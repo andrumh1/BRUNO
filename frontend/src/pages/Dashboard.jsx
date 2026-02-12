@@ -99,11 +99,8 @@ const Dashboard = () => {
       <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">B</span>
-            </div>
+            <img src="/bruno-logo.png" alt="BRUNO" className="h-10" />
             <div>
-              <h1 className="text-xl font-bold">BRUNO</h1>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
             </div>
           </div>
