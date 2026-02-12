@@ -56,7 +56,8 @@ const CreateCardPage = () => {
       personal: "personal_classic",
       empresarial: "empresarial_pro",
       negocio: "negocio_showcase",
-      lugares: "lugares_tour"
+      lugares: "lugares_tour",
+      guardian: "guardian_safe"
     };
     
     setFormData({
