@@ -49,7 +49,8 @@ const Dashboard = () => {
       await axios.delete(`${API}/cards/${cardId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setCards(cards.filter((card) => card.id !== cardId));
+      setCards(prevCards => prevCards.filter((card) => card.id !== cardId));
+      setStats(prevStats => ({ ...prevStats, total: prevStats.total - 1 }));
     } catch (error) {
       console.error("Error deleting card:", error);
       alert("Error al eliminar la tarjeta");
