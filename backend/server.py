@@ -97,6 +97,36 @@ class UserProfileUpdate(BaseModel):
     bio: Optional[str] = None
     website: Optional[str] = None
 
+# Album Models
+class Photo(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    url: str
+    thumbnail_url: Optional[str] = None
+    caption: Optional[str] = None
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class Album(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    name: str
+    description: Optional[str] = None
+    is_public: bool = False
+    photos: List[Photo] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class AlbumCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    is_public: bool = False
+
+class AlbumUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_public: Optional[bool] = None
+
 # Card Models
 class CardType(str):
     PERSONAL = "personal"
