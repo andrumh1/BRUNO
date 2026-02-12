@@ -68,6 +68,7 @@ const Dashboard = () => {
       empresarial: "Empresarial",
       negocio: "Negocio",
       lugares: "Lugares",
+      guardian: "Guardián",
     };
     return types[type] || type;
   };
@@ -78,6 +79,7 @@ const Dashboard = () => {
       empresarial: "bg-purple-500",
       negocio: "bg-green-500",
       lugares: "bg-orange-500",
+      guardian: "bg-red-500",
     };
     return colors[type] || "bg-gray-500";
   };
@@ -105,8 +107,11 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/feed">
+            <Link to="/">
               <Button variant="ghost">Explorar</Button>
+            </Link>
+            <Link to="/map">
+              <Button variant="ghost">Mapa</Button>
             </Link>
             <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
               <Settings className="w-5 h-5" />

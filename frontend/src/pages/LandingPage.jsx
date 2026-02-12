@@ -23,8 +23,11 @@ const LandingPage = () => {
           </div>
           <div className="flex items-center gap-4">
             <DownloadAppButton variant="ghost" />
-            <Link to="/feed">
+            <Link to="/">
               <Button variant="ghost">Explorar</Button>
+            </Link>
+            <Link to="/map">
+              <Button variant="ghost">Mapa</Button>
             </Link>
             <Link to="/contact">
               <Button variant="ghost">Contacto</Button>
@@ -58,7 +61,7 @@ const LandingPage = () => {
         </p>
         
         <div className="flex items-center justify-center gap-4 mb-20">
-          <Link to="/feed">
+          <Link to="/">
             <Button size="lg" variant="outline" className="text-lg px-8">
               <span className="mr-2">🌐</span>
               Explorar Feed

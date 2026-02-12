@@ -177,6 +177,7 @@ const ViewCardPage = () => {
                   {card.card_type === "empresarial" && "Empresarial"}
                   {card.card_type === "negocio" && "Negocio"}
                   {card.card_type === "lugares" && "Lugar"}
+                  {card.card_type === "guardian" && "Guardián"}
                 </div>
               </div>
 

@@ -68,6 +68,9 @@ const FeedPage = () => {
                   <Link to="/dashboard">
                     <Button variant="ghost">Mi Panel</Button>
                   </Link>
+                  <Link to="/map">
+                    <Button variant="ghost">Mapa</Button>
+                  </Link>
                   <Button variant="ghost" onClick={handleLogout}>
                     <LogOut className="w-4 h-4 mr-2" />
                     Salir
@@ -75,6 +78,9 @@ const FeedPage = () => {
                 </>
               ) : (
                 <>
+                  <Link to="/map">
+                    <Button variant="ghost">Mapa</Button>
+                  </Link>
                   <Link to="/login">
                     <Button variant="ghost">Iniciar Sesión</Button>
                   </Link>
@@ -132,6 +138,13 @@ const FeedPage = () => {
                 onClick={() => setFilterType("lugares")}
               >
                 Lugares
+              </Button>
+              <Button
+                variant={filterType === "guardian" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterType("guardian")}
+              >
+                Guardián
               </Button>
             </div>
           </div>
@@ -197,6 +210,7 @@ const FeedPage = () => {
                       {card.card_type === "empresarial" && "Empresarial"}
                       {card.card_type === "negocio" && "Negocio"}
                       {card.card_type === "lugares" && "Lugar"}
+                      {card.card_type === "guardian" && "Guardián"}
                     </div>
                   </div>
                 </div>

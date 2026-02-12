@@ -19,6 +19,7 @@ import HelpPage from "@/pages/HelpPage";
 import PricingPage from "@/pages/PricingPage";
 import FeedPage from "@/pages/FeedPage";
 import MapPage from "@/pages/MapPage";
+import EditCardPage from "@/pages/EditCardPage";
 
 function AppRouter() {
   const location = useLocation();
