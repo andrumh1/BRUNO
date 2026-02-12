@@ -189,29 +189,65 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
+async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> User:
+    """Get current user from JWT token or session_token cookie"""
+    from fastapi import Request
+    
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
+    
+    token = None
+    
+    # Try to get token from Authorization header first
+    if credentials:
         token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+        # Try JWT token (email/password auth)
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            email: str = payload.get("sub")
+            if email is None:
+                raise credentials_exception
+            
+            user_dict = await db.users.find_one({"email": email}, {"_id": 0})
+            if user_dict is None:
+                raise credentials_exception
+            
+            if isinstance(user_dict.get('created_at'), str):
+                user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
+            
+            return User(**user_dict)
+        except JWTError:
+            # If JWT fails, try as session_token
+            pass
     
-    user_dict = await db.users.find_one({"email": email}, {"_id": 0})
-    if user_dict is None:
-        raise credentials_exception
+    # If we have a token, try it as session_token
+    if token:
+        session_doc = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+        if session_doc:
+            # Check expiry
+            expires_at = session_doc["expires_at"]
+            if isinstance(expires_at, str):
+                expires_at = datetime.fromisoformat(expires_at)
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            
+            if expires_at < datetime.now(timezone.utc):
+                raise HTTPException(status_code=401, detail="Session expired")
+            
+            # Get user
+            user_dict = await db.users.find_one({"id": session_doc["user_id"]}, {"_id": 0})
+            if user_dict is None:
+                raise credentials_exception
+            
+            if isinstance(user_dict.get('created_at'), str):
+                user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
+            
+            return User(**user_dict)
     
-    if isinstance(user_dict.get('created_at'), str):
-        user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
-    
-    return User(**user_dict)
+    raise credentials_exception
 
 # ============================================================================
 # AUTH ROUTES
