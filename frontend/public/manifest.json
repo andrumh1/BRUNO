@@ -1,0 +1,24 @@
+{
+  "short_name": "BRUNO",
+  "name": "BRUNO - Tarjetas Digitales",
+  "description": "Crea y comparte tarjetas de presentación digitales con estilo futurista",
+  "icons": [
+    {
+      "src": "/bruno-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/bruno-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#FF6B35",
+  "background_color": "#0F0F10",
+  "orientation": "portrait"
+}
