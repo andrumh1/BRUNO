@@ -327,6 +327,22 @@ const CreateCardPage = () => {
                 </CardContent>
               </Card>
 
+              {/* Ubicación */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ubicación</CardTitle>
+                  <CardDescription>
+                    Agrega la ubicación de tu tarjeta (opcional)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <LocationSelector
+                    location={formData.location}
+                    onChange={(location) => setFormData({ ...formData, location })}
+                  />
+                </CardContent>
+              </Card>
+
               {/* Diseño */}
               <Card>
                 <CardHeader>
