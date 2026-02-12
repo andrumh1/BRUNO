@@ -164,9 +164,13 @@ const Dashboard = () => {
             <p className="text-muted-foreground">Gestiona tus tarjetas de presentación</p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => navigate("/nfc/activate")}>
+            <Button variant="outline" onClick={() => navigate("/map")}>
+              <MapPin className="w-4 h-4 mr-2" />
+              Ver Mapa
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/nfc/write")}>
               <Nfc className="w-4 h-4 mr-2" />
-              Activar NFC
+              Programar NFC
             </Button>
             <Button onClick={() => navigate("/cards/new")}>
               <Plus className="w-4 h-4 mr-2" />
