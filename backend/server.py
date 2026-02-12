@@ -568,6 +568,153 @@ async def get_card_qr(card_id: str):
     }
 
 # ============================================================================
+# USER PROFILE ROUTES
+# ============================================================================
+
+@api_router.get("/profile", response_model=UserProfile)
+async def get_my_profile(current_user: User = Depends(get_current_user)):
+    profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0})
+    
+    if not profile:
+        # Create default profile
+        profile = UserProfile(user_id=current_user.id)
+        profile_doc = profile.model_dump()
+        profile_doc['updated_at'] = profile_doc['updated_at'].isoformat()
+        await db.user_profiles.insert_one(profile_doc)
+        return profile
+    
+    if isinstance(profile.get('updated_at'), str):
+        profile['updated_at'] = datetime.fromisoformat(profile['updated_at'])
+    
+    return UserProfile(**profile)
+
+@api_router.put("/profile", response_model=UserProfile)
+async def update_my_profile(profile_input: UserProfileUpdate, current_user: User = Depends(get_current_user)):
+    update_data = {k: v for k, v in profile_input.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.user_profiles.update_one(
+        {"user_id": current_user.id},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0})
+    
+    if isinstance(profile.get('updated_at'), str):
+        profile['updated_at'] = datetime.fromisoformat(profile['updated_at'])
+    
+    return UserProfile(**profile)
+
+# ============================================================================
+# ALBUM ROUTES
+# ============================================================================
+
+@api_router.post("/albums", response_model=Album, status_code=status.HTTP_201_CREATED)
+async def create_album(album_input: AlbumCreate, current_user: User = Depends(get_current_user)):
+    album_dict = album_input.model_dump()
+    album_dict['user_id'] = current_user.id
+    album_obj = Album(**album_dict)
+    
+    album_doc = album_obj.model_dump()
+    album_doc['created_at'] = album_doc['created_at'].isoformat()
+    album_doc['updated_at'] = album_doc['updated_at'].isoformat()
+    
+    await db.albums.insert_one(album_doc)
+    return album_obj
+
+@api_router.get("/albums", response_model=List[Album])
+async def get_my_albums(current_user: User = Depends(get_current_user)):
+    albums = await db.albums.find({"user_id": current_user.id}, {"_id": 0}).to_list(1000)
+    
+    for album in albums:
+        if isinstance(album.get('created_at'), str):
+            album['created_at'] = datetime.fromisoformat(album['created_at'])
+        if isinstance(album.get('updated_at'), str):
+            album['updated_at'] = datetime.fromisoformat(album['updated_at'])
+    
+    return albums
+
+@api_router.get("/albums/{album_id}", response_model=Album)
+async def get_album(album_id: str, current_user: User = Depends(get_current_user)):
+    album = await db.albums.find_one({"id": album_id, "user_id": current_user.id}, {"_id": 0})
+    
+    if not album:
+        raise HTTPException(status_code=404, detail="Album not found")
+    
+    if isinstance(album.get('created_at'), str):
+        album['created_at'] = datetime.fromisoformat(album['created_at'])
+    if isinstance(album.get('updated_at'), str):
+        album['updated_at'] = datetime.fromisoformat(album['updated_at'])
+    
+    return Album(**album)
+
+@api_router.put("/albums/{album_id}", response_model=Album)
+async def update_album(album_id: str, album_input: AlbumUpdate, current_user: User = Depends(get_current_user)):
+    existing_album = await db.albums.find_one({"id": album_id, "user_id": current_user.id})
+    if not existing_album:
+        raise HTTPException(status_code=404, detail="Album not found")
+    
+    update_data = {k: v for k, v in album_input.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.albums.update_one(
+        {"id": album_id},
+        {"$set": update_data}
+    )
+    
+    updated_album = await db.albums.find_one({"id": album_id}, {"_id": 0})
+    
+    if isinstance(updated_album.get('created_at'), str):
+        updated_album['created_at'] = datetime.fromisoformat(updated_album['created_at'])
+    if isinstance(updated_album.get('updated_at'), str):
+        updated_album['updated_at'] = datetime.fromisoformat(updated_album['updated_at'])
+    
+    return Album(**updated_album)
+
+@api_router.delete("/albums/{album_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_album(album_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.albums.delete_one({"id": album_id, "user_id": current_user.id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Album not found")
+    return None
+
+@api_router.post("/albums/{album_id}/photos")
+async def add_photo_to_album(album_id: str, photo: Photo, current_user: User = Depends(get_current_user)):
+    album = await db.albums.find_one({"id": album_id, "user_id": current_user.id})
+    if not album:
+        raise HTTPException(status_code=404, detail="Album not found")
+    
+    photo_doc = photo.model_dump()
+    photo_doc['uploaded_at'] = photo_doc['uploaded_at'].isoformat()
+    
+    await db.albums.update_one(
+        {"id": album_id},
+        {
+            "$push": {"photos": photo_doc},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+    
+    return {"message": "Photo added successfully", "photo_id": photo.id}
+
+@api_router.delete("/albums/{album_id}/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_photo_from_album(album_id: str, photo_id: str, current_user: User = Depends(get_current_user)):
+    album = await db.albums.find_one({"id": album_id, "user_id": current_user.id})
+    if not album:
+        raise HTTPException(status_code=404, detail="Album not found")
+    
+    await db.albums.update_one(
+        {"id": album_id},
+        {
+            "$pull": {"photos": {"id": photo_id}},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+    
+    return None
+
+# ============================================================================
 # NFC ROUTES
 # ============================================================================
 
