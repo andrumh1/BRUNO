@@ -22,6 +22,10 @@ const LandingPage = () => {
             <img src="/bruno-logo.png" alt="BRUNO" className="h-10" />
           </div>
           <div className="flex items-center gap-4">
+            <DownloadAppButton variant="ghost" />
+            <Link to="/contact">
+              <Button variant="ghost">Contacto</Button>
+            </Link>
             <Link to="/login">
               <Button variant="ghost">Iniciar Sesión</Button>
             </Link>
