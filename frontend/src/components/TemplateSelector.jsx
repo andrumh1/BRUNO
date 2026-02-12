@@ -2,7 +2,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Check } from "lucide-react";
 
-// 12 plantillas: 3 por cada tipo de tarjeta
+// 15 plantillas: 3 por cada tipo de tarjeta
 const templates = {
   personal: [
     { id: "personal_classic", name: "Clásico", preview: "Avatar grande con info centrada" },
@@ -23,6 +23,11 @@ const templates = {
     { id: "lugares_tour", name: "Turístico", preview: "Banner panorámico" },
     { id: "lugares_map", name: "Ubicación", preview: "Mapa + info" },
     { id: "lugares_gallery", name: "Galería", preview: "Grid de fotos" }
+  ],
+  guardian: [
+    { id: "guardian_safe", name: "Seguridad", preview: "Info de contacto destacada" },
+    { id: "guardian_medical", name: "Médico", preview: "Info médica importante" },
+    { id: "guardian_emergency", name: "Emergencia", preview: "Contactos de emergencia" }
   ]
 };
 
