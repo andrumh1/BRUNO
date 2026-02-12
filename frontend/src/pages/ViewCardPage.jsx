@@ -313,6 +313,58 @@ const ViewCardPage = () => {
           </p>
         </div>
       </div>
+
+      {/* QR Modal */}
+      {showQR && qrData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Código QR con Logo BRUNO</h3>
+                <button
+                  onClick={() => setShowQR(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              {/* QR Code Image */}
+              <div className="p-6 bg-white rounded-xl mb-4 flex items-center justify-center">
+                <img 
+                  src={qrData.qr_code} 
+                  alt="QR Code con logo BRUNO" 
+                  className="w-64 h-64"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-xs text-muted-foreground break-all">
+                    {qrData.card_url}
+                  </p>
+                </div>
+                
+                <p className="text-sm text-center text-muted-foreground">
+                  ✅ {qrData.note}
+                </p>
+
+                <Button 
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = qrData.qr_code;
+                    link.download = `bruno-qr-${cardId}.png`;
+                    link.click();
+                  }}
+                  className="w-full"
+                >
+                  Descargar QR con Logo
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
