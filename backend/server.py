@@ -551,21 +551,61 @@ async def get_card_qr(card_id: str):
     if not card_dict:
         raise HTTPException(status_code=404, detail="Card not found")
     
-    # Generate QR code URL
+    # Generate QR code URL (permanent - never changes)
     frontend_url = os.environ.get('FRONTEND_URL', 'https://andru-gift-finder.preview.emergentagent.com')
     card_url = f"{frontend_url}/c/{card_id}"
     
-    # Generate QR code
+    # Get card color (default to orange)
+    fill_color = card_dict.get('background_color', '#FF6B35')
+    
+    # Generate QR code with high error correction (allows logo in center)
     qr = qrcode.QRCode(
         version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,  # High error correction allows 30% damage
         box_size=10,
         border=4,
     )
     qr.add_data(card_url)
     qr.make(fit=True)
     
-    img = qr.make_image(fill_color="#FF6B35", back_color="white")
+    # Create QR image with custom color
+    img = qr.make_image(fill_color=fill_color, back_color="white")
+    
+    # Convert PIL image to RGB mode for manipulation
+    img = img.convert('RGB')
+    
+    # Add BRUNO logo in center (if logo exists)
+    try:
+        # Try to open logo from public folder
+        logo_path = ROOT_DIR.parent / 'frontend' / 'public' / 'bruno-mascot.png'
+        if logo_path.exists():
+            from PIL import Image
+            logo = Image.open(logo_path)
+            
+            # Calculate logo size (about 20% of QR code)
+            qr_width, qr_height = img.size
+            logo_size = int(qr_width * 0.2)
+            
+            # Resize logo
+            logo = logo.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
+            
+            # Add white background to logo for better contrast
+            logo_bg = Image.new('RGB', (logo_size + 20, logo_size + 20), 'white')
+            logo_bg_pos = ((logo_bg.size[0] - logo.size[0]) // 2, (logo_bg.size[1] - logo.size[1]) // 2)
+            
+            if logo.mode == 'RGBA':
+                logo_bg.paste(logo, logo_bg_pos, logo)
+            else:
+                logo_bg.paste(logo, logo_bg_pos)
+            
+            # Calculate position to center logo
+            logo_pos = ((qr_width - logo_bg.size[0]) // 2, (qr_height - logo_bg.size[1]) // 2)
+            
+            # Paste logo on QR code
+            img.paste(logo_bg, logo_pos)
+    except Exception as e:
+        logger.warning(f"Could not add logo to QR code: {e}")
+        # Continue without logo if there's an error
     
     # Convert to base64
     buffer = io.BytesIO()
@@ -575,7 +615,9 @@ async def get_card_qr(card_id: str):
     
     return {
         "qr_code": f"data:image/png;base64,{img_base64}",
-        "card_url": card_url
+        "card_url": card_url,
+        "color": fill_color,
+        "note": "QR permanente - nunca cambia, solo actualiza la información de la tarjeta"
     }
 
 # ============================================================================
