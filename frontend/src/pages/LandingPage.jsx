@@ -18,10 +18,7 @@ const LandingPage = () => {
       <header className="relative z-10 p-6">
         <nav className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">B</span>
-            </div>
-            <span className="text-2xl font-bold">BRUNO</span>
+            <img src="/bruno-logo.png" alt="BRUNO" className="h-10" />
           </div>
           <div className="flex items-center gap-4">
             <Link to="/login">
