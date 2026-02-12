@@ -21,25 +21,26 @@ const Dashboard = () => {
       navigate("/login");
       return;
     }
-    fetchCards();
+    
+    const loadCards = async () => {
+      try {
+        const response = await axios.get(`${API}/cards`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setCards(response.data);
+        
+        // Calculate stats
+        const totalViews = response.data.reduce((acc, card) => acc + card.views, 0);
+        setStats({ total: response.data.length, views: totalViews });
+      } catch (error) {
+        console.error("Error fetching cards:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadCards();
   }, [user, token, navigate]);
-
-  const fetchCards = async () => {
-    try {
-      const response = await axios.get(`${API}/cards`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCards(response.data);
-      
-      // Calculate stats
-      const totalViews = response.data.reduce((acc, card) => acc + card.views, 0);
-      setStats({ total: response.data.length, views: totalViews });
-    } catch (error) {
-      console.error("Error fetching cards:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDeleteCard = async (cardId) => {
     if (!window.confirm("¿Estás seguro de eliminar esta tarjeta?")) return;
