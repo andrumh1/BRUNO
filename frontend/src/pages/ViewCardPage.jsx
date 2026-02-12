@@ -14,6 +14,8 @@ const ViewCardPage = () => {
   const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showQR, setShowQR] = useState(false);
+  const [qrData, setQrData] = useState(null);
 
   useEffect(() => {
     fetchCard();
@@ -27,6 +29,17 @@ const ViewCardPage = () => {
       setError(err.response?.data?.detail || "Tarjeta no encontrada");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchQRCode = async () => {
+    try {
+      const response = await axios.get(`${API}/cards/${cardId}/qr`);
+      setQrData(response.data);
+      setShowQR(true);
+    } catch (error) {
+      console.error("Error fetching QR:", error);
+      alert("Error al generar el código QR");
     }
   };
 
