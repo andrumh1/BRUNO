@@ -171,6 +171,7 @@ class Card(BaseModel):
     text_color: str = "#FFFFFF"
     social_links: Optional[List[SocialLink]] = []
     contact_info: Optional[ContactInfo] = None
+    location: Optional[dict] = None  # { "lat": float, "lng": float, "address": str, "place_name": str }
     template_id: str = "default"  # Para las 12 plantillas diferentes
     custom_fields: Optional[dict] = None
     is_public: bool = True
@@ -190,6 +191,7 @@ class CardCreate(BaseModel):
     text_color: str = "#FFFFFF"
     social_links: Optional[List[SocialLink]] = []
     contact_info: Optional[ContactInfo] = None
+    location: Optional[dict] = None
     template_id: str = "default"
     custom_fields: Optional[dict] = None
     is_public: bool = True
