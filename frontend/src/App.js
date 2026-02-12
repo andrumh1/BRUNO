@@ -13,10 +13,12 @@ import CreateCardPage from "@/pages/CreateCardPage";
 import ViewCardPage from "@/pages/ViewCardPage";
 import QRCodePage from "@/pages/QRCodePage";
 import ActivateNFCPage from "@/pages/ActivateNFCPage";
+import NFCWritePage from "@/pages/NFCWritePage";
 import ContactPage from "@/pages/ContactPage";
 import HelpPage from "@/pages/HelpPage";
 import PricingPage from "@/pages/PricingPage";
 import FeedPage from "@/pages/FeedPage";
+import MapPage from "@/pages/MapPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -31,6 +33,7 @@ function AppRouter() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/feed" element={<FeedPage />} />
+      <Route path="/map" element={<MapPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/contact" element={<ContactPage />} />
@@ -41,6 +44,7 @@ function AppRouter() {
       <Route path="/cards/:cardId/qr" element={<QRCodePage />} />
       <Route path="/c/:cardId" element={<ViewCardPage />} />
       <Route path="/nfc/activate" element={<ActivateNFCPage />} />
+      <Route path="/nfc/write" element={<NFCWritePage />} />
       <Route path="*" element={<LandingPage />} />
     </Routes>
   );
