@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import axios from "axios";
-import { Plus, CreditCard, QrCode, Nfc, LogOut, Eye, Edit, Trash2, Settings } from "lucide-react";
+import { Plus, CreditCard, QrCode, Nfc, LogOut, Eye, Edit, Trash2, Settings, MapPin } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
