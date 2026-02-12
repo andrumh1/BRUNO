@@ -13,6 +13,9 @@ import CreateCardPage from "@/pages/CreateCardPage";
 import ViewCardPage from "@/pages/ViewCardPage";
 import QRCodePage from "@/pages/QRCodePage";
 import ActivateNFCPage from "@/pages/ActivateNFCPage";
+import ContactPage from "@/pages/ContactPage";
+import HelpPage from "@/pages/HelpPage";
+import PricingPage from "@/pages/PricingPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -28,6 +31,9 @@ function AppRouter() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/help" element={<HelpPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/cards/new" element={<CreateCardPage />} />
       <Route path="/cards/:cardId/qr" element={<QRCodePage />} />
