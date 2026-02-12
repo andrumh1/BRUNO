@@ -196,12 +196,9 @@ class CardUpdate(BaseModel):
     template_id: Optional[str] = None
     custom_fields: Optional[dict] = None
     is_public: Optional[bool] = None
-    avatar_url: Optional[str] = None
-    background_color: Optional[str] = None
-    text_color: Optional[str] = None
-    social_links: Optional[SocialLinks] = None
-    custom_fields: Optional[dict] = None
     is_public: Optional[bool] = None
+
+# NFC Models
 
 # NFC Models
 class NFCCard(BaseModel):
