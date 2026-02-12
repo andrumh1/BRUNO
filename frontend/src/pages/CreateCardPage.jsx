@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import SocialLinkSelector from "@/components/SocialLinkSelector";
 import TemplateSelector from "@/components/TemplateSelector";
+import LocationSelector from "@/components/LocationSelector";
 import axios from "axios";
 import { ArrowLeft, Save, Upload, Image as ImageIcon } from "lucide-react";
 
