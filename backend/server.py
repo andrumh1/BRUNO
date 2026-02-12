@@ -153,9 +153,13 @@ class Card(BaseModel):
     subtitle: Optional[str] = None
     description: Optional[str] = None
     avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    gallery_photos: List[str] = []  # URLs of photos
     background_color: str = "#FF6B35"
     text_color: str = "#FFFFFF"
-    social_links: Optional[SocialLinks] = None
+    social_links: Optional[List[SocialLink]] = []
+    contact_info: Optional[ContactInfo] = None
+    template_id: str = "default"  # Para las 12 plantillas diferentes
     custom_fields: Optional[dict] = None
     is_public: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -168,9 +172,13 @@ class CardCreate(BaseModel):
     subtitle: Optional[str] = None
     description: Optional[str] = None
     avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    gallery_photos: List[str] = []
     background_color: str = "#FF6B35"
     text_color: str = "#FFFFFF"
-    social_links: Optional[SocialLinks] = None
+    social_links: Optional[List[SocialLink]] = []
+    contact_info: Optional[ContactInfo] = None
+    template_id: str = "default"
     custom_fields: Optional[dict] = None
     is_public: bool = True
 
@@ -178,6 +186,16 @@ class CardUpdate(BaseModel):
     title: Optional[str] = None
     subtitle: Optional[str] = None
     description: Optional[str] = None
+    avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    gallery_photos: Optional[List[str]] = None
+    background_color: Optional[str] = None
+    text_color: Optional[str] = None
+    social_links: Optional[List[SocialLink]] = None
+    contact_info: Optional[ContactInfo] = None
+    template_id: Optional[str] = None
+    custom_fields: Optional[dict] = None
+    is_public: Optional[bool] = None
     avatar_url: Optional[str] = None
     background_color: Optional[str] = None
     text_color: Optional[str] = None
