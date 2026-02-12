@@ -58,15 +58,16 @@ const LandingPage = () => {
         </p>
         
         <div className="flex items-center justify-center gap-4 mb-20">
+          <Link to="/feed">
+            <Button size="lg" variant="outline" className="text-lg px-8">
+              <span className="mr-2">🌐</span>
+              Explorar Feed
+            </Button>
+          </Link>
           <Link to="/register">
             <Button size="lg" className="text-lg px-8">
               Crear mi tarjeta
               <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-          </Link>
-          <Link to="/c/demo-card">
-            <Button size="lg" variant="outline" className="text-lg px-8">
-              Ver demo
             </Button>
           </Link>
         </div>
