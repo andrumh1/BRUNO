@@ -12,6 +12,7 @@ import os
 import logging
 import uuid
 import qrcode
+from PIL import Image
 import io
 import base64
 import requests
