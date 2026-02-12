@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import SocialLinkSelector from "@/components/SocialLinkSelector";
 import TemplateSelector from "@/components/TemplateSelector";
 import LocationSelector from "@/components/LocationSelector";
 import axios from "axios";
-import { ArrowLeft, Save, Upload, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -21,12 +21,15 @@ const cardTypes = [
   { value: "guardian", label: "Guardián", desc: "Para niños, ancianos o personas con necesidades especiales" },
 ];
 
-const CreateCardPage = () => {
+const EditCardPage = () => {
   const navigate = useNavigate();
+  const { cardId } = useParams();
   const { token } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [error, setError] = useState("");
   
   const [formData, setFormData] = useState({
     card_type: "personal",
@@ -42,6 +45,39 @@ const CreateCardPage = () => {
     template_id: "personal_classic",
     is_public: true,
   });
+
+  useEffect(() => {
+    fetchCard();
+  }, [cardId]);
+
+  const fetchCard = async () => {
+    try {
+      const response = await axios.get(`${API}/cards/${cardId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const card = response.data;
+      
+      setFormData({
+        card_type: card.card_type || "personal",
+        title: card.title || "",
+        subtitle: card.subtitle || "",
+        description: card.description || "",
+        avatar_url: card.avatar_url || "",
+        banner_url: card.banner_url || "",
+        background_color: card.background_color || "#FF6B35",
+        text_color: card.text_color || "#FFFFFF",
+        social_links: card.social_links || [],
+        location: card.location || null,
+        template_id: card.template_id || "personal_classic",
+        is_public: card.is_public !== false,
+      });
+    } catch (err) {
+      console.error("Error fetching card:", err);
+      setError("No se pudo cargar la tarjeta");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -99,20 +135,47 @@ const CreateCardPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
 
     try {
-      const response = await axios.post(`${API}/cards`, formData, {
+      await axios.put(`${API}/cards/${cardId}`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      navigate(`/dashboard`);
+      navigate("/dashboard");
     } catch (error) {
-      console.error("Error creating card:", error);
-      alert("Error al crear la tarjeta");
+      console.error("Error updating card:", error);
+      alert("Error al actualizar la tarjeta");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Cargando tarjeta...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="text-center py-16">
+            <h2 className="text-2xl font-bold mb-2">Error</h2>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <Button onClick={() => navigate("/dashboard")}>
+              Volver al Panel
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -123,8 +186,8 @@ const CreateCardPage = () => {
           </Button>
           <img src="/bruno-mascot.png" alt="BRUNO" className="h-8" />
           <div>
-            <h1 className="text-xl font-bold">Crear Nueva Tarjeta</h1>
-            <p className="text-sm text-muted-foreground">Completa la información de tu tarjeta</p>
+            <h1 className="text-xl font-bold">Editar Tarjeta</h1>
+            <p className="text-sm text-muted-foreground">Modifica la información de tu tarjeta</p>
           </div>
         </div>
       </header>
@@ -186,7 +249,7 @@ const CreateCardPage = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Imágenes</CardTitle>
-                  <CardDescription>Sube tu foto de perfil y banner</CardDescription>
+                  <CardDescription>Actualiza tu foto de perfil y banner</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Banner */}
@@ -318,7 +381,7 @@ const CreateCardPage = () => {
                 <CardHeader>
                   <CardTitle>Redes Sociales y Contacto</CardTitle>
                   <CardDescription>
-                    Agrega tus redes sociales, sitio web y formas de contacto
+                    Actualiza tus redes sociales, sitio web y formas de contacto
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -334,7 +397,7 @@ const CreateCardPage = () => {
                 <CardHeader>
                   <CardTitle>Ubicación</CardTitle>
                   <CardDescription>
-                    Agrega la ubicación de tu tarjeta (opcional)
+                    Actualiza la ubicación de tu tarjeta (opcional)
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -428,9 +491,9 @@ const CreateCardPage = () => {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" className="flex-1" disabled={loading || uploadingAvatar || uploadingBanner}>
+                <Button type="submit" className="flex-1" disabled={saving || uploadingAvatar || uploadingBanner}>
                   <Save className="w-4 h-4 mr-2" />
-                  {loading ? "Creando..." : "Crear Tarjeta"}
+                  {saving ? "Guardando..." : "Guardar Cambios"}
                 </Button>
               </div>
             </form>
@@ -441,7 +504,7 @@ const CreateCardPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Vista Previa</CardTitle>
-                <CardDescription>Así se verá tu tarjeta</CardDescription>
+                <CardDescription>Así se verá tu tarjeta actualizada</CardDescription>
               </CardHeader>
               <CardContent>
                 <div
@@ -513,4 +576,4 @@ const CreateCardPage = () => {
   );
 };
 
-export default CreateCardPage;
+export default EditCardPage;
