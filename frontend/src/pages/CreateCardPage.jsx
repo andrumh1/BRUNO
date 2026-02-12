@@ -18,6 +18,7 @@ const cardTypes = [
   { value: "empresarial", label: "Empresarial", desc: "Presentación corporativa" },
   { value: "negocio", label: "Negocio", desc: "Información de empresa o negocio" },
   { value: "lugares", label: "Lugares", desc: "Turismo, información, advertencias" },
+  { value: "guardian", label: "Guardián", desc: "Para niños, ancianos o personas con necesidades especiales" },
 ];
 
 const CreateCardPage = () => {
