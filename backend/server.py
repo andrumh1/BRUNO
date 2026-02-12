@@ -73,6 +73,13 @@ class Token(BaseModel):
     token_type: str
     user: User
 
+# Social Link Models (needed for both UserProfile and Card)
+class SocialLink(BaseModel):
+    type: str  # instagram, facebook, linkedin, twitter, tiktok, youtube, whatsapp, email, phone, website, custom
+    label: str
+    url: str
+    icon: Optional[str] = None
+
 # User Profile Models
 class ContactInfo(BaseModel):
     phone: Optional[str] = None
@@ -93,6 +100,9 @@ class UserProfile(BaseModel):
 
 class UserProfileUpdate(BaseModel):
     social_links: Optional[List[SocialLink]] = None
+    contact_info: Optional[ContactInfo] = None
+    bio: Optional[str] = None
+    website: Optional[str] = None
     contact_info: Optional[ContactInfo] = None
     bio: Optional[str] = None
     website: Optional[str] = None
