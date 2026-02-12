@@ -207,6 +207,7 @@ class CardUpdate(BaseModel):
     text_color: Optional[str] = None
     social_links: Optional[List[SocialLink]] = None
     contact_info: Optional[ContactInfo] = None
+    location: Optional[dict] = None
     template_id: Optional[str] = None
     custom_fields: Optional[dict] = None
     is_public: Optional[bool] = None
