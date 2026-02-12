@@ -73,6 +73,30 @@ class Token(BaseModel):
     token_type: str
     user: User
 
+# User Profile Models
+class ContactInfo(BaseModel):
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+
+class UserProfile(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    user_id: str
+    social_links: List[SocialLink] = []
+    contact_info: Optional[ContactInfo] = None
+    bio: Optional[str] = None
+    website: Optional[str] = None
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class UserProfileUpdate(BaseModel):
+    social_links: Optional[List[SocialLink]] = None
+    contact_info: Optional[ContactInfo] = None
+    bio: Optional[str] = None
+    website: Optional[str] = None
+
 # Card Models
 class CardType(str):
     PERSONAL = "personal"
