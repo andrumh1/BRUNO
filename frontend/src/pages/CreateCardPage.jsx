@@ -63,6 +63,7 @@ const CreateCardPage = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
+          <img src="/bruno-mascot.png" alt="BRUNO" className="h-8" />
           <div>
             <h1 className="text-xl font-bold">Crear Nueva Tarjeta</h1>
             <p className="text-sm text-muted-foreground">Completa la información de tu tarjeta</p>
