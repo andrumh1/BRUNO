@@ -191,10 +191,10 @@ const ViewCardPage = () => {
                   <Share2 className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
                 <button
-                  onClick={copyLink}
+                  onClick={fetchQRCode}
                   className="w-12 h-12 sm:w-14 sm:h-14 rounded-full backdrop-blur-sm flex items-center justify-center hover:scale-110 transition-all shadow-lg"
                   style={{ backgroundColor: `${card.text_color}20` }}
-                  title="Copiar enlace"
+                  title="Ver Código QR"
                 >
                   <QrCode className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
