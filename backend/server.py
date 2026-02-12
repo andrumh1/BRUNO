@@ -80,12 +80,14 @@ class CardType(str):
     NEGOCIO = "negocio"
     LUGARES = "lugares"
 
+class SocialLink(BaseModel):
+    type: str  # instagram, facebook, linkedin, twitter, tiktok, youtube, whatsapp, email, phone, website, custom
+    label: str
+    url: str
+    icon: Optional[str] = None
+
 class SocialLinks(BaseModel):
-    linkedin: Optional[str] = None
-    twitter: Optional[str] = None
-    instagram: Optional[str] = None
-    facebook: Optional[str] = None
-    website: Optional[str] = None
+    links: List[SocialLink] = []
 
 class Card(BaseModel):
     model_config = ConfigDict(extra="ignore")
