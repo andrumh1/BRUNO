@@ -61,9 +61,7 @@ const RegisterPage = () => {
       <Card className="w-full max-w-md relative z-10 backdrop-blur-xl bg-card/95 shadow-2xl">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">B</span>
-            </div>
+            <img src="/bruno-mascot.png" alt="BRUNO" className="h-20" />
           </div>
           <CardTitle className="text-3xl font-bold text-center">Crear Cuenta</CardTitle>
           <CardDescription className="text-center">
