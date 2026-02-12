@@ -107,7 +107,7 @@ const LandingPage = () => {
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
               <Sparkles className="w-6 h-6 text-primary" />
             </div>
-            <h3 className="text-xl font-bold mb-2">Diseño Minimalista</h3>
+            <h3 className="text-xl font-bold mb-2">Diseño Personalizado</h3>
             <p className="text-muted-foreground">
               Tarjetas elegantes con animaciones fluidas y estética futurista que impresionan.
             </p>
