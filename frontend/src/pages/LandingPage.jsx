@@ -150,8 +150,49 @@ const LandingPage = () => {
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-border/50 py-8">
-        <div className="max-w-7xl mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p>© 2025 BRUNO. Tarjetas digitales del futuro.</p>
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            {/* Columna 1: BRUNO */}
+            <div>
+              <img src="/bruno-logo.png" alt="BRUNO" className="h-8 mb-4" />
+              <p className="text-sm text-muted-foreground">
+                Tarjetas digitales del futuro
+              </p>
+            </div>
+
+            {/* Columna 2: Enlaces */}
+            <div>
+              <h4 className="font-semibold mb-3">Producto</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="/pricing" className="hover:text-primary transition-colors">Planes</Link></li>
+                <li><Link to="/register" className="hover:text-primary transition-colors">Crear Cuenta</Link></li>
+                <li><DownloadAppButton variant="link" size="sm" className="p-0 h-auto text-muted-foreground hover:text-primary" /></li>
+              </ul>
+            </div>
+
+            {/* Columna 3: Ayuda */}
+            <div>
+              <h4 className="font-semibold mb-3">Soporte</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="/contact" className="hover:text-primary transition-colors">Contacto</Link></li>
+                <li><Link to="/help" className="hover:text-primary transition-colors">Ayuda</Link></li>
+                <li><a href="mailto:soporte@bruno.com" className="hover:text-primary transition-colors">soporte@bruno.com</a></li>
+              </ul>
+            </div>
+
+            {/* Columna 4: Legal */}
+            <div>
+              <h4 className="font-semibold mb-3">Legal</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="/terms" className="hover:text-primary transition-colors">Términos</Link></li>
+                <li><Link to="/privacy" className="hover:text-primary transition-colors">Privacidad</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="text-center text-sm text-muted-foreground border-t border-border/50 pt-6">
+            <p>© 2025 BRUNO. Tarjetas digitales del futuro.</p>
+          </div>
         </div>
       </footer>
     </div>
