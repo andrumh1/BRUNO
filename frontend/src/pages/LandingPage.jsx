@@ -23,6 +23,9 @@ const LandingPage = () => {
           </div>
           <div className="flex items-center gap-4">
             <DownloadAppButton variant="ghost" />
+            <Link to="/feed">
+              <Button variant="ghost">Explorar</Button>
+            </Link>
             <Link to="/contact">
               <Button variant="ghost">Contacto</Button>
             </Link>
