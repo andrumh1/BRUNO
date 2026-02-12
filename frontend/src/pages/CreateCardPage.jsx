@@ -37,6 +37,7 @@ const CreateCardPage = () => {
     background_color: "#FF6B35",
     text_color: "#FFFFFF",
     social_links: [],
+    location: null,
     template_id: "personal_classic",
     is_public: true,
   });
