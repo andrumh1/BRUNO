@@ -16,6 +16,7 @@ import ActivateNFCPage from "@/pages/ActivateNFCPage";
 import ContactPage from "@/pages/ContactPage";
 import HelpPage from "@/pages/HelpPage";
 import PricingPage from "@/pages/PricingPage";
+import FeedPage from "@/pages/FeedPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -29,6 +30,7 @@ function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/feed" element={<FeedPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/contact" element={<ContactPage />} />
