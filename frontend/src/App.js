@@ -31,8 +31,8 @@ function AppRouter() {
   
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/feed" element={<FeedPage />} />
+      <Route path="/" element={<FeedPage />} />
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/map" element={<MapPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -41,11 +41,12 @@ function AppRouter() {
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/cards/new" element={<CreateCardPage />} />
+      <Route path="/cards/:cardId/edit" element={<EditCardPage />} />
       <Route path="/cards/:cardId/qr" element={<QRCodePage />} />
       <Route path="/c/:cardId" element={<ViewCardPage />} />
       <Route path="/nfc/activate" element={<ActivateNFCPage />} />
       <Route path="/nfc/write" element={<NFCWritePage />} />
-      <Route path="*" element={<LandingPage />} />
+      <Route path="*" element={<FeedPage />} />
     </Routes>
   );
 }
