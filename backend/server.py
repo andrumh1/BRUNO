@@ -725,6 +725,116 @@ async def delete_photo_from_album(album_id: str, photo_id: str, current_user: Us
     
     return None
 
+
+# ============================================================================
+# IMAGE UPLOAD ROUTES
+# ============================================================================
+
+@api_router.post("/upload/image")
+async def upload_image(
+    file: UploadFile = File(...),
+    folder: str = "bruno",
+    current_user: User = Depends(get_current_user)
+):
+    """Upload an image to Cloudinary"""
+    try:
+        # Read file content
+        contents = await file.read()
+        
+        # Upload to Cloudinary
+        result = cloudinary.uploader.upload(
+            contents,
+            folder=f"{folder}/{current_user.id}",
+            resource_type="auto",
+            transformation=[
+                {'width': 1200, 'height': 1200, 'crop': 'limit'},
+                {'quality': 'auto:good'}
+            ]
+        )
+        
+        return {
+            "url": result['secure_url'],
+            "public_id": result['public_id'],
+            "width": result['width'],
+            "height": result['height'],
+            "format": result['format']
+        }
+    except Exception as e:
+        logger.error(f"Error uploading image: {e}")
+        raise HTTPException(status_code=500, detail=f"Error uploading image: {str(e)}")
+
+@api_router.post("/upload/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload an avatar image (square, optimized)"""
+    try:
+        contents = await file.read()
+        
+        result = cloudinary.uploader.upload(
+            contents,
+            folder=f"bruno/avatars/{current_user.id}",
+            transformation=[
+                {'width': 400, 'height': 400, 'crop': 'fill', 'gravity': 'face'},
+                {'quality': 'auto:best'},
+                {'fetch_format': 'auto'}
+            ]
+        )
+        
+        return {
+            "url": result['secure_url'],
+            "public_id": result['public_id']
+        }
+    except Exception as e:
+        logger.error(f"Error uploading avatar: {e}")
+        raise HTTPException(status_code=500, detail=f"Error uploading avatar: {str(e)}")
+
+@api_router.post("/upload/banner")
+async def upload_banner(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload a banner image (wide format)"""
+    try:
+        contents = await file.read()
+        
+        result = cloudinary.uploader.upload(
+            contents,
+            folder=f"bruno/banners/{current_user.id}",
+            transformation=[
+                {'width': 1200, 'height': 400, 'crop': 'fill'},
+                {'quality': 'auto:good'},
+                {'fetch_format': 'auto'}
+            ]
+        )
+        
+        return {
+            "url": result['secure_url'],
+            "public_id": result['public_id']
+        }
+    except Exception as e:
+        logger.error(f"Error uploading banner: {e}")
+        raise HTTPException(status_code=500, detail=f"Error uploading banner: {str(e)}")
+
+@api_router.delete("/upload/{public_id:path}")
+async def delete_image(
+    public_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete an image from Cloudinary"""
+    try:
+        # Verify the image belongs to the user
+        if not public_id.startswith(f"bruno") or current_user.id not in public_id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this image")
+        
+        result = cloudinary.uploader.destroy(public_id)
+        return {"result": result}
+    except Exception as e:
+        logger.error(f"Error deleting image: {e}")
+        raise HTTPException(status_code=500, detail=f"Error deleting image: {str(e)}")
+
+
 # ============================================================================
 # NFC ROUTES
 # ============================================================================
