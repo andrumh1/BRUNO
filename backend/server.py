@@ -30,6 +30,8 @@ cloudinary.config(
     api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
     secure=True
 )
+from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest, CheckoutSessionResponse, CheckoutStatusResponse
+
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -40,6 +42,9 @@ db = client[os.environ['DB_NAME']]
 SECRET_KEY = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production-123456789')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+
+# Payments / Stripe
+STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
@@ -154,6 +159,8 @@ class CardType(str):
     EMPRESARIAL = "empresarial"
     NEGOCIO = "negocio"
     LUGARES = "lugares"
+    GUARDIAN = "guardian"
+    CURRICULUM = "curriculum"
 
 class Card(BaseModel):
     model_config = ConfigDict(extra="ignore")
