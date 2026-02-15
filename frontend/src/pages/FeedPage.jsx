@@ -212,6 +212,7 @@ const FeedPage = () => {
                 className={`overflow-hidden transition-all group backdrop-blur-xl bg-card/80 border border-white/40 shadow-[0_18px_45px_rgba(0,0,0,0.08)] ${
                   card.is_animated ? "card-bubble-animated" : "card-bubble-static"
                 }`}
+              >
                 {/* Banner or Colored Header */}
                 <div
                   className="h-32 relative"
