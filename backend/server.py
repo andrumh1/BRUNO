@@ -522,7 +522,7 @@ async def get_public_cards():
     return [Card(**card) for card in cards]
 
 @api_router.get("/cards/{card_id}", response_model=Card)
-async def get_card(card_id: str, current_user: Optional[User] = None):
+async def get_card(card_id: str, current_user: Optional[User] = Depends(get_current_user)):
     card_dict = await db.cards.find_one({"id": card_id}, {"_id": 0})
     
     if not card_dict:
