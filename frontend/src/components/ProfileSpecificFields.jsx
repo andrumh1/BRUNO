@@ -980,7 +980,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
                     />
                     <div className="flex gap-2">
                       <select
-                        className="flex-1 h-10 px-3 rounded-md border border-input bg-background text-sm"
+                        className="bubble-native-select flex-1"
                         value={contact.relationship}
                         onChange={(e) => updateArrayItem("ownerContacts", index, "relationship", e.target.value)}
                       >
