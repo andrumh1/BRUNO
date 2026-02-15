@@ -121,15 +121,18 @@ backend:
 frontend:
   - task: "Nuevas plantillas visuales edge_actions/full_banner_bubble y controles de visibilidad/feed/animación"
     implemented: true
-    working: false
+    working: true
     file: "frontend/src/pages/ViewCardPage.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Plantillas extra en TemplateSelector, variantes en ViewCardPage y Feed con cards públicas + efectos burbuja"
+      - working: true
+        agent: "testing"
+        comment: "✅ FRONTEND FUNCIONAL: 1) Feed principal carga correctamente y consume /api/public/cards. 2) Autenticación funciona (requiere usuario válido como testuser@bruno.com/test123). 3) Dashboard accesible con botón 'Nueva Tarjeta'. 4) Plantillas edge_actions y full_banner_bubble disponibles en TemplateSelector. 5) Campos show_in_feed e is_animated presentes en formulario de creación. 6) Feed muestra solo 'Hecha por BRUNO' sin contadores públicos. 7) Animaciones CSS .card-bubble-animated/.card-bubble-static implementadas. NOTA: demo@bruno.com/string123 no funciona - usar testuser@bruno.com/test123 para pruebas."
 metadata:
   created_by: "main_agent"
   version: "1.0"
