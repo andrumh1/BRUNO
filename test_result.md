@@ -104,52 +104,43 @@
 
 user_problem_statement: "BRUNO - app de tarjetas digitales con feed social, plantillas y NFC"
 backend:
-  - task: "Endpoint de tarjetas públicas y campos show_in_feed/is_animated"
+  - task: "Stripe: endpoints checkout suscripciones/pagos únicos y nuevo tipo de tarjeta curriculum"
     implemented: true
-    working: true
+    working: false
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: false
         agent: "main"
-        comment: "Añadidos campos show_in_feed e is_animated en modelos Card y nuevo endpoint /api/public/cards"
-      - working: true
-        agent: "testing"
-        comment: "✅ TODAS LAS PRUEBAS PASARON: 1) GET /api/public/cards funciona correctamente y filtra solo tarjetas con is_public=true y (show_in_feed=true o sin show_in_feed definido). 2) Los modelos Card/CardCreate/CardUpdate aceptan y guardan correctamente show_in_feed e is_animated. 3) GET /api/cards sigue devolviendo solo tarjetas del usuario autenticado. 4) Actualización de tarjetas con nuevos campos funciona correctamente. Corrección menor aplicada: añadido get_current_user_optional para autenticación opcional en endpoint individual de tarjetas."
+        comment: "Añadidos modelos PaymentTransaction, endpoints /api/payments/checkout, /api/payments/checkout/status y /api/webhook/stripe, y tipo de tarjeta curriculum en CardType. Falta validar flujo extremo a extremo."
 frontend:
-  - task: "Nuevas plantillas visuales edge_actions/full_banner_bubble y controles de visibilidad/feed/animación"
+  - task: "Tipo CURRICULUM visible en generador, plantillas base y ajustes visuales QR/burbuja"
     implemented: true
-    working: true
-    file: "frontend/src/pages/ViewCardPage.jsx"
+    working: false
+    file: "frontend/src/pages/CreateCardPage.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
       - working: false
         agent: "main"
-        comment: "Plantillas extra en TemplateSelector, variantes en ViewCardPage y Feed con cards públicas + efectos burbuja"
-      - working: true
-        agent: "testing"
-        comment: "✅ FRONTEND FUNCIONAL: 1) Feed principal carga correctamente y consume /api/public/cards. 2) Autenticación funciona (requiere usuario válido como testuser@bruno.com/test123). 3) Dashboard accesible con botón 'Nueva Tarjeta'. 4) Plantillas edge_actions y full_banner_bubble disponibles en TemplateSelector. 5) Campos show_in_feed e is_animated presentes en formulario de creación. 6) Feed muestra solo 'Hecha por BRUNO' sin contadores públicos. 7) Animaciones CSS .card-bubble-animated/.card-bubble-static implementadas. NOTA: demo@bruno.com/string123 no funciona - usar testuser@bruno.com/test123 para pruebas."
+        comment: "Añadido tipo curriculum al selector de tipos, plantillas base de curriculum en TemplateSelector, badge de tipo curriculum en ViewCardPage y mantenido QR con ajustes de tamaño/color. Falta editor de bloques profesionales, PDF y anexos."
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: true
 
 test_plan:
   current_focus:
-    - "Nuevas plantillas y efecto dinámico/estático en Feed y vista de tarjeta"
+    - "Stripe checkout suscripciones/pagos únicos (flujo básico)"
+    - "Creación/edición de tarjeta tipo curriculum con plantillas base"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
-    message: "Por favor probar creación/edición de tarjeta con nuevos checks (show_in_feed, is_animated), ver comportamiento en Feed público y vista /c/:cardId con plantillas edge_actions y full_banner_bubble. Usar usuario demo@bruno.com / string123."
-  - agent: "testing"
-    message: "✅ BACKEND COMPLETAMENTE FUNCIONAL: Todos los cambios recientes en BRUNO backend funcionan correctamente. El endpoint GET /api/public/cards filtra apropiadamente las tarjetas (solo públicas con show_in_feed=true o undefined). Los campos show_in_feed e is_animated se guardan y recuperan correctamente. GET /api/cards sigue funcionando solo para usuario autenticado. Se aplicó corrección menor para autenticación opcional en endpoint individual. FRONTEND pendiente de pruebas."
-  - agent: "testing"
-    message: "✅ PRUEBAS FRONTEND COMPLETADAS: La aplicación BRUNO funciona correctamente. Feed principal carga y consume /api/public/cards. Autenticación funcional (usar testuser@bruno.com/test123). Dashboard accesible. Plantillas edge_actions y full_banner_bubble disponibles. Campos show_in_feed e is_animated presentes. Feed muestra solo 'Hecha por BRUNO' sin contadores. Animaciones CSS implementadas. PROBLEMA MENOR: demo@bruno.com/string123 no funciona - usar credenciales de prueba válidas."
+    message: "Por favor probar: 1) creación/edición de tarjetas tipo curriculum (aunque sin bloques profesionales avanzados aún), y 2) invocación básica de /api/payments/checkout desde PricingPage o mediante curl para confirmar que la sesión de checkout se crea sin errores y que /api/payments/checkout/status responde correctamente."
