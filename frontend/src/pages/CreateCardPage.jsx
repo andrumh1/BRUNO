@@ -710,6 +710,84 @@ const CreateCardPage = () => {
                       ))}
                     </CardContent>
                   </Card>
+
+                  {/* Referencias Laborales */}
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Briefcase className="w-5 h-5 text-primary" />
+                          <CardTitle>{t("curriculum.references")}</CardTitle>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addCurriculumItem("references")}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          {t("curriculum.addReference")}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {formData.custom_fields.references.map((ref, index) => (
+                        <div key={index} className="p-4 border border-border rounded-lg space-y-3 relative">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 h-8 w-8 text-destructive"
+                            onClick={() => removeCurriculumItem("references", index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Input
+                              placeholder={t("curriculum.referenceName")}
+                              value={ref.name}
+                              onChange={(e) => updateCurriculumItem("references", index, "name", e.target.value)}
+                            />
+                            <Input
+                              placeholder={t("curriculum.referencePosition")}
+                              value={ref.position}
+                              onChange={(e) => updateCurriculumItem("references", index, "position", e.target.value)}
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Input
+                              placeholder={t("curriculum.referenceCompany")}
+                              value={ref.company}
+                              onChange={(e) => updateCurriculumItem("references", index, "company", e.target.value)}
+                            />
+                            <Input
+                              placeholder={t("curriculum.referenceRelationship")}
+                              value={ref.relationship}
+                              onChange={(e) => updateCurriculumItem("references", index, "relationship", e.target.value)}
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <Input
+                              placeholder={t("curriculum.referencePhone")}
+                              value={ref.phone}
+                              onChange={(e) => updateCurriculumItem("references", index, "phone", e.target.value)}
+                            />
+                            <Input
+                              type="email"
+                              placeholder={t("curriculum.referenceEmail")}
+                              value={ref.email}
+                              onChange={(e) => updateCurriculumItem("references", index, "email", e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {formData.custom_fields.references.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          {t("curriculum.addReference")} para comenzar
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
                 </>
               )}
 
