@@ -812,7 +812,7 @@ async def get_card_qr(card_id: str):
     
     # Add BRUNO logo in center (optimizado para miniatura)
     try:
-        # Try to open logo from public folder - preferir el logo cuadrado para QR
+        # Try to open logo from public folder
         logo_path = ROOT_DIR.parent / 'frontend' / 'public' / 'bruno-qr-logo.png'
         if not logo_path.exists():
             logo_path = ROOT_DIR.parent / 'frontend' / 'public' / 'bruno-mascot.png'
@@ -822,13 +822,14 @@ async def get_card_qr(card_id: str):
             logo = Image.open(logo_path)
             logger.info(f"QR: Logo loaded, mode: {logo.mode}, size: {logo.size}")
             
-            # Calculate logo size (22% del QR para mejor visibilidad)
+            # Calculate logo size - usar 30% del QR para que sea visible
             qr_width, qr_height = img.size
-            max_logo_size = int(qr_width * 0.22)
+            max_logo_width = int(qr_width * 0.30)
+            max_logo_height = int(qr_height * 0.15)  # Limitar altura para logos horizontales
             
             # Mantener proporción del logo
             logo_w, logo_h = logo.size
-            ratio = min(max_logo_size / logo_w, max_logo_size / logo_h)
+            ratio = min(max_logo_width / logo_w, max_logo_height / logo_h)
             new_w = int(logo_w * ratio)
             new_h = int(logo_h * ratio)
             
@@ -839,21 +840,18 @@ async def get_card_qr(card_id: str):
             if logo.mode != 'RGBA':
                 logo = logo.convert('RGBA')
             
-            # Crear fondo blanco cuadrado para el logo con bordes redondeados
-            padding = 15
-            bg_size = max(new_w, new_h) + padding * 2
-            logo_bg = Image.new('RGBA', (bg_size, bg_size), (255, 255, 255, 255))
+            # Crear fondo blanco rectangular para el logo
+            padding = 10
+            bg_width = new_w + padding * 2
+            bg_height = new_h + padding * 2
+            logo_bg = Image.new('RGBA', (bg_width, bg_height), (255, 255, 255, 255))
             
-            # Centrar logo en el fondo
-            logo_x = (bg_size - new_w) // 2
-            logo_y = (bg_size - new_h) // 2
-            
-            # Pegar logo con máscara de transparencia
-            logo_bg.paste(logo, (logo_x, logo_y), logo)
+            # Pegar logo centrado en el fondo
+            logo_bg.paste(logo, (padding, padding), logo)
             
             # Calculate position to center logo in QR
-            logo_pos = ((qr_width - bg_size) // 2, (qr_height - bg_size) // 2)
-            logger.info(f"QR: Pasting logo at {logo_pos}, bg_size: {bg_size}, logo size: {new_w}x{new_h}")
+            logo_pos = ((qr_width - bg_width) // 2, (qr_height - bg_height) // 2)
+            logger.info(f"QR: Pasting logo at {logo_pos}, bg_size: {bg_width}x{bg_height}, logo size: {new_w}x{new_h}")
             
             # Convert logo_bg to RGB for final paste (QR es RGB)
             final_logo = Image.new('RGB', logo_bg.size, (255, 255, 255))
