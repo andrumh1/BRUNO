@@ -797,7 +797,7 @@ async def get_checkout_status(session_id: str, request: Request):
     status = await stripe_checkout.get_checkout_status(session_id)
 
     # Actualizar estado en BD
-    updated = await db.payment_transactions.update_one(
+    await db.payment_transactions.update_one(
         {"session_id": session_id},
         {
             "$set": {
