@@ -203,9 +203,13 @@ const FeedPage = () => {
 
         {/* Cards Grid */}
         {!loading && filteredCards.length > 0 && (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
             {filteredCards.map((card) => (
-              <Card key={card.id} className="overflow-hidden hover:shadow-xl transition-all group">
+              <Card
+                key={card.id}
+                className={`overflow-hidden transition-all group backdrop-blur-xl bg-card/80 border border-white/40 shadow-[0_18px_45px_rgba(0,0,0,0.08)] ${
+                  card.is_animated ? "card-bubble-animated" : "card-bubble-static"
+                }`}
                 {/* Banner or Colored Header */}
                 <div
                   className="h-32 relative"
