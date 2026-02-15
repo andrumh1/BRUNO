@@ -3,7 +3,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Building2, Store, MapPin, Heart, User, Star, Clock, Camera, Link as LinkIcon, AlertTriangle, Phone, Pill } from "lucide-react";
+import { Plus, Trash2, Building2, Store, MapPin, Heart, User, Star, Clock, Camera, Link as LinkIcon, AlertTriangle, Phone, Pill, PawPrint } from "lucide-react";
 
 const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
   const { t } = useLanguage();
@@ -755,6 +755,250 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      </>
+    );
+  }
+
+  // MASCOTAS / Pets fields
+  if (cardType === "mascotas") {
+    return (
+      <>
+        <Card className="glass-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <PawPrint className="w-5 h-5 text-primary" />
+              <CardTitle>{t("profileFields.mascotas.sectionTitle")}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("profileFields.mascotas.petName")} *</label>
+                <Input
+                  placeholder="Nombre de tu mascota"
+                  value={customFields.petName || ""}
+                  onChange={(e) => updateField("petName", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("profileFields.mascotas.species")}</label>
+                <select
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  value={customFields.species || ""}
+                  onChange={(e) => updateField("species", e.target.value)}
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="dog">Perro</option>
+                  <option value="cat">Gato</option>
+                  <option value="bird">Ave</option>
+                  <option value="rabbit">Conejo</option>
+                  <option value="hamster">Hámster</option>
+                  <option value="fish">Pez</option>
+                  <option value="turtle">Tortuga</option>
+                  <option value="other">Otro</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("profileFields.mascotas.breed")}</label>
+                <Input
+                  placeholder="Raza de tu mascota"
+                  value={customFields.breed || ""}
+                  onChange={(e) => updateField("breed", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("profileFields.mascotas.age")}</label>
+                <Input
+                  placeholder="Edad (ej: 3 años)"
+                  value={customFields.age || ""}
+                  onChange={(e) => updateField("age", e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("profileFields.mascotas.color")}</label>
+                <Input
+                  placeholder="Color del pelaje"
+                  value={customFields.color || ""}
+                  onChange={(e) => updateField("color", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("profileFields.mascotas.size")}</label>
+                <select
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  value={customFields.size || ""}
+                  onChange={(e) => updateField("size", e.target.value)}
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="small">Pequeño</option>
+                  <option value="medium">Mediano</option>
+                  <option value="large">Grande</option>
+                  <option value="xlarge">Muy grande</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("profileFields.mascotas.identifyingMarks")}</label>
+              <textarea
+                placeholder="Marcas distintivas, cicatrices, manchas especiales..."
+                value={customFields.identifyingMarks || ""}
+                onChange={(e) => updateField("identifyingMarks", e.target.value)}
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Medical Info for Pet */}
+        <Card className="glass-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Pill className="w-5 h-5 text-primary" />
+              <CardTitle>{t("profileFields.mascotas.medicalInfo")}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("profileFields.mascotas.vaccinated")}</label>
+                <select
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  value={customFields.vaccinated || ""}
+                  onChange={(e) => updateField("vaccinated", e.target.value)}
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="yes">Sí, al día</option>
+                  <option value="partial">Parcialmente</option>
+                  <option value="no">No vacunado</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("profileFields.mascotas.sterilized")}</label>
+                <select
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  value={customFields.sterilized || ""}
+                  onChange={(e) => updateField("sterilized", e.target.value)}
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="yes">Sí</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("profileFields.mascotas.microchip")}</label>
+              <Input
+                placeholder="Número de microchip (si tiene)"
+                value={customFields.microchip || ""}
+                onChange={(e) => updateField("microchip", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("profileFields.mascotas.medicalConditions")}</label>
+              <textarea
+                placeholder="Condiciones médicas, alergias, medicamentos..."
+                value={customFields.petMedicalConditions || ""}
+                onChange={(e) => updateField("petMedicalConditions", e.target.value)}
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("profileFields.mascotas.vetInfo")}</label>
+              <Input
+                placeholder="Nombre y teléfono del veterinario"
+                value={customFields.vetInfo || ""}
+                onChange={(e) => updateField("vetInfo", e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Lost Pet Instructions */}
+        <Card className="glass-card border-2 border-yellow-500/30">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-500" />
+              <CardTitle className="text-yellow-600">{t("profileFields.mascotas.ifLostTitle")}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-3 bg-yellow-500/10 rounded-lg text-sm text-yellow-700 dark:text-yellow-300">
+              Esta información se mostrará de forma destacada si alguien encuentra a tu mascota
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("profileFields.mascotas.reward")}</label>
+              <Input
+                placeholder="¿Ofreces recompensa? (ej: $500)"
+                value={customFields.reward || ""}
+                onChange={(e) => updateField("reward", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("profileFields.mascotas.lostInstructions")}</label>
+              <textarea
+                placeholder="Instrucciones si encuentran a tu mascota (ej: No perseguir, es asustadizo. Llamar inmediatamente al número...)"
+                value={customFields.lostInstructions || ""}
+                onChange={(e) => updateField("lostInstructions", e.target.value)}
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            {/* Owner Contact */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">{t("profileFields.mascotas.ownerContacts")}</label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addArrayItem("ownerContacts", { name: "", phone: "", relationship: "owner" })}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Agregar Contacto
+                </Button>
+              </div>
+              {(customFields.ownerContacts || []).map((contact, index) => (
+                <div key={index} className="p-3 border border-border rounded-lg space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <Input
+                      placeholder="Nombre del dueño"
+                      value={contact.name}
+                      onChange={(e) => updateArrayItem("ownerContacts", index, "name", e.target.value)}
+                    />
+                    <Input
+                      placeholder="Teléfono"
+                      value={contact.phone}
+                      onChange={(e) => updateArrayItem("ownerContacts", index, "phone", e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <select
+                        className="flex-1 h-10 px-3 rounded-md border border-input bg-background text-sm"
+                        value={contact.relationship}
+                        onChange={(e) => updateArrayItem("ownerContacts", index, "relationship", e.target.value)}
+                      >
+                        <option value="owner">Dueño</option>
+                        <option value="family">Familiar</option>
+                        <option value="neighbor">Vecino</option>
+                        <option value="vet">Veterinario</option>
+                      </select>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeArrayItem("ownerContacts", index)}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </>
