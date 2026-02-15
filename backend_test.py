@@ -27,47 +27,50 @@ class BrunoAPITester:
         print(f"[{timestamp}] {level}: {message}")
         
     def authenticate(self):
-        """Authenticate with demo user (create if doesn't exist)"""
+        """Authenticate with demo user (try multiple passwords)"""
         self.log("🔐 Authenticating with demo@bruno.com...")
         
-        login_data = {
-            "email": TEST_EMAIL,
-            "password": TEST_PASSWORD
+        for password in TEST_PASSWORDS:
+            login_data = {
+                "email": TEST_EMAIL,
+                "password": password
+            }
+            
+            try:
+                response = self.session.post(f"{BACKEND_URL}/auth/login", json=login_data)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    self.auth_token = data["access_token"]
+                    self.session.headers.update({"Authorization": f"Bearer {self.auth_token}"})
+                    self.log(f"✅ Authentication successful with password '{password}'. User: {data['user']['name']}")
+                    return True
+                    
+            except Exception as e:
+                self.log(f"⚠️ Error trying password '{password}': {str(e)}")
+                continue
+        
+        # If all passwords failed, try to create a new test user
+        self.log("👤 All passwords failed, creating new test user...")
+        test_email = f"test_{datetime.now().strftime('%Y%m%d_%H%M%S')}@bruno.com"
+        register_data = {
+            "email": test_email,
+            "password": "test123",
+            "name": "Test User BRUNO",
+            "role": "personal"
         }
         
         try:
-            # Try to login first
-            response = self.session.post(f"{BACKEND_URL}/auth/login", json=login_data)
+            register_response = self.session.post(f"{BACKEND_URL}/auth/register", json=register_data)
             
-            if response.status_code == 200:
-                data = response.json()
+            if register_response.status_code == 201:
+                data = register_response.json()
                 self.auth_token = data["access_token"]
                 self.session.headers.update({"Authorization": f"Bearer {self.auth_token}"})
-                self.log(f"✅ Authentication successful. User: {data['user']['name']}")
+                self.log(f"✅ New test user created and authenticated: {test_email}")
                 return True
-            elif response.status_code == 401:
-                # User doesn't exist, try to register
-                self.log("👤 Demo user not found, creating...")
-                register_data = {
-                    "email": TEST_EMAIL,
-                    "password": TEST_PASSWORD,
-                    "name": "Demo User BRUNO",
-                    "role": "personal"
-                }
-                
-                register_response = self.session.post(f"{BACKEND_URL}/auth/register", json=register_data)
-                
-                if register_response.status_code == 201:
-                    data = register_response.json()
-                    self.auth_token = data["access_token"]
-                    self.session.headers.update({"Authorization": f"Bearer {self.auth_token}"})
-                    self.log(f"✅ Demo user created and authenticated. User: {data['user']['name']}")
-                    return True
-                else:
-                    self.log(f"❌ Registration failed: {register_response.status_code} - {register_response.text}", "ERROR")
-                    return False
             else:
-                self.log(f"❌ Authentication failed: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Registration failed: {register_response.status_code} - {register_response.text}", "ERROR")
                 return False
                 
         except Exception as e:
