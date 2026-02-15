@@ -874,3 +874,107 @@ select.bubble-native-select:focus {
   color: hsl(var(--foreground));
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
+
+/* ============================================
+   Spring Animations - iOS 26 Style
+   ============================================ */
+
+/* Spring button press effect */
+.spring-button {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.spring-button:active {
+  transform: scale(0.95);
+}
+
+/* Spring card hover */
+.spring-card {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              box-shadow 0.3s ease;
+}
+
+.spring-card:hover {
+  transform: translateY(-4px) scale(1.01);
+}
+
+.spring-card:active {
+  transform: translateY(-2px) scale(0.99);
+}
+
+/* Spring modal entrance */
+@keyframes spring-modal-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(20px);
+  }
+  50% {
+    transform: scale(1.03) translateY(-5px);
+  }
+  75% {
+    transform: scale(0.98) translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.spring-modal {
+  animation: spring-modal-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Spring fade in for list items */
+@keyframes spring-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(15px) scale(0.95);
+  }
+  60% {
+    transform: translateY(-3px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.spring-item {
+  animation: spring-fade-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+.spring-item:nth-child(1) { animation-delay: 0.05s; }
+.spring-item:nth-child(2) { animation-delay: 0.1s; }
+.spring-item:nth-child(3) { animation-delay: 0.15s; }
+.spring-item:nth-child(4) { animation-delay: 0.2s; }
+.spring-item:nth-child(5) { animation-delay: 0.25s; }
+.spring-item:nth-child(6) { animation-delay: 0.3s; }
+
+/* Spring icon bounce */
+@keyframes spring-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-8px);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+  70% {
+    transform: translateY(-2px);
+  }
+}
+
+.spring-bounce {
+  animation: spring-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Spring scale on tap for touch devices */
+@media (hover: none) {
+  .spring-tap:active {
+    transform: scale(0.92);
+    transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+}
+
