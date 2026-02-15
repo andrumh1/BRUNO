@@ -629,7 +629,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
                     className="flex-1"
                   />
                   <select
-                    className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                    className="bubble-native-select flex-shrink-0"
                     value={allergy.severity}
                     onChange={(e) => updateArrayItem("allergies", index, "severity", e.target.value)}
                   >
