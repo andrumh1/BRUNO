@@ -792,12 +792,14 @@ async def get_card_qr(card_id: str):
     base_color = card_dict.get('background_color', '#FF5A00')
     fill_color = base_color
 
-    # Generate QR code with high error correction (allows logo in center)
+    # Generate QR code optimizado para miniatura
+    # Versión más alta = más datos pero más resistente a errores
+    # box_size mayor = módulos más grandes = mejor lectura en miniatura
     qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,  # High error correction allows 30% damage
-        box_size=8,
-        border=2,
+        version=2,  # Versión 2 para mejor resolución
+        error_correction=qrcode.constants.ERROR_CORRECT_H,  # 30% de corrección de errores
+        box_size=12,  # Módulos más grandes para mejor lectura
+        border=3,  # Borde más amplio para mejor escaneo
     )
     qr.add_data(card_url)
     qr.make(fit=True)
@@ -808,42 +810,54 @@ async def get_card_qr(card_id: str):
     # Convert PIL image to RGB mode for manipulation
     img = img.convert('RGB')
     
-    # Add BRUNO logo in center (if logo exists)
+    # Add BRUNO logo in center (optimizado para miniatura)
     try:
+        from PIL import Image, ImageDraw
+        
         # Try to open logo from public folder
         logo_path = ROOT_DIR.parent / 'frontend' / 'public' / 'bruno-mascot.png'
         if logo_path.exists():
-            from PIL import Image
             logo = Image.open(logo_path)
             
-            # Calculate logo size (about 20% of QR code)
+            # Calculate logo size (15% para mejor legibilidad en miniatura)
             qr_width, qr_height = img.size
-            logo_size = int(qr_width * 0.2)
+            logo_size = int(qr_width * 0.15)
             
-            # Resize logo
+            # Resize logo con alta calidad
             logo = logo.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
             
-            # Add white background to logo for better contrast
-            logo_bg = Image.new('RGB', (logo_size + 20, logo_size + 20), 'white')
-            logo_bg_pos = ((logo_bg.size[0] - logo.size[0]) // 2, (logo_bg.size[1] - logo.size[1]) // 2)
+            # Crear fondo blanco circular para el logo
+            padding = 8
+            bg_size = logo_size + padding * 2
+            logo_bg = Image.new('RGBA', (bg_size, bg_size), (255, 255, 255, 0))
             
+            # Dibujar círculo blanco
+            draw = ImageDraw.Draw(logo_bg)
+            draw.ellipse([0, 0, bg_size-1, bg_size-1], fill='white', outline='white')
+            
+            # Pegar logo en el centro del círculo
+            logo_pos_in_bg = (padding, padding)
             if logo.mode == 'RGBA':
-                logo_bg.paste(logo, logo_bg_pos, logo)
+                logo_bg.paste(logo, logo_pos_in_bg, logo)
             else:
-                logo_bg.paste(logo, logo_bg_pos)
+                logo_bg.paste(logo, logo_pos_in_bg)
+            
+            # Convertir a RGB para pegar
+            logo_bg_rgb = Image.new('RGB', logo_bg.size, 'white')
+            logo_bg_rgb.paste(logo_bg, mask=logo_bg.split()[3] if logo_bg.mode == 'RGBA' else None)
             
             # Calculate position to center logo
-            logo_pos = ((qr_width - logo_bg.size[0]) // 2, (qr_height - logo_bg.size[1]) // 2)
+            logo_pos = ((qr_width - bg_size) // 2, (qr_height - bg_size) // 2)
             
             # Paste logo on QR code
-            img.paste(logo_bg, logo_pos)
+            img.paste(logo_bg_rgb, logo_pos)
     except Exception as e:
         logger.warning(f"Could not add logo to QR code: {e}")
         # Continue without logo if there's an error
     
-    # Convert to base64
+    # Convert to base64 con alta calidad
     buffer = io.BytesIO()
-    img.save(buffer, format='PNG')
+    img.save(buffer, format='PNG', optimize=True)
     buffer.seek(0)
     img_base64 = base64.b64encode(buffer.getvalue()).decode()
     
@@ -851,7 +865,7 @@ async def get_card_qr(card_id: str):
         "qr_code": f"data:image/png;base64,{img_base64}",
         "card_url": card_url,
         "color": fill_color,
-        "note": "QR permanente - nunca cambia, solo actualiza la información de la tarjeta"
+        "note": "QR optimizado para miniatura - funciona incluso impreso pequeño"
     }
 
 # ============================================================================
