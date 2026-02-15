@@ -106,15 +106,18 @@ user_problem_statement: "BRUNO - app de tarjetas digitales con feed social, plan
 backend:
   - task: "Endpoint de tarjetas públicas y campos show_in_feed/is_animated"
     implemented: true
-    working: false
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Añadidos campos show_in_feed e is_animated en modelos Card y nuevo endpoint /api/public/cards"
+      - working: true
+        agent: "testing"
+        comment: "✅ TODAS LAS PRUEBAS PASARON: 1) GET /api/public/cards funciona correctamente y filtra solo tarjetas con is_public=true y (show_in_feed=true o sin show_in_feed definido). 2) Los modelos Card/CardCreate/CardUpdate aceptan y guardan correctamente show_in_feed e is_animated. 3) GET /api/cards sigue devolviendo solo tarjetas del usuario autenticado. 4) Actualización de tarjetas con nuevos campos funciona correctamente. Corrección menor aplicada: añadido get_current_user_optional para autenticación opcional en endpoint individual de tarjetas."
 frontend:
   - task: "Nuevas plantillas visuales edge_actions/full_banner_bubble y controles de visibilidad/feed/animación"
     implemented: true
@@ -130,12 +133,11 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: true
 
 test_plan:
   current_focus:
-    - "Endpoint de tarjetas públicas y campos show_in_feed/is_animated"
     - "Nuevas plantillas y efecto dinámico/estático en Feed y vista de tarjeta"
   stuck_tasks: []
   test_all: false
@@ -144,3 +146,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Por favor probar creación/edición de tarjeta con nuevos checks (show_in_feed, is_animated), ver comportamiento en Feed público y vista /c/:cardId con plantillas edge_actions y full_banner_bubble. Usar usuario demo@bruno.com / string123."
+  - agent: "testing"
+    message: "✅ BACKEND COMPLETAMENTE FUNCIONAL: Todos los cambios recientes en BRUNO backend funcionan correctamente. El endpoint GET /api/public/cards filtra apropiadamente las tarjetas (solo públicas con show_in_feed=true o undefined). Los campos show_in_feed e is_animated se guardan y recuperan correctamente. GET /api/cards sigue funcionando solo para usuario autenticado. Se aplicó corrección menor para autenticación opcional en endpoint individual. FRONTEND pendiente de pruebas."
