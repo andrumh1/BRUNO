@@ -538,6 +538,27 @@ const translations = {
         portfolio: "Portfolio",
         availability: "Availability",
       },
+      // MASCOTAS / Pets
+      mascotas: {
+        sectionTitle: "Pet Information",
+        petName: "Pet Name",
+        species: "Species",
+        breed: "Breed",
+        age: "Age",
+        color: "Color",
+        size: "Size",
+        identifyingMarks: "Identifying Marks",
+        medicalInfo: "Medical Information",
+        vaccinated: "Vaccinated",
+        sterilized: "Sterilized",
+        microchip: "Microchip",
+        medicalConditions: "Medical Conditions",
+        vetInfo: "Veterinarian",
+        ifLostTitle: "If You Find This Pet",
+        reward: "Reward",
+        lostInstructions: "Instructions if Lost",
+        ownerContacts: "Owner Contacts",
+      },
     },
     // Card viewer
     cardView: {
