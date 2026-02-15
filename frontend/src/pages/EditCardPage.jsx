@@ -776,6 +776,15 @@ const EditCardPage = () => {
                 </>
               )}
 
+              {/* Profile-specific fields for non-curriculum types */}
+              {formData.card_type !== "curriculum" && (
+                <ProfileSpecificFields
+                  cardType={formData.card_type}
+                  customFields={formData.custom_fields}
+                  onChange={(fields) => setFormData({ ...formData, custom_fields: fields })}
+                />
+              )}
+
               {/* Redes Sociales y Contacto */}
               <Card className="glass-card">
                 <CardHeader>
