@@ -812,8 +812,6 @@ async def get_card_qr(card_id: str):
     
     # Add BRUNO logo in center (optimizado para miniatura)
     try:
-        from PIL import Image, ImageDraw
-        
         # Try to open logo from public folder
         logo_path = ROOT_DIR.parent / 'frontend' / 'public' / 'bruno-mascot.png'
         if logo_path.exists():
