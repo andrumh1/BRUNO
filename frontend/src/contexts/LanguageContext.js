@@ -419,6 +419,8 @@ const translations = {
       addCertification: "Add Certification",
       documents: "Documents",
       addDocument: "Add Document",
+      references: "Work References",
+      addReference: "Add Reference",
       downloadPDF: "Download PDF",
       company: "Company",
       position: "Position",
@@ -432,6 +434,12 @@ const translations = {
       fluent: "Fluent",
       intermediate: "Intermediate",
       basic: "Basic",
+      referenceName: "Contact Name",
+      referencePosition: "Contact Position",
+      referenceCompany: "Company",
+      referencePhone: "Phone",
+      referenceEmail: "Email",
+      referenceRelationship: "Relationship",
     },
     // Profile-specific fields
     profileFields: {
