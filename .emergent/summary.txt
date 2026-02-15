@@ -1,147 +1,172 @@
 <analysis>**original_problem_statement:**
 The user wants to build a comprehensive digital business card application called BRUNO.
+
 **PRODUCT REQUIREMENTS:**
-1.  **Card Types:** Five types (Personal, Corporate, Business, Places, Guardian).
-2.  **Card Design & Sharing:**
-    *   Blurred bubble background.
-    *   At least 3 templates per card type (15 total).
-    *   Permanent, shareable links and QR codes. QR codes must feature the BRUNO logo.
-    *   Image uploads for avatar, banner, and photo albums.
-    *   Social media links displayed with logos.
-3.  **User Profiles & Management:**
-    *   Central user profile for contact info.
-    *   Different profile levels: Public (free), Corporate, Business, and a Super-admin.
-4.  **Social & Engagement Features:**
-    *   A public Feed or Explore page as the main page of the app to view public cards, with features like comments, ratings, and likes.
-    *   A system to save/collect cards (history, favorites).
-    *   A map view to see the locations of saved cards.
-5.  **NFC Integration:** A feature to activate and write to physical NFC cards from within the app.
-6.  **App & Branding:**
-    *   Integration of the user-provided BRUNO logos.
-    *   A smart download button for PWA installation.
-    *   Pages for Contact, Help/Support, and Subscriptions/Pricing.
-    *   The app must be a PWA.
+The user has provided a large and evolving set of requirements, which have been consolidated and prioritized through conversation. The core goal is to build a highly polished, visually appealing PWA with extensive customization and social features.
+
+Key feature sets requested:
+1.  **Card Types:** Personal, Corporate, Business, Places, Guardian, and a new, detailed **CURRICULUM** type.
+2.  **Visuals & Design:**
+    *   A minimalist but bubbly/glass design inspired by modern OS aesthetics (like iOS).
+    *   A pronounced burbuja con luces (bubble with lights) effect on cards, modals, and dropdowns, with glowing borders and dynamic animations.
+    *   A specific color palette:  (off-white),  (cream beige),  (bright orange),  (grayish black).
+    *   Consistent typography across the application.
+3.  **Card Customization & Templates:**
+    *   At least 3 templates per card type, plus specific new designs (e.g., share/QR icons on avatar edge, full banner with transparent info bubble).
+    *   An option to make card animations dynamic or static ( flag).
+    *   Control over card visibility in the public feed ( flag).
+    *   Control over the visibility of individual fields on the public card.
+4.  **CURRICULUM Card Type (High Priority):**
+    *   A dedicated card type with professional resume templates.
+    *   Fields for experience, education, skills, languages, etc., added via a dynamic add more interface.
+    *   On the card, information should be accessible via icons that open large, scrollable bubble overlays.
+    *   Ability to attach documents (diplomas, certificates) that are downloadable from the card.
+    *   A feature to download the entire curriculum as a formatted PDF.
+5.  **Image Editing:** A built-in basic image editor (crop, rotate, flip, brightness/contrast) for avatar and banner uploads.
+6.  **QR Codes:** Must be customizable with the card's theme color and feature the BRUNO logo in the center, optimized for legibility at small sizes.
+7.  **Social & Feed:**
+    *   Public feed as the main page.
+    *   Features for liking, commenting, and sharing cards.
+    *   A section in the feed to view saved, scanned, or visited cards.
+    *   Option to view cards in a list or grid format.
+8.  **Internationalization (i18n):** Support for Spanish and English, with auto-detection based on browser language and a manual switcher.
+9.  **Payments & Subscriptions:**
+    *   Integration with Stripe for both one-time purchases and recurring subscriptions.
+    *   Support for payment methods in Colombia and the USA.
+10. **Architecture for External Control:** The system's API must be structured to allow a future external application to manage permissions, accessibility, and subscriptions.
+11. **SEO:** Public cards should be discoverable by search engines like Google without requiring a login.
 
 **User's preferred language**: Spanish
 
 **what currently exists?**
-A full-stack application with a React frontend and a FastAPI/MongoDB backend. Key features include full JWT/Google OAuth authentication, CRUD APIs for cards (all 5 types), user profiles, and image uploads via Cloudinary. The frontend has a PWA-ready structure with an orange-themed UI, including pages for a public feed, map, and NFC writing. The navigation has been updated to be Feed-first, and the QR code generator now embeds the BRUNO logo.
+A full-stack application with a React frontend and a FastAPI/MongoDB backend. It features JWT/Google OAuth authentication, CRUD for cards, and image uploads. The agent has implemented the backend foundation for many new features, including the CURRICULUM card type, / flags, and Stripe payments (endpoints and DB models). The frontend has the CURRICULUM type in the creation form, but the advanced editor, PDF generation, and detailed view are not implemented. Basic styling for the bubble effect has been added, but the more advanced glowing lights effect is pending. The backend for QR code generation and Stripe payments is mostly complete but not fully connected or utilized by the frontend.
 
 **Last working item**:
-- **Last item agent was working:** The agent completed a full batch of user-requested corrections: making the Feed the main page, creating a functional Edit Card page, adding the Guardian card type, ensuring the QR code has the BRUNO logo, and improving the NFC page.
-- **Status:** USER VERIFICATION PENDING
-- **Agent Testing Done:** Y
-- **Which testing method agent to use?** NA (Testing is complete for this work batch)
+- **Last item agent was working:** The agent was in the middle of a large implementation batch. It had just completed the backend work for Stripe and the basic structure for the CURRICULUM card type. The agent's plan was to proceed with the advanced CURRICULUM features and the image editor next.
+- **Status:** IN PROGRESS
+- **Agent Testing Done:** Y (Backend testing via testing agent passed for Stripe and basic CURRICULUM models)
+- **Which testing method agent to use?** both (The upcoming work involves significant frontend UI/UX and backend logic, requiring both frontend and backend testing agents upon completion of the feature batch).
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-There are no pending or in-progress issues. The list of corrections from the user has been fully implemented and tested by the agent.
+This is a large batch of features and corrections requested by the user. The agent is working through them based on a detailed plan.
+
+- **Issue 1 (P0): Implement Advanced CURRICULUM Functionality:** The base type exists, but the core features are missing.
+- **Issue 2 (P1): Implement Image Editor:** Create the modal for image manipulation (crop, rotate, adjust) upon file upload for avatars and banners.
+- **Issue 3 (P1): Implement Bubble with Lights Visuals:** Enhance the current bubble style with a more pronounced glowing border effect, more blur, and subtle animations across cards, modals, and dropdowns.
+- **Issue 4 (P1): Finalize QR Code Generation:** Connect the frontend to the improved backend QR generator to ensure it uses the card's color, has a centered logo, and is optimized for small sizes.
+- **Issue 5 (P1): Implement List/Grid View:** Add a toggle on the Dashboard and/or Feed to switch between the current grid view and a new list view for cards, and fix any dead spaces in the current layout.
+- **Issue 6 (P2): Implement Language System (i18n):** Create the logic for auto-detecting browser language (ES/EN), provide a manual switcher, and translate the main application screens.
+- **Issue 7 (P2): Connect Stripe Payments to UI:** Implement the frontend logic on the  to interact with the backend checkout endpoints for both subscriptions and one-time payments.
+- **Issue 8 (P3): Unify Typography:** Review and correct font types and sizes across all sections to ensure visual consistency.
+- **Issue 9 (P3): Style Dropdowns:** Apply the bubble/glass style to all dropdowns, select menus, and popovers ( components).
 
 **In progress Task List**:
-There are no in-progress tasks.
+- **Task 1: CURRICULUM Card Feature**
+    - **Where to resume:** Focus on the frontend implementation. Create the dynamic form editor in / for adding experience, education, skills, etc. Then, build the bubble overlay view in  that triggers from icons. Finally, implement the PDF export feature (/) and the document attachment upload/download flow.
+    - **What will be achieved with this?** Deliver one of the user's highest-priority features.
+    - **Status:** IN PROGRESS
+    - **Should Test frontend/backend/both after fix?** both
+    - **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks:**
-    *   **P1: Implement Card Templates:** Create 12 additional distinct card template designs (to reach the goal of 3 for each of the 5 card types) and integrate them into  and .
-    *   **P1: Implement Social Features:** Add functionality for liking, commenting on, and sharing cards from the .
-    *   **P2: Implement Card Collections:** Build the álbum de tarjetas where users can save cards into collections like 'favorites', 'history', etc.
+    *   **P1: Social Features:** Implement likes, comments, and advanced sharing options on cards.
+    *   **P1: Card Collections/History:** Create the álbum de tarjetas to see saved, scanned, and visited cards (user request #10).
+    *   **P2: Deepen Profile Questions:** Add more relevant questions to all card types (especially Guardian) with per-field visibility toggles (user request #8 & #9).
+    *   **P2: SEO Implementation:** Generate a  and add proper meta tags to public card pages for search engine indexing (user request #5).
 *   **Future Tasks:**
-    *   **P2: Subscription System:** Develop the subscription logic and UI for corporate and business accounts, building upon the placeholder .
-    *   **P2: Corporate Account Management:** Implement the feature for corporate admins to manage their employees' cards.
-    *   **P3: Super-Admin Panel:** Create a dedicated dashboard for the app owner to manage users and content.
-    *   **P3: Native App Conversion:** Plan the process for packaging the PWA into native iOS and Android applications.
+    *   **P2: Corporate Account Management:** Build the panel for corporate admins to manage employee cards.
+    *   **P3: Super-Admin Panel:** Create a dashboard for the app owner to manage users and content.
+    *   **P3: Native App Conversion:** Plan the process for packaging the PWA into native iOS/Android apps.
 
 **Completed work in this session**
-- **Functional Edit Card Page:** Created  which successfully fetches existing card data, allows modification, and saves changes via the backend.
-- **Navigation Reorganization:** Updated the application's routing and navigation bars (, , etc.) to make the Explorar (Feed) page the main landing page for logged-in users.
-- **Guardian Card Type Integration:** Fully integrated the fifth Guardian card type across the frontend (filters, forms, badges) and verified backend handling.
-- **QR Code with Logo:** Confirmed the backend correctly generates a QR code that embeds the BRUNO logo and uses the card's theme color. The frontend modal in  displays it correctly.
-- **NFC Page Enhancements:** Updated  to provide clearer instructions and compatibility information for users.
-- **End-to-End Testing:** Successfully created a test user and card, and performed a full testing cycle using the testing agent, which passed all frontend and backend checks.
-- **Documentation:** Created the  file in the  directory.
+- **Backend Foundation for Payments:** Integrated Stripe, created DB models for transactions, and set up API endpoints for creating checkout sessions and handling webhooks.
+- **Backend Foundation for CURRICULUM:** Added  as a  and extended backend models to support it. The system can now create and save this card type.
+- **Card Visibility Controls:** Added  and  boolean fields to the  model and integrated them into the creation/edit forms and the public feed API.
+- **New Card Templates:** Implemented the logic and UI for two new generic templates:  (icons on avatar) and  (dominant banner).
+- **UI/UX Enhancements:**
+    - The header now displays the user's name instead of just the email.
+    - The BRUNO logo now functions as a link to the homepage.
+    - Began applying the bubble visual style and color palette to  and card components.
+- **Testing:** Successfully ran backend tests for the new Stripe and CURRICULUM endpoints.
 
 **Earlier issues found/mentioned but not fixed**
-*   None.
+All pending user requests are captured in the Pending/In progress Issue list and Upcoming and Future Tasks sections. No known issues have been dropped.
 
 **Known issue recurrence from previous fork**
-*   N/A
+- N/A
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Backend:** FastAPI, Pydantic, MongoDB (), JWT (), Image manipulation (), .
+*   **Backend:** FastAPI, Pydantic, MongoDB (), JWT (), Image manipulation (), , **Stripe (new)**.
 *   **Frontend:** React, React Router, Axios, Tailwind CSS, shadcn/ui, .
 *   **Authentication:** Dual system with email/password (JWT) and Emergent-managed Google OAuth.
-*   **Architecture:** Full-stack monolith-style repository with separate  and  directories. PWA-enabled.
+*   **Architecture:** Monolithic repository with separate  and  directories. PWA-enabled.
 
 **key DB schema**
-*   **User:** , , 
-*   **UserProfile:** , , 
-*   **Card:** , , , , , , , , , 
-*   **Album:** , 
-*   **Photo:** , 
+*   **User:** , , , ****, ****, **** (new fields for payments).
+*   **Card:** , , , , , ..., , ****, ****, **** (for CURRICULUM data).
+*   **PaymentTransaction (new collection):** , , , , ,  (subscription/one-time), .
+
+**changes in tech stack**
+- **Stripe** has been added for payments. The  library is used for this.
 
 **All files of reference**
-*   : Contains all backend logic.
-*   : Defines all frontend routes.
-*   : The newly created page for editing cards.
-*   : The user's main panel with the (now fixed) Edit button.
-*   : The new primary landing page.
-*   : Displays the card and the QR code modal.
-*   : Page for writing to NFC cards.
-*   : The product requirements document.
-*   : The latest test report.
+*   : Heavily modified to include Stripe payment logic, webhook handling, and the new CURRICULUM card type model extensions.
+*   : Modified to include the  type in the selector and the / checkboxes. Needs major work for the CURRICULUM editor.
+*   : Same as .
+*   : Modified to render the  and  templates. Needs major work to display CURRICULUM data.
+*   : Not yet modified, but this is where the Stripe checkout buttons will be implemented.
+*   : Updated with new base colors and keyframe animations for the bubble effect.
+*   : Updated with a  and .
 
 **Areas that need refactoring**:
-*   The  file is over 800 lines and contains all models, routes, and logic. It should be refactored into separate modules (e.g., , , ) for better maintainability.
-*   The frontend uses component-level state (). As social features are added, introducing a global state manager (like Zustand or Redux Toolkit) would be beneficial.
+*    is now critically oversized, containing all application logic including routes, models, auth, QR generation, and now a full Stripe payment integration. It urgently needs to be broken down into a , ,  structure.
+*   The growing complexity of the app state (user info, card data, payment status, language preference) makes a global state manager (e.g., Zustand) increasingly necessary for the frontend to avoid prop-drilling.
 
 **key api endpoints**
-*   , 
-*   , 
-*   
-*    (GET, PUT)
-*    (GET all, POST create)
-*    (GET, PUT, DELETE)
-*    (GET)
-*    (POST)
+*    (GET, POST),  (GET, PUT, DELETE)
+*    (GET, new)
+*    (POST, new)
+*    (POST, new)
+*    (GET, new)
 
 **Critical Info for New Agent**
-*   All user-requested corrections have been implemented and successfully passed automated testing. The immediate next step is to wait for the user to verify these changes.
-*   Once the user confirms, the next priority is to begin work on the **Upcoming Tasks**, starting with the implementation of the 15 card templates.
-*   The application is a PWA; maintain this functionality.
-*   Refer to the newly created  for the project roadmap.
+*   The user has provided a very large list of new features and visual corrections. You are in the middle of a multi-part implementation plan that the user has approved. Do not deviate from it without confirmation.
+*   **Highest Priority:** The  card type is the most complex and important feature in the current batch. Focus on delivering a complete version, including the dynamic editor, bubble overlays for viewing details, PDF export, and document attachments.
+*   **Backend is ahead of Frontend:** The backend has foundational support for Stripe payments and the basic CURRICULUM type, but the frontend UI/UX for these features is not built yet. The next steps are heavily frontend-focused.
+*   **Follow the User's Vision:** The user has a very specific aesthetic in mind (burbuja con luces). Pay close attention to visual details, animations, and creating a polished, glassmorphism look and feel throughout the app.
 
 **documents and test reports created in this job**
-*   
-*   
+*    (viewed, not modified)
+*    (new reports generated)
+*    (updated for backend testing)
 
 **Last 10 User Messages and any pending HUMAN messages**
-- The user confirmed the agent should proceed with a specific list of corrections:
-  1.  QR code must have the Bruno logo.
-  2.  NFC system must have full permissions for Android/iOS.
-  3.  Explorar (Feed) should become the main page.
-  4.  The Edit button on cards must be fixed.
-  5.  A fifth Guardian card type should be added.
-- **Status:** All these items have been completed and are pending user verification.
+- User provided a list of 7 corrections/features (font consistency, CURRICULUM type, QR colors, image editor, list/grid view, bubble dropdowns, language switcher).
+- User clarified requirements for the CURRICULUM type (it can be a large form, should use icons that expand into overlays, and include PDF export/attachments).
+- User clarified language preference (auto-detect first, with a manual override).
+- User requested a more pronounced bubble with lights visual effect.
+- User requested the addition of a payment system for Colombia and USA and an architecture that supports external control of permissions/subscriptions.
+- User confirmed using **Stripe** and wants to support **both subscriptions and one-time payments** from the start.
+- User has repeatedly confirmed the agent's detailed plans and has been patiently waiting for the full feature batch to be completed, asking to be notified only when it's ready for review.
 
 **Project Health Check:**
-*   **Broken:** None. The previously broken Edit Card functionality and navigation have been fixed.
-*   **Mocked:**
-    *   
-    *   
-    *   
+*   **Broken:** None, but many new features are in a half-implemented state (backend done, frontend pending).
+*   **Mocked:** , . The  is about to be implemented.
 
 **3rd Party Integrations**
-*   **Emergent-managed Google Auth:** Used for Google social login.
-*   **Cloudinary (Image Management):** Uses a User-provided API Key.
-*   **Google Maps / Apple Maps:**  exists but does not yet have a formal API integration.
+*   **Emergent-managed Google Auth:** For Google social login.
+*   **Cloudinary:** For image storage (uses User-provided key).
+*   **Stripe:** For payments (subscriptions and one-time). Uses a test key from the environment.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES
+- **Testing agent used after significant changes:** YES (Backend agent for Stripe/Curriculum). Frontend agent has also been used in this session but before the latest batch of user requests.
 - **Troubleshoot agent used after agent stuck in loop:** NO
-- **Test files created:**  (report file)
+- **Test files created:** Test reports have been generated in . Test scenarios were updated in .
 - **Known regressions:** None.
 
 **Credentials to test flow:**
@@ -149,4 +174,7 @@ There are no in-progress tasks.
 *   **Password:** 
 
 **What agent forgot to execute**
-Nothing. The agent successfully completed all tasks from the user's latest request list.</analysis>
+The agent has a very large, active to-do list based on user requests. Nothing has been forgotten, but the following key items from the user's requests are still pending implementation in this batch:
+*   Social features (likes, comments, share).
+*   Deepening questions for Guardian and other profiles.
+*   SEO implementation (, meta tags).</analysis>
