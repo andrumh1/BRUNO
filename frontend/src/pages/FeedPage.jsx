@@ -336,18 +336,18 @@ const FeedPage = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Hero Section */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary/10 border border-primary/20 mb-3 sm:mb-4">
             <TrendingUp className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium">{t("feed.subtitle")}</span>
+            <span className="text-xs sm:text-sm font-medium">{t("feed.subtitle")}</span>
           </div>
-          <h1 className="text-4xl font-bold mb-4">{t("feed.title")}</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4">{t("feed.title")}</h1>
         </div>
 
         {/* View Toggle */}
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-end mb-4 sm:mb-6">
           <div className="view-toggle">
             <button
               className={viewMode === "grid" ? "active" : ""}
