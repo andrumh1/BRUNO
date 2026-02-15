@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 // Pages
 import LandingPage from "@/pages/LandingPage";
@@ -55,11 +56,13 @@ function AppRouter() {
 function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRouter />
-        </BrowserRouter>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppRouter />
+          </BrowserRouter>
+        </AuthProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

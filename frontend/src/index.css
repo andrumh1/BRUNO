@@ -2,162 +2,541 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   BRUNO - Global Styles
+   Paleta: #FFFFF3, #F5E7CA, #FF5A00, #2C2C27
+   ============================================ */
+
 body {
-    margin: 0;
-    font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-        "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-        sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-    font-family:
-        source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+/* ============================================
+   CSS Variables - Light/Dark Theme
+   ============================================ */
+
+@layer base {
+  :root {
+    /* Paleta BRUNO - modo claro */
+    --background: 60 100% 97%; /* #FFFFF3 */
+    --foreground: 60 6% 16%; /* #2C2C27 */
+    --card: 45 70% 92%; /* cercano a #F5E7CA */
+    --card-foreground: 60 6% 16%;
+    --popover: 60 100% 98%;
+    --popover-foreground: 60 6% 16%;
+    --primary: 20 100% 50%; /* #FF5A00 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 42 70% 86%;
+    --secondary-foreground: 60 6% 16%;
+    --muted: 42 60% 92%;
+    --muted-foreground: 42 20% 40%;
+    --accent: 24 95% 60%;
+    --accent-foreground: 60 6% 16%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 42 40% 85%;
+    --input: 42 40% 85%;
+    --ring: 20 100% 50%;
+    --chart-1: 20 100% 50%;
+    --chart-2: 42 70% 86%;
+    --chart-3: 30 100% 50%;
+    --chart-4: 35 90% 55%;
+    --chart-5: 40 85% 60%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Paleta BRUNO - modo oscuro */
+    --background: 60 6% 10%;
+    --foreground: 0 0% 96%;
+    --card: 60 6% 14%;
+    --card-foreground: 0 0% 96%;
+    --popover: 60 6% 14%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 20 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 60 6% 18%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 60 6% 18%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 24 95% 55%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 96%;
+    --border: 60 6% 24%;
+    --input: 60 6% 24%;
+    --ring: 20 100% 50%;
+    --chart-1: 20 100% 50%;
+    --chart-2: 24 95% 55%;
+    --chart-3: 30 100% 45%;
+    --chart-4: 35 90% 50%;
+    --chart-5: 40 85% 55%;
+  }
 }
 
 @layer base {
-    :root {
-        /* Paleta BRUNO - modo claro */
-        /* #FFFFF3 (blanco hueso) como fondo principal */
-        --background: 60 100% 97%;
-        --foreground: 60 6% 16%; /* #2C2C27 aproximado */
-        --card: 45 70% 90%; /* cercano a #F5E7CA */
-        --card-foreground: 60 6% 16%;
-        --popover: 60 100% 97%;
-        --popover-foreground: 60 6% 16%;
-        /* #FF5A00 (naranja brillante) */
-        --primary: 20 100% 50%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 42 70% 86%; /* beige crema */
-        --secondary-foreground: 60 6% 16%;
-        --muted: 42 60% 92%;
-        --muted-foreground: 42 20% 40%;
-        --accent: 24 95% 60%;
-        --accent-foreground: 60 6% 16%;
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 42 40% 85%;
-        --input: 42 40% 85%;
-        --ring: 20 100% 50%;
-        --chart-1: 20 100% 50%;
-        --chart-2: 42 70% 86%;
-        --chart-3: 30 100% 50%;
-        --chart-4: 35 90% 55%;
-        --chart-5: 40 85% 60%;
-        --radius: 0.75rem;
-    }
-    .dark {
-        /* Paleta BRUNO - modo oscuro */
-        --background: 60 6% 12%; /* cercano a #2C2C27 pero algo mss oscuro */
-        --foreground: 0 0% 96%;
-        --card: 60 6% 16%;
-        --card-foreground: 0 0% 96%;
-        --popover: 60 6% 16%;
-        --popover-foreground: 0 0% 96%;
-        --primary: 20 100% 50%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 60 6% 20%;
-        --secondary-foreground: 0 0% 96%;
-        --muted: 60 6% 20%;
-        --muted-foreground: 0 0% 70%;
-        --accent: 24 95% 55%;
-        --accent-foreground: 0 0% 96%;
-        --destructive: 0 70% 50%;
-        --destructive-foreground: 0 0% 96%;
-        --border: 60 6% 26%;
-        --input: 60 6% 26%;
-        --ring: 20 100% 50%;
-        --chart-1: 20 100% 50%;
-        --chart-2: 24 95% 55%;
-        --chart-3: 30 100% 45%;
-        --chart-4: 35 90% 50%;
-        --chart-5: 40 85% 55%;
-    }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
-@layer base {
-    * {
-        @apply border-border;
-    }
-    body {
-        @apply bg-background text-foreground;
-    }
-}
+/* ============================================
+   Animaciones - Efecto Burbuja con Luces
+   ============================================ */
 
-@layer base {
-    [data-debug-wrapper="true"] {
-        display: contents !important;
-    }
-
-    [data-debug-wrapper="true"] > * {
-        margin-left: inherit;
-        margin-right: inherit;
-        margin-top: inherit;
-        margin-bottom: inherit;
-        padding-left: inherit;
-        padding-right: inherit;
-        padding-top: inherit;
-        padding-bottom: inherit;
-        column-gap: inherit;
-        row-gap: inherit;
-        gap: inherit;
-        border-left-width: inherit;
-        border-right-width: inherit;
-        border-top-width: inherit;
-        border-bottom-width: inherit;
-        border-left-style: inherit;
-        border-right-style: inherit;
-        border-top-style: inherit;
-        border-bottom-style: inherit;
-        border-left-color: inherit;
-        border-right-color: inherit;
-
-/* Animaciones suaves tipo burbuja para tarjetas */
 @keyframes bubble-float {
-    0% {
-        transform: translateY(0px) translateX(0px);
-    }
-    50% {
-        transform: translateY(-4px) translateX(2px);
-    }
-    100% {
-        transform: translateY(0px) translateX(0px);
-    }
+  0%,
+  100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.005);
+  }
 }
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+    filter: blur(20px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(25px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes border-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(255, 90, 0, 0.3),
+      0 0 30px rgba(255, 90, 0, 0.1),
+      inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(255, 90, 0, 0.5),
+      0 0 50px rgba(255, 90, 0, 0.2),
+      inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* ============================================
+   Card Bubble Effects
+   ============================================ */
 
 .card-bubble-animated {
-    position: relative;
-    border-radius: 1.25rem;
-    overflow: hidden;
+  position: relative;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Efecto de luz interior */
 .card-bubble-animated::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    background: radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.5), transparent 55%),
-        radial-gradient(circle at 100% 100%, rgba(255, 90, 0, 0.2), transparent 55%);
-    opacity: 0.9;
-    pointer-events: none;
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+      ellipse at 20% 20%,
+      rgba(255, 255, 255, 0.4) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 80% 80%,
+      rgba(255, 90, 0, 0.15) 0%,
+      transparent 50%
+    );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Borde con brillo */
+.card-bubble-animated::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 90, 0, 0.3) 50%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  z-index: -1;
+  animation: border-glow 3s ease-in-out infinite;
 }
 
 .card-bubble-animated > * {
-    position: relative;
-    z-index: 1;
+  position: relative;
+  z-index: 2;
 }
 
 .card-bubble-animated:hover {
-    animation: bubble-float 4s ease-in-out infinite;
+  animation: bubble-float 4s ease-in-out infinite;
+  transform: translateY(-4px);
 }
 
+/* Versión estática sin animaciones */
 .card-bubble-static {
-    border-radius: 1.25rem;
+  position: relative;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
 }
 
-        border-top-color: inherit;
-        border-bottom-color: inherit;
-    }
+.card-bubble-static::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    ellipse at 20% 20%,
+    rgba(255, 255, 255, 0.3) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ============================================
+   Glass Morphism Components
+   ============================================ */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+.dark .glass-card {
+  background: rgba(44, 44, 39, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+.glass-button {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(255, 90, 0, 0.2);
+}
+
+/* ============================================
+   Dropdowns & Popovers - Glass Style
+   ============================================ */
+
+[data-radix-popper-content-wrapper] > div,
+[role="listbox"],
+[role="menu"] {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15),
+    0 0 20px rgba(255, 90, 0, 0.1),
+    inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
+  overflow: hidden;
+}
+
+.dark [data-radix-popper-content-wrapper] > div,
+.dark [role="listbox"],
+.dark [role="menu"] {
+  background: rgba(44, 44, 39, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(255, 90, 0, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Select & Dropdown items */
+[data-radix-collection-item],
+[role="option"],
+[role="menuitem"] {
+  transition: all 0.15s ease !important;
+  border-radius: 0.5rem !important;
+  margin: 2px 4px !important;
+}
+
+[data-radix-collection-item]:hover,
+[role="option"]:hover,
+[role="menuitem"]:hover,
+[data-highlighted] {
+  background: rgba(255, 90, 0, 0.1) !important;
+}
+
+/* ============================================
+   Modal & Dialog Glass Effect
+   ============================================ */
+
+[role="dialog"] > div:first-child,
+.dialog-content {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  border-radius: 1.5rem !important;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15),
+    0 0 30px rgba(255, 90, 0, 0.1) !important;
+}
+
+.dark [role="dialog"] > div:first-child,
+.dark .dialog-content {
+  background: rgba(44, 44, 39, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(255, 90, 0, 0.15) !important;
+}
+
+/* ============================================
+   Tooltips Glass Effect
+   ============================================ */
+
+[role="tooltip"] {
+  background: rgba(44, 44, 39, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* ============================================
+   Card in Lists/Grid - Hover Effects
+   ============================================ */
+
+.card-hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15),
+    0 0 20px rgba(255, 90, 0, 0.1);
+}
+
+/* ============================================
+   List View Card Style
+   ============================================ */
+
+.list-view-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 1rem;
+  transition: all 0.2s ease;
+}
+
+.list-view-card:hover {
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transform: translateX(4px);
+}
+
+.dark .list-view-card {
+  background: rgba(44, 44, 39, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .list-view-card:hover {
+  background: rgba(44, 44, 39, 0.8);
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 90, 0, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 90, 0, 0.5);
+}
+
+/* ============================================
+   Input Focus Glow
+   ============================================ */
+
+input:focus,
+textarea:focus,
+select:focus {
+  box-shadow: 0 0 0 3px rgba(255, 90, 0, 0.2),
+    0 0 15px rgba(255, 90, 0, 0.1);
+}
+
+/* ============================================
+   Button Glow on Hover
+   ============================================ */
+
+button[class*="bg-primary"]:hover {
+  box-shadow: 0 4px 20px rgba(255, 90, 0, 0.4),
+    0 0 30px rgba(255, 90, 0, 0.2);
+}
+
+/* ============================================
+   Debug Wrapper (preservar)
+   ============================================ */
+
+@layer base {
+  [data-debug-wrapper="true"] {
+    display: contents !important;
+  }
+
+  [data-debug-wrapper="true"] > * {
+    margin-left: inherit;
+    margin-right: inherit;
+    margin-top: inherit;
+    margin-bottom: inherit;
+    padding-left: inherit;
+    padding-right: inherit;
+    padding-top: inherit;
+    padding-bottom: inherit;
+    column-gap: inherit;
+    row-gap: inherit;
+    gap: inherit;
+    border-left-width: inherit;
+    border-right-width: inherit;
+    border-top-width: inherit;
+    border-bottom-width: inherit;
+    border-left-style: inherit;
+    border-right-style: inherit;
+    border-top-style: inherit;
+    border-bottom-style: inherit;
+    border-left-color: inherit;
+    border-right-color: inherit;
+    border-top-color: inherit;
+    border-bottom-color: inherit;
+  }
+}
+
+/* ============================================
+   Curriculum Overlay Bubble
+   ============================================ */
+
+.curriculum-bubble-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.curriculum-bubble-content {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 2rem;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2),
+    0 0 40px rgba(255, 90, 0, 0.1),
+    inset 0 2px 2px rgba(255, 255, 255, 0.8);
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.dark .curriculum-bubble-content {
+  background: rgba(44, 44, 39, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(255, 90, 0, 0.15),
+    inset 0 2px 2px rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================
+   View Toggle (List/Grid)
+   ============================================ */
+
+.view-toggle {
+  display: inline-flex;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.75rem;
+  gap: 4px;
+}
+
+.view-toggle button {
+  padding: 8px 12px;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.view-toggle button.active {
+  background: hsl(var(--primary));
+  color: white;
+  box-shadow: 0 2px 10px rgba(255, 90, 0, 0.3);
+}
+
+.view-toggle button:not(.active) {
+  color: hsl(var(--muted-foreground));
+}
+
+.view-toggle button:not(.active):hover {
+  background: rgba(255, 90, 0, 0.1);
+}
+
+.dark .view-toggle {
+  background: rgba(44, 44, 39, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
