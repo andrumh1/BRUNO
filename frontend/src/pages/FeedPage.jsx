@@ -22,20 +22,30 @@ const FeedPage = () => {
 
   useEffect(() => {
     fetchPublicCards();
-  }, []);
+    if (token) {
+      fetchMyCards();
+    }
+  }, [token]);
 
   const fetchPublicCards = async () => {
     try {
-      // Por ahora obtenemos todas las tarjetas
-      // TODO: Crear endpoint específico para tarjetas públicas
-      const response = await axios.get(`${API}/cards`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      setCards(response.data.filter(card => card.is_public));
+      const response = await axios.get(`${API}/public/cards`);
+      setCards(response.data);
     } catch (error) {
-      console.error("Error fetching cards:", error);
+      console.error("Error fetching public cards:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMyCards = async () => {
+    try {
+      const response = await axios.get(`${API}/cards`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMyCards(response.data);
+    } catch (error) {
+      console.error("Error fetching my cards:", error);
     }
   };
 
