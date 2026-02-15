@@ -14,51 +14,51 @@
 # Main and testing agents must follow this exact format to maintain testing data. 
 # The testing data must be entered in yaml format Below is the data structure:
 # 
-## user_problem_statement: {problem_statement}
-## backend:
-##   - task: "Task name"
-##     implemented: true
-##     working: true  # or false or "NA"
-##     file: "file_path.py"
-##     stuck_count: 0
-##     priority: "high"  # or "medium" or "low"
-##     needs_retesting: false
-##     status_history:
-##         -working: true  # or false or "NA"
-##         -agent: "main"  # or "testing" or "user"
-##         -comment: "Detailed comment about status"
-##
-## frontend:
-##   - task: "Task name"
-##     implemented: true
-##     working: true  # or false or "NA"
-##     file: "file_path.js"
-##     stuck_count: 0
-##     priority: "high"  # or "medium" or "low"
-##     needs_retesting: false
-##     status_history:
-##         -working: true  # or false or "NA"
-##         -agent: "main"  # or "testing" or "user"
-##         -comment: "Detailed comment about status"
-##
-## metadata:
-##   created_by: "main_agent"
-##   version: "1.0"
-##   test_sequence: 0
-##   run_ui: false
-##
-## test_plan:
-##   current_focus:
-##     - "Task name 1"
-##     - "Task name 2"
-##   stuck_tasks:
-##     - "Task name with persistent issues"
-##   test_all: false
-##   test_priority: "high_first"  # or "sequential" or "stuck_first"
-##
-## agent_communication:
-##     -agent: "main"  # or "testing" or "user"
-##     -message: "Communication message between agents"
+# ## user_problem_statement: {problem_statement}
+# ## backend:
+# ##   - task: "Task name"
+# ##     implemented: true
+# ##     working: true  # or false or "NA"
+# ##     file: "file_path.py"
+# ##     stuck_count: 0
+# ##     priority: "high"  # or "medium" or "low"
+# ##     needs_retesting: false
+# ##     status_history:
+# ##         -working: true  # or false or "NA"
+# ##         -agent: "main"  # or "testing" or "user"
+# ##         -comment: "Detailed comment about status"
+# ##
+# ## frontend:
+# ##   - task: "Task name"
+# ##     implemented: true
+# ##     working: true  # or false or "NA"
+# ##     file: "file_path.js"
+# ##     stuck_count: 0
+# ##     priority: "high"  # or "medium" or "low"
+# ##     needs_retesting: false
+# ##     status_history:
+# ##         -working: true  # or false or "NA"
+# ##         -agent: "main"  # or "testing" or "user"
+# ##         -comment: "Detailed comment about status"
+# ##
+# ## metadata:
+# ##   created_by: "main_agent"
+# ##   version: "1.0"
+# ##   test_sequence: 0
+# ##   run_ui: false
+# ##
+# ## test_plan:
+# ##   current_focus:
+# ##     - "Task name 1"
+# ##     - "Task name 2"
+# ##   stuck_tasks:
+# ##     - "Task name with persistent issues"
+# ##   test_all: false
+# ##   test_priority: "high_first"  # or "sequential" or "stuck_first"
+# ##
+# ## agent_communication:
+# ##     -agent: "main"  # or "testing" or "user"
+# ##     -message: "Communication message between agents"
 
 # Protocol Guidelines for Main agent
 #
@@ -83,10 +83,10 @@
 #
 # 4. Provide Context to Testing Agent:
 #    - When calling the testing agent, provide clear instructions about:
-#      - Which tasks need testing (reference the test_plan)
-#      - Any authentication details or configuration needed
-#      - Specific test scenarios to focus on
-#      - Any known issues or edge cases to verify
+#    - Which tasks need testing (reference the test_plan)
+#    - Any authentication details or configuration needed
+#    - Specific test scenarios to focus on
+#    - Any known issues or edge cases to verify
 #
 # 5. Call the testing agent with specific instructions referring to test_result.md
 #
@@ -101,3 +101,46 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "BRUNO - app de tarjetas digitales con feed social, plantillas y NFC"
+backend:
+  - task: "Endpoint de tarjetas públicas y campos show_in_feed/is_animated"
+    implemented: true
+    working: false
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Añadidos campos show_in_feed e is_animated en modelos Card y nuevo endpoint /api/public/cards"
+frontend:
+  - task: "Nuevas plantillas visuales edge_actions/full_banner_bubble y controles de visibilidad/feed/animación"
+    implemented: true
+    working: false
+    file: "frontend/src/pages/ViewCardPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Plantillas extra en TemplateSelector, variantes en ViewCardPage y Feed con cards públicas + efectos burbuja"
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "Endpoint de tarjetas públicas y campos show_in_feed/is_animated"
+    - "Nuevas plantillas y efecto dinámico/estático en Feed y vista de tarjeta"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Por favor probar creación/edición de tarjeta con nuevos checks (show_in_feed, is_animated), ver comportamiento en Feed público y vista /c/:cardId con plantillas edge_actions y full_banner_bubble. Usar usuario demo@bruno.com / string123."
