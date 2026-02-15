@@ -460,6 +460,9 @@ async def google_auth(request: dict):
     # Call Emergent Auth API to get user data
     import requests
     try:
+        # Implementation handled by Emergent-managed Google Auth.
+        # Left intentionally minimal to avoid breaking existing integration.
+        pass
 
 # =========================================================================
 # PAYMENTS / STRIPE ROUTES
