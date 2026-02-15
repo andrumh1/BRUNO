@@ -785,7 +785,7 @@ async def get_card_qr(card_id: str):
         raise HTTPException(status_code=404, detail="Card not found")
     
     # Generate QR code URL (permanent - never changes)
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://digibizcard-15.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://cardloop.preview.emergentagent.com')
     card_url = f"{frontend_url}/c/{card_id}"
     
     # Get card color (default to orange) y ajustarlo para buen contraste
