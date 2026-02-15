@@ -218,6 +218,35 @@ class CardUpdate(BaseModel):
     text_color: Optional[str] = None
     social_links: Optional[List[SocialLink]] = None
     contact_info: Optional[ContactInfo] = None
+
+# Payment Transaction Models
+class PaymentType(str):
+    SUBSCRIPTION = "subscription"
+    ONE_TIME = "one_time"
+
+
+class PaymentStatus(str):
+    PENDING = "pending"
+    PAID = "paid"
+    FAILED = "failed"
+    EXPIRED = "expired"
+
+
+class PaymentTransaction(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: Optional[str] = None
+    session_id: str
+    payment_type: str  # subscription / one_time
+    amount: float
+    currency: str
+    metadata: dict = {}
+    status: str = PaymentStatus.PENDING
+    payment_status: str = PaymentStatus.PENDING
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
     location: Optional[dict] = None
     template_id: Optional[str] = None
     custom_fields: Optional[dict] = None
