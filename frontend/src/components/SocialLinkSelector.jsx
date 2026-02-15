@@ -2,8 +2,24 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import BubbleSelect from "@/components/BubbleSelect";
 import { socialMediaConfig, getSocialIcon, getSocialColor } from "./SocialLinkButton";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Instagram, Facebook, Linkedin, Twitter, Youtube, MessageCircle, Mail, Phone, Globe, Link as LinkIcon } from "lucide-react";
+
+// Iconos para el selector
+const socialIcons = {
+  instagram: Instagram,
+  facebook: Facebook,
+  linkedin: Linkedin,
+  twitter: Twitter,
+  tiktok: MessageCircle,
+  youtube: Youtube,
+  whatsapp: MessageCircle,
+  email: Mail,
+  phone: Phone,
+  website: Globe,
+  custom: LinkIcon
+};
 
 const SocialLinkSelector = ({ links = [], onChange }) => {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -46,6 +62,17 @@ const SocialLinkSelector = ({ links = [], onChange }) => {
     onChange(links.filter((_, i) => i !== index));
   };
 
+  // Render option con icono
+  const renderSocialOption = (option, isSelected) => {
+    const Icon = socialIcons[option.value] || LinkIcon;
+    return (
+      <div className="flex items-center gap-3">
+        <Icon className="w-5 h-5 text-muted-foreground" />
+        <span className={isSelected ? "font-medium" : ""}>{option.label}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Lista de links agregados */}
@@ -58,14 +85,15 @@ const SocialLinkSelector = ({ links = [], onChange }) => {
             return (
               <div
                 key={index}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border"
-                style={{ borderColor: `${color}40`, backgroundColor: `${color}10` }}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-sm border"
+                style={{ borderColor: `${color}40`, backgroundColor: `${color}15` }}
               >
                 <Icon className="w-4 h-4" style={{ color }} />
                 <span className="text-sm font-medium">{link.label}</span>
                 <button
+                  type="button"
                   onClick={() => handleRemove(index)}
-                  className="ml-1 hover:text-destructive"
+                  className="ml-1 p-1 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -81,30 +109,26 @@ const SocialLinkSelector = ({ links = [], onChange }) => {
           type="button"
           variant="outline"
           onClick={() => setShowAddForm(true)}
-          className="w-full"
+          className="w-full h-12 rounded-xl border-2 border-dashed hover:border-primary/50 hover:bg-primary/5 transition-all"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-5 h-5 mr-2" />
           Agregar Red Social / Contacto
         </Button>
       )}
 
-      {/* Formulario para agregar */}
+      {/* Formulario para agregar - Con estilo burbuja */}
       {showAddForm && (
-        <Card>
+        <Card className="glass-card overflow-visible">
           <CardContent className="pt-6 space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo</label>
-              <select
+              <label className="text-sm font-medium">Tipo de Red Social</label>
+              <BubbleSelect
                 value={newLink.type}
-                onChange={(e) => setNewLink({ ...newLink, type: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {socialTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setNewLink({ ...newLink, type: value })}
+                options={socialTypes}
+                placeholder="Selecciona una red social"
+                renderOption={renderSocialOption}
+              />
             </div>
 
             <div className="space-y-2">
@@ -115,6 +139,7 @@ const SocialLinkSelector = ({ links = [], onChange }) => {
                  "Usuario o Enlace"}
               </label>
               <Input
+                className="h-12 rounded-xl border-2"
                 placeholder={
                   newLink.type === "instagram" ? "@usuario o https://instagram.com/usuario" :
                   newLink.type === "facebook" ? "URL de Facebook" :
@@ -134,19 +159,21 @@ const SocialLinkSelector = ({ links = [], onChange }) => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Etiqueta (opcional)</label>
               <Input
+                className="h-12 rounded-xl border-2"
                 placeholder="Ej: Mi Instagram Personal"
                 value={newLink.label}
                 onChange={(e) => setNewLink({ ...newLink, label: e.target.value })}
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-3 pt-2">
               <Button
                 type="button"
                 onClick={handleAdd}
                 disabled={!newLink.url}
-                className="flex-1"
+                className="flex-1 h-12 rounded-xl"
               >
+                <Plus className="w-4 h-4 mr-2" />
                 Agregar
               </Button>
               <Button
@@ -156,7 +183,7 @@ const SocialLinkSelector = ({ links = [], onChange }) => {
                   setShowAddForm(false);
                   setNewLink({ type: "instagram", label: "", url: "" });
                 }}
-                className="flex-1"
+                className="flex-1 h-12 rounded-xl"
               >
                 Cancelar
               </Button>
