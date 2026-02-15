@@ -101,174 +101,163 @@ class BrunoAPITester:
             self.log(f"❌ Authentication error: {str(e)}", "ERROR")
             return False
     
-    def create_test_card(self, card_data):
-        """Create a test card with specific properties"""
-        self.log(f"📝 Creating card: {card_data['title']}")
+    def test_backend_startup(self):
+        """Test that backend starts without errors"""
+        self.log("🚀 Testing backend startup...")
         
         try:
-            response = self.session.post(f"{BACKEND_URL}/cards", json=card_data)
+            response = self.session.get(f"{BACKEND_URL}/health")
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log(f"✅ Backend health check passed: {data}")
+                return True
+            else:
+                self.log(f"❌ Backend health check failed: {response.status_code} - {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Backend startup test error: {str(e)}", "ERROR")
+            return False
+    
+    def test_curriculum_card_type(self):
+        """Test that curriculum card type doesn't break existing card creation/reading"""
+        self.log("📚 Testing curriculum card type...")
+        
+        # Test creating a curriculum card
+        curriculum_card_data = {
+            "card_type": "curriculum",
+            "title": "Mi Curriculum Vitae",
+            "subtitle": "Desarrollador Full Stack",
+            "description": "Hoja de vida profesional con experiencia en desarrollo web",
+            "is_public": True,
+            "show_in_feed": True,
+            "is_animated": True
+        }
+        
+        try:
+            response = self.session.post(f"{BACKEND_URL}/cards", json=curriculum_card_data)
             
             if response.status_code == 201:
                 card = response.json()
                 self.test_cards.append(card)
-                self.log(f"✅ Card created: {card['id']} - Public: {card['is_public']}, Show in Feed: {card['show_in_feed']}, Animated: {card['is_animated']}")
-                return card
-            else:
-                self.log(f"❌ Card creation failed: {response.status_code} - {response.text}", "ERROR")
-                return None
+                self.log(f"✅ Curriculum card created successfully: {card['id']}")
                 
-        except Exception as e:
-            self.log(f"❌ Card creation error: {str(e)}", "ERROR")
-            return None
-    
-    def test_authenticated_cards_endpoint(self):
-        """Test GET /api/cards (authenticated) - should return only user's cards"""
-        self.log("🔍 Testing GET /api/cards (authenticated)...")
-        
-        try:
-            response = self.session.get(f"{BACKEND_URL}/cards")
-            
-            if response.status_code == 200:
-                cards = response.json()
-                self.log(f"✅ Authenticated cards endpoint working. Found {len(cards)} cards")
-                
-                # Verify all cards belong to authenticated user
-                for card in cards:
-                    if 'user_id' in card:
-                        self.log(f"   - Card {card['id']}: Public={card.get('is_public')}, Show in Feed={card.get('show_in_feed')}, Animated={card.get('is_animated')}")
-                
-                return True
-            else:
-                self.log(f"❌ Authenticated cards endpoint failed: {response.status_code} - {response.text}", "ERROR")
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ Authenticated cards endpoint error: {str(e)}", "ERROR")
-            return False
-    
-    def test_public_cards_endpoint(self):
-        """Test GET /api/public/cards (no authentication) - should return filtered public cards"""
-        self.log("🌐 Testing GET /api/public/cards (no authentication)...")
-        
-        # Create a new session without auth headers
-        public_session = requests.Session()
-        
-        try:
-            response = public_session.get(f"{BACKEND_URL}/public/cards")
-            
-            if response.status_code == 200:
-                cards = response.json()
-                self.log(f"✅ Public cards endpoint working. Found {len(cards)} public cards")
-                
-                # Verify filtering logic
-                for card in cards:
-                    is_public = card.get('is_public', False)
-                    show_in_feed = card.get('show_in_feed', True)  # Default to True if not set
+                # Verify card type is preserved
+                if card.get('card_type') == 'curriculum':
+                    self.log(f"✅ Card type 'curriculum' preserved correctly")
                     
-                    if not is_public:
-                        self.log(f"❌ Non-public card found in public endpoint: {card['id']}", "ERROR")
+                    # Test reading the card back
+                    get_response = self.session.get(f"{BACKEND_URL}/cards/{card['id']}")
+                    if get_response.status_code == 200:
+                        retrieved_card = get_response.json()
+                        if retrieved_card.get('card_type') == 'curriculum':
+                            self.log(f"✅ Curriculum card retrieved successfully with correct type")
+                            return True
+                        else:
+                            self.log(f"❌ Card type mismatch on retrieval: expected 'curriculum', got '{retrieved_card.get('card_type')}'", "ERROR")
+                            return False
+                    else:
+                        self.log(f"❌ Failed to retrieve curriculum card: {get_response.status_code}", "ERROR")
                         return False
-                    
-                    if show_in_feed is False:
-                        self.log(f"❌ Card with show_in_feed=False found in public endpoint: {card['id']}", "ERROR")
-                        return False
-                    
-                    self.log(f"   - Card {card['id']}: Public={is_public}, Show in Feed={show_in_feed}, Animated={card.get('is_animated')}")
-                
-                return True
-            else:
-                self.log(f"❌ Public cards endpoint failed: {response.status_code} - {response.text}", "ERROR")
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ Public cards endpoint error: {str(e)}", "ERROR")
-            return False
-    
-    def test_card_field_persistence(self):
-        """Test that new fields (show_in_feed, is_animated) are properly saved and retrieved"""
-        self.log("💾 Testing field persistence for show_in_feed and is_animated...")
-        
-        if not self.test_cards:
-            self.log("❌ No test cards available for field persistence test", "ERROR")
-            return False
-        
-        success = True
-        
-        for card in self.test_cards:
-            try:
-                # Get the card details
-                response = self.session.get(f"{BACKEND_URL}/cards/{card['id']}")
-                
-                if response.status_code == 200:
-                    retrieved_card = response.json()
-                    
-                    # Check if fields are present and match
-                    expected_show_in_feed = card.get('show_in_feed')
-                    expected_is_animated = card.get('is_animated')
-                    
-                    actual_show_in_feed = retrieved_card.get('show_in_feed')
-                    actual_is_animated = retrieved_card.get('is_animated')
-                    
-                    if expected_show_in_feed != actual_show_in_feed:
-                        self.log(f"❌ show_in_feed mismatch for card {card['id']}: expected {expected_show_in_feed}, got {actual_show_in_feed}", "ERROR")
-                        success = False
-                    
-                    if expected_is_animated != actual_is_animated:
-                        self.log(f"❌ is_animated mismatch for card {card['id']}: expected {expected_is_animated}, got {actual_is_animated}", "ERROR")
-                        success = False
-                    
-                    if success:
-                        self.log(f"✅ Field persistence verified for card {card['id']}")
-                
                 else:
-                    self.log(f"❌ Failed to retrieve card {card['id']}: {response.status_code}", "ERROR")
-                    success = False
-                    
-            except Exception as e:
-                self.log(f"❌ Field persistence test error for card {card['id']}: {str(e)}", "ERROR")
-                success = False
-        
-        return success
-    
-    def test_card_update_with_new_fields(self):
-        """Test updating cards with new fields"""
-        self.log("🔄 Testing card updates with new fields...")
-        
-        if not self.test_cards:
-            self.log("❌ No test cards available for update test", "ERROR")
+                    self.log(f"❌ Card type not preserved: expected 'curriculum', got '{card.get('card_type')}'", "ERROR")
+                    return False
+            else:
+                self.log(f"❌ Curriculum card creation failed: {response.status_code} - {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Curriculum card test error: {str(e)}", "ERROR")
             return False
+    
+    def test_stripe_checkout_endpoint(self):
+        """Test POST /api/payments/checkout endpoint"""
+        self.log("💳 Testing Stripe checkout endpoint...")
         
-        # Take the first test card and update it
-        card_to_update = self.test_cards[0]
-        
-        update_data = {
-            "show_in_feed": False,  # Change to False
-            "is_animated": False,   # Change to False
-            "title": f"{card_to_update['title']} - UPDATED"
+        checkout_data = {
+            "package_id": "nfc_basic",
+            "origin": "https://app.stage-preview.emergentagent.com"
         }
         
         try:
-            response = self.session.put(f"{BACKEND_URL}/cards/{card_to_update['id']}", json=update_data)
+            response = self.session.post(f"{BACKEND_URL}/payments/checkout", json=checkout_data)
             
             if response.status_code == 200:
-                updated_card = response.json()
+                data = response.json()
                 
-                # Verify the updates
-                if (updated_card.get('show_in_feed') == False and 
-                    updated_card.get('is_animated') == False and
-                    "UPDATED" in updated_card.get('title', '')):
-                    
-                    self.log(f"✅ Card update successful: {updated_card['id']}")
+                # Check required fields in response
+                if 'session_id' in data and 'checkout_url' in data:
+                    self.test_session_id = data['session_id']
+                    self.log(f"✅ Stripe checkout session created successfully")
+                    self.log(f"   Session ID: {data['session_id']}")
+                    self.log(f"   Checkout URL: {data['checkout_url']}")
                     return True
                 else:
-                    self.log(f"❌ Card update verification failed", "ERROR")
+                    self.log(f"❌ Missing required fields in response. Got: {list(data.keys())}", "ERROR")
                     return False
             else:
-                self.log(f"❌ Card update failed: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Stripe checkout failed: {response.status_code} - {response.text}", "ERROR")
                 return False
                 
         except Exception as e:
-            self.log(f"❌ Card update error: {str(e)}", "ERROR")
+            self.log(f"❌ Stripe checkout test error: {str(e)}", "ERROR")
+            return False
+    
+    def test_stripe_checkout_status_endpoint(self):
+        """Test GET /api/payments/checkout/status/{session_id} endpoint"""
+        self.log("📊 Testing Stripe checkout status endpoint...")
+        
+        if not self.test_session_id:
+            self.log("❌ No session ID available from checkout test", "ERROR")
+            return False
+        
+        try:
+            response = self.session.get(f"{BACKEND_URL}/payments/checkout/status/{self.test_session_id}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log(f"✅ Stripe checkout status retrieved successfully")
+                self.log(f"   Status data: {data}")
+                
+                # Check that it returns coherent status (should have status and payment_status fields)
+                if 'status' in data and 'payment_status' in data:
+                    self.log(f"✅ Status response has required fields")
+                    return True
+                else:
+                    self.log(f"❌ Missing status fields in response. Got: {list(data.keys())}", "ERROR")
+                    return False
+            else:
+                self.log(f"❌ Stripe checkout status failed: {response.status_code} - {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Stripe checkout status test error: {str(e)}", "ERROR")
+            return False
+    
+    def test_stripe_webhook_endpoint(self):
+        """Test that webhook endpoint exists and doesn't throw 500 with empty body"""
+        self.log("🔗 Testing Stripe webhook endpoint...")
+        
+        # Create a new session without auth headers for webhook test
+        webhook_session = requests.Session()
+        
+        try:
+            # Test with empty body
+            response = webhook_session.post(f"{BACKEND_URL}/webhook/stripe", 
+                                          json={},
+                                          headers={"Content-Type": "application/json"})
+            
+            # Webhook should not return 500 even with empty body
+            if response.status_code != 500:
+                self.log(f"✅ Webhook endpoint exists and handles empty body (status: {response.status_code})")
+                return True
+            else:
+                self.log(f"❌ Webhook endpoint returns 500 with empty body: {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Webhook endpoint test error: {str(e)}", "ERROR")
             return False
     
     def cleanup_test_cards(self):
