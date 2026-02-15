@@ -119,6 +119,8 @@ const translations = {
       addCertification: "Agregar Certificación",
       documents: "Documentos",
       addDocument: "Agregar Documento",
+      references: "Referencias Laborales",
+      addReference: "Agregar Referencia",
       downloadPDF: "Descargar PDF",
       company: "Empresa",
       position: "Cargo",
@@ -132,6 +134,12 @@ const translations = {
       fluent: "Fluido",
       intermediate: "Intermedio",
       basic: "Básico",
+      referenceName: "Nombre del Contacto",
+      referencePosition: "Cargo del Contacto",
+      referenceCompany: "Empresa",
+      referencePhone: "Teléfono",
+      referenceEmail: "Email",
+      referenceRelationship: "Relación",
     },
     // Campos específicos por tipo de perfil
     profileFields: {
