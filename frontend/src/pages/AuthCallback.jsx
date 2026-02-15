@@ -32,8 +32,9 @@ const AuthCallback = () => {
         // Exchange session_id for user data
         const response = await axios.post(`${API}/auth/google`, { session_id: sessionId });
         
-        // Login user
-        login(response.data.user, response.data.session_token);
+        // Login user - use access_token (JWT) for API calls
+        const token = response.data.access_token || response.data.session_token;
+        login(response.data.user, token);
         
         // Redirect to dashboard
         navigate('/dashboard', { replace: true });
