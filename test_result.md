@@ -150,3 +150,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Por favor probar: 1) creación/edición de tarjetas tipo curriculum (aunque sin bloques profesionales avanzados aún), y 2) invocación básica de /api/payments/checkout desde PricingPage o mediante curl para confirmar que la sesión de checkout se crea sin errores y que /api/payments/checkout/status responde correctamente."
+  - agent: "testing"
+    message: "✅ TESTING COMPLETADO EXITOSAMENTE - Todos los cambios recientes funcionan correctamente: BACKEND: Stripe integración 100% funcional (checkout, status, webhook), tipo curriculum se crea/lee sin problemas. FRONTEND: Tipo curriculum visible en CreateCard y EditCard con descripción correcta, TemplateSelector muestra 3 plantillas curriculum. No se encontraron errores críticos. El foco principal era backend y está completamente validado."
