@@ -121,15 +121,18 @@ backend:
 frontend:
   - task: "Tipo CURRICULUM visible en generador, plantillas base y ajustes visuales QR/burbuja"
     implemented: true
-    working: false
+    working: true
     file: "frontend/src/pages/CreateCardPage.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "main"
         comment: "Añadido tipo curriculum al selector de tipos, plantillas base de curriculum en TemplateSelector, badge de tipo curriculum en ViewCardPage y mantenido QR con ajustes de tamaño/color. Falta editor de bloques profesionales, PDF y anexos."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFICACIÓN FRONTEND COMPLETADA: 1) Tipo 'Curriculum' con descripción 'Hoja de vida profesional' aparece correctamente en CreateCardPage (línea 22), 2) Tipo 'Curriculum' también aparece en EditCardPage (línea 22), 3) TemplateSelector muestra plantillas de curriculum (curriculum_clean, curriculum_blocks, curriculum_card) sin romper el resto (líneas 45-51). Funcionalidad básica de curriculum implementada correctamente."
 metadata:
   created_by: "main_agent"
   version: "1.0"
