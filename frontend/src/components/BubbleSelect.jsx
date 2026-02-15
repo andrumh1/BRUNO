@@ -135,9 +135,9 @@ const BubbleSelect = ({
                   role="option"
                   data-value={option.value}
                   aria-selected={option.value === value}
-                  onClick={() => handleSelect(option.value)}
-                  onTouchEnd={(e) => {
+                  onClick={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     handleSelect(option.value);
                   }}
                   className={`
