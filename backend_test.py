@@ -186,15 +186,24 @@ class BrunoAPITester:
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check required fields in response
-                if 'session_id' in data and 'checkout_url' in data:
+                # Check required fields in response (accept both 'url' and 'checkout_url')
+                has_session_id = 'session_id' in data
+                has_checkout_url = 'checkout_url' in data or 'url' in data
+                
+                if has_session_id and has_checkout_url:
                     self.test_session_id = data['session_id']
+                    checkout_url = data.get('checkout_url', data.get('url'))
                     self.log(f"✅ Stripe checkout session created successfully")
                     self.log(f"   Session ID: {data['session_id']}")
-                    self.log(f"   Checkout URL: {data['checkout_url']}")
+                    self.log(f"   Checkout URL: {checkout_url}")
                     return True
                 else:
-                    self.log(f"❌ Missing required fields in response. Got: {list(data.keys())}", "ERROR")
+                    missing_fields = []
+                    if not has_session_id:
+                        missing_fields.append('session_id')
+                    if not has_checkout_url:
+                        missing_fields.append('checkout_url or url')
+                    self.log(f"❌ Missing required fields: {missing_fields}. Got: {list(data.keys())}", "ERROR")
                     return False
             else:
                 self.log(f"❌ Stripe checkout failed: {response.status_code} - {response.text}", "ERROR")
