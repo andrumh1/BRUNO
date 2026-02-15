@@ -8,7 +8,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import SocialLinkButton from "@/components/SocialLinkButton";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import axios from "axios";
-import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin } from "lucide-react";
+import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
