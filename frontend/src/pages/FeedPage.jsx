@@ -55,8 +55,10 @@ const FeedPage = () => {
       (card.subtitle && card.subtitle.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesFilter = filterType === "all" || card.card_type === filterType;
+
+    const visibleInFeed = card.show_in_feed !== false;
     
-    return matchesSearch && matchesFilter;
+    return matchesSearch && matchesFilter && visibleInFeed;
   });
 
   const handleLogout = () => {
