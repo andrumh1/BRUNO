@@ -23,18 +23,40 @@ class BrunoAPITester:
         self.session = requests.Session()
         self.auth_token = None
         self.test_cards = []
+        self.test_session_id = None
         
     def log(self, message, level="INFO"):
         timestamp = datetime.now().strftime("%H:%M:%S")
         print(f"[{timestamp}] {level}: {message}")
         
     def authenticate(self):
-        """Authenticate with demo user (try multiple passwords)"""
-        self.log("🔐 Authenticating with demo@bruno.com...")
+        """Authenticate with test user (try testuser@bruno.com first, then fallbacks)"""
+        self.log("🔐 Authenticating...")
         
-        for password in TEST_PASSWORDS:
+        # Try primary test credentials first
+        login_data = {
+            "email": TEST_EMAIL,
+            "password": TEST_PASSWORD
+        }
+        
+        try:
+            response = self.session.post(f"{BACKEND_URL}/auth/login", json=login_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.auth_token = data["access_token"]
+                self.session.headers.update({"Authorization": f"Bearer {self.auth_token}"})
+                self.log(f"✅ Authentication successful with {TEST_EMAIL}. User: {data['user']['name']}")
+                return True
+                
+        except Exception as e:
+            self.log(f"⚠️ Error with primary credentials: {str(e)}")
+        
+        # Try fallback credentials
+        self.log("Trying fallback credentials...")
+        for password in FALLBACK_PASSWORDS:
             login_data = {
-                "email": TEST_EMAIL,
+                "email": FALLBACK_EMAIL,
                 "password": password
             }
             
@@ -45,7 +67,7 @@ class BrunoAPITester:
                     data = response.json()
                     self.auth_token = data["access_token"]
                     self.session.headers.update({"Authorization": f"Bearer {self.auth_token}"})
-                    self.log(f"✅ Authentication successful with password '{password}'. User: {data['user']['name']}")
+                    self.log(f"✅ Authentication successful with {FALLBACK_EMAIL} and password '{password}'. User: {data['user']['name']}")
                     return True
                     
             except Exception as e:
@@ -53,7 +75,7 @@ class BrunoAPITester:
                 continue
         
         # If all passwords failed, try to create a new test user
-        self.log("👤 All passwords failed, creating new test user...")
+        self.log("👤 All credentials failed, creating new test user...")
         test_email = f"test_{datetime.now().strftime('%Y%m%d_%H%M%S')}@bruno.com"
         register_data = {
             "email": test_email,
