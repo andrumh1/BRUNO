@@ -19,54 +19,58 @@ code {
 
 @layer base {
     :root {
-        --background: 0 0% 100%;
-        --foreground: 24 10% 10%;
-        --card: 0 0% 100%;
-        --card-foreground: 24 10% 10%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 24 10% 10%;
-        --primary: 20 90% 48%;
+        /* Paleta BRUNO - modo claro */
+        /* #FFFFF3 (blanco hueso) como fondo principal */
+        --background: 60 100% 97%;
+        --foreground: 60 6% 16%; /* #2C2C27 aproximado */
+        --card: 45 70% 90%; /* cercano a #F5E7CA */
+        --card-foreground: 60 6% 16%;
+        --popover: 60 100% 97%;
+        --popover-foreground: 60 6% 16%;
+        /* #FF5A00 (naranja brillante) */
+        --primary: 20 100% 50%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 24 30% 95%;
-        --secondary-foreground: 24 10% 10%;
-        --muted: 24 10% 95%;
-        --muted-foreground: 24 10% 45%;
-        --accent: 25 95% 65%;
-        --accent-foreground: 24 10% 10%;
+        --secondary: 42 70% 86%; /* beige crema */
+        --secondary-foreground: 60 6% 16%;
+        --muted: 42 60% 92%;
+        --muted-foreground: 42 20% 40%;
+        --accent: 24 95% 60%;
+        --accent-foreground: 60 6% 16%;
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 98%;
-        --border: 24 20% 90%;
-        --input: 24 20% 90%;
-        --ring: 20 90% 48%;
-        --chart-1: 20 90% 48%;
-        --chart-2: 25 95% 65%;
+        --border: 42 40% 85%;
+        --input: 42 40% 85%;
+        --ring: 20 100% 50%;
+        --chart-1: 20 100% 50%;
+        --chart-2: 42 70% 86%;
         --chart-3: 30 100% 50%;
         --chart-4: 35 90% 55%;
         --chart-5: 40 85% 60%;
-        --radius: 0.5rem;
+        --radius: 0.75rem;
     }
     .dark {
-        --background: 24 10% 10%;
-        --foreground: 0 0% 95%;
-        --card: 24 10% 10%;
-        --card-foreground: 0 0% 95%;
-        --popover: 24 10% 10%;
-        --popover-foreground: 0 0% 95%;
-        --primary: 20 90% 48%;
+        /* Paleta BRUNO - modo oscuro */
+        --background: 60 6% 12%; /* cercano a #2C2C27 pero algo mss oscuro */
+        --foreground: 0 0% 96%;
+        --card: 60 6% 16%;
+        --card-foreground: 0 0% 96%;
+        --popover: 60 6% 16%;
+        --popover-foreground: 0 0% 96%;
+        --primary: 20 100% 50%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 24 10% 15%;
-        --secondary-foreground: 0 0% 95%;
-        --muted: 24 10% 15%;
-        --muted-foreground: 0 0% 65%;
-        --accent: 25 95% 50%;
-        --accent-foreground: 0 0% 95%;
+        --secondary: 60 6% 20%;
+        --secondary-foreground: 0 0% 96%;
+        --muted: 60 6% 20%;
+        --muted-foreground: 0 0% 70%;
+        --accent: 24 95% 55%;
+        --accent-foreground: 0 0% 96%;
         --destructive: 0 70% 50%;
-        --destructive-foreground: 0 0% 95%;
-        --border: 24 10% 20%;
-        --input: 24 10% 20%;
-        --ring: 20 90% 48%;
-        --chart-1: 20 90% 48%;
-        --chart-2: 25 95% 55%;
+        --destructive-foreground: 0 0% 96%;
+        --border: 60 6% 26%;
+        --input: 60 6% 26%;
+        --ring: 20 100% 50%;
+        --chart-1: 20 100% 50%;
+        --chart-2: 24 95% 55%;
         --chart-3: 30 100% 45%;
         --chart-4: 35 90% 50%;
         --chart-5: 40 85% 55%;

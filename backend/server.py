@@ -175,6 +175,8 @@ class Card(BaseModel):
     template_id: str = "default"  # Para las 12 plantillas diferentes
     custom_fields: Optional[dict] = None
     is_public: bool = True
+    show_in_feed: bool = True
+    is_animated: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     views: int = 0
@@ -195,6 +197,8 @@ class CardCreate(BaseModel):
     template_id: str = "default"
     custom_fields: Optional[dict] = None
     is_public: bool = True
+    show_in_feed: bool = True
+    is_animated: bool = True
 
 class CardUpdate(BaseModel):
     title: Optional[str] = None
@@ -211,7 +215,8 @@ class CardUpdate(BaseModel):
     template_id: Optional[str] = None
     custom_fields: Optional[dict] = None
     is_public: Optional[bool] = None
-    is_public: Optional[bool] = None
+    show_in_feed: Optional[bool] = None
+    is_animated: Optional[bool] = None
 
 # NFC Models
 
@@ -485,6 +490,31 @@ async def get_my_cards(current_user: User = Depends(get_current_user)):
     
     for card in cards:
         if isinstance(card.get('created_at'), str):
+
+@api_router.get("/public/cards", response_model=List[Card])
+async def get_public_cards():
+    """Obtener tarjetas pblicas para el Feed (sin autenticacin).
+
+    Solo devuelve tarjetas marcadas como pblicas y visibles en el Feed.
+    Las tarjetas antiguas sin el campo show_in_feed tambin se consideran visibles.
+    """
+    query = {
+        "is_public": True,
+        "$or": [
+            {"show_in_feed": True},
+            {"show_in_feed": {"$exists": False}},
+        ],
+    }
+    cards = await db.cards.find(query, {"_id": 0}).to_list(1000)
+
+    for card in cards:
+        if isinstance(card.get("created_at"), str):
+            card["created_at"] = datetime.fromisoformat(card["created_at"])
+        if isinstance(card.get("updated_at"), str):
+            card["updated_at"] = datetime.fromisoformat(card["updated_at"])
+
+    return [Card(**card) for card in cards]
+
             card['created_at'] = datetime.fromisoformat(card['created_at'])
         if isinstance(card.get('updated_at'), str):
             card['updated_at'] = datetime.fromisoformat(card['updated_at'])
