@@ -113,6 +113,50 @@ code {
         border-bottom-style: inherit;
         border-left-color: inherit;
         border-right-color: inherit;
+
+/* Animaciones suaves tipo burbuja para tarjetas */
+@keyframes bubble-float {
+    0% {
+        transform: translateY(0px) translateX(0px);
+    }
+    50% {
+        transform: translateY(-4px) translateX(2px);
+    }
+    100% {
+        transform: translateY(0px) translateX(0px);
+    }
+}
+
+.card-bubble-animated {
+    position: relative;
+    border-radius: 1.25rem;
+    overflow: hidden;
+}
+
+.card-bubble-animated::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.5), transparent 55%),
+        radial-gradient(circle at 100% 100%, rgba(255, 90, 0, 0.2), transparent 55%);
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+.card-bubble-animated > * {
+    position: relative;
+    z-index: 1;
+}
+
+.card-bubble-animated:hover {
+    animation: bubble-float 4s ease-in-out infinite;
+}
+
+.card-bubble-static {
+    border-radius: 1.25rem;
+}
+
         border-top-color: inherit;
         border-bottom-color: inherit;
     }
