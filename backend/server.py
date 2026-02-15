@@ -521,12 +521,6 @@ async def get_public_cards():
 
     return [Card(**card) for card in cards]
 
-            card['created_at'] = datetime.fromisoformat(card['created_at'])
-        if isinstance(card.get('updated_at'), str):
-            card['updated_at'] = datetime.fromisoformat(card['updated_at'])
-    
-    return cards
-
 @api_router.get("/cards/{card_id}", response_model=Card)
 async def get_card(card_id: str, current_user: Optional[User] = None):
     card_dict = await db.cards.find_one({"id": card_id}, {"_id": 0})
