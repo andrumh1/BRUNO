@@ -42,6 +42,9 @@ function AppRouter() {
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/help" element={<HelpPage />} />
       <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/store" element={<StorePage />} />
+      <Route path="/store/success" element={<StorePage />} />
+      <Route path="/store/cancel" element={<StorePage />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/cards/new" element={<CreateCardPage />} />
       <Route path="/cards/:cardId/edit" element={<EditCardPage />} />
