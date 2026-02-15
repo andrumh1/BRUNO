@@ -187,6 +187,8 @@ const CreateCardPage = () => {
         return { name: "", issuer: "", date: "", url: "" };
       case "documents":
         return { name: "", url: "", type: "pdf" };
+      case "references":
+        return { name: "", position: "", company: "", relationship: "", phone: "", email: "" };
       default:
         return {};
     }
