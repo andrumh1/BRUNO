@@ -226,7 +226,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t("profileFields.negocio.businessType")}</label>
                 <select
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  className={selectClassName}
                   value={customFields.businessType || ""}
                   onChange={(e) => updateField("businessType", e.target.value)}
                 >
@@ -262,7 +262,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t("profileFields.negocio.priceRange")}</label>
                 <select
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  className={selectClassName}
                   value={customFields.priceRange || ""}
                   onChange={(e) => updateField("priceRange", e.target.value)}
                 >
@@ -415,7 +415,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
             <div className="space-y-2">
               <label className="text-sm font-medium">{t("profileFields.lugares.locationType")}</label>
               <select
-                className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                className={selectClassName}
                 value={customFields.locationType || ""}
                 onChange={(e) => updateField("locationType", e.target.value)}
               >
@@ -552,7 +552,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t("profileFields.guardian.relationship")}</label>
                 <select
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  className={selectClassName}
                   value={customFields.relationship || ""}
                   onChange={(e) => updateField("relationship", e.target.value)}
                 >
@@ -570,7 +570,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t("profileFields.guardian.bloodType")}</label>
                 <select
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  className={selectClassName}
                   value={customFields.bloodType || ""}
                   onChange={(e) => updateField("bloodType", e.target.value)}
                 >
@@ -788,7 +788,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t("profileFields.mascotas.species")}</label>
                 <select
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  className={selectClassName}
                   value={customFields.species || ""}
                   onChange={(e) => updateField("species", e.target.value)}
                 >
@@ -834,7 +834,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t("profileFields.mascotas.size")}</label>
                 <select
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  className={selectClassName}
                   value={customFields.size || ""}
                   onChange={(e) => updateField("size", e.target.value)}
                 >
@@ -871,7 +871,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t("profileFields.mascotas.vaccinated")}</label>
                 <select
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  className={selectClassName}
                   value={customFields.vaccinated || ""}
                   onChange={(e) => updateField("vaccinated", e.target.value)}
                 >
@@ -884,7 +884,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">{t("profileFields.mascotas.sterilized")}</label>
                 <select
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                  className={selectClassName}
                   value={customFields.sterilized || ""}
                   onChange={(e) => updateField("sterilized", e.target.value)}
                 >
