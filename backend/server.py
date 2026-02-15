@@ -281,6 +281,16 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))) -> Optional[User]:
+    """Get current user from JWT token or session_token cookie (optional - returns None if not authenticated)"""
+    if not credentials:
+        return None
+    
+    try:
+        return await get_current_user(credentials)
+    except HTTPException:
+        return None
+
 async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> User:
     """Get current user from JWT token or session_token cookie"""
     from fastapi import Request
