@@ -486,10 +486,16 @@ async def create_card(card_input: CardCreate, current_user: User = Depends(get_c
 
 @api_router.get("/cards", response_model=List[Card])
 async def get_my_cards(current_user: User = Depends(get_current_user)):
+    """Obtener las tarjetas del usuario autenticado (panel y gestión)."""
     cards = await db.cards.find({"user_id": current_user.id}, {"_id": 0}).to_list(1000)
     
     for card in cards:
         if isinstance(card.get('created_at'), str):
+            card['created_at'] = datetime.fromisoformat(card['created_at'])
+        if isinstance(card.get('updated_at'), str):
+            card['updated_at'] = datetime.fromisoformat(card['updated_at'])
+    
+    return cards
 
 @api_router.get("/public/cards", response_model=List[Card])
 async def get_public_cards():
