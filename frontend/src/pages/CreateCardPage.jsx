@@ -234,36 +234,34 @@ const CreateCardPage = () => {
           {/* Form */}
           <div>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Tipo de Tarjeta */}
+              {/* Tipo de Tarjeta - Dropdown */}
               <Card className="glass-card">
                 <CardHeader>
                   <CardTitle>{t("cardForm.cardType")}</CardTitle>
                   <CardDescription>{t("cardForm.selectType")}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {cardTypes.map((type) => (
-                    <label
-                      key={type.value}
-                      className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        formData.card_type === type.value
-                          ? "border-primary bg-primary/5 shadow-md"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="card_type"
-                        value={type.value}
-                        checked={formData.card_type === type.value}
-                        onChange={() => handleCardTypeChange(type.value)}
-                        className="mt-1"
-                      />
-                      <div>
-                        <div className="font-medium">{type.label}</div>
-                        <div className="text-sm text-muted-foreground">{type.desc}</div>
-                      </div>
-                    </label>
-                  ))}
+                <CardContent>
+                  <select
+                    value={formData.card_type}
+                    onChange={(e) => handleCardTypeChange(e.target.value)}
+                    className="flex h-12 w-full rounded-xl border-2 border-input bg-background px-4 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
+                  >
+                    {cardTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label} - {type.desc}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {/* Preview del tipo seleccionado */}
+                  <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                    <div className="font-medium text-primary">
+                      {cardTypes.find(t => t.value === formData.card_type)?.label}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {cardTypes.find(t => t.value === formData.card_type)?.desc}
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
 
