@@ -101,9 +101,14 @@ const Dashboard = () => {
       <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/bruno-logo.png" alt="BRUNO" className="h-10" />
+            <button onClick={() => navigate("/")} className="flex items-center gap-3 group">
+              <img src="/bruno-logo.png" alt="BRUNO" className="h-10 group-hover:scale-105 transition-transform" />
+            </button>
             <div>
-              <p className="text-sm text-muted-foreground">{user?.email}</p>
+              <p className="text-sm font-semibold">
+                {user?.name || user?.email?.split("@")[0]}
+              </p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
