@@ -819,32 +819,36 @@ async def get_card_qr(card_id: str):
             logo = Image.open(logo_path)
             logger.info(f"QR: Logo loaded, mode: {logo.mode}, size: {logo.size}")
             
-            # Calculate logo size (18% para mejor visibilidad)
+            # Calculate logo size (20% del QR para mejor visibilidad)
             qr_width, qr_height = img.size
-            logo_size = int(qr_width * 0.18)
+            max_logo_size = int(qr_width * 0.20)
+            
+            # Mantener proporción del logo
+            logo_w, logo_h = logo.size
+            ratio = min(max_logo_size / logo_w, max_logo_size / logo_h)
+            new_w = int(logo_w * ratio)
+            new_h = int(logo_h * ratio)
             
             # Resize logo con alta calidad
-            logo = logo.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
+            logo = logo.resize((new_w, new_h), Image.Resampling.LANCZOS)
             
-            # Crear fondo blanco circular para el logo
-            padding = 10
-            bg_size = logo_size + padding * 2
+            # Crear fondo blanco cuadrado para el logo
+            padding = 12
+            bg_size = max(new_w, new_h) + padding * 2
             logo_bg = Image.new('RGBA', (bg_size, bg_size), (255, 255, 255, 255))
             
-            # Dibujar círculo blanco sólido
-            draw = ImageDraw.Draw(logo_bg)
-            draw.ellipse([0, 0, bg_size-1, bg_size-1], fill=(255, 255, 255, 255))
+            # Centrar logo en el fondo
+            logo_x = (bg_size - new_w) // 2
+            logo_y = (bg_size - new_h) // 2
             
-            # Pegar logo en el centro del círculo
-            logo_pos_in_bg = (padding, padding)
             if logo.mode == 'RGBA':
-                logo_bg.paste(logo, logo_pos_in_bg, logo)
+                logo_bg.paste(logo, (logo_x, logo_y), logo)
             else:
-                logo_bg.paste(logo, logo_pos_in_bg)
+                logo_bg.paste(logo, (logo_x, logo_y))
             
-            # Calculate position to center logo
+            # Calculate position to center logo in QR
             logo_pos = ((qr_width - bg_size) // 2, (qr_height - bg_size) // 2)
-            logger.info(f"QR: Pasting logo at {logo_pos}, bg_size: {bg_size}")
+            logger.info(f"QR: Pasting logo at {logo_pos}, bg_size: {bg_size}, logo size: {new_w}x{new_h}")
             
             # Convert logo_bg to RGB for final paste
             final_logo = Image.new('RGB', logo_bg.size, (255, 255, 255))
