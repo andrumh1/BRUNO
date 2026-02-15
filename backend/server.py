@@ -814,24 +814,26 @@ async def get_card_qr(card_id: str):
     try:
         # Try to open logo from public folder
         logo_path = ROOT_DIR.parent / 'frontend' / 'public' / 'bruno-mascot.png'
+        logger.info(f"QR: Looking for logo at {logo_path}, exists: {logo_path.exists()}")
         if logo_path.exists():
             logo = Image.open(logo_path)
+            logger.info(f"QR: Logo loaded, mode: {logo.mode}, size: {logo.size}")
             
-            # Calculate logo size (15% para mejor legibilidad en miniatura)
+            # Calculate logo size (18% para mejor visibilidad)
             qr_width, qr_height = img.size
-            logo_size = int(qr_width * 0.15)
+            logo_size = int(qr_width * 0.18)
             
             # Resize logo con alta calidad
             logo = logo.resize((logo_size, logo_size), Image.Resampling.LANCZOS)
             
             # Crear fondo blanco circular para el logo
-            padding = 8
+            padding = 10
             bg_size = logo_size + padding * 2
-            logo_bg = Image.new('RGBA', (bg_size, bg_size), (255, 255, 255, 0))
+            logo_bg = Image.new('RGBA', (bg_size, bg_size), (255, 255, 255, 255))
             
-            # Dibujar círculo blanco
+            # Dibujar círculo blanco sólido
             draw = ImageDraw.Draw(logo_bg)
-            draw.ellipse([0, 0, bg_size-1, bg_size-1], fill='white', outline='white')
+            draw.ellipse([0, 0, bg_size-1, bg_size-1], fill=(255, 255, 255, 255))
             
             # Pegar logo en el centro del círculo
             logo_pos_in_bg = (padding, padding)
@@ -840,17 +842,21 @@ async def get_card_qr(card_id: str):
             else:
                 logo_bg.paste(logo, logo_pos_in_bg)
             
-            # Convertir a RGB para pegar
-            logo_bg_rgb = Image.new('RGB', logo_bg.size, 'white')
-            logo_bg_rgb.paste(logo_bg, mask=logo_bg.split()[3] if logo_bg.mode == 'RGBA' else None)
-            
             # Calculate position to center logo
             logo_pos = ((qr_width - bg_size) // 2, (qr_height - bg_size) // 2)
+            logger.info(f"QR: Pasting logo at {logo_pos}, bg_size: {bg_size}")
+            
+            # Convert logo_bg to RGB for final paste
+            final_logo = Image.new('RGB', logo_bg.size, (255, 255, 255))
+            final_logo.paste(logo_bg, mask=logo_bg.split()[3])
             
             # Paste logo on QR code
-            img.paste(logo_bg_rgb, logo_pos)
+            img.paste(final_logo, logo_pos)
+            logger.info("QR: Logo added successfully")
+        else:
+            logger.warning(f"QR: Logo file not found at {logo_path}")
     except Exception as e:
-        logger.warning(f"Could not add logo to QR code: {e}")
+        logger.error(f"Could not add logo to QR code: {e}", exc_info=True)
         # Continue without logo if there's an error
     
     # Convert to base64 con alta calidad
