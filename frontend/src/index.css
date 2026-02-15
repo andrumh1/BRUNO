@@ -626,3 +626,228 @@ button[class*="bg-primary"]:hover {
   background: rgba(44, 44, 39, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+
+/* ============================================
+   BubbleSelect - iOS 26 Style Dropdown
+   ============================================ */
+
+.bubble-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.bubble-select-trigger {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 1rem;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 0 15px rgba(255, 90, 0, 0.05),
+    inset 0 1px 2px rgba(255, 255, 255, 0.8);
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}
+
+.bubble-select-trigger:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 90, 0, 0.3);
+  box-shadow: 
+    0 6px 25px rgba(0, 0, 0, 0.1),
+    0 0 20px rgba(255, 90, 0, 0.1),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
+.bubble-select-trigger:focus {
+  outline: none;
+  border-color: rgba(255, 90, 0, 0.5);
+  box-shadow: 
+    0 0 0 4px rgba(255, 90, 0, 0.15),
+    0 6px 25px rgba(0, 0, 0, 0.1),
+    0 0 20px rgba(255, 90, 0, 0.15),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
+.bubble-select-trigger-open {
+  border-color: rgba(255, 90, 0, 0.4);
+  box-shadow: 
+    0 8px 30px rgba(0, 0, 0, 0.12),
+    0 0 25px rgba(255, 90, 0, 0.12),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
+.dark .bubble-select-trigger {
+  background: rgba(44, 44, 39, 0.7);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.2),
+    0 0 15px rgba(255, 90, 0, 0.08),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+.dark .bubble-select-trigger:hover:not(:disabled) {
+  background: rgba(44, 44, 39, 0.85);
+  border-color: rgba(255, 90, 0, 0.4);
+}
+
+/* Options Container */
+.bubble-select-options {
+  animation: bubble-dropdown-in 0.2s ease-out;
+}
+
+@keyframes bubble-dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.bubble-select-options-inner {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 1.25rem;
+  box-shadow: 
+    0 15px 50px rgba(0, 0, 0, 0.15),
+    0 0 30px rgba(255, 90, 0, 0.08),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  padding: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dark .bubble-select-options-inner {
+  background: rgba(44, 44, 39, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    0 15px 50px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(255, 90, 0, 0.12),
+    inset 0 1px 2px rgba(255, 255, 255, 0.08);
+}
+
+/* Individual Option */
+.bubble-select-option {
+  background: transparent;
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  color: hsl(var(--foreground));
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bubble-select-option:hover,
+.bubble-select-option:focus {
+  background: rgba(255, 90, 0, 0.08);
+  outline: none;
+}
+
+.bubble-select-option:active {
+  background: rgba(255, 90, 0, 0.15);
+  transform: scale(0.98);
+}
+
+.bubble-select-option-selected {
+  background: rgba(255, 90, 0, 0.1);
+  font-weight: 600;
+}
+
+.bubble-select-option-selected:hover {
+  background: rgba(255, 90, 0, 0.15);
+}
+
+/* Mobile Optimizations */
+@media (max-width: 640px) {
+  .bubble-select-trigger {
+    min-height: 52px;
+    font-size: 1rem;
+    padding: 14px 16px;
+  }
+  
+  .bubble-select-option {
+    min-height: 48px;
+    font-size: 1rem;
+    padding: 12px 16px;
+  }
+  
+  .bubble-select-options-inner {
+    max-height: 50vh;
+    border-radius: 1.5rem;
+    padding: 10px;
+  }
+}
+
+/* Scrollbar for options */
+.bubble-select-options-inner::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bubble-select-options-inner::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bubble-select-options-inner::-webkit-scrollbar-thumb {
+  background: rgba(255, 90, 0, 0.25);
+  border-radius: 3px;
+}
+
+.bubble-select-options-inner::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 90, 0, 0.4);
+}
+
+/* ============================================
+   Native Select iOS Style Override
+   ============================================ */
+
+select.bubble-native-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 1rem;
+  padding: 14px 40px 14px 16px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 0 15px rgba(255, 90, 0, 0.05),
+    inset 0 1px 2px rgba(255, 255, 255, 0.8);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 20px;
+  transition: all 0.2s ease;
+}
+
+select.bubble-native-select:hover {
+  background-color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 90, 0, 0.3);
+}
+
+select.bubble-native-select:focus {
+  outline: none;
+  border-color: rgba(255, 90, 0, 0.5);
+  box-shadow: 
+    0 0 0 4px rgba(255, 90, 0, 0.15),
+    0 6px 25px rgba(0, 0, 0, 0.1);
+}
+
+.dark select.bubble-native-select {
+  background-color: rgba(44, 44, 39, 0.7);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: hsl(var(--foreground));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
