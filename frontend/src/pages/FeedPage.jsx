@@ -71,7 +71,7 @@ const FeedPage = () => {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <Link to="/">
-              <img src="/bruno-logo.png" alt="BRUNO" className="h-10" />
+              <img src="/bruno-logo.png" alt="BRUNO" className="h-10 hover:scale-105 transition-transform" />
             </Link>
             <div className="flex items-center gap-2">
               {user ? (
