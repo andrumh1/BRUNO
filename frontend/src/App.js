@@ -21,6 +21,7 @@ import PricingPage from "@/pages/PricingPage";
 import FeedPage from "@/pages/FeedPage";
 import MapPage from "@/pages/MapPage";
 import EditCardPage from "@/pages/EditCardPage";
+import StorePage from "@/pages/StorePage";
 
 function AppRouter() {
   const location = useLocation();
