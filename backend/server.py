@@ -457,12 +457,9 @@ async def google_auth(request: dict):
     if not session_id:
         raise HTTPException(status_code=400, detail="session_id required")
     
-    # Call Emergent Auth API to get user data
-    import requests
-    try:
-        # Implementation handled by Emergent-managed Google Auth.
-        # Left intentionally minimal to avoid breaking existing integration.
-        pass
+    # Implementación real gestionada por Emergent Auth.
+    # Este stub existe solo para mantener compatibilidad y no se modifica.
+    return {"message": "Google auth is handled externally"}
 
 # =========================================================================
 # PAYMENTS / STRIPE ROUTES
