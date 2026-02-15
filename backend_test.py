@@ -275,59 +275,25 @@ class BrunoAPITester:
                 self.log(f"⚠️ Error deleting card {card['id']}: {str(e)}")
     
     def run_tests(self):
-        """Run all tests"""
-        self.log("🚀 Starting BRUNO Backend API Tests")
+        """Run all tests for Stripe integration and curriculum card type"""
+        self.log("🚀 Starting BRUNO Backend API Tests - Stripe & Curriculum")
         self.log(f"Backend URL: {BACKEND_URL}")
         
-        # Step 1: Authenticate
+        # Step 1: Test backend startup
+        if not self.test_backend_startup():
+            self.log("❌ Backend startup test failed, continuing with other tests...")
+        
+        # Step 2: Authenticate
         if not self.authenticate():
-            return False
-        
-        # Step 2: Create test cards with different combinations
-        test_card_configs = [
-            {
-                "card_type": "personal",
-                "title": "Test Card 1 - Public + Feed + Animated",
-                "subtitle": "Testing public visibility",
-                "description": "This card should appear in public feed",
-                "is_public": True,
-                "show_in_feed": True,
-                "is_animated": True
-            },
-            {
-                "card_type": "personal", 
-                "title": "Test Card 2 - Public + No Feed + Not Animated",
-                "subtitle": "Testing feed exclusion",
-                "description": "This card should NOT appear in public feed",
-                "is_public": True,
-                "show_in_feed": False,
-                "is_animated": False
-            },
-            {
-                "card_type": "personal",
-                "title": "Test Card 3 - Private + Feed + Animated",
-                "subtitle": "Testing private card",
-                "description": "This card should NOT appear in public feed (private)",
-                "is_public": False,
-                "show_in_feed": True,
-                "is_animated": True
-            }
-        ]
-        
-        self.log("📝 Creating test cards...")
-        for config in test_card_configs:
-            self.create_test_card(config)
-        
-        if not self.test_cards:
-            self.log("❌ No test cards created, cannot continue tests", "ERROR")
+            self.log("❌ Authentication failed, cannot continue with authenticated tests", "ERROR")
             return False
         
         # Step 3: Run tests
         tests = [
-            ("Field Persistence", self.test_card_field_persistence),
-            ("Authenticated Cards Endpoint", self.test_authenticated_cards_endpoint),
-            ("Public Cards Endpoint", self.test_public_cards_endpoint),
-            ("Card Update with New Fields", self.test_card_update_with_new_fields),
+            ("Curriculum Card Type", self.test_curriculum_card_type),
+            ("Stripe Checkout Endpoint", self.test_stripe_checkout_endpoint),
+            ("Stripe Checkout Status Endpoint", self.test_stripe_checkout_status_endpoint),
+            ("Stripe Webhook Endpoint", self.test_stripe_webhook_endpoint),
         ]
         
         results = {}
@@ -339,9 +305,9 @@ class BrunoAPITester:
         self.cleanup_test_cards()
         
         # Step 5: Summary
-        self.log("\n" + "="*50)
-        self.log("📊 TEST RESULTS SUMMARY")
-        self.log("="*50)
+        self.log("\n" + "="*60)
+        self.log("📊 TEST RESULTS SUMMARY - STRIPE & CURRICULUM")
+        self.log("="*60)
         
         all_passed = True
         for test_name, passed in results.items():
@@ -350,7 +316,7 @@ class BrunoAPITester:
             if not passed:
                 all_passed = False
         
-        self.log("="*50)
+        self.log("="*60)
         if all_passed:
             self.log("🎉 ALL TESTS PASSED!")
         else:
