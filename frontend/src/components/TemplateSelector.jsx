@@ -42,6 +42,13 @@ const templates = {
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
   ],
+  curriculum: [
+    { id: "curriculum_clean", name: "Curriculum limpio", preview: "Layout tipo hoja de vida minimalista" },
+    { id: "curriculum_blocks", name: "Curriculum bloques", preview: "Secciones destacadas por bloques" },
+    { id: "curriculum_card", name: "Curriculum tarjeta", preview: "Perfil compacto con detalles expandibles" },
+    { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
+    { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+  ],
 };
 
 const TemplateSelector = ({ cardType, selectedTemplate, onChange }) => {
