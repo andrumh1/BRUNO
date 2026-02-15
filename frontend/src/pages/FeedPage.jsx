@@ -244,6 +244,12 @@ const FeedPage = () => {
               <img src="/bruno-logo.png" alt="BRUNO" className="bruno-logo hover:scale-105 transition-transform" />
             </Link>
             <div className="flex items-center gap-1 sm:gap-2">
+              {/* Store Icon */}
+              <Link to="/store">
+                <Button variant="ghost" size="icon" className="relative spring-button" title="Tienda PIUP">
+                  <ShoppingBag className="w-5 h-5" />
+                </Button>
+              </Link>
               <LanguageSwitcher variant="minimal" />
               {user ? (
                 <>
