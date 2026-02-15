@@ -822,9 +822,9 @@ async def get_card_qr(card_id: str):
             logo = Image.open(logo_path)
             logger.info(f"QR: Logo loaded, mode: {logo.mode}, size: {logo.size}")
             
-            # Calculate logo size (20% del QR para mejor visibilidad)
+            # Calculate logo size (22% del QR para mejor visibilidad)
             qr_width, qr_height = img.size
-            max_logo_size = int(qr_width * 0.20)
+            max_logo_size = int(qr_width * 0.22)
             
             # Mantener proporción del logo
             logo_w, logo_h = logo.size
@@ -835,8 +835,12 @@ async def get_card_qr(card_id: str):
             # Resize logo con alta calidad
             logo = logo.resize((new_w, new_h), Image.Resampling.LANCZOS)
             
-            # Crear fondo blanco cuadrado para el logo
-            padding = 12
+            # Convertir a RGBA si no lo es
+            if logo.mode != 'RGBA':
+                logo = logo.convert('RGBA')
+            
+            # Crear fondo blanco cuadrado para el logo con bordes redondeados
+            padding = 15
             bg_size = max(new_w, new_h) + padding * 2
             logo_bg = Image.new('RGBA', (bg_size, bg_size), (255, 255, 255, 255))
             
@@ -844,16 +848,14 @@ async def get_card_qr(card_id: str):
             logo_x = (bg_size - new_w) // 2
             logo_y = (bg_size - new_h) // 2
             
-            if logo.mode == 'RGBA':
-                logo_bg.paste(logo, (logo_x, logo_y), logo)
-            else:
-                logo_bg.paste(logo, (logo_x, logo_y))
+            # Pegar logo con máscara de transparencia
+            logo_bg.paste(logo, (logo_x, logo_y), logo)
             
             # Calculate position to center logo in QR
             logo_pos = ((qr_width - bg_size) // 2, (qr_height - bg_size) // 2)
             logger.info(f"QR: Pasting logo at {logo_pos}, bg_size: {bg_size}, logo size: {new_w}x{new_h}")
             
-            # Convert logo_bg to RGB for final paste
+            # Convert logo_bg to RGB for final paste (QR es RGB)
             final_logo = Image.new('RGB', logo_bg.size, (255, 255, 255))
             final_logo.paste(logo_bg, mask=logo_bg.split()[3])
             
