@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 BRUNO Backend API Testing Script
-Tests the recent changes for public cards endpoint and new fields (show_in_feed, is_animated)
+Tests the recent changes for Stripe integration and curriculum card type
 """
 
 import requests
@@ -12,9 +12,11 @@ from datetime import datetime
 # Get backend URL from frontend .env
 BACKEND_URL = "https://cardshare-app-2.preview.emergentagent.com/api"
 
-# Test credentials - try multiple passwords
-TEST_EMAIL = "demo@bruno.com"
-TEST_PASSWORDS = ["string123", "demo123", "password", "123456", "demo"]
+# Test credentials - as specified in review request
+TEST_EMAIL = "testuser@bruno.com"
+TEST_PASSWORD = "test123"
+FALLBACK_EMAIL = "demo@bruno.com"
+FALLBACK_PASSWORDS = ["string123", "demo123", "password", "123456", "demo"]
 
 class BrunoAPITester:
     def __init__(self):
