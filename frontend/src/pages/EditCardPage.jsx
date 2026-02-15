@@ -39,6 +39,7 @@ const EditCardPage = () => {
     { value: "lugares", label: t("cards.types.lugares"), desc: t("cards.typeDescriptions.lugares") },
     { value: "guardian", label: t("cards.types.guardian"), desc: t("cards.typeDescriptions.guardian") },
     { value: "curriculum", label: t("cards.types.curriculum"), desc: t("cards.typeDescriptions.curriculum") },
+    { value: "mascotas", label: t("cards.types.mascotas"), desc: t("cards.typeDescriptions.mascotas") },
   ];
 
   const [formData, setFormData] = useState({
