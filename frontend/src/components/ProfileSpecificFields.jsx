@@ -5,6 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Building2, Store, MapPin, Heart, User, Star, Clock, Camera, Link as LinkIcon, AlertTriangle, Phone, Pill, PawPrint } from "lucide-react";
 
+// Clase común para selects con estilo burbuja iOS
+const selectClassName = "bubble-native-select w-full";
+
 const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
   const { t } = useLanguage();
 
