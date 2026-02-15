@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { 
   RotateCcw, 
   RotateCw, 
@@ -10,7 +9,8 @@ import {
   Contrast,
   Crop,
   Check,
-  X
+  X,
+  RefreshCw
 } from "lucide-react";
 
 const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
@@ -25,20 +25,50 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
   const [cropStart, setCropStart] = useState(null);
   const [cropEnd, setCropEnd] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
 
-  // Cargar imagen original
+  // Cargar imagen original - manejo mejorado para data URLs y URLs remotas
   useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      setOriginalImage(img);
-      setLoading(false);
+    const loadImage = async () => {
+      setLoading(true);
+      const img = new Image();
+      
+      // Si es un data URL (base64), no necesita crossOrigin
+      if (imageUrl.startsWith('data:')) {
+        img.onload = () => {
+          setOriginalImage(img);
+          setLoading(false);
+        };
+        img.onerror = (e) => {
+          console.error("Error loading image:", e);
+          setLoading(false);
+        };
+        img.src = imageUrl;
+      } else {
+        // Para URLs remotas, intentar con crossOrigin
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          setOriginalImage(img);
+          setLoading(false);
+        };
+        img.onerror = () => {
+          // Reintentar sin crossOrigin si falla
+          const imgRetry = new Image();
+          imgRetry.onload = () => {
+            setOriginalImage(imgRetry);
+            setLoading(false);
+          };
+          imgRetry.onerror = (e) => {
+            console.error("Error loading image after retry:", e);
+            setLoading(false);
+          };
+          imgRetry.src = imageUrl;
+        };
+        img.src = imageUrl;
+      }
     };
-    img.onerror = () => {
-      console.error("Error loading image");
-      setLoading(false);
-    };
-    img.src = imageUrl;
+    
+    loadImage();
   }, [imageUrl]);
 
   // Renderizar imagen con transformaciones
@@ -113,28 +143,44 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
     renderCanvas();
   }, [renderCanvas]);
 
-  // Handlers de recorte
+  // Handlers de recorte mejorados
+  const getEventCoords = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const scaleX = canvasRef.current.width / rect.width;
+    const scaleY = canvasRef.current.height / rect.height;
+    
+    // Soporte para touch events
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
   const handleMouseDown = (e) => {
     if (!isCropping) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    setCropStart({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
-    setCropEnd(null);
+    e.preventDefault();
+    setIsDragging(true);
+    const coords = getEventCoords(e);
+    setCropStart(coords);
+    setCropEnd(coords);
   };
 
   const handleMouseMove = (e) => {
-    if (!isCropping || !cropStart) return;
-    const rect = canvasRef.current.getBoundingClientRect();
+    if (!isCropping || !isDragging || !cropStart) return;
+    e.preventDefault();
+    const coords = getEventCoords(e);
     setCropEnd({
-      x: Math.max(0, Math.min(e.clientX - rect.left, canvasRef.current.width)),
-      y: Math.max(0, Math.min(e.clientY - rect.top, canvasRef.current.height))
+      x: Math.max(0, Math.min(coords.x, canvasRef.current.width)),
+      y: Math.max(0, Math.min(coords.y, canvasRef.current.height))
     });
   };
 
-  const handleMouseUp = () => {
-    // El recorte se mantiene hasta que se aplique o cancele
+  const handleMouseUp = (e) => {
+    if (e) e.preventDefault();
+    setIsDragging(false);
   };
 
   // Aplicar recorte
@@ -214,7 +260,7 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
           <h3 className="text-lg font-semibold">Editar Imagen</h3>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={handleReset}>
-              <RotateCcw className="w-4 h-4 mr-1" />
+              <RefreshCw className="w-4 h-4 mr-1" />
               Reset
             </Button>
             <Button variant="ghost" size="icon" onClick={onCancel}>
@@ -227,11 +273,14 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
         <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-muted/30">
           <canvas
             ref={canvasRef}
-            className="max-w-full max-h-[400px] rounded-lg shadow-lg cursor-crosshair"
+            className={`max-w-full max-h-[400px] rounded-lg shadow-lg ${isCropping ? 'cursor-crosshair' : 'cursor-default'}`}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleMouseDown}
+            onTouchMove={handleMouseMove}
+            onTouchEnd={handleMouseUp}
           />
         </div>
 
@@ -296,33 +345,43 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
             </Button>
           </div>
 
-          {/* Sliders */}
+          {/* Sliders usando input range nativo para mejor compatibilidad */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <Sun className="w-4 h-4" />
-                <span>Brillo: {brightness}%</span>
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Sun className="w-4 h-4" />
+                  <span>Brillo</span>
+                </div>
+                <span className="font-medium">{brightness}%</span>
               </div>
-              <Slider
-                value={[brightness]}
-                onValueChange={([v]) => setBrightness(v)}
+              <input
+                type="range"
+                value={brightness}
+                onChange={(e) => setBrightness(Number(e.target.value))}
                 min={50}
                 max={150}
                 step={5}
+                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
               />
             </div>
             
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <Contrast className="w-4 h-4" />
-                <span>Contraste: {contrast}%</span>
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Contrast className="w-4 h-4" />
+                  <span>Contraste</span>
+                </div>
+                <span className="font-medium">{contrast}%</span>
               </div>
-              <Slider
-                value={[contrast]}
-                onValueChange={([v]) => setContrast(v)}
+              <input
+                type="range"
+                value={contrast}
+                onChange={(e) => setContrast(Number(e.target.value))}
                 min={50}
                 max={150}
                 step={5}
+                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
               />
             </div>
           </div>
