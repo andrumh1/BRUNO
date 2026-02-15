@@ -1,37 +1,46 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import SocialLinkSelector from "@/components/SocialLinkSelector";
 import TemplateSelector from "@/components/TemplateSelector";
 import LocationSelector from "@/components/LocationSelector";
+import ImageEditor from "@/components/ImageEditor";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import axios from "axios";
-import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2, Plus, Trash2, Briefcase, GraduationCap, Award, Languages, FileText } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
-
-const cardTypes = [
-  { value: "personal", label: "Personal", desc: "Tarjeta de presentación personal" },
-  { value: "empresarial", label: "Empresarial", desc: "Presentación corporativa" },
-  { value: "negocio", label: "Negocio", desc: "Información de empresa o negocio" },
-  { value: "lugares", label: "Lugares", desc: "Turismo, información, advertencias" },
-  { value: "guardian", label: "Guardián", desc: "Para niños, ancianos o personas con necesidades especiales" },
-  { value: "curriculum", label: "Curriculum", desc: "Hoja de vida profesional" },
-];
 
 const EditCardPage = () => {
   const navigate = useNavigate();
   const { cardId } = useParams();
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [error, setError] = useState("");
   
+  // Image editor state
+  const [showImageEditor, setShowImageEditor] = useState(false);
+  const [editingImageType, setEditingImageType] = useState(null);
+  const [tempImageUrl, setTempImageUrl] = useState(null);
+  
+  const cardTypes = [
+    { value: "personal", label: t("cards.types.personal"), desc: t("cards.typeDescriptions.personal") },
+    { value: "empresarial", label: t("cards.types.empresarial"), desc: t("cards.typeDescriptions.empresarial") },
+    { value: "negocio", label: t("cards.types.negocio"), desc: t("cards.typeDescriptions.negocio") },
+    { value: "lugares", label: t("cards.types.lugares"), desc: t("cards.typeDescriptions.lugares") },
+    { value: "guardian", label: t("cards.types.guardian"), desc: t("cards.typeDescriptions.guardian") },
+    { value: "curriculum", label: t("cards.types.curriculum"), desc: t("cards.typeDescriptions.curriculum") },
+  ];
+
   const [formData, setFormData] = useState({
     card_type: "personal",
     title: "",
@@ -39,7 +48,7 @@ const EditCardPage = () => {
     description: "",
     avatar_url: "",
     banner_url: "",
-    background_color: "#FF6B35",
+    background_color: "#FF5A00",
     text_color: "#FFFFFF",
     social_links: [],
     location: null,
@@ -47,6 +56,14 @@ const EditCardPage = () => {
     is_public: true,
     show_in_feed: true,
     is_animated: true,
+    custom_fields: {
+      experience: [],
+      education: [],
+      skills: [],
+      languages: [],
+      certifications: [],
+      documents: []
+    }
   });
 
   useEffect(() => {
@@ -67,16 +84,26 @@ const EditCardPage = () => {
         description: card.description || "",
         avatar_url: card.avatar_url || "",
         banner_url: card.banner_url || "",
-        background_color: card.background_color || "#FF6B35",
+        background_color: card.background_color || "#FF5A00",
         text_color: card.text_color || "#FFFFFF",
         social_links: card.social_links || [],
         location: card.location || null,
         template_id: card.template_id || "personal_classic",
         is_public: card.is_public !== false,
+        show_in_feed: card.show_in_feed !== false,
+        is_animated: card.is_animated !== false,
+        custom_fields: card.custom_fields || {
+          experience: [],
+          education: [],
+          skills: [],
+          languages: [],
+          certifications: [],
+          documents: []
+        }
       });
     } catch (err) {
       console.error("Error fetching card:", err);
-      setError("No se pudo cargar la tarjeta");
+      setError(t("common.error"));
     } finally {
       setLoading(false);
     }
@@ -107,9 +134,25 @@ const EditCardPage = () => {
     });
   };
 
-  const handleImageUpload = async (file, type) => {
+  // Handle file selection and open editor
+  const handleFileSelect = (e, type) => {
+    const file = e.target.files[0];
     if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setTempImageUrl(event.target.result);
+      setEditingImageType(type);
+      setShowImageEditor(true);
+    };
+    reader.readAsDataURL(file);
+  };
 
+  // Handle edited image save
+  const handleImageEditorSave = async (file, dataUrl) => {
+    setShowImageEditor(false);
+    const type = editingImageType;
+    
     const uploadSetter = type === "avatar" ? setUploadingAvatar : setUploadingBanner;
     uploadSetter(true);
 
@@ -131,9 +174,65 @@ const EditCardPage = () => {
       });
     } catch (error) {
       console.error(`Error uploading ${type}:`, error);
-      alert(`Error al subir la imagen. Por favor intenta de nuevo.`);
+      alert(t("common.error"));
     } finally {
       uploadSetter(false);
+      setEditingImageType(null);
+      setTempImageUrl(null);
+    }
+  };
+
+  // CURRICULUM specific handlers
+  const addCurriculumItem = (field) => {
+    const newItem = getEmptyItem(field);
+    setFormData({
+      ...formData,
+      custom_fields: {
+        ...formData.custom_fields,
+        [field]: [...(formData.custom_fields[field] || []), newItem]
+      }
+    });
+  };
+
+  const updateCurriculumItem = (field, index, key, value) => {
+    const updated = [...(formData.custom_fields[field] || [])];
+    updated[index] = { ...updated[index], [key]: value };
+    setFormData({
+      ...formData,
+      custom_fields: {
+        ...formData.custom_fields,
+        [field]: updated
+      }
+    });
+  };
+
+  const removeCurriculumItem = (field, index) => {
+    const updated = (formData.custom_fields[field] || []).filter((_, i) => i !== index);
+    setFormData({
+      ...formData,
+      custom_fields: {
+        ...formData.custom_fields,
+        [field]: updated
+      }
+    });
+  };
+
+  const getEmptyItem = (field) => {
+    switch (field) {
+      case "experience":
+        return { company: "", position: "", startDate: "", endDate: "", current: false, description: "" };
+      case "education":
+        return { institution: "", degree: "", startDate: "", endDate: "", description: "" };
+      case "skills":
+        return { name: "", level: 80 };
+      case "languages":
+        return { name: "", level: "intermediate" };
+      case "certifications":
+        return { name: "", issuer: "", date: "", url: "" };
+      case "documents":
+        return { name: "", url: "", type: "pdf" };
+      default:
+        return {};
     }
   };
 
@@ -148,7 +247,7 @@ const EditCardPage = () => {
       navigate("/dashboard");
     } catch (error) {
       console.error("Error updating card:", error);
-      alert("Error al actualizar la tarjeta");
+      alert(t("common.error"));
     } finally {
       setSaving(false);
     }
@@ -159,7 +258,7 @@ const EditCardPage = () => {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Cargando tarjeta...</p>
+          <p className="text-muted-foreground">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -168,12 +267,12 @@ const EditCardPage = () => {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full">
+        <Card className="max-w-md w-full glass-card">
           <CardContent className="text-center py-16">
-            <h2 className="text-2xl font-bold mb-2">Error</h2>
+            <h2 className="text-2xl font-bold mb-2">{t("common.error")}</h2>
             <p className="text-muted-foreground mb-6">{error}</p>
             <Button onClick={() => navigate("/dashboard")}>
-              Volver al Panel
+              {t("dashboard.title")}
             </Button>
           </CardContent>
         </Card>
@@ -184,15 +283,18 @@ const EditCardPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/50 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <img src="/bruno-mascot.png" alt="BRUNO" className="h-8" />
-          <div>
-            <h1 className="text-xl font-bold">Editar Tarjeta</h1>
-            <p className="text-sm text-muted-foreground">Modifica la información de tu tarjeta</p>
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <img src="/bruno-mascot.png" alt="BRUNO" className="h-8" />
+            <div>
+              <h1 className="text-xl font-bold">{t("cardForm.editTitle")}</h1>
+              <p className="text-sm text-muted-foreground">{t("cardForm.selectType")}</p>
+            </div>
           </div>
+          <LanguageSwitcher />
         </div>
       </header>
 
@@ -202,18 +304,18 @@ const EditCardPage = () => {
           <div>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Tipo de Tarjeta */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>Tipo de Tarjeta</CardTitle>
-                  <CardDescription>Selecciona el tipo de tarjeta</CardDescription>
+                  <CardTitle>{t("cardForm.cardType")}</CardTitle>
+                  <CardDescription>{t("cardForm.selectType")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {cardTypes.map((type) => (
                     <label
                       key={type.value}
-                      className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
                         formData.card_type === type.value
-                          ? "border-primary bg-primary/5"
+                          ? "border-primary bg-primary/5 shadow-md"
                           : "border-border hover:border-primary/50"
                       }`}
                     >
@@ -235,10 +337,10 @@ const EditCardPage = () => {
               </Card>
 
               {/* Plantilla */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>Plantilla</CardTitle>
-                  <CardDescription>Elige el diseño de tu tarjeta</CardDescription>
+                  <CardTitle>{t("cardForm.template")}</CardTitle>
+                  <CardDescription>{t("cardForm.selectTemplate")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <TemplateSelector
@@ -250,15 +352,15 @@ const EditCardPage = () => {
               </Card>
 
               {/* Imágenes */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>Imágenes</CardTitle>
-                  <CardDescription>Actualiza tu foto de perfil y banner</CardDescription>
+                  <CardTitle>{t("cardForm.images")}</CardTitle>
+                  <CardDescription>{t("cardForm.uploadImages")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Banner */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Banner (1200x400px)</label>
+                    <label className="text-sm font-medium">{t("cardForm.banner")} (1200x400px)</label>
                     <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors">
                       {formData.banner_url ? (
                         <div className="space-y-2">
@@ -273,7 +375,7 @@ const EditCardPage = () => {
                             size="sm"
                             onClick={() => setFormData({ ...formData, banner_url: "" })}
                           >
-                            Cambiar Banner
+                            {t("cardForm.changeBanner")}
                           </Button>
                         </div>
                       ) : (
@@ -281,16 +383,16 @@ const EditCardPage = () => {
                           <input
                             type="file"
                             accept="image/*"
-                            onChange={(e) => handleImageUpload(e.target.files[0], "banner")}
+                            onChange={(e) => handleFileSelect(e, "banner")}
                             className="hidden"
                             disabled={uploadingBanner}
                           />
                           <ImageIcon className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
                           <p className="text-sm font-medium mb-1">
-                            {uploadingBanner ? "Subiendo..." : "Click para subir banner"}
+                            {uploadingBanner ? t("cardForm.uploading") : t("cardForm.uploadBanner")}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Recomendado: 1200x400px
+                            {t("cardForm.recommended")}: 1200x400px
                           </p>
                         </label>
                       )}
@@ -299,7 +401,7 @@ const EditCardPage = () => {
 
                   {/* Avatar */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Foto de Perfil (400x400px)</label>
+                    <label className="text-sm font-medium">{t("cardForm.avatar")} (400x400px)</label>
                     <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors">
                       {formData.avatar_url ? (
                         <div className="space-y-2">
@@ -314,7 +416,7 @@ const EditCardPage = () => {
                             size="sm"
                             onClick={() => setFormData({ ...formData, avatar_url: "" })}
                           >
-                            Cambiar Foto
+                            {t("cardForm.changePhoto")}
                           </Button>
                         </div>
                       ) : (
@@ -322,16 +424,16 @@ const EditCardPage = () => {
                           <input
                             type="file"
                             accept="image/*"
-                            onChange={(e) => handleImageUpload(e.target.files[0], "avatar")}
+                            onChange={(e) => handleFileSelect(e, "avatar")}
                             className="hidden"
                             disabled={uploadingAvatar}
                           />
                           <Upload className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
                           <p className="text-sm font-medium mb-1">
-                            {uploadingAvatar ? "Subiendo..." : "Click para subir foto"}
+                            {uploadingAvatar ? t("cardForm.uploading") : t("cardForm.uploadPhoto")}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Recomendado: 400x400px
+                            {t("cardForm.recommended")}: 400x400px
                           </p>
                         </label>
                       )}
@@ -341,13 +443,13 @@ const EditCardPage = () => {
               </Card>
 
               {/* Información Básica */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>Información Básica</CardTitle>
+                  <CardTitle>{t("cardForm.basicInfo")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Título *</label>
+                    <label className="text-sm font-medium">{t("cardForm.title")} *</label>
                     <Input
                       name="title"
                       placeholder="Juan Pérez"
@@ -358,7 +460,7 @@ const EditCardPage = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Subtítulo</label>
+                    <label className="text-sm font-medium">{t("cardForm.subtitle")}</label>
                     <Input
                       name="subtitle"
                       placeholder="UX Designer @ Tech Co"
@@ -368,10 +470,10 @@ const EditCardPage = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Descripción</label>
+                    <label className="text-sm font-medium">{t("cardForm.description")}</label>
                     <textarea
                       name="description"
-                      placeholder="Agrega una descripción..."
+                      placeholder={t("cardForm.addDescription")}
                       value={formData.description}
                       onChange={handleChange}
                       className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -380,13 +482,302 @@ const EditCardPage = () => {
                 </CardContent>
               </Card>
 
+              {/* CURRICULUM Fields */}
+              {formData.card_type === "curriculum" && (
+                <>
+                  {/* Experiencia Laboral */}
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Briefcase className="w-5 h-5 text-primary" />
+                          <CardTitle>{t("curriculum.experience")}</CardTitle>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addCurriculumItem("experience")}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          {t("curriculum.addExperience")}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {(formData.custom_fields?.experience || []).map((exp, index) => (
+                        <div key={index} className="p-4 border border-border rounded-lg space-y-3 relative">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 h-8 w-8 text-destructive"
+                            onClick={() => removeCurriculumItem("experience", index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                          <div className="grid grid-cols-2 gap-3">
+                            <Input
+                              placeholder={t("curriculum.company")}
+                              value={exp.company}
+                              onChange={(e) => updateCurriculumItem("experience", index, "company", e.target.value)}
+                            />
+                            <Input
+                              placeholder={t("curriculum.position")}
+                              value={exp.position}
+                              onChange={(e) => updateCurriculumItem("experience", index, "position", e.target.value)}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <Input
+                              type="date"
+                              value={exp.startDate}
+                              onChange={(e) => updateCurriculumItem("experience", index, "startDate", e.target.value)}
+                            />
+                            <Input
+                              type="date"
+                              value={exp.endDate}
+                              onChange={(e) => updateCurriculumItem("experience", index, "endDate", e.target.value)}
+                              disabled={exp.current}
+                            />
+                          </div>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={exp.current}
+                              onChange={(e) => updateCurriculumItem("experience", index, "current", e.target.checked)}
+                            />
+                            {t("curriculum.current")}
+                          </label>
+                          <textarea
+                            placeholder={t("cardForm.description")}
+                            value={exp.description}
+                            onChange={(e) => updateCurriculumItem("experience", index, "description", e.target.value)}
+                            className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          />
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  {/* Educación */}
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <GraduationCap className="w-5 h-5 text-primary" />
+                          <CardTitle>{t("curriculum.education")}</CardTitle>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addCurriculumItem("education")}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          {t("curriculum.addEducation")}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {(formData.custom_fields?.education || []).map((edu, index) => (
+                        <div key={index} className="p-4 border border-border rounded-lg space-y-3 relative">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 h-8 w-8 text-destructive"
+                            onClick={() => removeCurriculumItem("education", index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                          <div className="grid grid-cols-2 gap-3">
+                            <Input
+                              placeholder={t("curriculum.institution")}
+                              value={edu.institution}
+                              onChange={(e) => updateCurriculumItem("education", index, "institution", e.target.value)}
+                            />
+                            <Input
+                              placeholder={t("curriculum.degree")}
+                              value={edu.degree}
+                              onChange={(e) => updateCurriculumItem("education", index, "degree", e.target.value)}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <Input
+                              type="date"
+                              value={edu.startDate}
+                              onChange={(e) => updateCurriculumItem("education", index, "startDate", e.target.value)}
+                            />
+                            <Input
+                              type="date"
+                              value={edu.endDate}
+                              onChange={(e) => updateCurriculumItem("education", index, "endDate", e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  {/* Habilidades */}
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Award className="w-5 h-5 text-primary" />
+                          <CardTitle>{t("curriculum.skills")}</CardTitle>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addCurriculumItem("skills")}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          {t("curriculum.addSkill")}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {(formData.custom_fields?.skills || []).map((skill, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <Input
+                            placeholder={t("curriculum.skills")}
+                            value={skill.name}
+                            onChange={(e) => updateCurriculumItem("skills", index, "name", e.target.value)}
+                            className="flex-1"
+                          />
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={skill.level}
+                            onChange={(e) => updateCurriculumItem("skills", index, "level", parseInt(e.target.value))}
+                            className="w-20"
+                          />
+                          <span className="text-sm text-muted-foreground">%</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => removeCurriculumItem("skills", index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  {/* Idiomas */}
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Languages className="w-5 h-5 text-primary" />
+                          <CardTitle>{t("curriculum.languages")}</CardTitle>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addCurriculumItem("languages")}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          {t("curriculum.addLanguage")}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {(formData.custom_fields?.languages || []).map((lang, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <Input
+                            placeholder={t("curriculum.languages")}
+                            value={lang.name}
+                            onChange={(e) => updateCurriculumItem("languages", index, "name", e.target.value)}
+                            className="flex-1"
+                          />
+                          <select
+                            value={lang.level}
+                            onChange={(e) => updateCurriculumItem("languages", index, "level", e.target.value)}
+                            className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+                          >
+                            <option value="native">{t("curriculum.native")}</option>
+                            <option value="fluent">{t("curriculum.fluent")}</option>
+                            <option value="intermediate">{t("curriculum.intermediate")}</option>
+                            <option value="basic">{t("curriculum.basic")}</option>
+                          </select>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => removeCurriculumItem("languages", index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  {/* Documentos */}
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-primary" />
+                          <CardTitle>{t("curriculum.documents")}</CardTitle>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addCurriculumItem("documents")}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          {t("curriculum.addDocument")}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {(formData.custom_fields?.documents || []).map((doc, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <Input
+                            placeholder="Nombre del documento"
+                            value={doc.name}
+                            onChange={(e) => updateCurriculumItem("documents", index, "name", e.target.value)}
+                            className="flex-1"
+                          />
+                          <Input
+                            placeholder="URL del documento"
+                            value={doc.url}
+                            onChange={(e) => updateCurriculumItem("documents", index, "url", e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => removeCurriculumItem("documents", index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
               {/* Redes Sociales y Contacto */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>Redes Sociales y Contacto</CardTitle>
-                  <CardDescription>
-                    Actualiza tus redes sociales, sitio web y formas de contacto
-                  </CardDescription>
+                  <CardTitle>{t("cardForm.socialLinks")}</CardTitle>
+                  <CardDescription>{t("cardForm.socialLinksDesc")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <SocialLinkSelector
@@ -397,12 +788,10 @@ const EditCardPage = () => {
               </Card>
 
               {/* Ubicación */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>Ubicación</CardTitle>
-                  <CardDescription>
-                    Actualiza la ubicación de tu tarjeta (opcional)
-                  </CardDescription>
+                  <CardTitle>{t("cardForm.location")}</CardTitle>
+                  <CardDescription>{t("cardForm.locationDesc")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <LocationSelector
@@ -412,15 +801,15 @@ const EditCardPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Diseño */}
-              <Card>
+              {/* Colores */}
+              <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>Colores</CardTitle>
+                  <CardTitle>{t("cardForm.colors")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Color de Fondo</label>
+                      <label className="text-sm font-medium">{t("cardForm.backgroundColor")}</label>
                       <div className="flex gap-2">
                         <Input
                           type="color"
@@ -440,7 +829,7 @@ const EditCardPage = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Color de Texto</label>
+                      <label className="text-sm font-medium">{t("cardForm.textColor")}</label>
                       <div className="flex gap-2">
                         <Input
                           type="color"
@@ -463,28 +852,31 @@ const EditCardPage = () => {
               </Card>
 
               {/* Privacidad */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>Privacidad</CardTitle>
+                  <CardTitle>{t("cardForm.privacy")}</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       name="is_public"
                       checked={formData.is_public}
                       onChange={handleChange}
-                      className="w-4 h-4"
+                      className="w-4 h-4 accent-primary"
                     />
                     <div>
-                      <div className="font-medium">Tarjeta pública</div>
-                      <div className="text-sm text-muted-foreground">
-                        Cualquiera con el enlace puede ver esta tarjeta
-                      </div>
+                      <div className="font-medium">{t("cardForm.isPublic")}</div>
+                      <div className="text-sm text-muted-foreground">{t("cardForm.isPublicDesc")}</div>
+                    </div>
+                  </label>
+                </CardContent>
+              </Card>
+
               {/* Visibilidad en Feed */}
-              <Card>
+              <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>Visibilidad en el Feed</CardTitle>
+                  <CardTitle>{t("cardForm.feedVisibility")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -493,22 +885,20 @@ const EditCardPage = () => {
                       name="show_in_feed"
                       checked={formData.show_in_feed}
                       onChange={handleChange}
-                      className="w-4 h-4"
+                      className="w-4 h-4 accent-primary"
                     />
                     <div>
-                      <div className="font-medium">Mostrar en el Feed p 0fablico</div>
-                      <div className="text-sm text-muted-foreground">
-                        Si est 0e1 desmarcado, solo se podr e1 acceder con el enlace directo
-                      </div>
+                      <div className="font-medium">{t("cardForm.showInFeed")}</div>
+                      <div className="text-sm text-muted-foreground">{t("cardForm.showInFeedDesc")}</div>
                     </div>
                   </label>
                 </CardContent>
               </Card>
 
-              {/* Animaci f3n */}
-              <Card>
+              {/* Animación */}
+              <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle>Animaci f3n</CardTitle>
+                  <CardTitle>{t("cardForm.animation")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -517,19 +907,11 @@ const EditCardPage = () => {
                       name="is_animated"
                       checked={formData.is_animated}
                       onChange={handleChange}
-                      className="w-4 h-4"
+                      className="w-4 h-4 accent-primary"
                     />
                     <div>
-                      <div className="font-medium">Activar efecto din e1mico</div>
-                      <div className="text-sm text-muted-foreground">
-                        Aplica suaves movimientos tipo burbuja a la tarjeta
-                      </div>
-                    </div>
-                  </label>
-                </CardContent>
-              </Card>
-
-
+                      <div className="font-medium">{t("cardForm.isAnimated")}</div>
+                      <div className="text-sm text-muted-foreground">{t("cardForm.isAnimatedDesc")}</div>
                     </div>
                   </label>
                 </CardContent>
@@ -542,11 +924,11 @@ const EditCardPage = () => {
                   className="flex-1"
                   onClick={() => navigate("/dashboard")}
                 >
-                  Cancelar
+                  {t("cardForm.cancel")}
                 </Button>
                 <Button type="submit" className="flex-1" disabled={saving || uploadingAvatar || uploadingBanner}>
                   <Save className="w-4 h-4 mr-2" />
-                  {saving ? "Guardando..." : "Guardar Cambios"}
+                  {saving ? t("cardForm.saving") : t("cardForm.save")}
                 </Button>
               </div>
             </form>
@@ -554,14 +936,16 @@ const EditCardPage = () => {
 
           {/* Preview */}
           <div className="lg:sticky lg:top-8 h-fit">
-            <Card>
+            <Card className="glass-card">
               <CardHeader>
-                <CardTitle>Vista Previa</CardTitle>
-                <CardDescription>Así se verá tu tarjeta actualizada</CardDescription>
+                <CardTitle>{t("cardForm.preview")}</CardTitle>
+                <CardDescription>{t("cardForm.previewDesc")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div
-                  className="rounded-2xl shadow-lg relative overflow-hidden"
+                  className={`rounded-2xl shadow-lg relative overflow-hidden ${
+                    formData.is_animated ? "card-bubble-animated" : "card-bubble-static"
+                  }`}
                   style={{
                     background: `linear-gradient(135deg, ${formData.background_color}, ${formData.background_color}dd)`,
                     color: formData.text_color,
@@ -596,7 +980,7 @@ const EditCardPage = () => {
                       </div>
                     )}
 
-                    <h3 className="text-2xl font-bold mb-2">{formData.title || "Título"}</h3>
+                    <h3 className="text-2xl font-bold mb-2">{formData.title || t("cardForm.title")}</h3>
                     {formData.subtitle && <p className="mb-4 opacity-90">{formData.subtitle}</p>}
                     {formData.description && (
                       <p className="text-sm opacity-75 mb-4">{formData.description}</p>
@@ -618,6 +1002,27 @@ const EditCardPage = () => {
                         ))}
                       </div>
                     )}
+
+                    {/* Curriculum Preview Badges */}
+                    {formData.card_type === "curriculum" && (
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {(formData.custom_fields?.experience || []).length > 0 && (
+                          <span className="px-2 py-1 rounded-full text-xs" style={{ backgroundColor: `${formData.text_color}20` }}>
+                            {formData.custom_fields.experience.length} {t("curriculum.experience")}
+                          </span>
+                        )}
+                        {(formData.custom_fields?.education || []).length > 0 && (
+                          <span className="px-2 py-1 rounded-full text-xs" style={{ backgroundColor: `${formData.text_color}20` }}>
+                            {formData.custom_fields.education.length} {t("curriculum.education")}
+                          </span>
+                        )}
+                        {(formData.custom_fields?.skills || []).length > 0 && (
+                          <span className="px-2 py-1 rounded-full text-xs" style={{ backgroundColor: `${formData.text_color}20` }}>
+                            {formData.custom_fields.skills.length} {t("curriculum.skills")}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -625,6 +1030,19 @@ const EditCardPage = () => {
           </div>
         </div>
       </main>
+
+      {/* Image Editor Modal */}
+      {showImageEditor && tempImageUrl && (
+        <ImageEditor
+          imageUrl={tempImageUrl}
+          onSave={handleImageEditorSave}
+          onCancel={() => {
+            setShowImageEditor(false);
+            setTempImageUrl(null);
+            setEditingImageType(null);
+          }}
+        />
+      )}
     </div>
   );
 };
