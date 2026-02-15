@@ -240,7 +240,6 @@ class PaymentTransaction(BaseModel):
     session_id: str
     payment_type: str  # subscription / one_time
     amount: float
-    """Monto total a cobrar"""
     currency: str
     metadata: dict = {}
     status: str = PaymentStatus.PENDING
