@@ -450,16 +450,86 @@ async def login(user_input: UserLogin):
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+class GoogleAuthRequest(BaseModel):
+    session_id: str
+
 @api_router.post("/auth/google")
-async def google_auth(request: dict):
-    """Handle Google OAuth callback - exchange session_id for user data"""
-    session_id = request.get('session_id')
-    if not session_id:
-        raise HTTPException(status_code=400, detail="session_id required")
+async def google_auth(request: GoogleAuthRequest):
+    """Handle Google OAuth callback - exchange session_id for user data from Emergent Auth"""
+    import httpx
     
-    # Implementación real gestionada por Emergent Auth.
-    # Este stub existe solo para mantener compatibilidad y no se modifica.
-    return {"message": "Google auth is handled externally"}
+    try:
+        # Exchange session_id with Emergent Auth service
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+                headers={"X-Session-ID": request.session_id},
+                timeout=10.0
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid session_id")
+            
+            auth_data = response.json()
+            
+        # Extract user data from Emergent Auth response
+        email = auth_data.get("email")
+        name = auth_data.get("name", email.split("@")[0] if email else "User")
+        picture = auth_data.get("picture", "")
+        session_token = auth_data.get("session_token")
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Email not provided by Google")
+        
+        # Check if user exists
+        existing_user = await db.users.find_one({"email": email}, {"_id": 0})
+        
+        if existing_user:
+            # Update existing user
+            await db.users.update_one(
+                {"email": email},
+                {"$set": {
+                    "name": name,
+                    "avatar_url": picture,
+                    "last_login": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            user_id = existing_user["id"]
+        else:
+            # Create new user
+            user_id = str(uuid.uuid4())
+            new_user = {
+                "id": user_id,
+                "email": email,
+                "name": name,
+                "avatar_url": picture,
+                "hashed_password": "",  # Google users don't have password
+                "role": "personal",
+                "company_id": None,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "is_active": True,
+                "plan": "free",
+                "subscription_status": "inactive",
+                "country": ""
+            }
+            await db.users.insert_one(new_user)
+        
+        # Get full user data
+        user_doc = await db.users.find_one({"email": email}, {"_id": 0})
+        
+        # Create JWT token for this user (for API calls)
+        jwt_token = create_access_token(data={"sub": email})
+        
+        return {
+            "user": User(**user_doc),
+            "session_token": session_token or jwt_token,
+            "access_token": jwt_token
+        }
+        
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"Error connecting to auth service: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
 
 # =========================================================================
 # PAYMENTS / STRIPE ROUTES
