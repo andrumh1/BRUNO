@@ -62,7 +62,8 @@ const EditCardPage = () => {
       skills: [],
       languages: [],
       certifications: [],
-      documents: []
+      documents: [],
+      references: []
     }
   });
 
