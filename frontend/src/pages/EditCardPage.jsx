@@ -19,6 +19,7 @@ const cardTypes = [
   { value: "negocio", label: "Negocio", desc: "Información de empresa o negocio" },
   { value: "lugares", label: "Lugares", desc: "Turismo, información, advertencias" },
   { value: "guardian", label: "Guardián", desc: "Para niños, ancianos o personas con necesidades especiales" },
+  { value: "curriculum", label: "Curriculum", desc: "Hoja de vida profesional" },
 ];
 
 const EditCardPage = () => {
@@ -95,7 +96,8 @@ const EditCardPage = () => {
       empresarial: "empresarial_pro",
       negocio: "negocio_showcase",
       lugares: "lugares_tour",
-      guardian: "guardian_safe"
+      guardian: "guardian_safe",
+      curriculum: "curriculum_clean",
     };
     
     setFormData({
