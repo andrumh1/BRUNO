@@ -1390,6 +1390,606 @@ async def get_my_orders(current_user: User = Depends(get_current_user)):
     return orders
 
 # ============================================================================
+# STORE / SHOP ROUTES (PIUP)
+# ============================================================================
+
+# Get all products
+@api_router.get("/store/products")
+async def get_store_products(category: Optional[str] = None):
+    query = {"is_active": True}
+    if category:
+        query["category"] = category
+    
+    products = await db.store_products.find(query, {"_id": 0}).to_list(1000)
+    
+    # If no products, seed with defaults
+    if not products:
+        await seed_store_products()
+        products = await db.store_products.find(query, {"_id": 0}).to_list(1000)
+    
+    return products
+
+# Get single product
+@api_router.get("/store/products/{product_id}")
+async def get_store_product(product_id: str):
+    product = await db.store_products.find_one({"id": product_id, "is_active": True}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
+
+# Create store order with Stripe checkout
+@api_router.post("/store/orders")
+async def create_store_order(
+    items: List[dict],
+    shipping_address_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    # Validate items and calculate totals
+    order_items = []
+    subtotal = 0
+    
+    for item in items:
+        product = await db.store_products.find_one({"id": item["product_id"], "is_active": True}, {"_id": 0})
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product {item['product_id']} not found")
+        
+        quantity = item.get("quantity", 1)
+        line_total = product["price"] * quantity
+        subtotal += line_total
+        
+        order_items.append(StoreOrderItem(
+            product_id=product["id"],
+            product_name=product["name"],
+            quantity=quantity,
+            price=product["price"],
+            color=item.get("color"),
+            options=item.get("options", {})
+        ))
+    
+    # Get shipping address if provided
+    shipping_address = None
+    if shipping_address_id:
+        user_data = await db.user_saved_data.find_one({"user_id": current_user.id}, {"_id": 0})
+        if user_data and user_data.get("addresses"):
+            for addr in user_data["addresses"]:
+                if addr.get("id") == shipping_address_id:
+                    shipping_address = ShippingAddress(**addr)
+                    break
+    
+    # Calculate shipping and tax
+    shipping_cost = 5.99 if subtotal < 50 else 0  # Free shipping over $50
+    tax = subtotal * 0.08  # 8% tax example
+    total = subtotal + shipping_cost + tax
+    
+    # Create order
+    order = StoreOrder(
+        user_id=current_user.id,
+        items=[item.model_dump() for item in order_items],
+        subtotal=round(subtotal, 2),
+        shipping_cost=round(shipping_cost, 2),
+        tax=round(tax, 2),
+        total=round(total, 2),
+        shipping_address=shipping_address.model_dump() if shipping_address else None
+    )
+    
+    order_doc = order.model_dump()
+    order_doc['created_at'] = order_doc['created_at'].isoformat()
+    order_doc['updated_at'] = order_doc['updated_at'].isoformat()
+    
+    await db.store_orders.insert_one(order_doc)
+    
+    return {
+        "order_id": order.id,
+        "subtotal": order.subtotal,
+        "shipping_cost": order.shipping_cost,
+        "tax": order.tax,
+        "total": order.total,
+        "status": order.status
+    }
+
+# Create Stripe checkout for store order
+@api_router.post("/store/checkout/{order_id}")
+async def create_store_checkout(
+    order_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    order = await db.store_orders.find_one({"id": order_id, "user_id": current_user.id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if order["status"] != "pending_payment":
+        raise HTTPException(status_code=400, detail="Order already processed")
+    
+    # Create Stripe checkout session
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY)
+    
+    line_items = []
+    for item in order["items"]:
+        line_items.append({
+            "price_data": {
+                "currency": order["currency"].lower(),
+                "product_data": {
+                    "name": item["product_name"],
+                },
+                "unit_amount": int(item["price"] * 100),
+            },
+            "quantity": item["quantity"],
+        })
+    
+    # Add shipping if applicable
+    if order["shipping_cost"] > 0:
+        line_items.append({
+            "price_data": {
+                "currency": order["currency"].lower(),
+                "product_data": {"name": "Shipping"},
+                "unit_amount": int(order["shipping_cost"] * 100),
+            },
+            "quantity": 1,
+        })
+    
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://cardloop.preview.emergentagent.com')
+    
+    checkout_request = CheckoutSessionRequest(
+        success_url=f"{frontend_url}/store/success?order_id={order_id}",
+        cancel_url=f"{frontend_url}/store/cancel?order_id={order_id}",
+        line_items=line_items,
+        mode="payment",
+        metadata={"order_id": order_id, "user_id": current_user.id}
+    )
+    
+    checkout_response = stripe_checkout.create_checkout_session(checkout_request)
+    
+    # Update order with session ID
+    await db.store_orders.update_one(
+        {"id": order_id},
+        {"$set": {
+            "stripe_session_id": checkout_response.session_id,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"checkout_url": checkout_response.url, "session_id": checkout_response.session_id}
+
+# Get user's store orders
+@api_router.get("/store/orders")
+async def get_user_store_orders(current_user: User = Depends(get_current_user)):
+    orders = await db.store_orders.find({"user_id": current_user.id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return orders
+
+# ============================================================================
+# USER SAVED DATA ROUTES
+# ============================================================================
+
+# Get user's saved data
+@api_router.get("/user/saved-data")
+async def get_user_saved_data(current_user: User = Depends(get_current_user)):
+    data = await db.user_saved_data.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not data:
+        # Create default empty data
+        data = UserSavedData(user_id=current_user.id).model_dump()
+        data['created_at'] = data['created_at'].isoformat()
+        data['updated_at'] = data['updated_at'].isoformat()
+        await db.user_saved_data.insert_one(data)
+    return data
+
+# Update user's saved data
+@api_router.put("/user/saved-data")
+async def update_user_saved_data(
+    updates: dict,
+    current_user: User = Depends(get_current_user)
+):
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.user_saved_data.update_one(
+        {"user_id": current_user.id},
+        {"$set": updates},
+        upsert=True
+    )
+    
+    return {"message": "Data saved successfully"}
+
+# Add shipping address
+@api_router.post("/user/addresses")
+async def add_user_address(
+    address: dict,
+    current_user: User = Depends(get_current_user)
+):
+    address_obj = ShippingAddress(**address)
+    address_dict = address_obj.model_dump()
+    
+    # If this is the first address, make it default
+    user_data = await db.user_saved_data.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not user_data or not user_data.get("addresses"):
+        address_dict["is_default"] = True
+    
+    await db.user_saved_data.update_one(
+        {"user_id": current_user.id},
+        {
+            "$push": {"addresses": address_dict},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+        },
+        upsert=True
+    )
+    
+    return {"message": "Address added", "address": address_dict}
+
+# Delete shipping address
+@api_router.delete("/user/addresses/{address_id}")
+async def delete_user_address(
+    address_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    await db.user_saved_data.update_one(
+        {"user_id": current_user.id},
+        {
+            "$pull": {"addresses": {"id": address_id}},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+    return {"message": "Address deleted"}
+
+# Add social link to saved data
+@api_router.post("/user/social-links")
+async def add_saved_social_link(
+    link: dict,
+    current_user: User = Depends(get_current_user)
+):
+    social_link = SocialLink(**link)
+    
+    await db.user_saved_data.update_one(
+        {"user_id": current_user.id},
+        {
+            "$push": {"social_links": social_link.model_dump()},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+        },
+        upsert=True
+    )
+    
+    return {"message": "Social link saved"}
+
+# ============================================================================
+# SUBSCRIPTION PLANS ROUTES
+# ============================================================================
+
+# Get all subscription plans
+@api_router.get("/plans")
+async def get_subscription_plans():
+    plans = await db.subscription_plans.find({"is_active": True}, {"_id": 0}).to_list(100)
+    
+    # If no plans, seed with defaults
+    if not plans:
+        await seed_subscription_plans()
+        plans = await db.subscription_plans.find({"is_active": True}, {"_id": 0}).to_list(100)
+    
+    return plans
+
+# Get user's current subscription
+@api_router.get("/user/subscription")
+async def get_user_subscription(current_user: User = Depends(get_current_user)):
+    sub = await db.user_subscriptions.find_one({"user_id": current_user.id}, {"_id": 0})
+    if not sub:
+        # Return free plan by default
+        return {
+            "plan_id": "free",
+            "status": "active",
+            "billing_cycle": None,
+            "features": ["1 tarjeta digital", "QR básico", "Plantilla estándar"]
+        }
+    return sub
+
+# Create subscription checkout
+@api_router.post("/subscribe/{plan_id}")
+async def create_subscription_checkout(
+    plan_id: str,
+    billing_cycle: str = "monthly",
+    current_user: User = Depends(get_current_user)
+):
+    plan = await db.subscription_plans.find_one({"id": plan_id, "is_active": True}, {"_id": 0})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    if plan_id == "free":
+        raise HTTPException(status_code=400, detail="Free plan doesn't require payment")
+    
+    price = plan["price_monthly"] if billing_cycle == "monthly" else plan["price_yearly"]
+    
+    stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY)
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://cardloop.preview.emergentagent.com')
+    
+    checkout_request = CheckoutSessionRequest(
+        success_url=f"{frontend_url}/subscription/success?plan={plan_id}",
+        cancel_url=f"{frontend_url}/pricing",
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {
+                    "name": f"BRUNO {plan['name']} - {billing_cycle.capitalize()}",
+                },
+                "unit_amount": int(price * 100),
+                "recurring": {"interval": "month" if billing_cycle == "monthly" else "year"}
+            },
+            "quantity": 1,
+        }],
+        mode="subscription",
+        metadata={"plan_id": plan_id, "user_id": current_user.id, "billing_cycle": billing_cycle}
+    )
+    
+    checkout_response = stripe_checkout.create_checkout_session(checkout_request)
+    
+    return {"checkout_url": checkout_response.url, "session_id": checkout_response.session_id}
+
+# ============================================================================
+# SEED DATA FUNCTIONS
+# ============================================================================
+
+async def seed_store_products():
+    """Seed default store products"""
+    products = [
+        # NFC Cards - Different colors
+        {
+            "id": "nfc-card-black",
+            "name": "PIUP Card - Negro Elegante",
+            "description": "Tarjeta NFC premium en negro mate. Compatible con todos los smartphones.",
+            "category": "nfc_card",
+            "price": 15.00,
+            "currency": "USD",
+            "image_url": "/images/products/card-black.png",
+            "colors": ["black"],
+            "features": ["NFC de alta frecuencia", "Diseño premium", "Resistente al agua", "Personalizable"],
+            "for_card_type": "personal",
+            "is_active": True,
+            "stock": -1
+        },
+        {
+            "id": "nfc-card-white",
+            "name": "PIUP Card - Blanco Minimalista",
+            "description": "Tarjeta NFC elegante en blanco puro. Perfecta para profesionales.",
+            "category": "nfc_card",
+            "price": 15.00,
+            "currency": "USD",
+            "image_url": "/images/products/card-white.png",
+            "colors": ["white"],
+            "features": ["NFC de alta frecuencia", "Diseño minimalista", "Resistente al agua", "Personalizable"],
+            "for_card_type": "personal",
+            "is_active": True,
+            "stock": -1
+        },
+        {
+            "id": "nfc-card-orange",
+            "name": "PIUP Card - Naranja BRUNO",
+            "description": "Tarjeta NFC en el color signature de BRUNO. Destaca del resto.",
+            "category": "nfc_card",
+            "price": 18.00,
+            "currency": "USD",
+            "image_url": "/images/products/card-orange.png",
+            "colors": ["orange"],
+            "features": ["NFC de alta frecuencia", "Color exclusivo BRUNO", "Resistente al agua", "Personalizable"],
+            "for_card_type": "personal",
+            "is_active": True,
+            "stock": -1
+        },
+        {
+            "id": "nfc-card-gold",
+            "name": "PIUP Card - Dorado Premium",
+            "description": "Tarjeta NFC premium con acabado dorado. Para quienes buscan lo mejor.",
+            "category": "nfc_card",
+            "price": 25.00,
+            "currency": "USD",
+            "image_url": "/images/products/card-gold.png",
+            "colors": ["gold"],
+            "features": ["NFC de alta frecuencia", "Acabado metálico", "Resistente al agua", "Edición limitada"],
+            "for_card_type": "empresarial",
+            "is_active": True,
+            "stock": -1
+        },
+        {
+            "id": "nfc-card-holographic",
+            "name": "PIUP Card - Holográfica",
+            "description": "Tarjeta NFC con efecto holográfico único. Impresiona en cada encuentro.",
+            "category": "nfc_card",
+            "price": 30.00,
+            "currency": "USD",
+            "image_url": "/images/products/card-holo.png",
+            "colors": ["holographic"],
+            "features": ["NFC de alta frecuencia", "Efecto holográfico", "Ultra premium", "Edición limitada"],
+            "for_card_type": "empresarial",
+            "is_active": True,
+            "stock": -1
+        },
+        # Guardian Bracelets
+        {
+            "id": "nfc-bracelet-blue",
+            "name": "PIUP Guardian - Pulsera Azul",
+            "description": "Pulsera de silicona con NFC integrado. Ideal para niños y adultos mayores.",
+            "category": "nfc_bracelet",
+            "price": 12.00,
+            "currency": "USD",
+            "image_url": "/images/products/bracelet-blue.png",
+            "colors": ["blue", "red", "green", "purple", "black"],
+            "features": ["NFC integrado", "Silicona hipoalergénica", "Resistente al agua", "Talla ajustable"],
+            "for_card_type": "guardian",
+            "is_active": True,
+            "stock": -1
+        },
+        {
+            "id": "nfc-bracelet-kids",
+            "name": "PIUP Guardian Kids - Pulsera Infantil",
+            "description": "Pulsera colorida con NFC para los más pequeños. Seguridad y diversión.",
+            "category": "nfc_bracelet",
+            "price": 10.00,
+            "currency": "USD",
+            "image_url": "/images/products/bracelet-kids.png",
+            "colors": ["rainbow", "pink", "blue", "green"],
+            "features": ["NFC integrado", "Diseños infantiles", "Silicona segura", "Tamaño niños"],
+            "for_card_type": "guardian",
+            "is_active": True,
+            "stock": -1
+        },
+        # Pet Tags with GPS
+        {
+            "id": "nfc-pet-tag-basic",
+            "name": "PIUP Pet Tag - Básico",
+            "description": "Colgante NFC para collar de mascota. Si se pierde, quien lo encuentre puede contactarte.",
+            "category": "nfc_pet_tag",
+            "price": 15.00,
+            "currency": "USD",
+            "image_url": "/images/products/pet-tag-basic.png",
+            "colors": ["silver", "gold", "black", "blue", "pink"],
+            "features": ["NFC de alta frecuencia", "Acero inoxidable", "Resistente al agua", "Grabado personalizado"],
+            "for_card_type": "mascotas",
+            "is_active": True,
+            "stock": -1
+        },
+        {
+            "id": "nfc-pet-tag-gps",
+            "name": "PIUP Pet Tag GPS - Premium",
+            "description": "Colgante con NFC + GPS integrado. Localiza a tu mascota en tiempo real.",
+            "category": "nfc_pet_tag",
+            "price": 45.00,
+            "currency": "USD",
+            "image_url": "/images/products/pet-tag-gps.png",
+            "colors": ["black", "white", "orange"],
+            "features": ["NFC + GPS integrado", "Batería 30 días", "App de rastreo", "Resistente al agua IP67"],
+            "for_card_type": "mascotas",
+            "is_active": True,
+            "stock": -1
+        },
+        # Services
+        {
+            "id": "service-design-custom",
+            "name": "Diseño Personalizado",
+            "description": "Diseño exclusivo para tu tarjeta digital. Nuestros diseñadores crean algo único para ti.",
+            "category": "service",
+            "price": 25.00,
+            "currency": "USD",
+            "image_url": "/images/products/service-design.png",
+            "colors": [],
+            "features": ["Diseño exclusivo", "3 revisiones incluidas", "Entrega en 48h", "Archivos fuente"],
+            "is_active": True,
+            "stock": -1
+        },
+        {
+            "id": "service-setup-business",
+            "name": "Configuración Empresarial",
+            "description": "Configuramos todo tu equipo con tarjetas BRUNO. Incluye capacitación.",
+            "category": "service",
+            "price": 99.00,
+            "currency": "USD",
+            "image_url": "/images/products/service-business.png",
+            "colors": [],
+            "features": ["Setup completo", "Hasta 10 usuarios", "Capacitación incluida", "Soporte prioritario 30 días"],
+            "is_active": True,
+            "stock": -1
+        },
+    ]
+    
+    for product in products:
+        product["created_at"] = datetime.now(timezone.utc).isoformat()
+        await db.store_products.update_one(
+            {"id": product["id"]},
+            {"$set": product},
+            upsert=True
+        )
+
+async def seed_subscription_plans():
+    """Seed default subscription plans"""
+    plans = [
+        {
+            "id": "free",
+            "name": "Gratis",
+            "price_monthly": 0,
+            "price_yearly": 0,
+            "currency": "USD",
+            "features": [
+                "1 tarjeta digital",
+                "Código QR básico",
+                "1 plantilla estándar",
+                "Perfil público",
+                "Compartir por link",
+                "Soporte por email"
+            ],
+            "limits": {
+                "max_cards": 1,
+                "max_photos": 3,
+                "max_social_links": 5,
+                "analytics": False,
+                "custom_domain": False,
+                "remove_branding": False,
+                "nfc_support": False
+            },
+            "is_active": True
+        },
+        {
+            "id": "pro",
+            "name": "Pro",
+            "price_monthly": 9.99,
+            "price_yearly": 99.00,
+            "currency": "USD",
+            "features": [
+                "5 tarjetas digitales",
+                "Código QR personalizado con logo",
+                "Todas las plantillas",
+                "Estadísticas de visitas",
+                "Perfil verificado ✓",
+                "Soporte NFC básico",
+                "Sin marca BRUNO en tarjeta",
+                "Exportar contactos VCF",
+                "Integración calendario",
+                "Soporte prioritario"
+            ],
+            "limits": {
+                "max_cards": 5,
+                "max_photos": 20,
+                "max_social_links": 20,
+                "analytics": True,
+                "custom_domain": False,
+                "remove_branding": True,
+                "nfc_support": True
+            },
+            "is_active": True
+        },
+        {
+            "id": "business",
+            "name": "Business",
+            "price_monthly": 29.99,
+            "price_yearly": 299.00,
+            "currency": "USD",
+            "features": [
+                "Tarjetas ilimitadas",
+                "Todo de Pro incluido",
+                "Panel de administración de equipo",
+                "Dominio personalizado",
+                "API access",
+                "Estadísticas avanzadas",
+                "Múltiples administradores",
+                "Integración CRM",
+                "Soporte 24/7",
+                "Onboarding personalizado",
+                "Facturación empresarial"
+            ],
+            "limits": {
+                "max_cards": -1,
+                "max_photos": -1,
+                "max_social_links": -1,
+                "analytics": True,
+                "custom_domain": True,
+                "remove_branding": True,
+                "nfc_support": True,
+                "team_management": True,
+                "api_access": True
+            },
+            "is_active": True
+        }
+    ]
+    
+    for plan in plans:
+        await db.subscription_plans.update_one(
+            {"id": plan["id"]},
+            {"$set": plan},
+            upsert=True
+        )
+
+# ============================================================================
 # PUBLIC ROUTES
 # ============================================================================
 
