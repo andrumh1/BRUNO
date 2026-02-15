@@ -283,20 +283,9 @@ const FeedPage = () => {
                       </div>
                     )}
 
-                    {/* Stats */}
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground pt-3 border-t">
-                      <div className="flex items-center gap-1">
-                        <Eye className="w-4 h-4" />
-                        <span>{card.views || 0}</span>
-                      </div>
-                      <button className="flex items-center gap-1 hover:text-primary transition-colors">
-                        <Heart className="w-4 h-4" />
-                        <span>0</span>
-                      </button>
-                      <button className="flex items-center gap-1 hover:text-primary transition-colors">
-                        <MessageSquare className="w-4 h-4" />
-                        <span>0</span>
-                      </button>
+                    {/* Stats p fablicas m e1s discretas */}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border/60">
+                      <span>Hecha por BRUNO</span>
                     </div>
 
                     {/* Actions */}
