@@ -41,6 +41,8 @@ const CreateCardPage = () => {
     location: null,
     template_id: "personal_classic",
     is_public: true,
+    show_in_feed: true,
+    is_animated: true,
   });
 
   const handleChange = (e) => {
@@ -415,6 +417,55 @@ const CreateCardPage = () => {
                         Cualquiera con el enlace puede ver esta tarjeta
                       </div>
                     </div>
+              {/* Visibilidad en Feed */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Visibilidad en el Feed</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="show_in_feed"
+                      checked={formData.show_in_feed}
+                      onChange={handleChange}
+                      className="w-4 h-4"
+                    />
+                    <div>
+                      <div className="font-medium">Mostrar en el Feed pablico</div>
+                      <div className="text-sm text-muted-foreground">
+                        Si est 0e1 desmarcado, solo se podr e1 acceder con el enlace directo
+                      </div>
+                    </div>
+                  </label>
+                </CardContent>
+              </Card>
+
+              {/* Animaci f3n */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Animaci f3n</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="is_animated"
+                      checked={formData.is_animated}
+                      onChange={handleChange}
+                      className="w-4 h-4"
+                    />
+                    <div>
+                      <div className="font-medium">Activar efecto din e1mico</div>
+                      <div className="text-sm text-muted-foreground">
+                        Aplica suaves movimientos tipo burbuja a la tarjeta
+                      </div>
+                    </div>
+                  </label>
+                </CardContent>
+              </Card>
+
+
                   </label>
                 </CardContent>
               </Card>
