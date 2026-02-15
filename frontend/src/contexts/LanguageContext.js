@@ -48,6 +48,7 @@ const translations = {
         lugares: "Lugares",
         guardian: "Guardián",
         curriculum: "Curriculum",
+        mascotas: "Mascotas",
       },
       typeDescriptions: {
         personal: "Tarjeta de presentación personal",
@@ -56,6 +57,7 @@ const translations = {
         lugares: "Turismo, información, advertencias",
         guardian: "Para niños, ancianos o personas con necesidades especiales",
         curriculum: "Hoja de vida profesional",
+        mascotas: "Para tu mascota: información de contacto si se pierde",
       },
     },
     // Crear/Editar tarjeta
@@ -348,6 +350,7 @@ const translations = {
         lugares: "Places",
         guardian: "Guardian",
         curriculum: "Resume",
+        mascotas: "Pets",
       },
       typeDescriptions: {
         personal: "Personal presentation card",
@@ -356,6 +359,7 @@ const translations = {
         lugares: "Tourism, information, warnings",
         guardian: "For children, elderly or people with special needs",
         curriculum: "Professional resume",
+        mascotas: "For your pet: contact info if lost",
       },
     },
     // Create/Edit card
