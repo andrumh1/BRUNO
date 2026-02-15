@@ -19,6 +19,7 @@ const cardTypes = [
   { value: "negocio", label: "Negocio", desc: "Información de empresa o negocio" },
   { value: "lugares", label: "Lugares", desc: "Turismo, información, advertencias" },
   { value: "guardian", label: "Guardián", desc: "Para niños, ancianos o personas con necesidades especiales" },
+  // El tipo CURRICULUM se añadirá en una fase posterior con su propio formulario
 ];
 
 const CreateCardPage = () => {
