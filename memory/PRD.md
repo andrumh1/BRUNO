@@ -1,115 +1,127 @@
-# BRUNO - Tarjetas Digitales del Futuro
+# BRUNO - Digital Business Card Application
 
-## Descripción del Proyecto
-Aplicación de tarjetas de presentación digitales con características de red social. Permite crear, compartir y descubrir tarjetas digitales profesionales con códigos QR personalizados y soporte NFC.
+## Problem Statement
+Build a comprehensive digital business card application called "BRUNO" - a highly polished, visually appealing PWA with extensive customization and social features.
 
-## Arquitectura Técnica
-- **Frontend**: React + TailwindCSS + shadcn/ui
-- **Backend**: FastAPI + MongoDB
-- **Autenticación**: JWT + Google OAuth (Emergent-managed)
-- **Almacenamiento de imágenes**: Cloudinary
-- **Tipo de app**: PWA (Progressive Web App)
+## User Personas
+1. **Individual Professionals** - Need personal digital business cards
+2. **Small Business Owners** - Need business/negocio cards for their services
+3. **Corporate Teams** - Need branded corporate cards for employees
+4. **Tour/Place Managers** - Need location-based cards (lugares)
+5. **Guardians** - Need cards for children, elderly, or special needs individuals
+6. **Job Seekers** - Need curriculum/resume-style cards
 
-## Funcionalidades Implementadas
+## Core Requirements
 
-### Fase 1 - Fundación ✅
-- [x] Sistema de autenticación (email/password + Google OAuth)
-- [x] CRUD de tarjetas digitales
-- [x] 5 tipos de tarjetas: Personal, Empresarial, Negocio, Lugares, **Guardián**
-- [x] Generación de códigos QR con logo BRUNO
-- [x] Subida de imágenes (avatar, banner)
-- [x] Sistema de plantillas (15 plantillas, 3 por tipo)
+### Card Types
+1. ✅ Personal - Personal presentation card
+2. ✅ Empresarial/Corporate - Corporate presentation
+3. ✅ Negocio/Business - Company or business information
+4. ✅ Lugares/Places - Tourism, information, warnings
+5. ✅ Guardian - For children, elderly, or people with special needs
+6. ✅ Curriculum - Professional resume with experience, education, skills
 
-### Fase 2 - Características Sociales (En progreso)
-- [x] Feed público (página principal)
-- [x] Filtros por tipo de tarjeta
-- [x] Vista de tarjeta pública
-- [x] Contador de visualizaciones
-- [x] Botones de compartir
-- [x] **Navegación tipo red social**: Explorar | Mapa | Mi Panel
-- [ ] Likes en tarjetas
-- [ ] Comentarios en tarjetas
-- [ ] Sistema de colecciones (favoritos, historial)
+### Visual Design
+- ✅ Color Palette: #FFFFF3 (off-white), #F5E7CA (cream beige), #FF5A00 (bright orange), #2C2C27 (grayish black)
+- ✅ Glassmorphism/bubble design with glowing borders
+- ✅ Backdrop-blur effects on cards, modals, dropdowns
+- ✅ Card animation option (is_animated flag)
+- ✅ Hover lift effects on cards
 
-### Fase 3 - Funcionalidades Avanzadas (Pendiente)
-- [ ] Suscripciones y planes de pago
-- [ ] Gestión de cuentas corporativas
-- [ ] Panel de Super-Admin
-- [ ] Conversión a app nativa (iOS/Android)
+### Card Features
+- ✅ Multiple templates per card type
+- ✅ Avatar and banner image uploads
+- ✅ Social links selector
+- ✅ Location support with map
+- ✅ Custom colors (background, text)
+- ✅ Privacy controls (is_public, show_in_feed)
+- ✅ QR code generation
 
-## Correcciones Completadas (12 Feb 2026)
-1. ✅ **QR con logo BRUNO**: El código QR ahora incluye el logo de Bruno en el centro
-2. ✅ **Sistema NFC mejorado**: Página con detección de dispositivo y permisos completos para Android/iOS
-3. ✅ **Feed como página principal**: La ruta `/` ahora muestra el Feed (Explorar)
-4. ✅ **Botón Editar funcional**: Navega correctamente a `/cards/{cardId}/edit`
-5. ✅ **Tipo de tarjeta Guardián**: Disponible en todos los formularios y filtros
+### CURRICULUM Card Specific
+- ✅ Work Experience section (company, position, dates, description)
+- ✅ Education section (institution, degree, dates)
+- ✅ Skills section (name, level percentage)
+- ✅ Languages section (name, proficiency level)
+- ✅ Documents section (attachments like diplomas, certificates)
 
-## Estructura de Archivos Principales
-```
-/app/
-├── backend/
-│   ├── server.py          # API FastAPI completa
-│   ├── requirements.txt
-│   └── .env               # MONGO_URL, CLOUDINARY_*, SECRET_KEY
-├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── FeedPage.jsx       # Página principal
-│   │   │   ├── Dashboard.jsx      # Panel de usuario
-│   │   │   ├── CreateCardPage.jsx # Crear tarjeta
-│   │   │   ├── EditCardPage.jsx   # Editar tarjeta
-│   │   │   ├── ViewCardPage.jsx   # Vista pública de tarjeta
-│   │   │   ├── NFCWritePage.jsx   # Programar NFC
-│   │   │   └── MapPage.jsx        # Mapa de tarjetas
-│   │   ├── components/
-│   │   │   ├── TemplateSelector.jsx
-│   │   │   ├── SocialLinkSelector.jsx
-│   │   │   └── LocationSelector.jsx
-│   │   └── App.js
-│   └── public/
-│       ├── bruno-logo.png
-│       ├── bruno-mascot.png
-│       └── manifest.json
-└── test_reports/
-    └── iteration_1.json   # Resultados de pruebas
-```
+### Internationalization (i18n)
+- ✅ Spanish and English support
+- ✅ Auto-detection from browser language
+- ✅ Manual switcher with persistence
 
-## APIs Principales
-| Endpoint | Método | Descripción |
-|----------|--------|-------------|
-| `/api/auth/register` | POST | Registro de usuario |
-| `/api/auth/login` | POST | Login con email/password |
-| `/api/auth/google` | POST | Login con Google |
-| `/api/cards` | GET/POST | Listar/Crear tarjetas |
-| `/api/cards/{id}` | GET/PUT/DELETE | Operaciones en tarjeta |
-| `/api/cards/{id}/qr` | GET | Obtener QR con logo |
-| `/api/nfc/activate` | POST | Activar tarjeta NFC |
-| `/api/upload/avatar` | POST | Subir foto de perfil |
-| `/api/upload/banner` | POST | Subir banner |
+### Feed & Navigation
+- ✅ Public feed as main page
+- ✅ Grid/List view toggle
+- ✅ Search and filter by card type
+- ✅ User dashboard with stats
 
-## Credenciales de Prueba
-- **Email**: demo@bruno.com
-- **Password**: demo123
-- **Card ID de prueba**: 01e1d78c-a082-4de5-9590-ef3b0ed532b2
+### Payments (Stripe Integration)
+- ✅ Backend checkout endpoints
+- ✅ Frontend PricingPage with 4 plans
+- ✅ Subscription support (Personal, Business, Corporate)
+- ✅ One-time purchases (NFC packs)
 
-## Próximos Pasos (Backlog)
-### P1 - Alta Prioridad
-- Implementar likes en tarjetas
-- Implementar comentarios en tarjetas
-- Sistema de colecciones (favoritos, historial, guardados)
+## What's Been Implemented
 
-### P2 - Media Prioridad
-- Sistema de suscripciones con Stripe
-- Gestión de cuentas corporativas
-- Notificaciones push
+### Date: 2026-02-15
+**Session Summary:**
+- Implemented i18n system with LanguageContext and LanguageSwitcher
+- Added Grid/List view toggle to Feed and Dashboard
+- Created CURRICULUM card type with all sections
+- Built ImageEditor component for avatar/banner editing
+- Enhanced CSS with glassmorphism effects
+- Connected PricingPage to Stripe checkout
+- Applied consistent styling across all pages
 
-### P3 - Baja Prioridad
-- Panel de Super-Admin
-- Conversión a app nativa
-- Analytics avanzados
+### Key Files Modified
+- `/app/frontend/src/contexts/LanguageContext.js` - NEW
+- `/app/frontend/src/components/LanguageSwitcher.jsx` - NEW
+- `/app/frontend/src/components/ImageEditor.jsx` - NEW
+- `/app/frontend/src/pages/CreateCardPage.jsx` - UPDATED
+- `/app/frontend/src/pages/EditCardPage.jsx` - UPDATED
+- `/app/frontend/src/pages/FeedPage.jsx` - UPDATED
+- `/app/frontend/src/pages/Dashboard.jsx` - UPDATED
+- `/app/frontend/src/pages/PricingPage.jsx` - UPDATED
+- `/app/frontend/src/index.css` - UPDATED
+- `/app/frontend/src/App.js` - UPDATED
 
-## Notas Técnicas
-- El archivo `server.py` tiene >1000 líneas y se recomienda refactorizar en módulos
-- La API de NFC (Web NFC) solo funciona en Chrome para Android
-- iOS no soporta escritura NFC desde navegador web
-- Los códigos QR usan alta corrección de errores (H) para permitir el logo en el centro
+## Prioritized Backlog
+
+### P0 (Must Have - In Progress)
+- [ ] PDF export for CURRICULUM cards
+- [ ] Document attachment upload to cloud storage
+- [ ] CURRICULUM detail view with bubble overlays
+
+### P1 (Should Have)
+- [ ] Social features (likes, comments, share count)
+- [ ] Card collections/album (saved, scanned, visited)
+- [ ] Enhanced QR with logo in center
+- [ ] SEO meta tags for public cards
+
+### P2 (Nice to Have)
+- [ ] Corporate account management panel
+- [ ] Deepen questions for Guardian and other types
+- [ ] Analytics dashboard for card owners
+
+### P3 (Future)
+- [ ] Super-admin panel
+- [ ] Native app conversion (iOS/Android)
+- [ ] Advanced card templates designer
+
+## Technical Stack
+- **Frontend:** React, React Router, Tailwind CSS, shadcn/ui, lucide-react
+- **Backend:** FastAPI, MongoDB (motor), Pydantic
+- **Auth:** JWT + Emergent-managed Google OAuth
+- **Storage:** Cloudinary for images
+- **Payments:** Stripe (subscriptions + one-time)
+
+## Test Credentials
+- Email: `newtest@bruno.com`
+- Password: `Test1234!`
+
+## Test Results
+- Frontend: 100% pass rate
+- Backend: Previously tested, all endpoints working
+
+---
+*Last Updated: 2026-02-15*
