@@ -812,8 +812,11 @@ async def get_card_qr(card_id: str):
     
     # Add BRUNO logo in center (optimizado para miniatura)
     try:
-        # Try to open logo from public folder
-        logo_path = ROOT_DIR.parent / 'frontend' / 'public' / 'bruno-mascot.png'
+        # Try to open logo from public folder - preferir el logo cuadrado para QR
+        logo_path = ROOT_DIR.parent / 'frontend' / 'public' / 'bruno-qr-logo.png'
+        if not logo_path.exists():
+            logo_path = ROOT_DIR.parent / 'frontend' / 'public' / 'bruno-mascot.png'
+        
         logger.info(f"QR: Looking for logo at {logo_path}, exists: {logo_path.exists()}")
         if logo_path.exists():
             logo = Image.open(logo_path)
