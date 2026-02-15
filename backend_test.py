@@ -27,7 +27,7 @@ class BrunoAPITester:
         print(f"[{timestamp}] {level}: {message}")
         
     def authenticate(self):
-        """Authenticate with demo user"""
+        """Authenticate with demo user (create if doesn't exist)"""
         self.log("🔐 Authenticating with demo@bruno.com...")
         
         login_data = {
@@ -36,6 +36,7 @@ class BrunoAPITester:
         }
         
         try:
+            # Try to login first
             response = self.session.post(f"{BACKEND_URL}/auth/login", json=login_data)
             
             if response.status_code == 200:
@@ -44,6 +45,27 @@ class BrunoAPITester:
                 self.session.headers.update({"Authorization": f"Bearer {self.auth_token}"})
                 self.log(f"✅ Authentication successful. User: {data['user']['name']}")
                 return True
+            elif response.status_code == 401:
+                # User doesn't exist, try to register
+                self.log("👤 Demo user not found, creating...")
+                register_data = {
+                    "email": TEST_EMAIL,
+                    "password": TEST_PASSWORD,
+                    "name": "Demo User BRUNO",
+                    "role": "personal"
+                }
+                
+                register_response = self.session.post(f"{BACKEND_URL}/auth/register", json=register_data)
+                
+                if register_response.status_code == 201:
+                    data = register_response.json()
+                    self.auth_token = data["access_token"]
+                    self.session.headers.update({"Authorization": f"Bearer {self.auth_token}"})
+                    self.log(f"✅ Demo user created and authenticated. User: {data['user']['name']}")
+                    return True
+                else:
+                    self.log(f"❌ Registration failed: {register_response.status_code} - {register_response.text}", "ERROR")
+                    return False
             else:
                 self.log(f"❌ Authentication failed: {response.status_code} - {response.text}", "ERROR")
                 return False
