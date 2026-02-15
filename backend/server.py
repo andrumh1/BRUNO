@@ -595,19 +595,6 @@ async def stripe_webhook(request: Request):
     )
 
     return {"received": True}
-    }
-    
-    # Upsert session
-    await db.user_sessions.update_one(
-        {"user_id": user_obj.id},
-        {"$set": session_doc},
-        upsert=True
-    )
-    
-    return {
-        "session_token": session_token,
-        "user": user_obj
-    }
 
 # ============================================================================
 # CARD ROUTES
