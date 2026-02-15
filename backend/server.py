@@ -460,6 +460,142 @@ async def google_auth(request: dict):
     # Call Emergent Auth API to get user data
     import requests
     try:
+
+# =========================================================================
+# PAYMENTS / STRIPE ROUTES
+# =========================================================================
+
+
+async def get_stripe_checkout(request) -> StripeCheckout:
+    if not STRIPE_API_KEY:
+        raise HTTPException(status_code=500, detail="Stripe API key not configured")
+
+    host_url = str(request.base_url).rstrip("/")
+    webhook_url = f"{host_url}/api/webhook/stripe"
+    return StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+
+
+PACKAGES = {
+    "nfc_basic": {"amount": 9.99, "currency": "usd", "type": PaymentType.ONE_TIME},
+    "nfc_pro": {"amount": 24.99, "currency": "usd", "type": PaymentType.ONE_TIME},
+}
+
+
+SUBSCRIPTION_PLANS = {
+    "bruno_personal": {"amount": 4.99, "currency": "usd"},
+    "bruno_business": {"amount": 14.99, "currency": "usd"},
+    "bruno_corporate": {"amount": 39.99, "currency": "usd"},
+}
+
+
+class CheckoutSessionCreate(BaseModel):
+    package_id: Optional[str] = None
+    plan_id: Optional[str] = None
+    origin: str
+
+
+@api_router.post("/payments/checkout", response_model=CheckoutSessionResponse)
+async def create_checkout_session(payload: CheckoutSessionCreate, request: Request, current_user: User = Depends(get_current_user)):
+    """Crear sesión de pago (suscripción o pago único)."""
+    stripe_checkout = await get_stripe_checkout(request)
+
+    if not payload.package_id and not payload.plan_id:
+        raise HTTPException(status_code=400, detail="Debe especificar package_id o plan_id")
+
+    # Determinar tipo de pago y configuración
+    if payload.package_id:
+        pkg = PACKAGES.get(payload.package_id)
+        if not pkg:
+            raise HTTPException(status_code=400, detail="Paquete inválido")
+        amount = pkg["amount"]
+        currency = pkg["currency"]
+        payment_type = pkg["type"]
+    else:
+        plan = SUBSCRIPTION_PLANS.get(payload.plan_id)
+        if not plan:
+            raise HTTPException(status_code=400, detail="Plan inválido")
+        amount = plan["amount"]
+        currency = plan["currency"]
+        payment_type = PaymentType.SUBSCRIPTION
+
+    origin = payload.origin.rstrip("/")
+    success_url = f"{origin}/pricing?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{origin}/pricing"
+
+    metadata = {
+        "user_id": current_user.id,
+        "payment_type": payment_type,
+        "package_id": payload.package_id or "",
+        "plan_id": payload.plan_id or "",
+    }
+
+    checkout_request = CheckoutSessionRequest(
+        amount=amount,
+        currency=currency,
+        success_url=success_url,
+        cancel_url=cancel_url,
+        metadata=metadata,
+    )
+
+    session = await stripe_checkout.create_checkout_session(checkout_request)
+
+    # Registrar transacción
+    transaction = PaymentTransaction(
+        user_id=current_user.id,
+        session_id=session.session_id,
+        payment_type=payment_type,
+        amount=amount,
+        currency=currency,
+        metadata=metadata,
+    )
+
+    tx_doc = transaction.model_dump()
+    tx_doc["created_at"] = tx_doc["created_at"].isoformat()
+    tx_doc["updated_at"] = tx_doc["updated_at"].isoformat()
+    await db.payment_transactions.insert_one(tx_doc)
+
+    return session
+
+
+@api_router.get("/payments/checkout/status/{session_id}", response_model=CheckoutStatusResponse)
+async def get_checkout_status(session_id: str, request: Request):
+    """Consultar estado de sesión de pago y actualizar transacción."""
+    stripe_checkout = await get_stripe_checkout(request)
+    status = await stripe_checkout.get_checkout_status(session_id)
+
+    # Actualizar estado en BD
+    updated = await db.payment_transactions.update_one(
+        {"session_id": session_id},
+        {
+            "$set": {
+                "status": status.status,
+                "payment_status": status.payment_status,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
+
+    return status
+
+
+@api_router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    """Webhook de Stripe (registro adicional de eventos)."""
+    stripe_checkout = await get_stripe_checkout(request)
+    body = await request.body()
+    sig_header = request.headers.get("Stripe-Signature", "")
+
+    event = await stripe_checkout.handle_webhook(body, sig_header)
+
+    # Podemos registrar el evento o actualizar según sea necesario
+    session_id = event.session_id
+    await db.payment_transactions.update_one(
+        {"session_id": session_id},
+        {"$set": {"payment_status": event.payment_status, "updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+
+    return {"received": True}
+
         response = requests.get(
             "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
             headers={"X-Session-ID": session_id}
