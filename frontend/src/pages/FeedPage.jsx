@@ -238,36 +238,32 @@ const FeedPage = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
             <Link to="/">
-              <img src="/bruno-logo.png" alt="BRUNO" className="h-10 hover:scale-105 transition-transform" />
+              <img src="/bruno-logo.png" alt="BRUNO" className="bruno-logo hover:scale-105 transition-transform" />
             </Link>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <LanguageSwitcher variant="minimal" />
               {user ? (
                 <>
-                  <Link to="/dashboard">
-                    <Button variant="ghost">{t("nav.myPanel")}</Button>
+                  <Link to="/dashboard" className="hidden sm:block">
+                    <Button variant="ghost" size="sm">{t("nav.myPanel")}</Button>
                   </Link>
-                  <Link to="/map">
-                    <Button variant="ghost">{t("nav.map")}</Button>
+                  <Link to="/dashboard" className="sm:hidden">
+                    <Button variant="ghost" size="icon"><Grid3X3 className="w-4 h-4" /></Button>
                   </Link>
-                  <Button variant="ghost" onClick={handleLogout}>
-                    <LogOut className="w-4 h-4 mr-2" />
-                    {t("nav.logout")}
+                  <Button variant="ghost" size="icon" onClick={handleLogout}>
+                    <LogOut className="w-4 h-4" />
                   </Button>
                 </>
               ) : (
                 <>
-                  <Link to="/map">
-                    <Button variant="ghost">{t("nav.map")}</Button>
-                  </Link>
                   <Link to="/login">
-                    <Button variant="ghost">{t("nav.login")}</Button>
+                    <Button variant="ghost" size="sm">{t("nav.login")}</Button>
                   </Link>
-                  <Link to="/register">
-                    <Button>{t("nav.register")}</Button>
+                  <Link to="/register" className="hidden sm:block">
+                    <Button size="sm">{t("nav.register")}</Button>
                   </Link>
                 </>
               )}
@@ -275,7 +271,7 @@ const FeedPage = () => {
           </div>
 
           {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
@@ -285,7 +281,7 @@ const FeedPage = () => {
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap overflow-x-auto pb-2 sm:pb-0">
               <Button
                 variant={filterType === "all" ? "default" : "outline"}
                 size="sm"
