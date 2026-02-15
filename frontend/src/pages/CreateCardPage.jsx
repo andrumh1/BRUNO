@@ -237,27 +237,28 @@ const CreateCardPage = () => {
           {/* Form */}
           <div>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Tipo de Tarjeta - Dropdown */}
+              {/* Tipo de Tarjeta - BubbleSelect */}
               <Card className="glass-card">
                 <CardHeader>
                   <CardTitle>{t("cardForm.cardType")}</CardTitle>
                   <CardDescription>{t("cardForm.selectType")}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <select
+                  <BubbleSelect
                     value={formData.card_type}
-                    onChange={(e) => handleCardTypeChange(e.target.value)}
-                    className="flex h-12 w-full rounded-xl border-2 border-input bg-background px-4 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer"
-                  >
-                    {cardTypes.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label} - {type.desc}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => handleCardTypeChange(value)}
+                    options={cardTypes}
+                    placeholder={t("cardForm.selectType")}
+                    renderOption={(option, isSelected) => (
+                      <div className="flex flex-col">
+                        <span className={`font-medium ${isSelected ? "" : ""}`}>{option.label}</span>
+                        {!isSelected && <span className="text-xs text-muted-foreground mt-0.5">{option.desc}</span>}
+                      </div>
+                    )}
+                  />
                   
                   {/* Preview del tipo seleccionado */}
-                  <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                  <div className="mt-4 p-4 rounded-xl bg-primary/5 border border-primary/20">
                     <div className="font-medium text-primary">
                       {cardTypes.find(t => t.value === formData.card_type)?.label}
                     </div>
