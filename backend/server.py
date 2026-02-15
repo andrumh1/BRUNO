@@ -298,6 +298,169 @@ class CardOrderCreate(BaseModel):
     shipping_address: Optional[dict] = None
 
 # ============================================================================
+# STORE / SHOP MODELS (PIUP - Personal Intelligent Unlock Point)
+# ============================================================================
+
+# Product Categories
+class ProductCategory(str):
+    NFC_CARD = "nfc_card"
+    NFC_BRACELET = "nfc_bracelet"  # Guardian
+    NFC_PET_TAG = "nfc_pet_tag"    # Mascotas con GPS
+    MEMBERSHIP = "membership"
+    SERVICE = "service"
+
+# Store Product
+class StoreProduct(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str
+    category: str  # nfc_card, nfc_bracelet, nfc_pet_tag, membership, service
+    price: float
+    currency: str = "USD"
+    image_url: Optional[str] = None
+    colors: List[str] = []  # Available colors for NFC products
+    features: List[str] = []  # Product features
+    for_card_type: Optional[str] = None  # personal, guardian, mascotas, etc.
+    is_active: bool = True
+    stock: int = -1  # -1 = unlimited
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Shipping Address
+class ShippingAddress(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    label: str = "Home"  # Home, Work, Other
+    full_name: str
+    phone: str
+    address_line1: str
+    address_line2: Optional[str] = None
+    city: str
+    state: Optional[str] = None
+    postal_code: str
+    country: str
+    is_default: bool = False
+
+# Payment Method (stored for user)
+class SavedPaymentMethod(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str = "card"  # card, paypal, etc.
+    last_four: str
+    brand: str  # visa, mastercard, etc.
+    exp_month: int
+    exp_year: int
+    is_default: bool = False
+    stripe_payment_method_id: Optional[str] = None
+
+# User Saved Data (for reuse across cards)
+class UserSavedData(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    user_id: str
+    # Personal Info
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    bio: Optional[str] = None
+    profession: Optional[str] = None
+    company: Optional[str] = None
+    website: Optional[str] = None
+    
+    # Saved Social Links
+    social_links: List[SocialLink] = []
+    
+    # Saved Addresses
+    addresses: List[ShippingAddress] = []
+    
+    # Saved Payment Methods
+    payment_methods: List[SavedPaymentMethod] = []
+    
+    # Saved Photos (gallery)
+    photos: List[str] = []  # URLs
+    
+    # Work References (for curriculum)
+    work_references: List[dict] = []
+    
+    # Frequently used custom fields
+    custom_fields: dict = {}
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Store Order
+class StoreOrderStatus(str):
+    PENDING_PAYMENT = "pending_payment"
+    PAID = "paid"
+    PROCESSING = "processing"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+
+class StoreOrderItem(BaseModel):
+    product_id: str
+    product_name: str
+    quantity: int
+    price: float
+    color: Optional[str] = None
+    options: dict = {}
+
+class StoreOrder(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    items: List[StoreOrderItem] = []
+    subtotal: float
+    shipping_cost: float = 0
+    tax: float = 0
+    total: float
+    currency: str = "USD"
+    status: str = StoreOrderStatus.PENDING_PAYMENT
+    shipping_address: Optional[ShippingAddress] = None
+    billing_address: Optional[ShippingAddress] = None
+    payment_method_id: Optional[str] = None
+    stripe_session_id: Optional[str] = None
+    stripe_payment_intent_id: Optional[str] = None
+    tracking_number: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Subscription Plans
+class SubscriptionPlan(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str
+    name: str  # Free, Pro, Business
+    price_monthly: float
+    price_yearly: float
+    currency: str = "USD"
+    features: List[str] = []
+    limits: dict = {}  # max_cards, max_photos, etc.
+    stripe_price_id_monthly: Optional[str] = None
+    stripe_price_id_yearly: Optional[str] = None
+    is_active: bool = True
+
+# User Subscription
+class UserSubscription(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    user_id: str
+    plan_id: str
+    status: str = "active"  # active, cancelled, past_due, trialing
+    billing_cycle: str = "monthly"  # monthly, yearly
+    current_period_start: datetime
+    current_period_end: datetime
+    stripe_subscription_id: Optional[str] = None
+    stripe_customer_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# ============================================================================
 # SECURITY FUNCTIONS
 # ============================================================================
 
