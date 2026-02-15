@@ -18,6 +18,7 @@ const FeedPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [myCards, setMyCards] = useState([]);
 
   useEffect(() => {
     fetchPublicCards();
