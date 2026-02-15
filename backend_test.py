@@ -12,9 +12,9 @@ from datetime import datetime
 # Get backend URL from frontend .env
 BACKEND_URL = "https://cardshare-app-2.preview.emergentagent.com/api"
 
-# Test credentials
+# Test credentials - try multiple passwords
 TEST_EMAIL = "demo@bruno.com"
-TEST_PASSWORD = "string123"
+TEST_PASSWORDS = ["string123", "demo123", "password", "123456", "demo"]
 
 class BrunoAPITester:
     def __init__(self):
