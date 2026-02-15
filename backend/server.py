@@ -771,15 +771,16 @@ async def get_card_qr(card_id: str):
     frontend_url = os.environ.get('FRONTEND_URL', 'https://cardshare-app-2.preview.emergentagent.com')
     card_url = f"{frontend_url}/c/{card_id}"
     
-    # Get card color (default to orange)
-    fill_color = card_dict.get('background_color', '#FF6B35')
-    
+    # Get card color (default to orange) y ajustarlo para buen contraste
+    base_color = card_dict.get('background_color', '#FF5A00')
+    fill_color = base_color
+
     # Generate QR code with high error correction (allows logo in center)
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_H,  # High error correction allows 30% damage
-        box_size=10,
-        border=4,
+        box_size=8,
+        border=2,
     )
     qr.add_data(card_url)
     qr.make(fit=True)
