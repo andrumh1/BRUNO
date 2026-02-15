@@ -598,46 +598,6 @@ async def stripe_webhook(request: Request):
     )
 
     return {"received": True}
-
-        response = requests.get(
-            "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-            headers={"X-Session-ID": session_id}
-        )
-        response.raise_for_status()
-        user_data = response.json()
-    except Exception as e:
-        logger.error(f"Failed to get session data: {e}")
-        raise HTTPException(status_code=401, detail="Invalid session")
-    
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": user_data['email']}, {"_id": 0})
-    
-    if existing_user:
-        # Update user data if needed
-        user_obj = User(**existing_user)
-        if isinstance(existing_user.get('created_at'), str):
-            user_obj.created_at = datetime.fromisoformat(existing_user['created_at'])
-    else:
-        # Create new user
-        user_obj = User(
-            email=user_data['email'],
-            name=user_data['name'],
-            role=UserRole.PERSONAL
-        )
-        user_doc = user_obj.model_dump()
-        user_doc['created_at'] = user_doc['created_at'].isoformat()
-        user_doc['google_picture'] = user_data.get('picture')
-        await db.users.insert_one(user_doc)
-    
-    # Store session token
-    session_token = user_data['session_token']
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    
-    session_doc = {
-        "user_id": user_obj.id,
-        "session_token": session_token,
-        "expires_at": expires_at.isoformat(),
-        "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     # Upsert session
