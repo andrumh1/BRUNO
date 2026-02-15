@@ -10,6 +10,7 @@ import TemplateSelector from "@/components/TemplateSelector";
 import LocationSelector from "@/components/LocationSelector";
 import ImageEditor from "@/components/ImageEditor";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ProfileSpecificFields from "@/components/ProfileSpecificFields";
 import axios from "axios";
 import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2, Plus, Trash2, Briefcase, GraduationCap, Award, Languages, FileText } from "lucide-react";
 
