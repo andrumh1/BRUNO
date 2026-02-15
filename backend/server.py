@@ -1289,7 +1289,7 @@ async def delete_image(
     """Delete an image from Cloudinary"""
     try:
         # Verify the image belongs to the user
-        if not public_id.startswith(f"bruno") or current_user.id not in public_id:
+        if not public_id.startswith("bruno") or current_user.id not in public_id:
             raise HTTPException(status_code=403, detail="Not authorized to delete this image")
         
         result = cloudinary.uploader.destroy(public_id)
