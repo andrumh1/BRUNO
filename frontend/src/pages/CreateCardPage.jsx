@@ -60,7 +60,8 @@ const CreateCardPage = () => {
       skills: [],
       languages: [],
       certifications: [],
-      documents: []
+      documents: [],
+      references: []
     }
   });
 
