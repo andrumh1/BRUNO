@@ -5,117 +5,89 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 
 ## What's Been Implemented
 
-### Session: 2026-02-18 (Current)
+### Session: 2026-02-18 (Current) - Bug Fixes
 
-**1. Animaciones Spring iOS 26**
-- Animación `bubble-spring-in` con `cubic-bezier(0.34, 1.56, 0.64, 1)`
-- Efecto de rebote al abrir/cerrar dropdowns
-- Clases `.spring-button`, `.spring-card`, `.spring-modal`, `.spring-item`, `.spring-bounce`
-- Animaciones staggered para listas
+**Correcciones Técnicas Completadas:**
 
-**2. Tienda PIUP (Personal Intelligent Unlock Point)**
-- Página `/store` con catálogo de productos
-- **Tarjetas NFC** en múltiples colores: Negro, Blanco, Naranja BRUNO, Dorado Premium, Holográfica ($15-$30)
-- **Pulseras Guardian** de silicona con NFC para niños/adultos mayores ($10-$12)
-- **Tags para Mascotas** con NFC básico y GPS Premium ($15-$45)
-- **Servicios**: Diseño personalizado, Configuración empresarial
-- Carrito de compras con sidebar animado
-- Checkout con selección de direcciones guardadas
-- Integración con Stripe para pagos
+1. **Sincronización de Tarjetas** ✅
+   - CardUpdate model corregido con todos los campos necesarios
+   - PUT /api/cards/{id} ahora actualiza y persiste correctamente
+   - EditCardPage muestra mensaje de éxito traducido
 
-**3. Sistema de Datos Guardados del Usuario**
-- Direcciones de envío guardadas (CRUD completo)
-- Redes sociales favoritas reutilizables
-- Datos personales (nombre, teléfono, email, avatar, bio)
-- Referencias laborales guardadas
-- Fotos/galería personal
-- Métodos de pago guardados
+2. **NFC Redirect** ✅
+   - Nuevo endpoint GET /api/nfc/resolve/{nfc_id}
+   - Nueva página /n/:nfcId para redirección NFC
+   - Maneja NFC registrados y no registrados
 
-**4. Planes de Suscripción Mejorados**
-- **Gratis**: 1 tarjeta, QR básico, 1 plantilla, 3 fotos, 5 links sociales
-- **Pro ($9.99/mes)**: 5 tarjetas, QR con logo, todas las plantillas, estadísticas, NFC, sin branding, 20 fotos
-- **Business ($29.99/mes)**: Ilimitado, panel de equipo, dominio personalizado, API, CRM, soporte 24/7
+3. **Auth Refresh** ✅
+   - AuthContext.refreshUser() para actualizar datos del usuario
+   - Implementado con useCallback para mejor performance
 
-**Archivos Creados/Modificados:**
-- `/app/frontend/src/pages/StorePage.jsx` - NUEVO
-- `/app/frontend/src/index.css` - Animaciones spring (~100 líneas)
-- `/app/backend/server.py` - Modelos y endpoints de tienda (~400 líneas)
-- `/app/frontend/src/pages/FeedPage.jsx` - Ícono de tienda en header
-- `/app/frontend/src/App.js` - Rutas de tienda
+4. **Z-index Dropdowns** ✅
+   - BubbleSelect z-index aumentado a 9999
+   - Backdrop z-index 9998
+   - CSS para evitar overflow:hidden de padres
+
+5. **Tarjeta de Negocio Mejorada** ✅
+   - Sección Servicios expandida (nombre, descripción, precio, duración)
+   - Nueva sección "Catálogos y Productos"
+   - Campos para productos: nombre, descripción, precio, categoría, imagen
 
 ---
 
-### Session: 2026-02-15
+### Session: 2026-02-18 - Tienda PIUP
 
-**Dropdowns Móviles Corregidos:**
-- Componente `BubbleSelect.jsx` con estilo glassmorphism iOS 26
-- `backdrop-filter: blur(20px/30px)`
-- Touch events optimizados
-- Clase `bubble-native-select` para selects nativos
-
-**Bugs P0 Corregidos:**
-- ViewCardPage template "Bubble" - código duplicado separado
-- ImageEditor - sliders nativos funcionando
-
-**Features:**
-- Dropdown selector de tipo de tarjeta
-- Perfil "Mascotas" con campos específicos
-- Traducciones ES/EN completas
+**Implementado:**
+- Página /store con catálogo de productos NFC
+- Tarjetas NFC (5 colores), Pulseras Guardian, Tags Mascotas GPS
+- Sistema de checkout con direcciones guardadas
+- Animaciones Spring iOS 26
+- Planes de suscripción Free/Pro/Business
 
 ---
 
 ## Prioritized Backlog
 
-### P0 (Must Have)
-- [x] ~~Dropdowns no funcionan en móvil~~ ✅
-- [x] ~~Tienda PIUP~~ ✅
-- [x] ~~Animaciones spring iOS 26~~ ✅
-- [x] ~~Datos guardados del usuario~~ ✅
+### P0 (Completado)
+- [x] ~~Sincronización de tarjetas~~ ✅
+- [x] ~~NFC redirect~~ ✅
+- [x] ~~Auth refresh~~ ✅
+- [x] ~~Z-index dropdowns~~ ✅
+- [x] ~~Secciones Servicios/Catálogos~~ ✅
 
-### P1 (Should Have)
-- [ ] Eliminar/Archivar tarjetas desde Dashboard
-- [ ] NFC Lock - bloquear edición después de escribir
-- [ ] Mapa embebido (Leaflet) para direcciones
-- [ ] PDF export para CURRICULUM cards
-- [ ] Completar checkout flow con Stripe webhooks
+### P1 (Próximo - Red Social)
+- [ ] Feed tipo red social con posts multimedia
+- [ ] Likes, comentarios, compartir
+- [ ] Perfil editable con privacidad
+- [ ] Sistema de chat (texto, fotos, videos, voz)
 
-### P2 (Nice to Have)
-- [ ] Social features (likes, comentarios)
-- [ ] SEO meta tags para cards públicas
-- [ ] Panel corporativo
+### P2 (Siguiente)
+- [ ] IA BRUNO con GPT-5.2 (generación de tarjetas, asistente)
+- [ ] Sistema de suscripciones mejorado
+- [ ] Página web oficial
 
-### P3 (Future)
-- [ ] Super-admin panel
-- [ ] Native app conversion
+### P3 (Futuro)
+- [ ] Panel admin
+- [ ] Native apps
 
 ---
 
 ## Test Credentials
 - **Email:** `newtest@bruno.com`
 - **Password:** `Test1234!`
+- **Test Card ID:** `f191a519-4730-4af9-b870-5a80b4e556fc`
 
-## Tech Stack
-- **Frontend:** React, React Router, Axios, Tailwind CSS, shadcn/ui, lucide-react
-- **Backend:** FastAPI, Pydantic, MongoDB (motor), JWT, Pillow, Cloudinary, Stripe
-- **Payments:** Stripe (emergentintegrations)
-- **Authentication:** JWT + Emergent-managed Google OAuth
+## API Endpoints (Nuevos)
+- `GET /api/nfc/resolve/{nfc_id}` - Resolver NFC a URL de tarjeta
+- `PUT /api/cards/{id}` - Actualizar tarjeta (corregido)
 
-## Key Files Reference
-- `/app/frontend/src/pages/StorePage.jsx` - Tienda PIUP
-- `/app/frontend/src/components/BubbleSelect.jsx` - Dropdown iOS style
-- `/app/backend/server.py` - API principal con tienda, productos, planes
-- `/app/frontend/src/index.css` - Estilos CSS (animaciones spring, glassmorphism)
-
-## API Endpoints (Tienda)
-- `GET /api/store/products` - Lista productos
-- `GET /api/store/products/{id}` - Detalle producto
-- `POST /api/store/orders` - Crear orden
-- `POST /api/store/checkout/{order_id}` - Crear checkout Stripe
-- `GET /api/plans` - Planes de suscripción
-- `GET /api/user/saved-data` - Datos guardados del usuario
-- `PUT /api/user/saved-data` - Actualizar datos guardados
-- `POST /api/user/addresses` - Agregar dirección
-- `DELETE /api/user/addresses/{id}` - Eliminar dirección
+## Key Files Modified
+- `/app/backend/server.py` - CardUpdate model, NFC resolve endpoint
+- `/app/frontend/src/components/BubbleSelect.jsx` - z-index 9999
+- `/app/frontend/src/pages/EditCardPage.jsx` - handleSubmit mejorado
+- `/app/frontend/src/pages/NFCRedirectPage.jsx` - Nueva página
+- `/app/frontend/src/contexts/AuthContext.js` - refreshUser
+- `/app/frontend/src/components/ProfileSpecificFields.jsx` - Servicios y Catálogos
 
 ---
 *Last Updated: 2026-02-18*
