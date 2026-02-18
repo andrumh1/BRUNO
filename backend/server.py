@@ -1343,6 +1343,50 @@ async def activate_nfc(nfc_input: NFCActivate, current_user: User = Depends(get_
     
     return {"message": "NFC card activated successfully", "nfc_id": nfc_input.nfc_id, "card_id": nfc_input.card_id}
 
+@api_router.get("/nfc/resolve/{nfc_id}")
+async def resolve_nfc_card(nfc_id: str):
+    """Resolve NFC ID to card URL - used when scanning NFC tags"""
+    nfc_card = await db.nfc_cards.find_one({"nfc_id": nfc_id}, {"_id": 0})
+    
+    if not nfc_card:
+        # NFC not registered - return info to register
+        return {
+            "found": False,
+            "message": "NFC tag not registered",
+            "redirect_url": None,
+            "nfc_id": nfc_id
+        }
+    
+    card_id = nfc_card.get("card_id")
+    if not card_id:
+        return {
+            "found": False,
+            "message": "NFC tag not linked to a card",
+            "redirect_url": None,
+            "nfc_id": nfc_id
+        }
+    
+    # Verify the card still exists
+    card = await db.cards.find_one({"id": card_id}, {"_id": 0})
+    if not card:
+        return {
+            "found": False,
+            "message": "Linked card no longer exists",
+            "redirect_url": None,
+            "nfc_id": nfc_id
+        }
+    
+    # Return card URL
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://cardloop.preview.emergentagent.com')
+    
+    return {
+        "found": True,
+        "card_id": card_id,
+        "card_title": card.get("title", ""),
+        "redirect_url": f"{frontend_url}/c/{card_id}",
+        "nfc_id": nfc_id
+    }
+
 @api_router.get("/nfc/my-cards")
 async def get_my_nfc_cards(current_user: User = Depends(get_current_user)):
     nfc_cards = await db.nfc_cards.find({"user_id": current_user.id}, {"_id": 0}).to_list(1000)
