@@ -109,7 +109,8 @@ const BubbleSelect = ({
         <>
           {/* Backdrop para móviles */}
           <div 
-            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm sm:hidden"
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm sm:hidden"
+            style={{ zIndex: 9998 }}
             onClick={() => setIsOpen(false)}
           />
           
@@ -124,7 +125,7 @@ const BubbleSelect = ({
               left: 0,
               right: 0,
               marginTop: "8px",
-              zIndex: 50,
+              zIndex: 9999,
             }}
           >
             <div className="bubble-select-options-inner">
