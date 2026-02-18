@@ -2461,11 +2461,11 @@ async def get_comments(post_id: str, skip: int = 0, limit: int = 50):
         user = await db.users.find_one({"id": comment["user_id"]}, {"_id": 0, "hashed_password": 0})
         profile = await db.user_profiles.find_one({"user_id": comment["user_id"]}, {"_id": 0})
         
-        # Determine display name
+        # Determine display name - User model has 'name' not 'username'
         username = "Unknown"
         display_name = None
         if user:
-            username = user.get("username") or user.get("email", "Unknown").split("@")[0]
+            username = user.get("name") or user.get("email", "Unknown").split("@")[0]
         if profile:
             display_name = profile.get("display_name")
             
