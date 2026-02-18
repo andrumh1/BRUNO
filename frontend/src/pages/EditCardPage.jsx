@@ -245,15 +245,29 @@ const EditCardPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError("");
 
     try {
-      await axios.put(`${API}/cards/${cardId}`, formData, {
+      const response = await axios.put(`${API}/cards/${cardId}`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
+      // Update local state with response data to ensure sync
+      if (response.data) {
+        setFormData({
+          ...formData,
+          ...response.data
+        });
+      }
+      
+      // Show success and navigate
+      alert(t("cardForm.savedSuccess") || "¡Tarjeta actualizada exitosamente!");
       navigate("/dashboard");
     } catch (error) {
       console.error("Error updating card:", error);
-      alert(t("common.error"));
+      const errorMsg = error.response?.data?.detail || t("common.error");
+      setError(errorMsg);
+      alert(errorMsg);
     } finally {
       setSaving(false);
     }
