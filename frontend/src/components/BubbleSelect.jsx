@@ -75,6 +75,7 @@ const BubbleSelect = ({
     <div 
       ref={containerRef} 
       className={`bubble-select-container relative ${className}`}
+      style={{ zIndex: isOpen ? 9997 : "auto" }}
     >
       {/* Trigger Button */}
       <button
