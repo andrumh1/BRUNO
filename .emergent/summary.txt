@@ -1,97 +1,91 @@
 <analysis>Here is the handover summary for the next agent:
 
 **original_problem_statement:**
-The user wants to build a comprehensive digital business card application called BRUNO.
+The user wants to build a comprehensive digital business card application called BRUNO. The project has evolved significantly to include e-commerce, and is now pivoting to become a full-fledged professional social network while retaining all existing functionality.
 
 **PRODUCT REQUIREMENTS:**
-The user has provided a large and evolving set of requirements, which have been consolidated and prioritized through conversation. The core goal is to build a highly polished, visually appealing PWA with extensive customization and social features.
+The application must be a polished PWA with a minimalist but bubbly/glass design aesthetic inspired by iOS, using a specific color palette and animations.
 
-Key feature sets requested:
-1.  **Card Types:** Personal, Corporate, Business, Places, Guardian, CURRICULUM, and a new **Mascotas (Pets)** type.
-2.  **Visuals & Design:**
-    *   A minimalist but bubbly/glass design inspired by modern OS aesthetics (like iOS).
-    *   A pronounced burbuja con luces (bubble with lights) effect on cards, modals, and dropdowns.
-    *   A specific color palette: , , , .
-3.  **Card Functionality:**
-    *   Card profile selection should be a dropdown menu instead of radio boxes.
-    *   An option to lock card information after it's written to an NFC tag. Edits should only be possible through the app.
-    *   A button to delete or archive cards in the user's dashboard (mi panel).
-4.  **CURRICULUM Card Type:**
-    *   Fields for experience, education, skills, languages, document attachments, and **work references**.
-    *   A feature to download the curriculum as a formatted PDF.
-5.  **Image Editor:** A built-in basic image editor (crop, rotate, flip, brightness/contrast) for avatar and banner uploads is broken and needs fixing.
-6.  **QR Codes:** Must be customizable with the card's theme color and feature the BRUNO logo in the center, optimized for legibility at small sizes.
-7.  **Social Features & Bugs:**
-    *   A bug preventing users from adding social links needs to be fixed.
-    *   The bubble template has a bug causing duplicated information.
-8.  **Internationalization (i18n):** Support for Spanish and English. There are bugs where some sections are not translated correctly.
-9.  **Map Integration:** An embedded map view (e.g., Leaflet, Mapbox) should be displayed within the app for addresses, with an option to open in Google Maps for navigation.
-10. **Payments & Subscriptions:** Integration with Stripe for one-time purchases and recurring subscriptions.
+1.  **Core App:**
+    *   Multiple card types (Personal, Business, Pets, etc.).
+    *   Customizable QR codes and NFC card management.
+    *   Internationalization (ES/EN).
+
+2.  **E-commerce (PIUP Store):**
+    *   A store to sell physical NFC products (cards, pet tags, wristbands).
+    *   Product catalog, shopping cart, and checkout flow.
+    *   Subscription plans with different feature tiers (Publicity, Business, Enterprise).
+
+3.  **Social Network:**
+    *   A main feed for posts (image, video, multimedia).
+    *   User interactions: likes, comments, shares.
+    *   Editable user profiles with post history.
+    *   A private chat system with real-time notifications and support for text, media, and voice notes.
+
+4.  **AI Integration (BRUNO):**
+    *   An AI assistant, accessible via a floating chat button.
+    *   Functions: automatically generate card designs, assist with app navigation, and recommend products.
+
+5.  **Public Website:**
+    *   A separate official marketing website explaining the app, features, AI, and NFC technology.
 
 **User's preferred language**: Spanish
 
 **what currently exists?**
-A full-stack application (React + FastAPI/MongoDB) with JWT/Google OAuth. The previous session successfully implemented a large batch of features: a functional language switcher (ES/EN), list/grid view toggles for feeds, a fully integrated Stripe pricing page UI, and dynamic forms for CURRICULUM and other profile types. Key bugs were also fixed, including a critical Google OAuth login loop and a difficult issue with generating QR codes with a centered logo. The app is in a functional state, but the user has just provided a new, large list of bug fixes and feature requests.
+A full-stack application (React + FastAPI/MongoDB) with JWT/Google OAuth. The app features multiple card creation forms, a working e-commerce store for physical NFC products (PIUPs), and custom bubble style UI components that work on desktop and mobile. A large batch of critical bugs related to card editing, NFC redirection, and z-index issues have just been fixed. The agent has just started building the backend for the social network features.
 
 **Last working item**:
-- **Last item agent was working:** The agent just received a large, 10-item list of bug fixes and new features from the user. The agent acknowledged the list, confirmed the plan to proceed, and began the initial investigation by viewing the files related to the first few reported issues: , , and .
+- **Last item agent was working:** Implementing the Professional Social Network feature. The agent successfully created the backend models (, , , , ) and the corresponding API endpoints for posts, likes, and comments in . On the frontend, it created the initial  and  components. The next step was to integrate these into the  to transform it into a social feed.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
-- **Which testing method agent to use?** both (This batch involves fixing frontend components, backend logic, and adding new features, requiring comprehensive testing).
+- **Which testing method agent to use?** both
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-This is a new batch of 10 user-reported issues and requests. The user has approved proceeding in order of priority.
-
-- **Issue 1 (P0): Fix Image Editor:** The editor at  is not allowing users to crop or adjust brightness/contrast.
-- **Issue 2 (P0): Fix Social Link Bug:** A bug, likely in  or the  state management, is preventing some users from adding social links.
-- **Issue 3 (P0): Fix Translation Errors:** Some UI elements remain in Spanish even when the language is switched to English. This needs to be corrected in .
-- **Issue 4 (P0): Fix Bubble Template:** The full_banner_bubble template in  is duplicating information and needs to be corrected.
-- **Issue 5 (P1): Implement Delete/Archive Card:** Add a button in the  for each card to allow deletion or archiving. This requires a new backend endpoint and frontend logic.
-- **Issue 6 (P1): Change Profile Selection to Dropdown:** Convert the card type selection in  from radio buttons to a dropdown menu.
-- **Issue 7 (P2): Implement NFC Lock:** Develop a mechanism to lock a card from being edited after it has been written to an NFC tag. This is a complex feature requiring backend flags and frontend UI changes.
-- **Issue 8 (P2): Add Pets Profile:** Create a new card type for Mascotas with relevant fields (e.g., location/instructions if lost) in  and .
-- **Issue 9 (P2): Implement Embedded Map:** Replace the direct link to Google Maps with an embedded map view within the app for any card with an address. Provide a separate button to Open in Google Maps.
-- **Issue 10 (P2): Add Profile-Specific Questions:** The initial implementation is done, but the user wants more functional questions added to each profile type.
+There are no pending bugs. All reported issues have been resolved. The focus is now on new feature development.
 
 **In progress Task List**:
-- **Task 1: Triage and Fix User-Reported Bugs**
-    - **Where to resume:** Start by fixing the highest priority bugs.
-        1.  **Image Editor:** Debug the state management and canvas logic in .
-        2.  **Social Links:** Investigate the  and state update logic in  and .
-        3.  **Translations:** Audit the UI in English mode, identify non-translated strings, and add them to the  object in .
-        4.  **Bubble Template:** Analyze the rendering logic for the  template in  to find and eliminate the cause of data duplication.
-    - **What will be achieved with this?** Resolve the critical bugs reported by the user, improving app stability and usability.
+- **Task 1: Complete Social Feed Implementation (P0)**
+    - **Where to resume:** .
+    - **Actions:**
+        1.  Modify  to fetch posts from the new  endpoint.
+        2.  Integrate the  component at the top of the feed to allow users to create new posts.
+        3.  Use the  component to render the list of posts fetched from the backend.
+        4.  Implement the frontend logic for liking/unliking posts by calling the  endpoint.
+    - **What will be achieved with this?** A functional social feed where users can create and view posts, establishing the core of the social network feature.
     - **Status:** IN PROGRESS
     - **Should Test frontend/backend/both after fix?** both
     - **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
-*   **Upcoming Tasks:**
-    *   **P1: Implement New Features from User List:** Once bugs are fixed, implement the new features: dropdown profile selection, NFC lock, Pets profile, and the embedded map.
-    *   **P1: Social Features:** Implement likes, comments, and advanced sharing options on cards.
-    *   **P1: Card Collections/History:** Create the álbum de tarjetas to see saved, scanned, and visited cards.
-    *   **P2: SEO Implementation:** Generate a  and add proper meta tags to public card pages for search engine indexing.
-*   **Future Tasks:**
-    *   **P2: Corporate Account Management:** Build the panel for corporate admins to manage employee cards.
-    *   **P3: Super-Admin Panel:** Create a dashboard for the app owner to manage users and content.
-    *   **P3: Native App Conversion:** Plan the process for packaging the PWA into native iOS/Android apps.
+*   **Upcoming Tasks (P0 - Social Network Phase 1):**
+    *   **Post Comments:** Implement the ability for users to view and add comments to posts. This will require building out the UI and connecting it to the  endpoints.
+    *   **User Profiles:** Create a public user profile page that displays their information and a gallery of their posts.
+    *   **Chat System:** Build the frontend for the private messaging system, including a chat list, message view, and real-time updates (likely requiring WebSockets).
+*   **Future Tasks (P1-P2):**
+    *   **P1: Subscription System:** Implement the subscription plans (Publicity, Business, Enterprise) in the store, including integration with Stripe for recurring payments and backend logic to manage plan benefits.
+    *   **P1: Store User Data for Re-use:** Implement the backend logic and frontend UI for the user's profile/panel to save and manage reusable data chunks (addresses, payment methods, social links, work references).
+    *   **P2: BRUNO AI Assistant:** Integrate a large language model via a floating chat interface to assist users with card creation and other tasks.
+    *   **P2: Official Website:** Develop the separate public-facing marketing website.
+    *   **P2: Order Tracking:** Add a feature for users to track the status of their physical card orders.
 
 **Completed work in this session**
-- **Google OAuth Login Fixed:** Resolved a critical bug that caused an infinite redirect loop for Google login users by correctly implementing the Emergent Auth token exchange on the backend.
-- **QR Code with Logo:** Successfully implemented a highly-requested feature to generate a QR code with the card's theme color and a centered, clean BRUNO logo. This involved significant debugging of image processing logic.
-- **i18n System:** Implemented a full internationalization (ES/EN) system using a React Context, with language detection and a manual switcher.
-- **Profile-Specific Fields:** Added dynamic form sections that show relevant fields based on the selected card type (e.g., Guardian, Business, Corporate).
-- **CURRICULUM Form Expanded:** Added a Work References section to the CURRICULUM card type.
-- **UI/UX Batch Implementation:**
-    - Deployed a List/Grid view toggle on the Feed and Dashboard.
-    - Implemented the UI for the Stripe-powered Pricing page.
-    - Corrected responsive margins and logo deformation on mobile devices.
-    - Enhanced the bubble/glassmorphism effect in CSS.
-- **Testing:** Successfully used the testing agent to validate a large batch of features and performed extensive manual testing with screenshots to verify UI changes and bug fixes.
+- **Critical Bug Fixes:**
+    - **Card Sync:** Fixed a bug where card updates did not persist correctly. Implemented better state management and user feedback on .
+    - **NFC Redirects:** Fixed a critical bug where all NFC cards redirected to the homepage. Created a new backend endpoint () and a frontend page () to correctly resolve NFC IDs to their specific card URLs.
+    - **User Creation:** Improved the  to ensure user data is refreshed correctly after registration.
+    - **Dropdown Visibility (z-index):** Fixed a UI bug where dropdowns were hidden behind other elements by correcting z-index and overflow properties.
+- **Feature Implementation:**
+    - **Store & E-commerce:** Implemented a complete PIUP Store with product listings, categories, a shopping cart, and a checkout flow with address forms.
+    - **Mobile-First Dropdowns:** Replaced native selects with a custom  component, achieving the user's desired iOS-style glassmorphism aesthetic that is fully functional on mobile devices.
+    - **UI Animations:** Added spring animations to dropdowns, modals, and buttons using CSS keyframes.
+    - **Business Card Enhancement:** Added new Services and Catalogs sections to the Business card type in .
+- **Backend Development:**
+    - Created backend models and API endpoints for the Store (Products, Orders).
+    - Created backend models and API endpoints for the initial Social Network features (Posts, Comments, Likes).
 
 **Earlier issues found/mentioned but not fixed**
-All known pending user requests are captured in the Pending/In progress Issue list and Upcoming and Future Tasks. No items have been dropped.
+- None. All user-reported issues have been addressed. The remaining user requests are scheduled as upcoming/future tasks.
 
 **Known issue recurrence from previous fork**
 - N/A
@@ -100,78 +94,90 @@ All known pending user requests are captured in the Pending/In progress Issue li
 
 
 **Key Technical Concepts**
-*   **Backend:** FastAPI, Pydantic, MongoDB (), JWT,  for image manipulation, , .
+*   **Backend:** FastAPI, Pydantic, MongoDB (), JWT.
 *   **Frontend:** React, React Router, Axios, Tailwind CSS, shadcn/ui, .
-*   **Authentication:** Dual system with email/password (JWT) and fixed Emergent-managed Google OAuth.
+*   **Design:** Heavy reliance on custom CSS in  to achieve a glassmorphism/bubble aesthetic with , custom animations, and responsive design.
 
 **key DB schema**
-*   **User:** , , , , , .
-*   **Card:** , , , , , , .
+*   **User:** , , , , .
+*   **Card:** , , .
+*   **Product:** , , , , .
+*   **CardOrder:** , , , , .
+*   **Post:** , , , .
+*   **Comment:** , , , .
+*   **Like:** , .
 
 **changes in tech stack**
--  was added to the backend  to support the Google OAuth fix.
+- No changes to the core stack, but  has significantly expanded with e-commerce and social media logic.
 
 **All files of reference**
-*   **/app/backend/server.py**: Heavily modified for Google Auth fix and QR code generation logic.
-*   **/app/frontend/src/pages/CreateCardPage.jsx**: Heavily modified to add profile-specific fields, CURRICULUM references, and other UI logic.
-*   **/app/frontend/src/pages/EditCardPage.jsx**: Updated to mirror changes in .
-*   **/app/frontend/src/pages/AuthCallback.jsx**: Updated to fix the Google Auth flow.
-*   **/app/frontend/src/contexts/LanguageContext.js**: New file, contains all translation strings. Needs to be checked for untranslated parts.
-*   **/app/frontend/src/components/ImageEditor.jsx**: New file, reported as buggy.
-*   **/app/frontend/src/components/SocialLinkSelector.jsx**: Existing component, related to a reported bug.
-*   **/app/frontend/src/pages/ViewCardPage.jsx**: Related to the duplicated info bug in the bubble template.
-*   **/app/frontend/src/index.css**: Modified for responsive fixes and logo display.
+*   **New Files:**
+    *   
+    *   
+    *   
+    *   
+    *   
+*   **Heavily Modified:**
+    *    (New models and endpoints for store, NFC resolve, and social features).
+    *    (New z-index rules, animations, and styles for all custom components).
+    *    (New routes for  and ).
+    *    (Improved save logic and user feedback).
+    *    (Added Services and Catalogs to Business card).
+    *    (Added store icon; will be completely refactored next).
 
 **Areas that need refactoring**:
-*   ** is critically oversized.** It contains all routes, models, auth, QR generation, and Stripe logic. It MUST be broken down into a , ,  structure to maintain the project.
-*   Frontend state management is becoming complex. A global state manager like Zustand (mentioned in the previous fork) is still a very good idea.
+*   ** is critically monolithic.** It now handles auth, cards, QR codes, the store, NFC resolving, and social media. It MUST be broken down into a , , and  structure immediately.
+*   **Shared Header/Navbar:** The main navigation (including the new Store icon) is duplicated across several page components (e.g., ). This should be extracted into a single, reusable  or  component.
 
 **key api endpoints**
-*    (POST): This is the endpoint that was fixed.
-*    (GET): This endpoint was heavily modified to add the logo.
+*    (GET): **NEW**, resolves an NFC tag ID to a card URL.
+*    (GET): **NEW**, lists products for the store.
+*    (POST): **NEW**, creates a new order.
+*    (GET): **NEW**, gets the main social feed.
+*    (POST): **NEW**, creates a new post.
+*    (POST): **NEW**, likes/unlikes a post.
+*    (PUT): **FIXED**, endpoint for updating a card.
 
 **Critical Info for New Agent**
-*   **PRIORITIZE THE BUGS:** The user has provided a list of 10 items. Tackle the bugs first (Image Editor, Social Links, Translations, Bubble Template) to restore full functionality before moving on to new features.
-*   **Systematic Approach:** Address the user's 10-point list systematically. Do not deviate.
-*   **Refactor :** While implementing backend changes (like delete/archive card or NFC lock), take the opportunity to start breaking  into smaller, more manageable files. This is becoming a major technical debt.
-*   **Credentials:** A new test user was created and is essential for testing. Use these credentials.
+*   **Priority 1 is the Social Network.** The immediate task is to build out the main feed UI on .
+*   **Refactor  ASAP.** This is a major technical debt. When adding the next set of backend endpoints (e.g., for Chat), create a new file like  and import it into  instead of adding more code to the monolith.
+*   **Maintain the Bubble Aesthetic.** All new UI must follow the established design language. Use the  component and the styles in  as a guide.
+*   **The project is evolving rapidly.** Be prepared for large, multi-faceted feature requests from the user. Continue to prioritize bugs first, then tackle features systematically.
 
 **documents and test reports created in this job**
-*    (updated)
-*    (new test report from testing agent)
-*    (new clean logo asset)
+*    (updated with all new requirements)
+*    (most recent test report)
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. User provides a massive 10-item list of bugs and features to fix/implement.
-9.  Agent confirms the plan to tackle the new list.
-8.  User asks to use a new logo for the QR and add work references to the curriculum.
-7.  Agent reports the QR code and other fixes are complete.
-6.  User reports a login issue.
-5.  Agent reports a large batch of features (i18n, Stripe UI, CURRICULUM form, etc.) is complete and tested.
-4.  User tells agent to proceed with all pending corrections.
+10. User: prosigue con el desarrollo (Proceed with the development).
+9.  Agent: Summarized final fixes and asked to confirm starting the social network features.
+8.  User: Approved the plan to fix critical bugs first, then implement social network features.
+7.  Agent: Asked for confirmation of a multi-step plan to address the large list of bug fixes and new features.
+6.  User: Provided a massive list of technical corrections (bugs) and new features (social network, AI, website).
+5.  Agent: Finished implementing the PIUP store and spring animations, and asked for next steps.
+4.  User: Provided clarifications for the store and subscription implementation.
+3.  Agent: Asked for clarification on the new request to build a store and add animations.
+2.  User: Requested adding spring animations, a Shop for physical cards, and a system to save/reuse user data.
+1.  Agent: Finished fixing the mobile dropdown bug and confirmed its functionality.
 
 **Project Health Check:**
-*   **Broken:**
-    *   Image Editor (crop/contrast/brightness).
-    *   Social Link creation for some users.
-    *   Bubble card template (duplicates info).
-    *   Parts of the i18n system (incomplete translations).
+*   **Broken:** None. All reported critical bugs have been fixed.
 *   **Mocked:** , .
 
 **3rd Party Integrations**
-*   **Emergent-managed Google Auth:** For Google social login (Now fixed).
+*   **Emergent-managed Google Auth:** For social login.
 *   **Cloudinary:** For image storage.
-*   **Stripe:** For payments.
+*   **Stripe:** For payments (currently for the store, will be extended for subscriptions).
 
 **Testing status**
-- **Testing agent used after significant changes:** YES, a full test run was completed successfully before the latest bug reports.
+- **Testing agent used after significant changes:** YES, multiple times. The last run was for .
 - **Troubleshoot agent used after agent stuck in loop:** NO
-- **Test files created:** 
-- **Known regressions:** The user has reported several new bugs that can be considered regressions or newly discovered issues.
+- **Test files created:** Test reports from  to  were created in this session.
+- **Known regressions:** None currently. All reported regressions have been fixed.
 
 **Credentials to test flow:**
 *   **Username:** 
 *   **Password:** 
 
 **What agent forgot to execute**
-The agent did not forget anything; it has been systematically working through an evolving list of user requests. The new 10-item list has superseded the previous upcoming tasks in priority.</analysis>
+The agent has been very thorough and has not missed any explicit user requests. A potential proactive step that was not taken is refactoring the non-reusable header/navigation into a shared component, which is now an important item for the next agent to consider.</analysis>

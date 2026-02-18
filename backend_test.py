@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 
 # Get backend URL from frontend .env
-BACKEND_URL = "https://cardloop.preview.emergentagent.com/api"
+BACKEND_URL = "https://nfc-connect-3.preview.emergentagent.com/api"
 
 # Test credentials - as specified in review request
 TEST_EMAIL = "testuser@bruno.com"
