@@ -2257,11 +2257,20 @@ async def get_posts(
     for post in posts:
         user = await db.users.find_one({"id": post["user_id"]}, {"_id": 0, "hashed_password": 0})
         profile = await db.user_profiles.find_one({"user_id": post["user_id"]}, {"_id": 0})
+        
+        # Determine display name: profile.display_name > user.username > user.email
+        username = "Unknown"
+        display_name = None
+        if user:
+            username = user.get("username") or user.get("email", "Unknown").split("@")[0]
+        if profile:
+            display_name = profile.get("display_name")
+        
         post["user"] = {
             "id": user["id"] if user else None,
-            "username": user.get("username") if user else "Unknown",
+            "username": username,
             "avatar_url": profile.get("avatar_url") if profile else None,
-            "display_name": profile.get("display_name") if profile else None,
+            "display_name": display_name or username,
             "is_verified": profile.get("is_verified", False) if profile else False
         }
         
