@@ -327,6 +327,14 @@ const FeedPage = () => {
                   <ShoppingBag className="w-5 h-5" />
                 </Button>
               </Link>
+              {/* Chat Icon - only for logged in users */}
+              {user && (
+                <Link to="/chat">
+                  <Button variant="ghost" size="icon" className="relative spring-button" title="Mensajes" data-testid="chat-nav-btn">
+                    <MessageCircle className="w-5 h-5" />
+                  </Button>
+                </Link>
+              )}
               <LanguageSwitcher variant="minimal" />
               {user ? (
                 <>
