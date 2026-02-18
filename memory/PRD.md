@@ -5,80 +5,82 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 
 ## What's Been Implemented
 
-### Session: 2026-02-15 (Current) - Part 2
+### Session: 2026-02-18 (Current)
 
-**Corrección de Dropdowns Móviles:**
+**1. Animaciones Spring iOS 26**
+- Animación `bubble-spring-in` con `cubic-bezier(0.34, 1.56, 0.64, 1)`
+- Efecto de rebote al abrir/cerrar dropdowns
+- Clases `.spring-button`, `.spring-card`, `.spring-modal`, `.spring-item`, `.spring-bounce`
+- Animaciones staggered para listas
 
-5. **BubbleSelect - Componente iOS 26 Style**
-   - Nuevo componente de dropdown personalizado que funciona en móviles
-   - Estilo glassmorphism/burbuja semitransparente
-   - `backdrop-filter: blur(20px/30px)`
-   - Fondos: `rgba(255,255,255,0.7)` trigger, `rgba(255,255,255,0.92)` opciones
-   - Touch events funcionan correctamente
-   - Archivo: `/app/frontend/src/components/BubbleSelect.jsx`
+**2. Tienda PIUP (Personal Intelligent Unlock Point)**
+- Página `/store` con catálogo de productos
+- **Tarjetas NFC** en múltiples colores: Negro, Blanco, Naranja BRUNO, Dorado Premium, Holográfica ($15-$30)
+- **Pulseras Guardian** de silicona con NFC para niños/adultos mayores ($10-$12)
+- **Tags para Mascotas** con NFC básico y GPS Premium ($15-$45)
+- **Servicios**: Diseño personalizado, Configuración empresarial
+- Carrito de compras con sidebar animado
+- Checkout con selección de direcciones guardadas
+- Integración con Stripe para pagos
 
-6. **SocialLinkSelector Actualizado**
-   - Usa BubbleSelect para selección de tipo de red social
-   - Muestra iconos de cada red social (Instagram, Facebook, etc.)
-   - Formulario mejorado con estilo de burbuja
-   - Archivo: `/app/frontend/src/components/SocialLinkSelector.jsx`
+**3. Sistema de Datos Guardados del Usuario**
+- Direcciones de envío guardadas (CRUD completo)
+- Redes sociales favoritas reutilizables
+- Datos personales (nombre, teléfono, email, avatar, bio)
+- Referencias laborales guardadas
+- Fotos/galería personal
+- Métodos de pago guardados
 
-7. **Estilos CSS iOS 26**
-   - Clase `.bubble-native-select` para selects nativos
-   - Animaciones suaves de apertura/cierre
-   - Scrollbar personalizado naranja
-   - Optimizaciones para móviles (min-height 48px táctil)
-   - Archivo: `/app/frontend/src/index.css`
+**4. Planes de Suscripción Mejorados**
+- **Gratis**: 1 tarjeta, QR básico, 1 plantilla, 3 fotos, 5 links sociales
+- **Pro ($9.99/mes)**: 5 tarjetas, QR con logo, todas las plantillas, estadísticas, NFC, sin branding, 20 fotos
+- **Business ($29.99/mes)**: Ilimitado, panel de equipo, dominio personalizado, API, CRM, soporte 24/7
 
-**Archivos Modificados:**
-- `/app/frontend/src/components/BubbleSelect.jsx` - NUEVO
-- `/app/frontend/src/components/SocialLinkSelector.jsx` - Actualizado con BubbleSelect
-- `/app/frontend/src/pages/CreateCardPage.jsx` - Usa BubbleSelect
-- `/app/frontend/src/pages/EditCardPage.jsx` - Usa BubbleSelect
-- `/app/frontend/src/components/ProfileSpecificFields.jsx` - Clase bubble-native-select
-- `/app/frontend/src/index.css` - Estilos iOS 26 para dropdowns
+**Archivos Creados/Modificados:**
+- `/app/frontend/src/pages/StorePage.jsx` - NUEVO
+- `/app/frontend/src/index.css` - Animaciones spring (~100 líneas)
+- `/app/backend/server.py` - Modelos y endpoints de tienda (~400 líneas)
+- `/app/frontend/src/pages/FeedPage.jsx` - Ícono de tienda en header
+- `/app/frontend/src/App.js` - Rutas de tienda
 
 ---
 
-### Session: 2026-02-15 - Part 1
+### Session: 2026-02-15
 
-**Bugs Corregidos (P0):**
+**Dropdowns Móviles Corregidos:**
+- Componente `BubbleSelect.jsx` con estilo glassmorphism iOS 26
+- `backdrop-filter: blur(20px/30px)`
+- Touch events optimizados
+- Clase `bubble-native-select` para selects nativos
 
-1. **Bug ViewCardPage Template "Bubble"**
-   - El template `full_banner_bubble` tenía código de `edge_actions` mezclado incorrectamente
-   - Se separó el código correctamente - ahora cada template muestra sus botones sin duplicar
+**Bugs P0 Corregidos:**
+- ViewCardPage template "Bubble" - código duplicado separado
+- ImageEditor - sliders nativos funcionando
 
-2. **Bug ImageEditor (Brillo/Contraste)**
-   - Los sliders de Shadcn no funcionaban correctamente
-   - Reemplazados por inputs range nativos de HTML para mayor compatibilidad
-
-**Features Nuevas:**
-
-3. **Dropdown Selector de Tipo de Tarjeta**
-   - Reemplazados los radio buttons por un dropdown en CreateCardPage y EditCardPage
-
-4. **Nuevo Perfil: Mascotas (Pets)**
-   - 7 tipos de tarjeta disponibles ahora
-   - Campos específicos: nombre, especie, raza, edad, color, tamaño, información médica
-   - Sección "If Lost" con recompensa, instrucciones, contactos del dueño
+**Features:**
+- Dropdown selector de tipo de tarjeta
+- Perfil "Mascotas" con campos específicos
+- Traducciones ES/EN completas
 
 ---
 
 ## Prioritized Backlog
 
-### P0 (Must Have) - Bugs Pendientes
-- [x] ~~Dropdowns no funcionan en móvil~~ ✅ COMPLETADO
-- [ ] Verificar Social Links funcionando correctamente para todos los usuarios
+### P0 (Must Have)
+- [x] ~~Dropdowns no funcionan en móvil~~ ✅
+- [x] ~~Tienda PIUP~~ ✅
+- [x] ~~Animaciones spring iOS 26~~ ✅
+- [x] ~~Datos guardados del usuario~~ ✅
 
 ### P1 (Should Have)
 - [ ] Eliminar/Archivar tarjetas desde Dashboard
-- [ ] NFC Lock - bloquear edición después de escribir en NFC tag
+- [ ] NFC Lock - bloquear edición después de escribir
 - [ ] Mapa embebido (Leaflet) para direcciones
 - [ ] PDF export para CURRICULUM cards
-- [ ] Social features (likes, comentarios)
+- [ ] Completar checkout flow con Stripe webhooks
 
 ### P2 (Nice to Have)
-- [ ] Más preguntas/campos por tipo de perfil
+- [ ] Social features (likes, comentarios)
 - [ ] SEO meta tags para cards públicas
 - [ ] Panel corporativo
 
@@ -95,16 +97,25 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 ## Tech Stack
 - **Frontend:** React, React Router, Axios, Tailwind CSS, shadcn/ui, lucide-react
 - **Backend:** FastAPI, Pydantic, MongoDB (motor), JWT, Pillow, Cloudinary, Stripe
+- **Payments:** Stripe (emergentintegrations)
 - **Authentication:** JWT + Emergent-managed Google OAuth
 
 ## Key Files Reference
+- `/app/frontend/src/pages/StorePage.jsx` - Tienda PIUP
 - `/app/frontend/src/components/BubbleSelect.jsx` - Dropdown iOS style
-- `/app/frontend/src/components/SocialLinkSelector.jsx` - Selector de redes sociales
-- `/app/frontend/src/pages/CreateCardPage.jsx` - Creación de tarjetas
-- `/app/frontend/src/pages/EditCardPage.jsx` - Edición de tarjetas
-- `/app/frontend/src/pages/ViewCardPage.jsx` - Vista pública de tarjetas
-- `/app/frontend/src/components/ProfileSpecificFields.jsx` - Campos por tipo de perfil
-- `/app/frontend/src/index.css` - Estilos CSS (incluye bubble styles)
+- `/app/backend/server.py` - API principal con tienda, productos, planes
+- `/app/frontend/src/index.css` - Estilos CSS (animaciones spring, glassmorphism)
+
+## API Endpoints (Tienda)
+- `GET /api/store/products` - Lista productos
+- `GET /api/store/products/{id}` - Detalle producto
+- `POST /api/store/orders` - Crear orden
+- `POST /api/store/checkout/{order_id}` - Crear checkout Stripe
+- `GET /api/plans` - Planes de suscripción
+- `GET /api/user/saved-data` - Datos guardados del usuario
+- `PUT /api/user/saved-data` - Actualizar datos guardados
+- `POST /api/user/addresses` - Agregar dirección
+- `DELETE /api/user/addresses/{id}` - Eliminar dirección
 
 ---
-*Last Updated: 2026-02-15*
+*Last Updated: 2026-02-18*
