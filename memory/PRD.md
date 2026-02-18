@@ -1,37 +1,53 @@
 # BRUNO - Digital Business Card Application
 
 ## Problem Statement
-Build a comprehensive digital business card application called "BRUNO" - a highly polished, visually appealing PWA with extensive customization and social features.
+Build a comprehensive digital business card application called "BRUNO" - a highly polished, visually appealing PWA with extensive customization and social networking features.
 
 ## What's Been Implemented
 
-### Session: 2026-02-18 (Current) - Bug Fixes
+### Session: 2026-02-18 - Red Social Profesional ✅ NEW
+
+**Feed Social Implementado:**
+
+1. **FeedPage con Tabs** ✅
+   - Pestaña "Feed" para red social con posts
+   - Pestaña "Explorar" para ver tarjetas públicas
+   - Componente CreatePost para crear publicaciones
+   - Componente PostCard para mostrar posts
+
+2. **API Endpoints Posts** ✅
+   - `POST /api/posts` - Crear nuevo post
+   - `GET /api/posts` - Obtener feed de posts
+   - `GET /api/posts/{id}` - Obtener post específico
+   - `DELETE /api/posts/{id}` - Eliminar post propio
+
+3. **API Endpoints Likes** ✅
+   - `POST /api/posts/{id}/like` - Toggle like/unlike
+
+4. **API Endpoints Comments** ✅
+   - `GET /api/posts/{id}/comments` - Obtener comentarios
+   - `POST /api/posts/{id}/comments` - Crear comentario
+
+5. **Funcionalidades Frontend** ✅
+   - Crear posts de texto
+   - Ver feed de publicaciones
+   - Like/Unlike con contador actualizado
+   - Ver y agregar comentarios
+   - Compartir posts (Web Share API)
+   - Eliminar posts propios
+   - Tiempo relativo (1m, 2h, 3d)
+
+---
+
+### Session: 2026-02-18 (Anterior) - Bug Fixes
 
 **Correcciones Técnicas Completadas:**
 
 1. **Sincronización de Tarjetas** ✅
-   - CardUpdate model corregido con todos los campos necesarios
-   - PUT /api/cards/{id} ahora actualiza y persiste correctamente
-   - EditCardPage muestra mensaje de éxito traducido
-
 2. **NFC Redirect** ✅
-   - Nuevo endpoint GET /api/nfc/resolve/{nfc_id}
-   - Nueva página /n/:nfcId para redirección NFC
-   - Maneja NFC registrados y no registrados
-
 3. **Auth Refresh** ✅
-   - AuthContext.refreshUser() para actualizar datos del usuario
-   - Implementado con useCallback para mejor performance
-
 4. **Z-index Dropdowns** ✅
-   - BubbleSelect z-index aumentado a 9999
-   - Backdrop z-index 9998
-   - CSS para evitar overflow:hidden de padres
-
 5. **Tarjeta de Negocio Mejorada** ✅
-   - Sección Servicios expandida (nombre, descripción, precio, duración)
-   - Nueva sección "Catálogos y Productos"
-   - Campos para productos: nombre, descripción, precio, categoría, imagen
 
 ---
 
@@ -39,7 +55,6 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 
 **Implementado:**
 - Página /store con catálogo de productos NFC
-- Tarjetas NFC (5 colores), Pulseras Guardian, Tags Mascotas GPS
 - Sistema de checkout con direcciones guardadas
 - Animaciones Spring iOS 26
 - Planes de suscripción Free/Pro/Business
@@ -49,26 +64,29 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 ## Prioritized Backlog
 
 ### P0 (Completado)
-- [x] ~~Sincronización de tarjetas~~ ✅
-- [x] ~~NFC redirect~~ ✅
-- [x] ~~Auth refresh~~ ✅
-- [x] ~~Z-index dropdowns~~ ✅
-- [x] ~~Secciones Servicios/Catálogos~~ ✅
+- [x] Sincronización de tarjetas ✅
+- [x] NFC redirect ✅
+- [x] Auth refresh ✅
+- [x] Z-index dropdowns ✅
+- [x] Secciones Servicios/Catálogos ✅
+- [x] **Feed tipo red social con posts** ✅ NEW
+- [x] **Likes y comentarios** ✅ NEW
 
-### P1 (Próximo - Red Social)
-- [ ] Feed tipo red social con posts multimedia
-- [ ] Likes, comentarios, compartir
-- [ ] Perfil editable con privacidad
-- [ ] Sistema de chat (texto, fotos, videos, voz)
+### P1 (Próximo - Red Social Fase 2)
+- [ ] Perfil público de usuario con galería de posts
+- [ ] Sistema de chat privado (texto, fotos, videos, voz)
+- [ ] Subir imágenes/videos a posts
+- [ ] Notificaciones en tiempo real
 
 ### P2 (Siguiente)
 - [ ] IA BRUNO con GPT-5.2 (generación de tarjetas, asistente)
-- [ ] Sistema de suscripciones mejorado
-- [ ] Página web oficial
+- [ ] Sistema de suscripciones mejorado (Stripe)
+- [ ] Página web oficial de marketing
 
 ### P3 (Futuro)
 - [ ] Panel admin
 - [ ] Native apps
+- [ ] Seguimiento de pedidos
 
 ---
 
@@ -77,17 +95,29 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 - **Password:** `Test1234!`
 - **Test Card ID:** `f191a519-4730-4af9-b870-5a80b4e556fc`
 
-## API Endpoints (Nuevos)
-- `GET /api/nfc/resolve/{nfc_id}` - Resolver NFC a URL de tarjeta
-- `PUT /api/cards/{id}` - Actualizar tarjeta (corregido)
+## API Endpoints (Social)
+- `POST /api/posts` - Crear post
+- `GET /api/posts` - Feed de posts (soporta user_id, skip, limit)
+- `GET /api/posts/{id}` - Post específico
+- `DELETE /api/posts/{id}` - Eliminar post
+- `POST /api/posts/{id}/like` - Toggle like
+- `GET /api/posts/{id}/comments` - Comentarios del post
+- `POST /api/posts/{id}/comments` - Crear comentario
 
-## Key Files Modified
-- `/app/backend/server.py` - CardUpdate model, NFC resolve endpoint
-- `/app/frontend/src/components/BubbleSelect.jsx` - z-index 9999
-- `/app/frontend/src/pages/EditCardPage.jsx` - handleSubmit mejorado
-- `/app/frontend/src/pages/NFCRedirectPage.jsx` - Nueva página
-- `/app/frontend/src/contexts/AuthContext.js` - refreshUser
-- `/app/frontend/src/components/ProfileSpecificFields.jsx` - Servicios y Catálogos
+## Key Files (Social Network)
+- `/app/frontend/src/pages/FeedPage.jsx` - Feed principal con tabs
+- `/app/frontend/src/components/PostCard.jsx` - Componente de post
+- `/app/frontend/src/components/CreatePost.jsx` - Crear publicación
+- `/app/backend/server.py` - API endpoints (líneas 2205-2500)
+
+## Data Models (Social)
+- **Post:** id, user_id, content, media[], post_type, visibility, hashtags[], likes_count, comments_count
+- **Like:** id, user_id, target_id, target_type
+- **Comment:** id, post_id, user_id, parent_id, content, replies_count
 
 ---
+
+## Test Reports
+- `/app/test_reports/iteration_7.json` - Tests de Red Social (16/16 passed)
+
 *Last Updated: 2026-02-18*
