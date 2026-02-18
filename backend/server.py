@@ -218,6 +218,13 @@ class CardUpdate(BaseModel):
     text_color: Optional[str] = None
     social_links: Optional[List[SocialLink]] = None
     contact_info: Optional[ContactInfo] = None
+    location: Optional[dict] = None
+    template_id: Optional[str] = None
+    custom_fields: Optional[dict] = None
+    is_public: Optional[bool] = None
+    show_in_feed: Optional[bool] = None
+    is_animated: Optional[bool] = None
+    card_type: Optional[str] = None
 
 # Payment Transaction Models
 class PaymentType(str):
@@ -246,15 +253,6 @@ class PaymentTransaction(BaseModel):
     payment_status: str = PaymentStatus.PENDING
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    location: Optional[dict] = None
-    template_id: Optional[str] = None
-    custom_fields: Optional[dict] = None
-    is_public: Optional[bool] = None
-    show_in_feed: Optional[bool] = None
-    is_animated: Optional[bool] = None
-
-# NFC Models
 
 # NFC Models
 class NFCCard(BaseModel):
