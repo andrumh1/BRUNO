@@ -2197,6 +2197,627 @@ async def seed_subscription_plans():
         )
 
 # ============================================================================
+# SOCIAL NETWORK ROUTES
+# ============================================================================
+
+# -------------------- POSTS --------------------
+
+@api_router.post("/posts")
+async def create_post(
+    post_data: PostCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new post"""
+    post = Post(
+        user_id=current_user.id,
+        content=post_data.content,
+        media=[PostMedia(**m) for m in post_data.media] if post_data.media else [],
+        card_id=post_data.card_id,
+        post_type=post_data.post_type,
+        visibility=post_data.visibility,
+        hashtags=post_data.hashtags
+    )
+    
+    post_doc = post.model_dump()
+    post_doc['created_at'] = post_doc['created_at'].isoformat()
+    post_doc['updated_at'] = post_doc['updated_at'].isoformat()
+    
+    await db.posts.insert_one(post_doc)
+    
+    # Update user's posts count
+    await db.user_profiles.update_one(
+        {"user_id": current_user.id},
+        {"$inc": {"posts_count": 1}},
+        upsert=True
+    )
+    
+    return post_doc
+
+@api_router.get("/posts")
+async def get_posts(
+    skip: int = 0,
+    limit: int = 20,
+    user_id: Optional[str] = None,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Get posts feed"""
+    query = {"visibility": "public"}
+    
+    if user_id:
+        query["user_id"] = user_id
+        # If viewing own posts, show all visibility levels
+        if current_user and current_user.id == user_id:
+            del query["visibility"]
+    
+    posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Enrich posts with user info and like status
+    for post in posts:
+        user = await db.users.find_one({"id": post["user_id"]}, {"_id": 0, "hashed_password": 0})
+        profile = await db.user_profiles.find_one({"user_id": post["user_id"]}, {"_id": 0})
+        post["user"] = {
+            "id": user["id"] if user else None,
+            "username": user.get("username") if user else "Unknown",
+            "avatar_url": profile.get("avatar_url") if profile else None,
+            "display_name": profile.get("display_name") if profile else None,
+            "is_verified": profile.get("is_verified", False) if profile else False
+        }
+        
+        # Check if current user liked this post
+        if current_user:
+            like = await db.likes.find_one({
+                "user_id": current_user.id,
+                "target_id": post["id"],
+                "target_type": "post"
+            })
+            post["is_liked"] = like is not None
+        else:
+            post["is_liked"] = False
+    
+    return posts
+
+@api_router.get("/posts/{post_id}")
+async def get_post(post_id: str, current_user: Optional[User] = Depends(get_current_user_optional)):
+    """Get a single post"""
+    post = await db.posts.find_one({"id": post_id}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # Get user info
+    user = await db.users.find_one({"id": post["user_id"]}, {"_id": 0, "hashed_password": 0})
+    profile = await db.user_profiles.find_one({"user_id": post["user_id"]}, {"_id": 0})
+    post["user"] = {
+        "id": user["id"] if user else None,
+        "username": user.get("username") if user else "Unknown",
+        "avatar_url": profile.get("avatar_url") if profile else None,
+        "display_name": profile.get("display_name") if profile else None
+    }
+    
+    if current_user:
+        like = await db.likes.find_one({
+            "user_id": current_user.id,
+            "target_id": post["id"],
+            "target_type": "post"
+        })
+        post["is_liked"] = like is not None
+    else:
+        post["is_liked"] = False
+    
+    return post
+
+@api_router.delete("/posts/{post_id}")
+async def delete_post(post_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a post"""
+    post = await db.posts.find_one({"id": post_id, "user_id": current_user.id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found or not authorized")
+    
+    await db.posts.delete_one({"id": post_id})
+    await db.likes.delete_many({"target_id": post_id, "target_type": "post"})
+    await db.comments.delete_many({"post_id": post_id})
+    
+    # Update posts count
+    await db.user_profiles.update_one(
+        {"user_id": current_user.id},
+        {"$inc": {"posts_count": -1}}
+    )
+    
+    return {"message": "Post deleted"}
+
+# -------------------- LIKES --------------------
+
+@api_router.post("/posts/{post_id}/like")
+async def toggle_like(post_id: str, current_user: User = Depends(get_current_user)):
+    """Toggle like on a post"""
+    post = await db.posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    existing_like = await db.likes.find_one({
+        "user_id": current_user.id,
+        "target_id": post_id,
+        "target_type": "post"
+    })
+    
+    if existing_like:
+        # Unlike
+        await db.likes.delete_one({"id": existing_like["id"]})
+        await db.posts.update_one({"id": post_id}, {"$inc": {"likes_count": -1}})
+        return {"liked": False, "likes_count": post["likes_count"] - 1}
+    else:
+        # Like
+        like = Like(
+            user_id=current_user.id,
+            target_id=post_id,
+            target_type="post"
+        )
+        like_doc = like.model_dump()
+        like_doc['created_at'] = like_doc['created_at'].isoformat()
+        await db.likes.insert_one(like_doc)
+        await db.posts.update_one({"id": post_id}, {"$inc": {"likes_count": 1}})
+        
+        # Create notification (if not own post)
+        if post["user_id"] != current_user.id:
+            notification = Notification(
+                user_id=post["user_id"],
+                actor_id=current_user.id,
+                type="like",
+                target_id=post_id,
+                target_type="post"
+            )
+            notif_doc = notification.model_dump()
+            notif_doc['created_at'] = notif_doc['created_at'].isoformat()
+            await db.notifications.insert_one(notif_doc)
+        
+        return {"liked": True, "likes_count": post["likes_count"] + 1}
+
+# -------------------- COMMENTS --------------------
+
+@api_router.post("/posts/{post_id}/comments")
+async def create_comment(
+    post_id: str,
+    comment_data: CommentCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a comment on a post"""
+    post = await db.posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    comment = Comment(
+        user_id=current_user.id,
+        post_id=post_id,
+        parent_id=comment_data.parent_id,
+        content=comment_data.content
+    )
+    
+    comment_doc = comment.model_dump()
+    comment_doc['created_at'] = comment_doc['created_at'].isoformat()
+    comment_doc['updated_at'] = comment_doc['updated_at'].isoformat()
+    
+    await db.comments.insert_one(comment_doc)
+    
+    # Update post's comment count
+    await db.posts.update_one({"id": post_id}, {"$inc": {"comments_count": 1}})
+    
+    # If it's a reply, update parent's replies count
+    if comment_data.parent_id:
+        await db.comments.update_one({"id": comment_data.parent_id}, {"$inc": {"replies_count": 1}})
+    
+    # Create notification
+    if post["user_id"] != current_user.id:
+        notification = Notification(
+            user_id=post["user_id"],
+            actor_id=current_user.id,
+            type="comment",
+            target_id=post_id,
+            target_type="post",
+            content=comment_data.content[:100]
+        )
+        notif_doc = notification.model_dump()
+        notif_doc['created_at'] = notif_doc['created_at'].isoformat()
+        await db.notifications.insert_one(notif_doc)
+    
+    # Get user info for response
+    profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0})
+    comment_doc["user"] = {
+        "id": current_user.id,
+        "username": current_user.username,
+        "avatar_url": profile.get("avatar_url") if profile else None,
+        "display_name": profile.get("display_name") if profile else None
+    }
+    
+    return comment_doc
+
+@api_router.get("/posts/{post_id}/comments")
+async def get_comments(post_id: str, skip: int = 0, limit: int = 50):
+    """Get comments for a post"""
+    comments = await db.comments.find(
+        {"post_id": post_id, "parent_id": None},
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Enrich with user info
+    for comment in comments:
+        user = await db.users.find_one({"id": comment["user_id"]}, {"_id": 0, "hashed_password": 0})
+        profile = await db.user_profiles.find_one({"user_id": comment["user_id"]}, {"_id": 0})
+        comment["user"] = {
+            "id": user["id"] if user else None,
+            "username": user.get("username") if user else "Unknown",
+            "avatar_url": profile.get("avatar_url") if profile else None,
+            "display_name": profile.get("display_name") if profile else None
+        }
+        
+        # Get replies
+        if comment["replies_count"] > 0:
+            replies = await db.comments.find(
+                {"parent_id": comment["id"]},
+                {"_id": 0}
+            ).sort("created_at", 1).limit(3).to_list(3)
+            
+            for reply in replies:
+                reply_user = await db.users.find_one({"id": reply["user_id"]}, {"_id": 0, "hashed_password": 0})
+                reply_profile = await db.user_profiles.find_one({"user_id": reply["user_id"]}, {"_id": 0})
+                reply["user"] = {
+                    "id": reply_user["id"] if reply_user else None,
+                    "username": reply_user.get("username") if reply_user else "Unknown",
+                    "avatar_url": reply_profile.get("avatar_url") if reply_profile else None
+                }
+            
+            comment["replies"] = replies
+    
+    return comments
+
+# -------------------- USER PROFILE --------------------
+
+@api_router.get("/profile/{user_id}")
+async def get_user_profile(user_id: str, current_user: Optional[User] = Depends(get_current_user_optional)):
+    """Get a user's profile"""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    profile = await db.user_profiles.find_one({"user_id": user_id}, {"_id": 0})
+    
+    if not profile:
+        # Create default profile
+        profile = UserProfile(user_id=user_id).model_dump()
+        profile['created_at'] = profile['created_at'].isoformat()
+        profile['updated_at'] = profile['updated_at'].isoformat()
+        await db.user_profiles.insert_one(profile)
+    
+    # Combine user and profile data
+    result = {
+        "id": user["id"],
+        "username": user.get("username"),
+        "email": user.get("email") if current_user and current_user.id == user_id else None,
+        **profile
+    }
+    
+    # Check if current user follows this profile
+    if current_user and current_user.id != user_id:
+        follow = await db.follows.find_one({
+            "follower_id": current_user.id,
+            "following_id": user_id
+        })
+        result["is_following"] = follow is not None
+    else:
+        result["is_following"] = False
+    
+    # Get user's cards
+    cards = await db.cards.find(
+        {"user_id": user_id, "is_public": True},
+        {"_id": 0}
+    ).limit(10).to_list(10)
+    result["cards"] = cards
+    
+    return result
+
+@api_router.put("/profile")
+async def update_user_profile(
+    profile_update: UserProfileUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update current user's profile"""
+    update_data = profile_update.model_dump(exclude_unset=True)
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    if profile_update.social_links is not None:
+        update_data["social_links"] = profile_update.social_links
+    
+    await db.user_profiles.update_one(
+        {"user_id": current_user.id},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    return {"message": "Profile updated successfully"}
+
+@api_router.get("/profile")
+async def get_my_profile(current_user: User = Depends(get_current_user)):
+    """Get current user's profile"""
+    return await get_user_profile(current_user.id, current_user)
+
+# -------------------- FOLLOW --------------------
+
+@api_router.post("/profile/{user_id}/follow")
+async def toggle_follow(user_id: str, current_user: User = Depends(get_current_user)):
+    """Follow or unfollow a user"""
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot follow yourself")
+    
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    existing_follow = await db.follows.find_one({
+        "follower_id": current_user.id,
+        "following_id": user_id
+    })
+    
+    if existing_follow:
+        # Unfollow
+        await db.follows.delete_one({"id": existing_follow["id"]})
+        await db.user_profiles.update_one({"user_id": current_user.id}, {"$inc": {"following_count": -1}})
+        await db.user_profiles.update_one({"user_id": user_id}, {"$inc": {"followers_count": -1}})
+        return {"following": False}
+    else:
+        # Follow
+        follow = Follow(
+            follower_id=current_user.id,
+            following_id=user_id
+        )
+        follow_doc = follow.model_dump()
+        follow_doc['created_at'] = follow_doc['created_at'].isoformat()
+        await db.follows.insert_one(follow_doc)
+        await db.user_profiles.update_one({"user_id": current_user.id}, {"$inc": {"following_count": 1}}, upsert=True)
+        await db.user_profiles.update_one({"user_id": user_id}, {"$inc": {"followers_count": 1}}, upsert=True)
+        
+        # Create notification
+        notification = Notification(
+            user_id=user_id,
+            actor_id=current_user.id,
+            type="follow"
+        )
+        notif_doc = notification.model_dump()
+        notif_doc['created_at'] = notif_doc['created_at'].isoformat()
+        await db.notifications.insert_one(notif_doc)
+        
+        return {"following": True}
+
+# -------------------- CHAT / MESSAGING --------------------
+
+@api_router.get("/chats")
+async def get_chats(current_user: User = Depends(get_current_user)):
+    """Get all chat rooms for current user"""
+    chats = await db.chats.find(
+        {"participants": current_user.id},
+        {"_id": 0}
+    ).sort("last_message_at", -1).to_list(100)
+    
+    # Enrich with other participant info and last message
+    for chat in chats:
+        # Get other participant(s)
+        other_ids = [p for p in chat["participants"] if p != current_user.id]
+        participants = []
+        for uid in other_ids:
+            user = await db.users.find_one({"id": uid}, {"_id": 0, "hashed_password": 0})
+            profile = await db.user_profiles.find_one({"user_id": uid}, {"_id": 0})
+            if user:
+                participants.append({
+                    "id": uid,
+                    "username": user.get("username"),
+                    "avatar_url": profile.get("avatar_url") if profile else None,
+                    "display_name": profile.get("display_name") if profile else None
+                })
+        chat["other_participants"] = participants
+        
+        # Get last message
+        if chat.get("last_message_id"):
+            last_msg = await db.messages.find_one({"id": chat["last_message_id"]}, {"_id": 0})
+            chat["last_message"] = last_msg
+        
+        # Count unread messages
+        unread_count = await db.messages.count_documents({
+            "chat_id": chat["id"],
+            "sender_id": {"$ne": current_user.id},
+            "read_by": {"$nin": [current_user.id]}
+        })
+        chat["unread_count"] = unread_count
+    
+    return chats
+
+@api_router.post("/chats")
+async def create_or_get_chat(
+    participant_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new direct chat or get existing one"""
+    if participant_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot chat with yourself")
+    
+    # Check if direct chat already exists
+    existing_chat = await db.chats.find_one({
+        "type": "direct",
+        "participants": {"$all": [current_user.id, participant_id], "$size": 2}
+    }, {"_id": 0})
+    
+    if existing_chat:
+        return existing_chat
+    
+    # Create new chat
+    chat = ChatRoom(
+        type="direct",
+        participants=[current_user.id, participant_id],
+        created_by=current_user.id
+    )
+    
+    chat_doc = chat.model_dump()
+    chat_doc['created_at'] = chat_doc['created_at'].isoformat()
+    chat_doc['updated_at'] = chat_doc['updated_at'].isoformat()
+    
+    await db.chats.insert_one(chat_doc)
+    
+    return chat_doc
+
+@api_router.get("/chats/{chat_id}/messages")
+async def get_messages(
+    chat_id: str,
+    skip: int = 0,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """Get messages from a chat"""
+    # Verify user is participant
+    chat = await db.chats.find_one({
+        "id": chat_id,
+        "participants": current_user.id
+    })
+    
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    messages = await db.messages.find(
+        {"chat_id": chat_id, "is_deleted": False},
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Mark messages as read
+    await db.messages.update_many(
+        {
+            "chat_id": chat_id,
+            "sender_id": {"$ne": current_user.id},
+            "read_by": {"$nin": [current_user.id]}
+        },
+        {"$addToSet": {"read_by": current_user.id}, "$set": {"is_read": True}}
+    )
+    
+    # Enrich with sender info
+    for msg in messages:
+        user = await db.users.find_one({"id": msg["sender_id"]}, {"_id": 0, "hashed_password": 0})
+        profile = await db.user_profiles.find_one({"user_id": msg["sender_id"]}, {"_id": 0})
+        msg["sender"] = {
+            "id": msg["sender_id"],
+            "username": user.get("username") if user else "Unknown",
+            "avatar_url": profile.get("avatar_url") if profile else None
+        }
+    
+    return messages[::-1]  # Return in chronological order
+
+@api_router.post("/chats/{chat_id}/messages")
+async def send_message(
+    chat_id: str,
+    message_data: MessageCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Send a message in a chat"""
+    # Verify user is participant
+    chat = await db.chats.find_one({
+        "id": chat_id,
+        "participants": current_user.id
+    })
+    
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    message = Message(
+        chat_id=chat_id,
+        sender_id=current_user.id,
+        content=message_data.content,
+        message_type=message_data.message_type,
+        attachments=[MessageAttachment(**a) for a in message_data.attachments] if message_data.attachments else [],
+        reply_to_id=message_data.reply_to_id,
+        read_by=[current_user.id]
+    )
+    
+    message_doc = message.model_dump()
+    message_doc['created_at'] = message_doc['created_at'].isoformat()
+    message_doc['updated_at'] = message_doc['updated_at'].isoformat()
+    
+    await db.messages.insert_one(message_doc)
+    
+    # Update chat's last message
+    await db.chats.update_one(
+        {"id": chat_id},
+        {
+            "$set": {
+                "last_message_id": message.id,
+                "last_message_at": message_doc['created_at'],
+                "updated_at": message_doc['updated_at']
+            }
+        }
+    )
+    
+    # Create notification for other participants
+    for participant_id in chat["participants"]:
+        if participant_id != current_user.id:
+            notification = Notification(
+                user_id=participant_id,
+                actor_id=current_user.id,
+                type="message",
+                target_id=chat_id,
+                target_type="chat",
+                content=message_data.content[:100] if message_data.content else "Sent an attachment"
+            )
+            notif_doc = notification.model_dump()
+            notif_doc['created_at'] = notif_doc['created_at'].isoformat()
+            await db.notifications.insert_one(notif_doc)
+    
+    # Add sender info to response
+    profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0})
+    message_doc["sender"] = {
+        "id": current_user.id,
+        "username": current_user.username,
+        "avatar_url": profile.get("avatar_url") if profile else None
+    }
+    
+    return message_doc
+
+# -------------------- NOTIFICATIONS --------------------
+
+@api_router.get("/notifications")
+async def get_notifications(
+    skip: int = 0,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """Get notifications for current user"""
+    notifications = await db.notifications.find(
+        {"user_id": current_user.id},
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Enrich with actor info
+    for notif in notifications:
+        actor = await db.users.find_one({"id": notif["actor_id"]}, {"_id": 0, "hashed_password": 0})
+        profile = await db.user_profiles.find_one({"user_id": notif["actor_id"]}, {"_id": 0})
+        notif["actor"] = {
+            "id": notif["actor_id"],
+            "username": actor.get("username") if actor else "Unknown",
+            "avatar_url": profile.get("avatar_url") if profile else None
+        }
+    
+    return notifications
+
+@api_router.put("/notifications/read")
+async def mark_notifications_read(current_user: User = Depends(get_current_user)):
+    """Mark all notifications as read"""
+    await db.notifications.update_many(
+        {"user_id": current_user.id, "is_read": False},
+        {"$set": {"is_read": True}}
+    )
+    return {"message": "All notifications marked as read"}
+
+@api_router.get("/notifications/unread-count")
+async def get_unread_count(current_user: User = Depends(get_current_user)):
+    """Get count of unread notifications"""
+    count = await db.notifications.count_documents({
+        "user_id": current_user.id,
+        "is_read": False
+    })
+    return {"count": count}
+
+# ============================================================================
 # PUBLIC ROUTES
 # ============================================================================
 
