@@ -2825,9 +2825,12 @@ async def get_notifications(
     for notif in notifications:
         actor = await db.users.find_one({"id": notif["actor_id"]}, {"_id": 0, "hashed_password": 0})
         profile = await db.user_profiles.find_one({"user_id": notif["actor_id"]}, {"_id": 0})
+        username = "Unknown"
+        if actor:
+            username = actor.get("name") or actor.get("email", "Unknown").split("@")[0]
         notif["actor"] = {
             "id": notif["actor_id"],
-            "username": actor.get("username") if actor else "Unknown",
+            "username": username,
             "avatar_url": profile.get("avatar_url") if profile else None
         }
     
