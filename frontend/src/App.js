@@ -23,6 +23,7 @@ import FeedPage from "@/pages/FeedPage";
 import MapPage from "@/pages/MapPage";
 import EditCardPage from "@/pages/EditCardPage";
 import StorePage from "@/pages/StorePage";
+import ChatPage from "@/pages/ChatPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -36,6 +37,7 @@ function AppRouter() {
   return (
     <Routes>
       <Route path="/" element={<FeedPage />} />
+      <Route path="/feed" element={<FeedPage />} />
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/map" element={<MapPage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -46,6 +48,8 @@ function AppRouter() {
       <Route path="/store" element={<StorePage />} />
       <Route path="/store/success" element={<StorePage />} />
       <Route path="/store/cancel" element={<StorePage />} />
+      <Route path="/chat" element={<ChatPage />} />
+      <Route path="/chat/:chatId" element={<ChatPage />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/cards/new" element={<CreateCardPage />} />
       <Route path="/cards/:cardId/edit" element={<EditCardPage />} />
