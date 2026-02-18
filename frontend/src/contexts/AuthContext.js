@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
 const AuthContext = createContext({
@@ -6,6 +6,7 @@ const AuthContext = createContext({
   token: null,
   login: () => {},
   logout: () => {},
+  refreshUser: () => {},
   isLoading: true,
 });
 
@@ -17,36 +18,43 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [isLoading, setIsLoading] = useState(true);
 
+  // Function to refresh user data from server
+  const refreshUser = useCallback(async (authToken = null) => {
+    const currentToken = authToken || token || localStorage.getItem("token");
+    if (!currentToken) {
+      setIsLoading(false);
+      return null;
+    }
+
+    try {
+      const response = await axios.get(`${API}/auth/me`, {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
+      setUser(response.data);
+      setToken(currentToken);
+      return response.data;
+    } catch (error) {
+      console.error("Auth refresh failed:", error);
+      localStorage.removeItem("token");
+      setToken(null);
+      setUser(null);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
-    const checkAuth = async () => {
-      const storedToken = localStorage.getItem("token");
-      if (!storedToken) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const response = await axios.get(`${API}/auth/me`, {
-          headers: { Authorization: `Bearer ${storedToken}` },
-        });
-        setUser(response.data);
-        setToken(storedToken);
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        localStorage.removeItem("token");
-        setToken(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
+    refreshUser();
   }, []);
 
-  const login = (userData, userToken) => {
-    setUser(userData);
-    setToken(userToken);
+  const login = async (userData, userToken) => {
     localStorage.setItem("token", userToken);
+    setToken(userToken);
+    setUser(userData);
+    
+    // Also refresh from server to ensure we have latest data
+    await refreshUser(userToken);
   };
 
   const logout = () => {
@@ -56,7 +64,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, refreshUser, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
