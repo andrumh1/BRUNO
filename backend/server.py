@@ -2435,8 +2435,8 @@ async def create_comment(
     # Remove _id before returning (MongoDB adds it)
     comment_doc.pop("_id", None)
     
-    # Determine display name
-    username = current_user.username or current_user.email.split("@")[0]
+    # Determine display name - User model has 'name' not 'username'
+    username = current_user.name or current_user.email.split("@")[0]
     display_name = profile.get("display_name") if profile else None
     
     comment_doc["user"] = {
