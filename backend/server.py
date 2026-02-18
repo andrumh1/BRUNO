@@ -2725,9 +2725,12 @@ async def get_messages(
     for msg in messages:
         user = await db.users.find_one({"id": msg["sender_id"]}, {"_id": 0, "hashed_password": 0})
         profile = await db.user_profiles.find_one({"user_id": msg["sender_id"]}, {"_id": 0})
+        username = "Unknown"
+        if user:
+            username = user.get("name") or user.get("email", "Unknown").split("@")[0]
         msg["sender"] = {
             "id": msg["sender_id"],
-            "username": user.get("username") if user else "Unknown",
+            "username": username,
             "avatar_url": profile.get("avatar_url") if profile else None
         }
     
