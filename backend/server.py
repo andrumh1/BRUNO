@@ -2726,6 +2726,8 @@ async def create_or_get_chat(
     
     await db.chats.insert_one(chat_doc)
     
+    # Remove _id before returning
+    chat_doc.pop("_id", None)
     return chat_doc
 
 @api_router.get("/chats/{chat_id}/messages")
