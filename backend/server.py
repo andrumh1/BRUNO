@@ -2613,6 +2613,45 @@ async def toggle_follow(user_id: str, current_user: User = Depends(get_current_u
         
         return {"following": True}
 
+# -------------------- USER SEARCH --------------------
+
+@api_router.get("/users/search")
+async def search_users(
+    q: str,
+    limit: int = 20,
+    current_user: User = Depends(get_current_user)
+):
+    """Search users by name or email"""
+    if len(q) < 2:
+        return []
+    
+    # Search in users collection
+    users = await db.users.find({
+        "$and": [
+            {"id": {"$ne": current_user.id}},  # Exclude current user
+            {"$or": [
+                {"name": {"$regex": q, "$options": "i"}},
+                {"email": {"$regex": q, "$options": "i"}}
+            ]}
+        ]
+    }, {"_id": 0, "hashed_password": 0}).limit(limit).to_list(limit)
+    
+    # Enrich with profile info
+    result = []
+    for user in users:
+        profile = await db.user_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
+        username = user.get("name") or user.get("email", "Unknown").split("@")[0]
+        result.append({
+            "id": user["id"],
+            "username": username,
+            "email": user.get("email"),
+            "display_name": profile.get("display_name") if profile else username,
+            "avatar_url": profile.get("avatar_url") if profile else None,
+            "is_verified": profile.get("is_verified", False) if profile else False
+        })
+    
+    return result
+
 # -------------------- CHAT / MESSAGING --------------------
 
 @api_router.get("/chats")
