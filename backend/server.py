@@ -459,6 +459,171 @@ class UserSubscription(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # ============================================================================
+# SOCIAL NETWORK MODELS
+# ============================================================================
+
+# Post / Publication
+class PostMedia(BaseModel):
+    type: str = "image"  # image, video, document
+    url: str
+    thumbnail_url: Optional[str] = None
+    duration: Optional[int] = None  # for videos, in seconds
+
+class Post(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    content: str = ""
+    media: List[PostMedia] = []
+    card_id: Optional[str] = None  # If sharing a card
+    post_type: str = "text"  # text, image, video, card_share
+    visibility: str = "public"  # public, followers, private
+    likes_count: int = 0
+    comments_count: int = 0
+    shares_count: int = 0
+    is_pinned: bool = False
+    is_edited: bool = False
+    hashtags: List[str] = []
+    mentions: List[str] = []  # user_ids mentioned
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PostCreate(BaseModel):
+    content: str = ""
+    media: List[dict] = []
+    card_id: Optional[str] = None
+    post_type: str = "text"
+    visibility: str = "public"
+    hashtags: List[str] = []
+
+# Like
+class Like(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    target_id: str  # post_id or comment_id
+    target_type: str = "post"  # post, comment
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Comment
+class Comment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    post_id: str
+    parent_id: Optional[str] = None  # For nested replies
+    content: str
+    likes_count: int = 0
+    replies_count: int = 0
+    is_edited: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CommentCreate(BaseModel):
+    content: str
+    parent_id: Optional[str] = None
+
+# Follow relationship
+class Follow(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    follower_id: str  # Who is following
+    following_id: str  # Who is being followed
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# User Profile (extended)
+class UserProfile(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    user_id: str
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    location: Optional[str] = None
+    website: Optional[str] = None
+    profession: Optional[str] = None
+    company: Optional[str] = None
+    is_verified: bool = False
+    is_private: bool = False  # Private profile
+    followers_count: int = 0
+    following_count: int = 0
+    posts_count: int = 0
+    social_links: List[SocialLink] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class UserProfileUpdate(BaseModel):
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
+    location: Optional[str] = None
+    website: Optional[str] = None
+    profession: Optional[str] = None
+    company: Optional[str] = None
+    is_private: Optional[bool] = None
+    social_links: Optional[List[dict]] = None
+
+# Chat / Messaging
+class ChatRoom(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str = "direct"  # direct, group
+    name: Optional[str] = None  # For group chats
+    participants: List[str] = []  # user_ids
+    last_message_id: Optional[str] = None
+    last_message_at: Optional[datetime] = None
+    created_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class MessageAttachment(BaseModel):
+    type: str = "image"  # image, video, audio, file
+    url: str
+    filename: Optional[str] = None
+    size: Optional[int] = None  # in bytes
+    duration: Optional[int] = None  # for audio/video in seconds
+
+class Message(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    chat_id: str
+    sender_id: str
+    content: str = ""
+    message_type: str = "text"  # text, image, video, audio, file, voice_note
+    attachments: List[MessageAttachment] = []
+    reply_to_id: Optional[str] = None
+    is_read: bool = False
+    read_by: List[str] = []  # user_ids who have read
+    is_edited: bool = False
+    is_deleted: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class MessageCreate(BaseModel):
+    content: str = ""
+    message_type: str = "text"
+    attachments: List[dict] = []
+    reply_to_id: Optional[str] = None
+
+# Notification
+class Notification(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str  # Who receives the notification
+    actor_id: str  # Who triggered the notification
+    type: str  # like, comment, follow, mention, message
+    target_id: Optional[str] = None  # post_id, comment_id, etc.
+    target_type: Optional[str] = None  # post, comment, etc.
+    content: Optional[str] = None
+    is_read: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# ============================================================================
 # SECURITY FUNCTIONS
 # ============================================================================
 
