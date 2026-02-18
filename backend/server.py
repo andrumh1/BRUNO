@@ -2632,11 +2632,12 @@ async def get_chats(current_user: User = Depends(get_current_user)):
             user = await db.users.find_one({"id": uid}, {"_id": 0, "hashed_password": 0})
             profile = await db.user_profiles.find_one({"user_id": uid}, {"_id": 0})
             if user:
+                username = user.get("name") or user.get("email", "Unknown").split("@")[0]
                 participants.append({
                     "id": uid,
-                    "username": user.get("username"),
+                    "username": username,
                     "avatar_url": profile.get("avatar_url") if profile else None,
-                    "display_name": profile.get("display_name") if profile else None
+                    "display_name": profile.get("display_name") or username
                 })
         chat["other_participants"] = participants
         
