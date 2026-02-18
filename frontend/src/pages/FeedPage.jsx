@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,8 +7,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import SocialLinkButton from "@/components/SocialLinkButton";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import PostCard from "@/components/PostCard";
+import CreatePost from "@/components/CreatePost";
 import axios from "axios";
-import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag } from "lucide-react";
+import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag, Home, CreditCard, RefreshCw } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -17,6 +19,16 @@ const FeedPage = () => {
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
   const { t } = useLanguage();
+  
+  // Tab state: "social" or "cards"
+  const [activeTab, setActiveTab] = useState("social");
+  
+  // Social feed state
+  const [posts, setPosts] = useState([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [userCards, setUserCards] = useState([]);
+  
+  // Cards explorer state
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
