@@ -637,6 +637,13 @@ button[class*="bg-primary"]:hover {
   width: 100%;
 }
 
+/* Ensure parent containers don't clip dropdowns */
+.glass-card,
+[class*="CardContent"],
+[class*="card"] {
+  overflow: visible !important;
+}
+
 .bubble-select-trigger {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(20px);
