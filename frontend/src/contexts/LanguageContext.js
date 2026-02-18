@@ -431,6 +431,8 @@ const translations = {
       saving: "Saving...",
       preview: "Preview",
       previewDesc: "This is how your card will look",
+      savedSuccess: "Card saved successfully!",
+      updateSuccess: "Card updated successfully!",
     },
     // CURRICULUM specific
     curriculum: {
