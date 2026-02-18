@@ -35,11 +35,35 @@ const FeedPage = () => {
   const [filterType, setFilterType] = useState("all");
   const [viewMode, setViewMode] = useState("grid"); // grid or list
 
-  useEffect(() => {
-    fetchPublicCards();
+  // Fetch posts for social feed
+  const fetchPosts = useCallback(async () => {
+    setLoadingPosts(true);
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await axios.get(`${API}/posts`, { headers });
+      setPosts(response.data);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+    } finally {
+      setLoadingPosts(false);
+    }
   }, [token]);
 
-  const fetchPublicCards = async () => {
+  // Fetch user's cards for sharing in posts
+  const fetchUserCards = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await axios.get(`${API}/cards`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserCards(response.data);
+    } catch (error) {
+      console.error("Error fetching user cards:", error);
+    }
+  }, [token]);
+
+  // Fetch public cards for explorer tab
+  const fetchPublicCards = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/public/cards`);
       setCards(response.data);
@@ -48,6 +72,47 @@ const FeedPage = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "social") {
+      fetchPosts();
+      if (token) fetchUserCards();
+    } else {
+      fetchPublicCards();
+    }
+  }, [activeTab, token, fetchPosts, fetchUserCards, fetchPublicCards]);
+
+  // Handle new post created
+  const handlePostCreated = (newPost) => {
+    // Add user info to the new post
+    const enrichedPost = {
+      ...newPost,
+      user: {
+        id: user?.id,
+        username: user?.username,
+        avatar_url: user?.avatar_url,
+        display_name: user?.display_name || user?.username
+      },
+      is_liked: false,
+      likes_count: 0,
+      comments_count: 0
+    };
+    setPosts([enrichedPost, ...posts]);
+  };
+
+  // Handle post deletion
+  const handlePostDelete = (postId) => {
+    setPosts(posts.filter(p => p.id !== postId));
+  };
+
+  // Handle like update
+  const handleLikeUpdate = (postId, data) => {
+    setPosts(posts.map(p => 
+      p.id === postId 
+        ? { ...p, is_liked: data.liked, likes_count: data.likes_count }
+        : p
+    ));
   };
 
   const filteredCards = cards.filter(card => {
