@@ -2456,11 +2456,20 @@ async def get_comments(post_id: str, skip: int = 0, limit: int = 50):
     for comment in comments:
         user = await db.users.find_one({"id": comment["user_id"]}, {"_id": 0, "hashed_password": 0})
         profile = await db.user_profiles.find_one({"user_id": comment["user_id"]}, {"_id": 0})
+        
+        # Determine display name
+        username = "Unknown"
+        display_name = None
+        if user:
+            username = user.get("username") or user.get("email", "Unknown").split("@")[0]
+        if profile:
+            display_name = profile.get("display_name")
+            
         comment["user"] = {
             "id": user["id"] if user else None,
-            "username": user.get("username") if user else "Unknown",
+            "username": username,
             "avatar_url": profile.get("avatar_url") if profile else None,
-            "display_name": profile.get("display_name") if profile else None
+            "display_name": display_name or username
         }
         
         # Get replies
