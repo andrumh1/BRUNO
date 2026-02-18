@@ -51,6 +51,7 @@ function AppRouter() {
       <Route path="/cards/:cardId/edit" element={<EditCardPage />} />
       <Route path="/cards/:cardId/qr" element={<QRCodePage />} />
       <Route path="/c/:cardId" element={<ViewCardPage />} />
+      <Route path="/n/:nfcId" element={<NFCRedirectPage />} />
       <Route path="/nfc/activate" element={<ActivateNFCPage />} />
       <Route path="/nfc/write" element={<NFCWritePage />} />
       <Route path="*" element={<FeedPage />} />
