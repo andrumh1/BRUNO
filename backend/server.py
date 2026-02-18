@@ -2797,9 +2797,11 @@ async def send_message(
     
     # Add sender info to response
     profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0})
+    username = current_user.name or current_user.email.split("@")[0]
+    message_doc.pop("_id", None)
     message_doc["sender"] = {
         "id": current_user.id,
-        "username": current_user.username,
+        "username": username,
         "avatar_url": profile.get("avatar_url") if profile else None
     }
     
