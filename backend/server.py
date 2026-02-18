@@ -2422,6 +2422,10 @@ async def create_comment(
     
     # Get user info for response
     profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0})
+    
+    # Remove _id before returning (MongoDB adds it)
+    comment_doc.pop("_id", None)
+    
     comment_doc["user"] = {
         "id": current_user.id,
         "username": current_user.username,
