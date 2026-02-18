@@ -2231,6 +2231,8 @@ async def create_post(
         upsert=True
     )
     
+    # Remove _id before returning (MongoDB adds it)
+    post_doc.pop("_id", None)
     return post_doc
 
 @api_router.get("/posts")
