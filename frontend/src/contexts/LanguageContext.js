@@ -98,6 +98,8 @@ const translations = {
       showInFeedDesc: "Si está desmarcado, solo se podrá acceder con el enlace directo",
       animation: "Animación",
       isAnimated: "Activar efecto dinámico",
+      savedSuccess: "¡Tarjeta guardada exitosamente!",
+      updateSuccess: "¡Tarjeta actualizada exitosamente!",
       isAnimatedDesc: "Aplica suaves movimientos tipo burbuja a la tarjeta",
       cancel: "Cancelar",
       create: "Crear Tarjeta",
