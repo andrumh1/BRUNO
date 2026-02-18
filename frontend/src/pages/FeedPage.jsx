@@ -353,143 +353,252 @@ const FeedPage = () => {
             </div>
           </div>
 
-          {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                placeholder={t("feed.searchPlaceholder")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2 flex-wrap overflow-x-auto pb-2 sm:pb-0">
-              <Button
-                variant={filterType === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("all")}
-              >
-                {t("feed.allTypes")}
-              </Button>
-              <Button
-                variant={filterType === "personal" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("personal")}
-              >
-                {t("cards.types.personal")}
-              </Button>
-              <Button
-                variant={filterType === "empresarial" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("empresarial")}
-              >
-                {t("cards.types.empresarial")}
-              </Button>
-              <Button
-                variant={filterType === "negocio" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("negocio")}
-              >
-                {t("cards.types.negocio")}
-              </Button>
-              <Button
-                variant={filterType === "lugares" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("lugares")}
-              >
-                {t("cards.types.lugares")}
-              </Button>
-              <Button
-                variant={filterType === "guardian" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("guardian")}
-              >
-                {t("cards.types.guardian")}
-              </Button>
-              <Button
-                variant={filterType === "curriculum" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterType("curriculum")}
-              >
-                {t("cards.types.curriculum")}
-              </Button>
-            </div>
+          {/* Tab Navigation */}
+          <div className="flex gap-1 mb-3 sm:mb-4">
+            <button
+              onClick={() => setActiveTab("social")}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                activeTab === "social"
+                  ? "bg-primary text-primary-foreground shadow-lg"
+                  : "bg-muted/50 hover:bg-muted text-muted-foreground"
+              }`}
+              data-testid="social-tab-btn"
+            >
+              <Home className="w-4 h-4" />
+              <span>Feed</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("cards")}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                activeTab === "cards"
+                  ? "bg-primary text-primary-foreground shadow-lg"
+                  : "bg-muted/50 hover:bg-muted text-muted-foreground"
+              }`}
+              data-testid="cards-tab-btn"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>{t("nav.explore") || "Explorar"}</span>
+            </button>
           </div>
+
+          {/* Search and Filters - Only show for cards tab */}
+          {activeTab === "cards" && (
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  placeholder={t("feed.searchPlaceholder")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                  data-testid="cards-search-input"
+                />
+              </div>
+              <div className="flex gap-2 flex-wrap overflow-x-auto pb-2 sm:pb-0">
+                <Button
+                  variant={filterType === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterType("all")}
+                >
+                  {t("feed.allTypes")}
+                </Button>
+                <Button
+                  variant={filterType === "personal" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterType("personal")}
+                >
+                  {t("cards.types.personal")}
+                </Button>
+                <Button
+                  variant={filterType === "empresarial" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterType("empresarial")}
+                >
+                  {t("cards.types.empresarial")}
+                </Button>
+                <Button
+                  variant={filterType === "negocio" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterType("negocio")}
+                >
+                  {t("cards.types.negocio")}
+                </Button>
+                <Button
+                  variant={filterType === "lugares" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterType("lugares")}
+                >
+                  {t("cards.types.lugares")}
+                </Button>
+                <Button
+                  variant={filterType === "guardian" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterType("guardian")}
+                >
+                  {t("cards.types.guardian")}
+                </Button>
+                <Button
+                  variant={filterType === "curriculum" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterType("curriculum")}
+                >
+                  {t("cards.types.curriculum")}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
-        {/* Hero Section */}
-        <div className="text-center mb-6 sm:mb-8">
-          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary/10 border border-primary/20 mb-3 sm:mb-4">
-            <TrendingUp className="w-4 h-4 text-primary" />
-            <span className="text-xs sm:text-sm font-medium">{t("feed.subtitle")}</span>
-          </div>
-          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4">{t("feed.title")}</h1>
-        </div>
-
-        {/* View Toggle */}
-        <div className="flex justify-end mb-4 sm:mb-6">
-          <div className="view-toggle">
-            <button
-              className={viewMode === "grid" ? "active" : ""}
-              onClick={() => setViewMode("grid")}
-            >
-              <Grid3X3 className="w-4 h-4" />
-              {t("feed.gridView")}
-            </button>
-            <button
-              className={viewMode === "list" ? "active" : ""}
-              onClick={() => setViewMode("list")}
-            >
-              <List className="w-4 h-4" />
-              {t("feed.listView")}
-            </button>
-          </div>
-        </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-muted-foreground">{t("common.loading")}</p>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!loading && filteredCards.length === 0 && (
-          <Card className="text-center py-16 glass-card">
-            <CardContent>
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="w-8 h-8 text-primary" />
+        {/* Social Feed Tab */}
+        {activeTab === "social" && (
+          <div className="max-w-xl mx-auto space-y-4">
+            {/* Create Post (only for logged in users) */}
+            {user && (
+              <CreatePost 
+                onPostCreated={handlePostCreated} 
+                userCards={userCards}
+              />
+            )}
+            
+            {/* Refresh Button */}
+            <div className="flex justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchPosts}
+                disabled={loadingPosts}
+                className="text-muted-foreground hover:text-primary"
+                data-testid="refresh-feed-btn"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${loadingPosts ? "animate-spin" : ""}`} />
+                Actualizar
+              </Button>
+            </div>
+            
+            {/* Loading State */}
+            {loadingPosts && posts.length === 0 && (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Cargando publicaciones...</p>
               </div>
-              <h3 className="text-xl font-bold mb-2">{t("feed.noResults")}</h3>
-              <p className="text-muted-foreground mb-6">
-                {searchQuery ? `No hay resultados para "${searchQuery}"` : t("feed.noResults")}
-              </p>
-              <Link to="/register">
-                <Button>{t("dashboard.createCard")}</Button>
-              </Link>
-            </CardContent>
-          </Card>
+            )}
+            
+            {/* Empty State */}
+            {!loadingPosts && posts.length === 0 && (
+              <Card className="text-center py-16 glass-card">
+                <CardContent>
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Home className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">¡Bienvenido al Feed!</h3>
+                  <p className="text-muted-foreground mb-6">
+                    {user 
+                      ? "Sé el primero en publicar algo. ¡Comparte tu tarjeta o cuenta algo interesante!"
+                      : "Inicia sesión para ver y crear publicaciones en la comunidad."
+                    }
+                  </p>
+                  {!user && (
+                    <Link to="/login">
+                      <Button>{t("nav.login")}</Button>
+                    </Link>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Posts List */}
+            {posts.length > 0 && (
+              <div className="space-y-4" data-testid="posts-feed">
+                {posts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onLike={handleLikeUpdate}
+                    onDelete={handlePostDelete}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
-        {/* Cards Grid/List */}
-        {!loading && filteredCards.length > 0 && (
-          viewMode === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-10">
-              {filteredCards.map((card) => (
-                <GridCard key={card.id} card={card} />
-              ))}
+        {/* Cards Explorer Tab */}
+        {activeTab === "cards" && (
+          <>
+            {/* Hero Section */}
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary/10 border border-primary/20 mb-3 sm:mb-4">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                <span className="text-xs sm:text-sm font-medium">{t("feed.subtitle")}</span>
+              </div>
+              <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4">{t("feed.title")}</h1>
             </div>
-          ) : (
-            <div className="space-y-4 mb-10">
-              {filteredCards.map((card) => (
-                <ListCard key={card.id} card={card} />
-              ))}
+
+            {/* View Toggle */}
+            <div className="flex justify-end mb-4 sm:mb-6">
+              <div className="view-toggle">
+                <button
+                  className={viewMode === "grid" ? "active" : ""}
+                  onClick={() => setViewMode("grid")}
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                  {t("feed.gridView")}
+                </button>
+                <button
+                  className={viewMode === "list" ? "active" : ""}
+                  onClick={() => setViewMode("list")}
+                >
+                  <List className="w-4 h-4" />
+                  {t("feed.listView")}
+                </button>
+              </div>
             </div>
-          )
+
+            {/* Loading State */}
+            {loading && (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-muted-foreground">{t("common.loading")}</p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!loading && filteredCards.length === 0 && (
+              <Card className="text-center py-16 glass-card">
+                <CardContent>
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-8 h-8 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">{t("feed.noResults")}</h3>
+                  <p className="text-muted-foreground mb-6">
+                    {searchQuery ? `No hay resultados para "${searchQuery}"` : t("feed.noResults")}
+                  </p>
+                  <Link to="/register">
+                    <Button>{t("dashboard.createCard")}</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Cards Grid/List */}
+            {!loading && filteredCards.length > 0 && (
+              viewMode === "grid" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-10">
+                  {filteredCards.map((card) => (
+                    <GridCard key={card.id} card={card} />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4 mb-10">
+                  {filteredCards.map((card) => (
+                    <ListCard key={card.id} card={card} />
+                  ))}
+                </div>
+              )
+            )}
+          </>
         )}
       </main>
     </div>
