@@ -15,6 +15,7 @@ import ViewCardPage from "@/pages/ViewCardPage";
 import QRCodePage from "@/pages/QRCodePage";
 import ActivateNFCPage from "@/pages/ActivateNFCPage";
 import NFCWritePage from "@/pages/NFCWritePage";
+import NFCRedirectPage from "@/pages/NFCRedirectPage";
 import ContactPage from "@/pages/ContactPage";
 import HelpPage from "@/pages/HelpPage";
 import PricingPage from "@/pages/PricingPage";
