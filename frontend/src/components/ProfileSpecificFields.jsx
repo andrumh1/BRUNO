@@ -274,7 +274,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
                 </select>
               </div>
             </div>
-            {/* Services */}
+            {/* Services - Improved */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">{t("profileFields.negocio.services")}</label>
@@ -282,36 +282,123 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => addArrayItem("services", { name: "", price: "" })}
+                  onClick={() => addArrayItem("services", { name: "", description: "", price: "", duration: "" })}
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   {t("profileFields.negocio.addService")}
                 </Button>
               </div>
               {(customFields.services || []).map((service, index) => (
-                <div key={index} className="flex items-center gap-2">
+                <div key={index} className="p-3 border border-border rounded-xl space-y-2 bg-background/50">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Nombre del servicio"
+                      value={service.name}
+                      onChange={(e) => updateArrayItem("services", index, "name", e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeArrayItem("services", index)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
                   <Input
-                    placeholder="Nombre del servicio"
-                    value={service.name}
-                    onChange={(e) => updateArrayItem("services", index, "name", e.target.value)}
-                    className="flex-1"
+                    placeholder="Descripción breve del servicio"
+                    value={service.description || ""}
+                    onChange={(e) => updateArrayItem("services", index, "description", e.target.value)}
                   />
-                  <Input
-                    placeholder="Precio"
-                    value={service.price}
-                    onChange={(e) => updateArrayItem("services", index, "price", e.target.value)}
-                    className="w-24"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeArrayItem("services", index)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      placeholder="Precio (ej: $50)"
+                      value={service.price}
+                      onChange={(e) => updateArrayItem("services", index, "price", e.target.value)}
+                    />
+                    <Input
+                      placeholder="Duración (ej: 1 hora)"
+                      value={service.duration || ""}
+                      onChange={(e) => updateArrayItem("services", index, "duration", e.target.value)}
+                    />
+                  </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Catalogs / Products Section - NEW */}
+        <Card className="glass-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Store className="w-5 h-5 text-primary" />
+              <CardTitle>Catálogos y Productos</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Productos o Catálogos</label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addArrayItem("catalogs", { name: "", description: "", price: "", imageUrl: "", category: "" })}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Agregar Producto
+                </Button>
+              </div>
+              {(customFields.catalogs || []).map((item, index) => (
+                <div key={index} className="p-4 border border-border rounded-xl space-y-3 bg-background/50">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Nombre del producto"
+                      value={item.name}
+                      onChange={(e) => updateArrayItem("catalogs", index, "name", e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeArrayItem("catalogs", index)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                  <textarea
+                    placeholder="Descripción del producto"
+                    value={item.description || ""}
+                    onChange={(e) => updateArrayItem("catalogs", index, "description", e.target.value)}
+                    className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      placeholder="Precio (ej: $99.99)"
+                      value={item.price || ""}
+                      onChange={(e) => updateArrayItem("catalogs", index, "price", e.target.value)}
+                    />
+                    <Input
+                      placeholder="Categoría"
+                      value={item.category || ""}
+                      onChange={(e) => updateArrayItem("catalogs", index, "category", e.target.value)}
+                    />
+                  </div>
+                  <Input
+                    placeholder="URL de imagen del producto"
+                    value={item.imageUrl || ""}
+                    onChange={(e) => updateArrayItem("catalogs", index, "imageUrl", e.target.value)}
+                  />
+                </div>
+              ))}
+              {(!customFields.catalogs || customFields.catalogs.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Agrega productos o servicios de tu catálogo para mostrarlos en tu tarjeta
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
