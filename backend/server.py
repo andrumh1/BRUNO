@@ -1580,7 +1580,7 @@ async def update_user_saved_data(
 ):
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
     
-    result = await db.user_saved_data.update_one(
+    await db.user_saved_data.update_one(
         {"user_id": current_user.id},
         {"$set": updates},
         upsert=True
