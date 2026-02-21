@@ -2673,10 +2673,11 @@ async def get_chats(current_user: User = Depends(get_current_user)):
             if user:
                 username = user.get("name") or user.get("email", "Unknown").split("@")[0]
                 display_name = profile.get("display_name") if profile else None
+                avatar_url = profile.get("avatar_url") if profile else user.get("avatar_url")
                 participants.append({
                     "id": uid,
                     "username": username,
-                    "avatar_url": profile.get("avatar_url") if profile else None,
+                    "avatar_url": avatar_url,
                     "display_name": display_name or username
                 })
         chat["other_participants"] = participants
