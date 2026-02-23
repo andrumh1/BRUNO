@@ -198,6 +198,20 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - `POST /api/calls/{call_id}/decline` - Rechazar llamada
 - `POST /api/calls/{call_id}/end` - Terminar llamada
 
+### Sistema de Puntos (NUEVO)
+- `GET /api/points/me` - Puntos del usuario actual
+- `POST /api/points/daily-check-in` - Check-in diario
+- `GET /api/points/leaderboard` - Ranking de usuarios
+- `GET /api/points/history` - Historial de transacciones
+
+### Notificaciones (NUEVO)
+- `POST /api/notifications/subscribe` - Suscribirse a push
+- `DELETE /api/notifications/unsubscribe` - Desuscribirse
+- `GET /api/notifications/status` - Estado de suscripción
+- `GET /api/notifications/preferences` - Preferencias
+- `PUT /api/notifications/preferences` - Actualizar preferencias
+- `GET /api/notifications/recent` - Notificaciones recientes
+
 ### Tienda
 - `GET /api/store/products` - Lista productos (36 productos)
 - Categorías: nfc_card, hogar, comercios, oficinas, mascotas, guardian, habladores, servicios, meow_services
