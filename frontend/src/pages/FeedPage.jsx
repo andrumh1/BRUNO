@@ -557,47 +557,19 @@ const FeedPage = () => {
           </div>
         )}
 
-        {/* Reels Tab */}
+        {/* Reels Tab - Full Screen TikTok Style */}
         {activeTab === "reels" && (
-          <div className="max-w-md mx-auto">
-            {/* Video posts filter */}
-            {posts.filter(p => p.media?.some(m => m.type === "video")).length > 0 ? (
-              <div className="space-y-4">
-                {posts
-                  .filter(p => p.media?.some(m => m.type === "video"))
-                  .map((post) => (
-                    <div key={post.id} className="rounded-2xl overflow-hidden bg-black relative">
-                      <video 
-                        src={post.media.find(m => m.type === "video")?.url}
-                        className="w-full aspect-[9/16] object-cover"
-                        controls
-                        playsInline
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-                            {post.user?.username?.[0]?.toUpperCase() || "?"}
-                          </div>
-                          <div>
-                            <p className="text-white font-semibold">{post.user?.display_name || post.user?.username}</p>
-                            <p className="text-white/70 text-sm">@{post.user?.username}</p>
-                          </div>
-                        </div>
-                        {post.content && (
-                          <p className="text-white text-sm">{post.content}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            ) : (
-              <Card className="text-center py-16">
-                <CardContent>
-                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="w-10 h-10 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-2">No hay Reels aún</h3>
-                  <p className="text-muted-foreground mb-4">
+          <div className="fixed inset-0 z-40 bg-black">
+            <ReelsFeed />
+            {/* Back button */}
+            <button 
+              onClick={() => setActiveTab("social")}
+              className="absolute top-4 left-4 z-50 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+          </div>
+        )}
                     ¡Sé el primero en publicar un video!
                   </p>
                   {user && (
