@@ -269,10 +269,16 @@ const VideoCallModal = ({
     return (
       <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
         <div className="bg-card rounded-3xl p-8 max-w-sm w-full text-center">
-          <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/60 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+          <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse ${
+            isAudioOnly 
+              ? "bg-gradient-to-br from-green-500 to-green-600" 
+              : "bg-gradient-to-br from-primary to-primary/60"
+          }`}>
             <Phone className="w-12 h-12 text-white" />
           </div>
-          <h3 className="text-xl font-bold mb-2">Llamada entrante</h3>
+          <h3 className="text-xl font-bold mb-2">
+            {isAudioOnly ? "Llamada de voz" : "Videollamada"} entrante
+          </h3>
           <p className="text-muted-foreground mb-8">{remoteUserName || "Usuario"}</p>
           
           <div className="flex justify-center gap-6">
@@ -297,6 +303,46 @@ const VideoCallModal = ({
     );
   }
 
+  // Audio-only call UI - Minimalist design
+  if (isAudioOnly) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90">
+        <div className="bg-gradient-to-b from-gray-900 to-black rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+          {/* Animated audio waves */}
+          <div className="relative w-32 h-32 mx-auto mb-6">
+            <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
+            <div className="absolute inset-2 bg-green-500/30 rounded-full animate-ping" style={{ animationDuration: '2s', animationDelay: '0.3s' }} />
+            <div className="absolute inset-4 bg-green-500/40 rounded-full animate-ping" style={{ animationDuration: '2s', animationDelay: '0.6s' }} />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/50">
+                <Phone className="w-10 h-10 text-white" />
+              </div>
+            </div>
+          </div>
+          
+          {/* User name */}
+          <h2 className="text-2xl font-bold text-white mb-2">
+            {remoteUserName || "Usuario"}
+          </h2>
+          
+          {/* Call status */}
+          <p className="text-green-400 text-sm mb-6">
+            {callState === 'connecting' && "Conectando..."}
+            {callState === 'connected' && formatDuration(callDuration)}
+          </p>
+          
+          {/* Audio controls */}
+          {callObject && (
+            <DailyProvider callObject={callObject}>
+              <AudioOnlyControls onLeave={handleLeave} />
+            </DailyProvider>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Video call UI
   return (
     <div 
       ref={containerRef}
@@ -313,7 +359,7 @@ const VideoCallModal = ({
               <h3 className="font-semibold">{remoteUserName || "Videollamada"}</h3>
               <p className="text-xs text-muted-foreground">
                 {callState === 'connecting' && "Conectando..."}
-                {callState === 'connected' && "En llamada"}
+                {callState === 'connected' && formatDuration(callDuration)}
               </p>
             </div>
           </div>
