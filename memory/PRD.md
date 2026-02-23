@@ -75,7 +75,8 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 ### P0 (Completado)
 - [x] Feed social con posts ✅
 - [x] Likes y comentarios ✅
-- [x] **Sistema de chat privado** ✅ NEW
+- [x] Sistema de chat privado ✅
+- [x] **Burbujas flotantes (Chat + BRUNO IA)** ✅ NEW
 
 ### P1 (Próximo)
 - [ ] Perfiles públicos de usuario
