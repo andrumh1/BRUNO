@@ -1,145 +1,153 @@
 # BRUNO - Digital Business Card Application
 
 ## Problem Statement
-Build a comprehensive digital business card application called "BRUNO" - a highly polished, visually appealing PWA with extensive customization and social networking features.
-
-## What's Been Implemented
-
-### Session: 2026-02-23 - Grandes Mejoras ✅ NEW
-
-**1. Perfiles de Usuario** ✅
-- Página `/profile/:userId` con banner, avatar, stats
-- Contador de seguidores/siguiendo
-- Galería de posts del usuario
-- Tabs: Publicaciones, Media, Guardados
-- Follow/Unfollow funcional
-
-**2. BRUNO IA (GPT-5.2)** ✅
-- Chat flotante con asistente IA
-- Integración GPT-5.2 via EMERGENT_LLM_KEY
-- Historial de conversaciones persistente
-- Ayuda con diseño de tarjetas y navegación
-
-**3. WebSockets Chat** ✅
-- Mensajes en tiempo real
-- Indicador "está escribiendo..."
-- Notificación de mensajes leídos
-- Reconexión automática
-
-**4. Burbujas Flotantes** ✅
-- Chat (derecha) - acceso rápido a mensajes con badge de no leídos
-- BRUNO IA (izquierda) - chat con asistente IA
-- Solo visibles para usuarios logueados
-- Ocultas en página /chat
+Build a comprehensive digital business card application called "BRUNO" - a polished PWA with social networking features, e-commerce, and AI assistant.
 
 ---
 
-### Session: 2026-02-21 - Sistema de Chat Privado ✅
+## FASE 1 - Correcciones Críticas (EN PROGRESO)
 
-**Chat System Implementado:**
-- Lista de conversaciones con último mensaje y hora
-- Vista de chat con mensajes agrupados por fecha
-- Búsqueda de conversaciones
-- Modal para iniciar nueva conversación
-- Soporte para envío de imágenes/videos
-- Indicadores de lectura (✓ / ✓✓)
+### ✅ Completado
+
+#### 1. Sistema de Usuarios Mejorado
+- Sesión persistente con opción de mantener sesión
+- Endpoints de logout y actualización de perfil
+- Cache de usuario en localStorage para carga rápida
+- Manejo de errores de autenticación mejorado
+- `/app/frontend/src/contexts/AuthContext.js` - Actualizado
+
+#### 2. Tienda PIUP Ampliada (36 productos)
+**Categorías implementadas:**
+- Tarjetas NFC (Negro, Blanco, Naranja, Dorado, Holográfica)
+- Carnets empresariales
+- Hogar (WiFi, Despensa, Alarma, Emergencia, Llaveros GPS)
+- Restaurantes y Comercios (Menú QR, WiFi, Redes, AR productos)
+- Oficinas (Citas, Apps, Pagos, Web, Inventario, Acceso, Archivos)
+- Mascotas (Tags básicos, GPS, Collares completos)
+- Guardian (Pulseras adultos, infantiles)
+- Habladores (Mesa, Pared, Mostrador, A-Frame)
+- Servicios (Diseño personalizado, Configuración empresarial)
+- MEOW APP (Redes sociales, Branding, Publicidad)
+
+#### 3. Mapa Estilo Snapchat
+- Diseño visual similar a Snapchat
+- Cálculo de distancias (fórmula Haversine)
+- Marcadores con avatares de tarjetas
+- Lista de tarjetas con distancia
+- Botón "Cómo llegar" abre Google/Apple Maps
+- Componente `MapMarkerCard` para marcadores
+- `/app/frontend/src/pages/MapPage.jsx` - Actualizado
+
+#### 4. Variantes de Tarjetas
+- `MiniCard` - Para mapas y selecciones rápidas
+- `MediumCard` - Para listados y grids  
+- `LargeCard` - Presentación completa
+- `MapMarkerCard` - Marcadores en mapa
+- Botón de Chat integrado en cada tarjeta
+- `/app/frontend/src/components/CardVariants.jsx` - Creado
+
+#### 5. Nuevo Tipo de Tarjeta: Servicios
+- Para emprendedores y freelancers
+- Campos adicionales: services, products, pricing, portfolio
+- Template: servicios_portfolio
+- Actualizado en CreateCardPage.jsx
+
+#### 6. BRUNO IA Mejorado
+- System message extensivo con toda la info de la app
+- Conocimiento de todas las categorías de productos
+- Guía de diseño de tarjetas
+- Información de MEOW APP partner
+- `/app/backend/server.py` - BRUNO_SYSTEM_MESSAGE actualizado
 
 ---
 
-### Session: 2026-02-18 - Red Social Profesional ✅
+### 🔄 Pendiente Fase 1
 
-**Feed Social Implementado:**
-- FeedPage con pestañas "Feed" y "Explorar"
-- Crear posts de texto, imagen, video
-- Likes con contador
-- Comentarios
-- Compartir posts
+#### Tarjetas
+- [ ] Corrección de visualización de burbujas (info duplicada)
+- [ ] Plantillas editables en modo edición
+- [ ] Links NFC corregidos
+- [ ] Preguntas según tipo de tarjeta
+
+#### Feed
+- [ ] Línea gráfica unificada con tarjetas
+- [ ] Sección de Reels y videos
+- [ ] Republicar tarjetas
+
+#### Chat
+- [ ] Envío de audios
+- [ ] Envío de stickers
+- [ ] Envío de archivos
+- [ ] Burbuja expandible flotante
+- [ ] Historial multimedia
+- [ ] Videollamadas (WebRTC/Daily.co)
 
 ---
 
-## Prioritized Backlog
+## FASE 2 - Mejoras de UX (Próximo)
 
-### P0 (Completado)
-- [x] Feed social con posts ✅
-- [x] Likes y comentarios ✅
-- [x] Sistema de chat privado ✅
-- [x] Burbujas flotantes (Chat + BRUNO IA) ✅
-- [x] **Perfiles de Usuario** ✅ NEW
-- [x] **BRUNO IA con GPT-5.2** ✅ NEW
-- [x] **WebSockets para chat** ✅ NEW
+- [ ] Feed con Reels
+- [ ] Perfil tipo red social completo
+- [ ] Sistema de puntos
+- [ ] Tour de bienvenida
+- [ ] Cuestionario de perfil
 
-### P1 (Próximo)
-- [ ] Notas de voz en chat
-- [ ] Sistema de notificaciones mejorado
-- [ ] Editar perfil de usuario (avatar, banner, bio)
+---
 
-### P2 (Siguiente)
-- [ ] Sistema de suscripciones con Stripe
-- [ ] Página web oficial de marketing
+## FASE 3 - Nuevas Funcionalidades
 
-### P3 (Futuro)
-- [ ] Panel admin
-- [ ] Native apps
-- [ ] Seguimiento de pedidos
+- [ ] Suscripciones con diferencias claras
+- [ ] Tarjetas preferenciales por suscripción
+- [ ] Habladores para negocios
+
+---
+
+## FASE 4 - Expansión
+
+- [ ] Página web BRUNO.com
+- [ ] Integración completa MEOW APP
 
 ---
 
 ## API Endpoints
 
-### User Profile
-- `GET /api/users/{id}/profile` - Perfil público
-- `GET /api/users/{id}/posts` - Posts del usuario
-- `POST /api/users/{id}/follow` - Follow/Unfollow
+### Auth
+- `POST /api/auth/register` - Registro
+- `POST /api/auth/login` - Login
+- `GET /api/auth/me` - Usuario actual
+- `PUT /api/auth/me` - Actualizar usuario (NUEVO)
+- `POST /api/auth/logout` - Logout (NUEVO)
 
-### BRUNO AI
-- `POST /api/ai/chat` - Enviar mensaje a BRUNO IA
-- `GET /api/ai/history` - Historial de conversaciones
+### Tienda
+- `GET /api/store/products` - Lista productos (36 productos)
+- Categorías: nfc_card, hogar, comercios, oficinas, mascotas, guardian, habladores, servicios, meow_services
+
+### Mapa
+- `GET /api/cards/public?with_location=true` - Tarjetas con ubicación
+
+### BRUNO IA
+- `POST /api/ai/chat` - Chat con IA
+- `GET /api/ai/history` - Historial
 - `DELETE /api/ai/history` - Limpiar historial
-
-### WebSocket
-- `ws://*/ws/chat/{token}` - Conexión WebSocket para chat
-
-### Chat System
-- `GET /api/chats` - Lista de chats
-- `POST /api/chats?participant_id={id}` - Crear chat
-- `GET /api/chats/{id}/messages` - Mensajes
-- `POST /api/chats/{id}/messages` - Enviar mensaje
-
-### Social Feed
-- `POST /api/posts` - Crear post
-- `GET /api/posts` - Feed
-- `POST /api/posts/{id}/like` - Like
-- `GET/POST /api/posts/{id}/comments` - Comentarios
 
 ---
 
 ## Key Files
 
-### User Profile
-- `/app/frontend/src/pages/UserProfilePage.jsx`
-- `/app/frontend/src/App.js` - Ruta /profile/:userId
-
-### BRUNO AI & Floating Bubbles
-- `/app/frontend/src/components/FloatingBubbles.jsx`
-- `/app/backend/server.py` - Líneas 3095-3200 (AI endpoints)
-
-### WebSocket
-- `/app/backend/server.py` - Líneas 3200-3350 (WS endpoints)
-- `/app/frontend/src/pages/ChatPage.jsx` - Integración WS
-
-### Chat System
-- `/app/frontend/src/pages/ChatPage.jsx`
-- `/app/backend/server.py` - Líneas 2760-2900
+### Nuevos/Actualizados
+- `/app/frontend/src/contexts/AuthContext.js` - Sesión persistente
+- `/app/frontend/src/components/CardVariants.jsx` - Variantes de tarjetas
+- `/app/frontend/src/pages/MapPage.jsx` - Mapa estilo Snapchat
+- `/app/frontend/src/pages/CreateCardPage.jsx` - Tipo Servicios
+- `/app/frontend/src/pages/StorePage.jsx` - Nuevas categorías
+- `/app/backend/server.py` - 36 productos, endpoints auth, BRUNO IA mejorado
 
 ---
-
-## Test Reports
-- `/app/test_reports/iteration_7.json` - Tests de Red Social (100%)
-- `/app/test_reports/iteration_8.json` - Tests de Chat (100%)
-- `/app/test_reports/iteration_9.json` - Tests de Profile, AI, WS (100%)
 
 ## Test Credentials
 - **User 1:** `newtest@bruno.com` / `Test1234!`
 - **User 2:** `chattest2@bruno.com` / `Test1234!`
 
-*Last Updated: 2026-02-23*
+---
+
+*Last Updated: 2026-02-23 - Fase 1 en progreso*
