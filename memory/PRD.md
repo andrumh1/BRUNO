@@ -294,6 +294,7 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - `/app/test_reports/iteration_10.json` - Video calls (12/12 tests passed)
 - `/app/test_reports/iteration_11.json` - Audio calls with minimalist UI (12/12 tests passed)
 - `/app/test_reports/iteration_12.json` - Points, Notifications, Stickers (15/15 tests passed)
+- `/app/test_reports/iteration_13.json` - Welcome Tour, Card Sharing, BRUNO Website (100% backend, 90% frontend)
 
 ---
 
