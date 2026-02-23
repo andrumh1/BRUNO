@@ -3206,13 +3206,16 @@ async def get_user_from_token(token: str) -> Optional[User]:
     """Validate token and return user for WebSocket connections"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
+        email: str = payload.get("sub")  # JWT token stores email in "sub", not user_id
+        if email is None:
             return None
         
-        user_data = await db.users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
+        user_data = await db.users.find_one({"email": email}, {"_id": 0, "hashed_password": 0})
         if user_data is None:
             return None
+        
+        if isinstance(user_data.get('created_at'), str):
+            user_data['created_at'] = datetime.fromisoformat(user_data['created_at'])
         
         return User(**user_data)
     except JWTError:
