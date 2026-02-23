@@ -622,11 +622,15 @@ class ChatRoom(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class MessageAttachment(BaseModel):
-    type: str = "image"  # image, video, audio, file
-    url: str
+    type: str = "image"  # image, video, audio, file, sticker
+    url: Optional[str] = None  # Optional for stickers
     filename: Optional[str] = None
     size: Optional[int] = None  # in bytes
     duration: Optional[int] = None  # for audio/video in seconds
+    # Sticker-specific fields
+    sticker_id: Optional[str] = None
+    emoji: Optional[str] = None
+    is_emoji: Optional[bool] = False
 
 class Message(BaseModel):
     model_config = ConfigDict(extra="ignore")
