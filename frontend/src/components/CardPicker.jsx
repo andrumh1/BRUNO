@@ -171,7 +171,12 @@ export const CardPicker = ({ isOpen, onClose, onSelect }) => {
 export const CardMessagePreview = ({ card, isOwn, onClick }) => {
   if (!card) return null;
 
-  const Icon = CARD_TYPE_ICONS[card.type] || CreditCard;
+  // Support both card_type (from attachment) and type (from direct card object)
+  const cardType = card.card_type || card.type;
+  const cardTitle = card.card_title || card.title;
+  const cardSubtitle = card.card_subtitle || card.subtitle;
+  
+  const Icon = CARD_TYPE_ICONS[cardType] || CreditCard;
 
   return (
     <div 
@@ -179,6 +184,7 @@ export const CardMessagePreview = ({ card, isOwn, onClick }) => {
         isOwn ? "bg-primary text-white" : "bg-card border shadow-sm"
       }`}
       onClick={onClick}
+      data-testid="card-message-preview"
     >
       {/* Card Header with gradient */}
       <div 
@@ -190,7 +196,7 @@ export const CardMessagePreview = ({ card, isOwn, onClick }) => {
         <Icon className="w-8 h-8 text-white/80" />
         <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/20 rounded-full">
           <span className="text-[10px] text-white font-medium uppercase">
-            {card.type}
+            {cardType}
           </span>
         </div>
       </div>
@@ -198,11 +204,11 @@ export const CardMessagePreview = ({ card, isOwn, onClick }) => {
       {/* Card Content */}
       <div className="p-3">
         <h4 className={`font-semibold text-sm truncate ${isOwn ? "text-white" : ""}`}>
-          {card.title || "Tarjeta de presentación"}
+          {cardTitle || "Tarjeta de presentación"}
         </h4>
-        {card.subtitle && (
+        {cardSubtitle && (
           <p className={`text-xs truncate mt-0.5 ${isOwn ? "text-white/70" : "text-muted-foreground"}`}>
-            {card.subtitle}
+            {cardSubtitle}
           </p>
         )}
         
