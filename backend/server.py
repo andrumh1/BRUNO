@@ -3199,6 +3199,165 @@ async def clear_ai_chat_history(
     return {"deleted_count": result.deleted_count}
 
 # ============================================================================
+# WEBSOCKET ENDPOINTS
+# ============================================================================
+
+async def get_user_from_token(token: str) -> Optional[User]:
+    """Validate token and return user for WebSocket connections"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+        
+        user_data = await db.users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
+        if user_data is None:
+            return None
+        
+        return User(**user_data)
+    except JWTError:
+        return None
+
+@app.websocket("/ws/chat/{token}")
+async def websocket_chat(websocket: WebSocket, token: str):
+    """WebSocket endpoint for real-time chat"""
+    # Validate token
+    user = await get_user_from_token(token)
+    if not user:
+        await websocket.close(code=4001, reason="Invalid token")
+        return
+    
+    await ws_manager.connect(websocket, user.id)
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            
+            action = data.get("action")
+            
+            if action == "send_message":
+                chat_id = data.get("chat_id")
+                content = data.get("content", "")
+                message_type = data.get("message_type", "text")
+                attachments = data.get("attachments", [])
+                
+                # Verify user is participant of the chat
+                chat = await db.chats.find_one({
+                    "id": chat_id,
+                    "participants": user.id
+                })
+                
+                if not chat:
+                    await websocket.send_json({"error": "Chat not found"})
+                    continue
+                
+                # Create message
+                message_id = str(uuid.uuid4())
+                created_at = datetime.now(timezone.utc).isoformat()
+                
+                message_doc = {
+                    "id": message_id,
+                    "chat_id": chat_id,
+                    "sender_id": user.id,
+                    "content": content,
+                    "message_type": message_type,
+                    "attachments": attachments,
+                    "is_read": False,
+                    "read_by": [user.id],
+                    "is_deleted": False,
+                    "created_at": created_at
+                }
+                
+                await db.messages.insert_one(message_doc)
+                
+                # Update chat's last message
+                await db.chats.update_one(
+                    {"id": chat_id},
+                    {"$set": {
+                        "last_message_id": message_id,
+                        "last_message_at": created_at,
+                        "updated_at": created_at
+                    }}
+                )
+                
+                # Get sender info for response
+                profile = await db.user_profiles.find_one({"user_id": user.id}, {"_id": 0})
+                sender_info = {
+                    "id": user.id,
+                    "username": user.name,
+                    "avatar_url": profile.get("avatar_url") if profile else None
+                }
+                
+                # Prepare message for broadcast
+                message_response = {
+                    "type": "new_message",
+                    "message": {
+                        "id": message_id,
+                        "chat_id": chat_id,
+                        "sender_id": user.id,
+                        "content": content,
+                        "message_type": message_type,
+                        "attachments": attachments,
+                        "is_read": False,
+                        "created_at": created_at,
+                        "sender": sender_info
+                    }
+                }
+                
+                # Send to all participants
+                await ws_manager.broadcast_to_users(message_response, chat["participants"])
+            
+            elif action == "typing":
+                chat_id = data.get("chat_id")
+                
+                # Get chat participants
+                chat = await db.chats.find_one({"id": chat_id, "participants": user.id})
+                if chat:
+                    # Notify other participants
+                    other_participants = [p for p in chat["participants"] if p != user.id]
+                    await ws_manager.broadcast_to_users({
+                        "type": "typing",
+                        "chat_id": chat_id,
+                        "user_id": user.id,
+                        "username": user.name
+                    }, other_participants)
+            
+            elif action == "mark_read":
+                chat_id = data.get("chat_id")
+                
+                # Mark messages as read
+                await db.messages.update_many(
+                    {
+                        "chat_id": chat_id,
+                        "sender_id": {"$ne": user.id},
+                        "is_read": False
+                    },
+                    {
+                        "$set": {"is_read": True},
+                        "$addToSet": {"read_by": user.id}
+                    }
+                )
+                
+                # Notify sender their messages were read
+                chat = await db.chats.find_one({"id": chat_id})
+                if chat:
+                    other_participants = [p for p in chat["participants"] if p != user.id]
+                    await ws_manager.broadcast_to_users({
+                        "type": "messages_read",
+                        "chat_id": chat_id,
+                        "read_by": user.id
+                    }, other_participants)
+            
+            elif action == "ping":
+                await websocket.send_json({"type": "pong"})
+    
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, user.id)
+    except Exception as e:
+        logging.error(f"WebSocket error: {str(e)}")
+        ws_manager.disconnect(websocket, user.id)
+
+# ============================================================================
 # PUBLIC ROUTES
 # ============================================================================
 
