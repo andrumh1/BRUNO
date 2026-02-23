@@ -863,17 +863,26 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                         </div>
                       )}
 
-                      {/* Regular Attachments (non-sticker) */}
-                      {message.message_type !== 'sticker' && message.attachments?.length > 0 && (
+                      {/* Regular Attachments (non-sticker, non-card) */}
+                      {message.message_type !== 'sticker' && message.message_type !== 'card' && message.attachments?.length > 0 && (
                         <div className="mb-2">
                           {message.attachments.map((att, idx) => (
                             <FileAttachment key={idx} file={att} isOwn={isOwn} />
                           ))}
                         </div>
                       )}
+
+                      {/* Card messages */}
+                      {message.message_type === 'card' && message.attachments?.[0] && (
+                        <CardMessagePreview 
+                          card={message.attachments[0]}
+                          isOwn={isOwn}
+                          onClick={() => navigate(`/c/${message.attachments[0].card_id}`)}
+                        />
+                      )}
                       
                       {/* Text content */}
-                      {message.content && message.message_type !== 'audio' && message.message_type !== 'sticker' && (
+                      {message.content && message.message_type !== 'audio' && message.message_type !== 'sticker' && message.message_type !== 'card' && (
                         <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                       )}
                       
