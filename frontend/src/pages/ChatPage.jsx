@@ -415,6 +415,28 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
             m.sender_id === currentUserId ? { ...m, is_read: true } : m
           ));
         }
+
+        // Handle incoming video calls
+        if (data.type === "incoming_call" && data.chat_id === chat.id) {
+          setVideoCallState({
+            isOpen: true,
+            roomUrl: data.room_url,
+            isIncoming: true,
+            callId: data.call_id,
+            callerName: data.caller_name
+          });
+        }
+
+        // Handle call answered
+        if (data.type === "call_answered" && videoCallState.callId === data.call_id) {
+          setVideoCallState(prev => ({ ...prev, isIncoming: false }));
+        }
+
+        // Handle call declined or ended
+        if ((data.type === "call_declined" || data.type === "call_ended") && 
+            videoCallState.callId === data.call_id) {
+          setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null });
+        }
       } catch (e) {
         console.error("Error parsing WS message:", e);
       }
@@ -430,7 +452,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       ws.removeEventListener("message", handleWsMessage);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
-  }, [ws, chat?.id, currentUserId]);
+  }, [ws, chat?.id, currentUserId, videoCallState.callId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
