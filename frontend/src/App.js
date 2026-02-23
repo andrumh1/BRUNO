@@ -30,6 +30,7 @@ import EditCardPage from "@/pages/EditCardPage";
 import StorePage from "@/pages/StorePage";
 import ChatPage from "@/pages/ChatPage";
 import UserProfilePage from "@/pages/UserProfilePage";
+import MyProfilePage from "@/pages/MyProfilePage";
 import PointsPage from "@/pages/PointsPage";
 import BrunoWebsite from "@/pages/BrunoWebsite";
 
