@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { TourProvider, TourOverlay } from "@/components/WelcomeTour";
 
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
