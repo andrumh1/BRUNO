@@ -570,18 +570,6 @@ const FeedPage = () => {
             </button>
           </div>
         )}
-                    ¡Sé el primero en publicar un video!
-                  </p>
-                  {user && (
-                    <Button onClick={() => setActiveTab("social")}>
-                      Crear Reel
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
 
         {/* Cards Explorer Tab */}
         {activeTab === "cards" && (
