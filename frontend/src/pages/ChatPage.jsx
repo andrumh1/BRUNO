@@ -255,18 +255,37 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         attachments: pendingMedia ? [pendingMedia] : []
       };
       
-      const response = await axios.post(
-        `${API}/chats/${chat.id}/messages`,
-        messageData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setMessages([...messages, response.data]);
-      setNewMessage("");
-      setPendingMedia(null);
+      // Try WebSocket first, fallback to HTTP
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          action: "send_message",
+          chat_id: chat.id,
+          ...messageData
+        }));
+        setNewMessage("");
+        setPendingMedia(null);
+      } else {
+        // Fallback to HTTP
+        const response = await axios.post(
+          `${API}/chats/${chat.id}/messages`,
+          messageData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setMessages([...messages, response.data]);
+        setNewMessage("");
+        setPendingMedia(null);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
     } finally {
       setSending(false);
+    }
+  };
+
+  // Send typing indicator
+  const handleTyping = () => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: "typing", chat_id: chat.id }));
     }
   };
 
