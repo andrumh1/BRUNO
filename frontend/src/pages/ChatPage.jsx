@@ -357,6 +357,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   const [typingUser, setTypingUser] = useState(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [showCardPicker, setShowCardPicker] = useState(false);
   // Video call state
   const [videoCallState, setVideoCallState] = useState({
     isOpen: false,
@@ -371,6 +372,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   const audioInputRef = useRef(null);
   const docInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const navigate = useNavigate();
   const participant = chat?.other_participants?.[0] || {};
   
   const { isRecording, audioBlob, recordingTime, startRecording, stopRecording, cancelRecording, clearAudio } = useAudioRecorder();
