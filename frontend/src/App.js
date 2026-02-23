@@ -31,6 +31,7 @@ import StorePage from "@/pages/StorePage";
 import ChatPage from "@/pages/ChatPage";
 import UserProfilePage from "@/pages/UserProfilePage";
 import PointsPage from "@/pages/PointsPage";
+import BrunoWebsite from "@/pages/BrunoWebsite";
 
 function AppRouter() {
   const location = useLocation();
@@ -46,6 +47,8 @@ function AppRouter() {
       <Route path="/" element={<FeedPage />} />
       <Route path="/feed" element={<FeedPage />} />
       <Route path="/landing" element={<LandingPage />} />
+      <Route path="/website" element={<BrunoWebsite />} />
+      <Route path="/bruno" element={<BrunoWebsite />} />
       <Route path="/map" element={<MapPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
