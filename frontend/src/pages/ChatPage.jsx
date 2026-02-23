@@ -961,13 +961,19 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
               </div>
               <span className="text-xs">Archivo</span>
             </button>
-            <button className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-muted transition-colors">
+            <button 
+              onClick={() => { setShowCardPicker(true); setShowAttachMenu(false); }}
+              className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-muted transition-colors"
+            >
               <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                 <CreditCard className="w-6 h-6 text-white" />
               </div>
               <span className="text-xs">Tarjeta</span>
             </button>
-            <button className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-muted transition-colors">
+            <button 
+              onClick={() => { setShowStickerPicker(true); setShowAttachMenu(false); }}
+              className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-muted transition-colors"
+            >
               <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
                 <Smile className="w-6 h-6 text-white" />
               </div>
@@ -976,6 +982,13 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
           </div>
         </div>
       )}
+
+      {/* Card Picker Modal */}
+      <CardPicker
+        isOpen={showCardPicker}
+        onClose={() => setShowCardPicker(false)}
+        onSelect={handleSendCard}
+      />
       
       {/* Input */}
       <form onSubmit={handleSend} className="p-3 border-t bg-card/80 backdrop-blur-xl flex items-center gap-2">
