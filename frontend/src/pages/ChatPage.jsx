@@ -458,7 +458,7 @@ const ChatView = ({ chat, onBack, currentUserId }) => {
         <Button 
           type="submit" 
           size="icon" 
-          disabled={!newMessage.trim() || sending}
+          disabled={(!newMessage.trim() && !pendingMedia) || sending}
           data-testid="send-message-btn"
         >
           {sending ? (
