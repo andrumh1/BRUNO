@@ -515,7 +515,10 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         
         <Input
           value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
+          onChange={(e) => {
+            setNewMessage(e.target.value);
+            handleTyping();
+          }}
           placeholder="Escribe un mensaje..."
           className="flex-1"
           data-testid="chat-input"
