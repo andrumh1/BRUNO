@@ -32,13 +32,14 @@ const CreateCardPage = () => {
   const [tempImageUrl, setTempImageUrl] = useState(null);
   
   const cardTypes = [
-    { value: "personal", label: t("cards.types.personal"), desc: t("cards.typeDescriptions.personal") },
-    { value: "empresarial", label: t("cards.types.empresarial"), desc: t("cards.typeDescriptions.empresarial") },
-    { value: "negocio", label: t("cards.types.negocio"), desc: t("cards.typeDescriptions.negocio") },
-    { value: "lugares", label: t("cards.types.lugares"), desc: t("cards.typeDescriptions.lugares") },
-    { value: "guardian", label: t("cards.types.guardian"), desc: t("cards.typeDescriptions.guardian") },
-    { value: "curriculum", label: t("cards.types.curriculum"), desc: t("cards.typeDescriptions.curriculum") },
-    { value: "mascotas", label: t("cards.types.mascotas"), desc: t("cards.typeDescriptions.mascotas") },
+    { value: "personal", label: t("cards.types.personal"), desc: t("cards.typeDescriptions.personal"), icon: "User" },
+    { value: "empresarial", label: t("cards.types.empresarial"), desc: t("cards.typeDescriptions.empresarial"), icon: "Building2" },
+    { value: "negocio", label: t("cards.types.negocio"), desc: t("cards.typeDescriptions.negocio"), icon: "Store" },
+    { value: "servicios", label: "Servicios", desc: "Para emprendedores que ofrecen servicios o productos", icon: "Briefcase" },
+    { value: "lugares", label: t("cards.types.lugares"), desc: t("cards.typeDescriptions.lugares"), icon: "MapPin" },
+    { value: "guardian", label: t("cards.types.guardian"), desc: t("cards.typeDescriptions.guardian"), icon: "Shield" },
+    { value: "curriculum", label: t("cards.types.curriculum"), desc: t("cards.typeDescriptions.curriculum"), icon: "FileText" },
+    { value: "mascotas", label: t("cards.types.mascotas"), desc: t("cards.typeDescriptions.mascotas"), icon: "Dog" },
   ];
 
   const [formData, setFormData] = useState({
@@ -56,6 +57,11 @@ const CreateCardPage = () => {
     is_public: true,
     show_in_feed: true,
     is_animated: true,
+    // Campos para servicios
+    services: [],
+    products: [],
+    pricing: [],
+    portfolio: [],
     custom_fields: {
       experience: [],
       education: [],
