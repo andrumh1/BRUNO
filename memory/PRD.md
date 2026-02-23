@@ -117,6 +117,10 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 
 ## Key Files
 
+### Floating Bubbles
+- `/app/frontend/src/components/FloatingBubbles.jsx` - Burbujas flotantes Chat + IA
+- `/app/frontend/src/App.js` - Incluido globalmente
+
 ### Chat System
 - `/app/frontend/src/pages/ChatPage.jsx` - Página principal de chat
 - `/app/frontend/src/App.js` - Rutas /chat y /chat/:chatId
