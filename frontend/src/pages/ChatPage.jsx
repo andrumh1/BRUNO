@@ -610,6 +610,42 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
     }
   };
 
+  // Send card
+  const handleSendCard = async (card) => {
+    if (!card || !chat?.id) return;
+    
+    setSending(true);
+    try {
+      const messageData = {
+        content: `📇 Tarjeta compartida: ${card.title || "Mi tarjeta"}`,
+        message_type: "card",
+        attachments: [{
+          type: "card",
+          card_id: card.id,
+          card_title: card.title,
+          card_subtitle: card.subtitle,
+          card_type: card.type,
+          primary_color: card.primary_color,
+          secondary_color: card.secondary_color
+        }]
+      };
+      
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: "send_message", chat_id: chat.id, ...messageData }));
+      } else {
+        await axios.post(`${API}/chats/${chat.id}/messages`, messageData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (error) {
+      console.error("Error sending card:", error);
+    } finally {
+      setSending(false);
+      setShowCardPicker(false);
+      setShowAttachMenu(false);
+    }
+  };
+
   const handleFileSelect = async (e, type = "image") => {
     const file = e.target.files[0];
     if (!file) return;
