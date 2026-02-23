@@ -5,7 +5,19 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 
 ## What's Been Implemented
 
-### Session: 2026-02-21 - Sistema de Chat Privado ✅ NEW
+### Session: 2026-02-23 - Burbujas Flotantes ✅ NEW
+
+**FloatingBubbles.jsx Implementado:**
+- Burbuja de Chat (esquina inferior derecha) - acceso rápido a mensajes
+- Burbuja de BRUNO IA (esquina inferior izquierda) - asistente IA (próximamente)
+- Solo visible para usuarios logueados
+- Contador de mensajes no leídos en la burbuja de chat
+- Modal informativo de BRUNO IA con features próximas
+- Ocultas en la página /chat para evitar duplicación
+
+---
+
+### Session: 2026-02-21 - Sistema de Chat Privado ✅
 
 **Chat System Implementado:**
 
