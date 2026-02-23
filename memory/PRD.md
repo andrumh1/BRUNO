@@ -5,82 +5,75 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 
 ## What's Been Implemented
 
-### Session: 2026-02-18 - Red Social Profesional ✅ NEW
+### Session: 2026-02-21 - Sistema de Chat Privado ✅ NEW
+
+**Chat System Implementado:**
+
+1. **ChatPage.jsx** ✅
+   - Lista de conversaciones con último mensaje y hora
+   - Vista de chat con mensajes agrupados por fecha
+   - Búsqueda de conversaciones
+   - Modal para iniciar nueva conversación
+   - Soporte para envío de imágenes/videos
+   - Polling automático cada 5 segundos para nuevos mensajes
+
+2. **API Endpoints Chat** ✅
+   - `GET /api/chats` - Lista de conversaciones del usuario
+   - `POST /api/chats?participant_id={id}` - Crear/obtener chat directo
+   - `GET /api/chats/{id}/messages` - Mensajes de un chat
+   - `POST /api/chats/{id}/messages` - Enviar mensaje
+   - `GET /api/users/search?q={query}` - Buscar usuarios
+
+3. **Funcionalidades** ✅
+   - Mensajes de texto
+   - Adjuntar imágenes/videos
+   - Indicador de mensaje leído (✓ / ✓✓)
+   - Contador de mensajes no leídos
+   - Preview del último mensaje en lista
+
+4. **Navegación** ✅
+   - Icono de chat en FeedPage para usuarios logueados
+   - Rutas `/chat` y `/chat/:chatId`
+
+---
+
+### Session: 2026-02-18 - Red Social Profesional ✅
 
 **Feed Social Implementado:**
-
-1. **FeedPage con Tabs** ✅
-   - Pestaña "Feed" para red social con posts
-   - Pestaña "Explorar" para ver tarjetas públicas
-   - Componente CreatePost para crear publicaciones
-   - Componente PostCard para mostrar posts
-
-2. **API Endpoints Posts** ✅
-   - `POST /api/posts` - Crear nuevo post
-   - `GET /api/posts` - Obtener feed de posts
-   - `GET /api/posts/{id}` - Obtener post específico
-   - `DELETE /api/posts/{id}` - Eliminar post propio
-
-3. **API Endpoints Likes** ✅
-   - `POST /api/posts/{id}/like` - Toggle like/unlike
-
-4. **API Endpoints Comments** ✅
-   - `GET /api/posts/{id}/comments` - Obtener comentarios
-   - `POST /api/posts/{id}/comments` - Crear comentario
-
-5. **Funcionalidades Frontend** ✅
-   - Crear posts de texto
-   - Ver feed de publicaciones
-   - Like/Unlike con contador actualizado
-   - Ver y agregar comentarios
-   - Compartir posts (Web Share API)
-   - Eliminar posts propios
-   - Tiempo relativo (1m, 2h, 3d)
+- FeedPage con pestañas "Feed" y "Explorar"
+- Crear posts de texto
+- Likes con contador
+- Comentarios
+- Compartir posts
 
 ---
 
-### Session: 2026-02-18 (Anterior) - Bug Fixes
+### Session Anterior - Bug Fixes & Store
 
-**Correcciones Técnicas Completadas:**
-
-1. **Sincronización de Tarjetas** ✅
-2. **NFC Redirect** ✅
-3. **Auth Refresh** ✅
-4. **Z-index Dropdowns** ✅
-5. **Tarjeta de Negocio Mejorada** ✅
-
----
-
-### Session: 2026-02-18 - Tienda PIUP
-
-**Implementado:**
-- Página /store con catálogo de productos NFC
-- Sistema de checkout con direcciones guardadas
-- Animaciones Spring iOS 26
-- Planes de suscripción Free/Pro/Business
+**Completado:**
+- Sincronización de tarjetas
+- NFC redirect
+- Tienda PIUP
+- Animaciones Spring iOS
 
 ---
 
 ## Prioritized Backlog
 
 ### P0 (Completado)
-- [x] Sincronización de tarjetas ✅
-- [x] NFC redirect ✅
-- [x] Auth refresh ✅
-- [x] Z-index dropdowns ✅
-- [x] Secciones Servicios/Catálogos ✅
-- [x] **Feed tipo red social con posts** ✅ NEW
-- [x] **Likes y comentarios** ✅ NEW
+- [x] Feed social con posts ✅
+- [x] Likes y comentarios ✅
+- [x] **Sistema de chat privado** ✅ NEW
 
-### P1 (Próximo - Red Social Fase 2)
-- [ ] Perfil público de usuario con galería de posts
-- [ ] Sistema de chat privado (texto, fotos, videos, voz)
-- [ ] Subir imágenes/videos a posts
-- [ ] Notificaciones en tiempo real
+### P1 (Próximo)
+- [ ] Perfiles públicos de usuario
+- [ ] Subir imágenes/videos a posts (mejorar CreatePost)
+- [ ] Notificaciones en tiempo real (WebSockets)
+- [ ] Notas de voz en chat
 
 ### P2 (Siguiente)
-- [ ] IA BRUNO con GPT-5.2 (generación de tarjetas, asistente)
-- [ ] Sistema de suscripciones mejorado (Stripe)
+- [ ] Asistente IA "BRUNO" con GPT-5.2
+- [ ] Sistema de suscripciones con Stripe
 - [ ] Página web oficial de marketing
 
 ### P3 (Futuro)
@@ -93,31 +86,49 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 ## Test Credentials
 - **Email:** `newtest@bruno.com`
 - **Password:** `Test1234!`
-- **Test Card ID:** `f191a519-4730-4af9-b870-5a80b4e556fc`
 
-## API Endpoints (Social)
+## API Endpoints
+
+### Chat System
+- `GET /api/chats` - Lista de chats del usuario
+- `POST /api/chats?participant_id={id}` - Crear chat directo
+- `GET /api/chats/{id}/messages` - Obtener mensajes
+- `POST /api/chats/{id}/messages` - Enviar mensaje
+- `GET /api/users/search?q={query}` - Buscar usuarios
+
+### Social Feed
 - `POST /api/posts` - Crear post
-- `GET /api/posts` - Feed de posts (soporta user_id, skip, limit)
-- `GET /api/posts/{id}` - Post específico
-- `DELETE /api/posts/{id}` - Eliminar post
+- `GET /api/posts` - Feed de posts
 - `POST /api/posts/{id}/like` - Toggle like
-- `GET /api/posts/{id}/comments` - Comentarios del post
-- `POST /api/posts/{id}/comments` - Crear comentario
+- `GET/POST /api/posts/{id}/comments` - Comentarios
 
-## Key Files (Social Network)
-- `/app/frontend/src/pages/FeedPage.jsx` - Feed principal con tabs
-- `/app/frontend/src/components/PostCard.jsx` - Componente de post
-- `/app/frontend/src/components/CreatePost.jsx` - Crear publicación
-- `/app/backend/server.py` - API endpoints (líneas 2205-2500)
+## Key Files
 
-## Data Models (Social)
-- **Post:** id, user_id, content, media[], post_type, visibility, hashtags[], likes_count, comments_count
+### Chat System
+- `/app/frontend/src/pages/ChatPage.jsx` - Página principal de chat
+- `/app/frontend/src/App.js` - Rutas /chat y /chat/:chatId
+- `/app/backend/server.py` - Endpoints (líneas 2656-2850)
+
+### Social Feed
+- `/app/frontend/src/pages/FeedPage.jsx` - Feed con tabs
+- `/app/frontend/src/components/PostCard.jsx` - Post component
+- `/app/frontend/src/components/CreatePost.jsx` - Crear post
+
+## Data Models
+
+### Chat
+- **ChatRoom:** id, type, participants[], last_message_id, last_message_at
+- **Message:** id, chat_id, sender_id, content, message_type, attachments[], is_read, read_by[]
+- **MessageAttachment:** type, url, filename, size, duration
+
+### Social
+- **Post:** id, user_id, content, media[], likes_count, comments_count
+- **Comment:** id, post_id, user_id, content
 - **Like:** id, user_id, target_id, target_type
-- **Comment:** id, post_id, user_id, parent_id, content, replies_count
 
 ---
 
 ## Test Reports
-- `/app/test_reports/iteration_7.json` - Tests de Red Social (16/16 passed)
+- `/app/test_reports/iteration_7.json` - Tests de Red Social
 
-*Last Updated: 2026-02-18*
+*Last Updated: 2026-02-21*
