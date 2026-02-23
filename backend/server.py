@@ -3029,6 +3029,134 @@ async def get_unread_count(current_user: User = Depends(get_current_user)):
     return {"count": count}
 
 # ============================================================================
+# BRUNO AI ASSISTANT
+# ============================================================================
+
+from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+# Store active AI chat sessions
+ai_chat_sessions = {}
+
+BRUNO_SYSTEM_MESSAGE = """Eres BRUNO IA, el asistente inteligente de la aplicación BRUNO - una plataforma de tarjetas digitales y red social profesional.
+
+Tu personalidad:
+- Amigable, profesional y servicial
+- Hablas principalmente en español
+- Eres conciso pero completo en tus respuestas
+- Usas un tono casual pero respetuoso
+
+Tus capacidades:
+1. Ayudar a los usuarios a crear y personalizar sus tarjetas digitales
+2. Sugerir diseños de tarjetas basados en la industria o preferencias del usuario
+3. Explicar las funcionalidades de la app (feed social, chat, tienda, tarjetas NFC)
+4. Dar recomendaciones sobre cómo aprovechar mejor la plataforma
+5. Ayudar con problemas técnicos básicos
+
+Sobre BRUNO:
+- Es una app de tarjetas digitales con soporte NFC
+- Tiene una red social integrada para networking profesional
+- Ofrece una tienda de productos NFC físicos (PIUP Store)
+- Permite crear diferentes tipos de tarjetas: Personal, Empresarial, Negocio, Lugares, Guardian (mascotas), y Curriculum
+
+Cuando te pidan sugerencias de diseño de tarjeta, pregunta sobre:
+- El tipo de negocio o industria
+- La personalidad de la marca (formal, creativa, minimalista)
+- Colores preferidos
+- Información que quieren destacar
+
+Mantén tus respuestas breves y útiles. Si no sabes algo, sé honesto y sugiere contactar soporte."""
+
+class AIMessageInput(BaseModel):
+    message: str
+    session_id: Optional[str] = None
+
+class AIMessageResponse(BaseModel):
+    response: str
+    session_id: str
+
+@api_router.post("/ai/chat", response_model=AIMessageResponse)
+async def chat_with_bruno_ai(
+    input_data: AIMessageInput,
+    current_user: User = Depends(get_current_user)
+):
+    """Chat with BRUNO AI assistant"""
+    try:
+        # Get or create session ID
+        session_id = input_data.session_id or f"bruno_ai_{current_user.id}_{str(uuid.uuid4())[:8]}"
+        
+        # Get or create chat instance
+        if session_id not in ai_chat_sessions:
+            api_key = os.environ.get("EMERGENT_LLM_KEY")
+            if not api_key:
+                raise HTTPException(status_code=500, detail="AI service not configured")
+            
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=session_id,
+                system_message=BRUNO_SYSTEM_MESSAGE
+            ).with_model("openai", "gpt-5.2")
+            
+            ai_chat_sessions[session_id] = chat
+        
+        chat = ai_chat_sessions[session_id]
+        
+        # Create user message
+        user_message = UserMessage(text=input_data.message)
+        
+        # Get response
+        response = await chat.send_message(user_message)
+        
+        # Store conversation in database for persistence
+        conversation_doc = {
+            "session_id": session_id,
+            "user_id": current_user.id,
+            "user_message": input_data.message,
+            "ai_response": response,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.ai_conversations.insert_one(conversation_doc)
+        
+        return AIMessageResponse(response=response, session_id=session_id)
+        
+    except Exception as e:
+        logging.error(f"AI Chat error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing AI request: {str(e)}")
+
+@api_router.get("/ai/history")
+async def get_ai_chat_history(
+    session_id: Optional[str] = None,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """Get AI conversation history"""
+    query = {"user_id": current_user.id}
+    if session_id:
+        query["session_id"] = session_id
+    
+    conversations = await db.ai_conversations.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    return conversations
+
+@api_router.delete("/ai/history")
+async def clear_ai_chat_history(
+    session_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Clear AI conversation history"""
+    query = {"user_id": current_user.id}
+    if session_id:
+        query["session_id"] = session_id
+        # Also remove from active sessions
+        if session_id in ai_chat_sessions:
+            del ai_chat_sessions[session_id]
+    
+    result = await db.ai_conversations.delete_many(query)
+    return {"deleted_count": result.deleted_count}
+
+# ============================================================================
 # PUBLIC ROUTES
 # ============================================================================
 
