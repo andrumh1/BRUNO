@@ -4029,6 +4029,10 @@ async def health_check():
 # Include router in app
 app.include_router(api_router)
 
+# Import and include separate routers
+from routers.notifications import router as notifications_router
+api_router.include_router(notifications_router)
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
