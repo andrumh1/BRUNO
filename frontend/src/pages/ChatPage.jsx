@@ -17,7 +17,8 @@ import {
   Plus,
   Check,
   CheckCheck,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
