@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import VideoCallModal from "@/components/VideoCallModal";
+import { StickerPicker, StickerMessage } from "@/components/StickerPicker";
 import axios from "axios";
 import { 
   ArrowLeft, 
