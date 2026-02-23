@@ -65,7 +65,7 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - Diseño de burbujas mejorado
 - Indicador de "escribiendo..."
 - Menú de adjuntos (imagen, archivo, tarjeta, sticker)
-- Botones de llamada/videollamada (UI lista)
+- **NUEVO: Videollamadas funcionales**
 - `/app/frontend/src/pages/ChatPage.jsx` - Reescrito completamente
 - Endpoints: `/api/upload/audio`, `/api/upload/file` - Creados
 
@@ -75,6 +75,18 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - Vista de video estilo TikTok/Instagram
 - Estado vacío cuando no hay reels
 - `/app/frontend/src/pages/FeedPage.jsx` - Actualizado
+
+#### 9. Videollamadas (NUEVO - 2025-02-23)
+- **Integración completa de videollamadas en el chat**
+- Backend endpoints: `/api/calls/start`, `/api/calls/{id}/answer`, `/api/calls/{id}/decline`, `/api/calls/{id}/end`
+- Componente `VideoCallModal.jsx` con Daily.co para WebRTC
+- Botones de llamada de voz y video en el header del chat
+- Notificaciones WebSocket para llamadas entrantes
+- Modal de llamada entrante con opciones de aceptar/rechazar
+- Controles de cámara y micrófono durante la llamada
+- Tests completos: 12/12 tests pasados
+- `/app/frontend/src/components/VideoCallModal.jsx` - Creado
+- `/app/backend/routers/video_calls.py` - Creado (router separado)
 
 ---
 
@@ -90,16 +102,23 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - [ ] Envío de stickers (UI lista, funcionalidad pendiente)
 - [ ] Envío de tarjetas en chat
 - [ ] Burbuja expandible flotante
-- [ ] Videollamadas funcionales (WebRTC/Daily.co)
 
 #### Páginas Web
 - [ ] BRUNO.com - Sitio web oficial
+
+#### Backend Refactoring (En Progreso)
+- [x] Crear estructura de routers (`/app/backend/routers/`)
+- [x] Crear modelos separados (`/app/backend/models/`)
+- [x] Crear utilidades (`/app/backend/utils/`)
+- [x] Router de autenticación (`auth.py`)
+- [x] Router de videollamadas (`video_calls.py`)
+- [ ] Migrar resto de endpoints de server.py a routers separados
 
 ---
 
 ## FASE 2 - Mejoras de UX (Próximo)
 
-- [ ] Feed con Reels
+- [ ] Feed con Reels completo
 - [ ] Perfil tipo red social completo
 - [ ] Sistema de puntos
 - [ ] Tour de bienvenida
@@ -128,8 +147,14 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - `POST /api/auth/register` - Registro
 - `POST /api/auth/login` - Login
 - `GET /api/auth/me` - Usuario actual
-- `PUT /api/auth/me` - Actualizar usuario (NUEVO)
-- `POST /api/auth/logout` - Logout (NUEVO)
+- `PUT /api/auth/me` - Actualizar usuario
+- `POST /api/auth/logout` - Logout
+
+### Videollamadas (NUEVO)
+- `POST /api/calls/start` - Iniciar videollamada
+- `POST /api/calls/{call_id}/answer` - Responder llamada
+- `POST /api/calls/{call_id}/decline` - Rechazar llamada
+- `POST /api/calls/{call_id}/end` - Terminar llamada
 
 ### Tienda
 - `GET /api/store/products` - Lista productos (36 productos)
@@ -147,13 +172,22 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 ## Key Files
 
-### Nuevos/Actualizados
+### Nuevos/Actualizados (Feb 2025)
+- `/app/frontend/src/components/VideoCallModal.jsx` - Componente de videollamadas
+- `/app/frontend/src/pages/ChatPage.jsx` - Chat con integración de videollamadas
+- `/app/backend/routers/video_calls.py` - Router de videollamadas
+- `/app/backend/routers/auth.py` - Router de autenticación
+- `/app/backend/models/user.py` - Modelos de usuario
+- `/app/backend/utils/security.py` - Utilidades de seguridad
+- `/app/backend/utils/database.py` - Conexión a base de datos
+
+### Archivos Existentes
 - `/app/frontend/src/contexts/AuthContext.js` - Sesión persistente
 - `/app/frontend/src/components/CardVariants.jsx` - Variantes de tarjetas
 - `/app/frontend/src/pages/MapPage.jsx` - Mapa estilo Snapchat
 - `/app/frontend/src/pages/CreateCardPage.jsx` - Tipo Servicios
 - `/app/frontend/src/pages/StorePage.jsx` - Nuevas categorías
-- `/app/backend/server.py` - 36 productos, endpoints auth, BRUNO IA mejorado
+- `/app/backend/server.py` - Servidor principal (en proceso de refactorización)
 
 ---
 
@@ -163,4 +197,35 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 ---
 
-*Last Updated: 2026-02-23 - Fase 1 en progreso*
+## Test Reports
+- `/app/test_reports/iteration_8.json` - Chat system validation
+- `/app/test_reports/iteration_9.json` - WebSocket bug fix
+- `/app/test_reports/iteration_10.json` - Video calls (12/12 tests passed)
+
+---
+
+## Technical Notes
+
+### Video Calls Implementation
+- Uses Daily.co for WebRTC (currently with demo domain)
+- For production: Set `DAILY_DOMAIN` env var with real Daily.co domain
+- WebSocket notifications for real-time call events
+- Full call lifecycle: start -> answer/decline -> end
+
+### Backend Architecture (In Progress)
+```
+/app/backend/
+├── server.py           # Main app (being refactored)
+├── routers/
+│   ├── auth.py        # Authentication routes
+│   └── video_calls.py # Video call routes
+├── models/
+│   └── user.py        # User models
+└── utils/
+    ├── database.py    # MongoDB connection
+    └── security.py    # Auth utilities
+```
+
+---
+
+*Last Updated: 2025-02-23 - Videollamadas implementadas y testeadas*
