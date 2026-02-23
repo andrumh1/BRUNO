@@ -818,6 +818,42 @@ async def login(user_input: UserLogin):
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+@api_router.put("/auth/me")
+async def update_me(
+    updates: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Update current user profile"""
+    allowed_fields = ["name", "plan"]
+    update_data = {k: v for k, v in updates.items() if k in allowed_fields}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$set": update_data}
+    )
+    
+    # Return updated user
+    user_dict = await db.users.find_one({"id": current_user.id}, {"_id": 0, "hashed_password": 0})
+    if isinstance(user_dict.get('created_at'), str):
+        user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
+    
+    return User(**user_dict)
+
+@api_router.post("/auth/logout")
+async def logout(current_user: User = Depends(get_current_user)):
+    """Logout user - for audit logging purposes"""
+    # Log the logout event
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": current_user.id,
+        "action": "logout",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return {"message": "Logged out successfully"}
+
 class GoogleAuthRequest(BaseModel):
     session_id: str
 
