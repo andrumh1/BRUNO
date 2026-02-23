@@ -2697,7 +2697,7 @@ async def get_user_posts(
     user_id: str,
     skip: int = 0,
     limit: int = 20,
-    current_user: Optional[User] = Depends(get_optional_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Get posts from a specific user"""
     posts = await db.posts.find(
