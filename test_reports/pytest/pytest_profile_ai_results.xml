@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="0.142" timestamp="2026-02-23T03:06:38.975400+00:00" hostname="agent-env-7ff03cdf-642e-41c0-af55-7359458bcc72"><testcase classname="" name="backend.tests.test_user_profile_ai" time="0.000"><error message="collection failure">ImportError while importing test module '/app/backend/tests/test_user_profile_ai.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_user_profile_ai.py:20: in &lt;module&gt;
+    import websocket
+E   ModuleNotFoundError: No module named 'websocket'</error></testcase></testsuite></testsuites>
