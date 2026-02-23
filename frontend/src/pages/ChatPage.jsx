@@ -127,7 +127,7 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
 };
 
 // Chat View Component
-const ChatView = ({ chat, onBack, currentUserId }) => {
+const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   const { token } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -135,8 +135,11 @@ const ChatView = ({ chat, onBack, currentUserId }) => {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [pendingMedia, setPendingMedia] = useState(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingUser, setTypingUser] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
   const participant = chat?.other_participants?.[0] || {};
 
   const fetchMessages = useCallback(async () => {
@@ -153,12 +156,57 @@ const ChatView = ({ chat, onBack, currentUserId }) => {
     }
   }, [chat?.id, token]);
 
+  // Initial fetch
   useEffect(() => {
     fetchMessages();
-    // Poll for new messages every 5 seconds
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
   }, [fetchMessages]);
+
+  // Listen for WebSocket messages
+  useEffect(() => {
+    if (!ws || !chat?.id) return;
+
+    const handleWsMessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === "new_message" && data.message.chat_id === chat.id) {
+          setMessages(prev => {
+            // Avoid duplicates
+            if (prev.some(m => m.id === data.message.id)) return prev;
+            return [...prev, data.message];
+          });
+        }
+        
+        if (data.type === "typing" && data.chat_id === chat.id) {
+          setTypingUser(data.username);
+          setIsTyping(true);
+          // Clear typing indicator after 3 seconds
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 3000);
+        }
+        
+        if (data.type === "messages_read" && data.chat_id === chat.id) {
+          setMessages(prev => prev.map(m => 
+            m.sender_id === currentUserId ? { ...m, is_read: true } : m
+          ));
+        }
+      } catch (e) {
+        console.error("Error parsing WS message:", e);
+      }
+    };
+
+    ws.addEventListener("message", handleWsMessage);
+    
+    // Mark messages as read when viewing chat
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: "mark_read", chat_id: chat.id }));
+    }
+
+    return () => {
+      ws.removeEventListener("message", handleWsMessage);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, [ws, chat?.id, currentUserId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
