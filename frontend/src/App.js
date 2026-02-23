@@ -29,6 +29,7 @@ import EditCardPage from "@/pages/EditCardPage";
 import StorePage from "@/pages/StorePage";
 import ChatPage from "@/pages/ChatPage";
 import UserProfilePage from "@/pages/UserProfilePage";
+import PointsPage from "@/pages/PointsPage";
 
 function AppRouter() {
   const location = useLocation();
