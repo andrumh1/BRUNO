@@ -56,13 +56,19 @@ const StorePage = () => {
     postal_code: "",
     country: ""
   });
+  const [activeSection, setActiveSection] = useState("products"); // products | subscriptions
 
   const categories = [
-    { value: "all", label: "Todos los Productos" },
-    { value: "nfc_card", label: "Tarjetas NFC" },
-    { value: "nfc_bracelet", label: "Pulseras Guardian" },
-    { value: "nfc_pet_tag", label: "Tags para Mascotas" },
-    { value: "service", label: "Servicios" },
+    { value: "all", label: "Todos", icon: "Grid3X3" },
+    { value: "nfc_card", label: "Tarjetas NFC", icon: "CreditCard" },
+    { value: "hogar", label: "Hogar", icon: "Home" },
+    { value: "comercios", label: "Comercios", icon: "Store" },
+    { value: "oficinas", label: "Oficinas", icon: "Building2" },
+    { value: "mascotas", label: "Mascotas", icon: "Dog" },
+    { value: "guardian", label: "Guardian", icon: "Shield" },
+    { value: "habladores", label: "Habladores", icon: "MessageSquare" },
+    { value: "servicios", label: "Servicios", icon: "Wrench" },
+    { value: "meow_services", label: "MEOW APP", icon: "Sparkles" },
   ];
 
   useEffect(() => {
