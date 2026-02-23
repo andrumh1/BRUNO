@@ -76,16 +76,19 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - Estado vacío cuando no hay reels
 - `/app/frontend/src/pages/FeedPage.jsx` - Actualizado
 
-#### 9. Videollamadas (NUEVO - 2025-02-23)
+#### 9. Videollamadas y Llamadas de Voz (NUEVO - 2025-02-23)
 - **Integración completa de videollamadas en el chat**
+- **Llamadas de solo voz con diseño minimalista**
 - Backend endpoints: `/api/calls/start`, `/api/calls/{id}/answer`, `/api/calls/{id}/decline`, `/api/calls/{id}/end`
 - Componente `VideoCallModal.jsx` con Daily.co para WebRTC
+- `AudioOnlyControls` - Controles minimalistas para llamadas de voz
+- UI de llamada de audio: ondas animadas verdes, cronómetro de duración
 - Botones de llamada de voz y video en el header del chat
 - Notificaciones WebSocket para llamadas entrantes
 - Modal de llamada entrante con opciones de aceptar/rechazar
 - Controles de cámara y micrófono durante la llamada
 - Tests completos: 12/12 tests pasados
-- `/app/frontend/src/components/VideoCallModal.jsx` - Creado
+- `/app/frontend/src/components/VideoCallModal.jsx` - Actualizado
 - `/app/backend/routers/video_calls.py` - Creado (router separado)
 
 ---
