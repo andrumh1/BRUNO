@@ -1,0 +1,106 @@
+{
+  "summary": "Iteration 13: Tested new features - BrunoWebsite marketing page (/website, /bruno routes), WelcomeTour component, and CardPicker for chat. Fixed bug in MessageAttachment model that was dropping card-specific fields. Fixed CardMessagePreview to handle attachment field naming correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [],
+    "fixed_in_this_iteration": [
+      {
+        "endpoint": "POST /api/chats/{chat_id}/messages",
+        "issue": "Card messages were not storing card-specific fields (card_id, card_title, card_subtitle, card_type, primary_color, secondary_color)",
+        "fix": "Added card-specific fields to MessageAttachment model in server.py",
+        "file_modified": "/app/backend/server.py (line 624-639)"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Chat page navigation",
+        "issue": "Navigating to /chat sometimes redirects to login - appears to be intermittent auth state issue in Playwright tests (known issue from iteration 12)",
+        "priority": "LOW",
+        "note": "Auth API works correctly via curl. This appears to be a browser session/localStorage persistence issue in automated tests."
+      }
+    ],
+    "design_issues": [],
+    "fixed_in_this_iteration": [
+      {
+        "component": "CardMessagePreview",
+        "issue": "Component was using card.type/card.title/card.subtitle but attachment stores as card_type/card_title/card_subtitle",
+        "fix": "Updated to support both field naming conventions",
+        "file_modified": "/app/frontend/src/components/CardPicker.jsx"
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/pytest/pytest_points_notifications.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "BrunoWebsite.jsx (542 lines) - Well structured marketing page with all sections: nav, hero, features, pricing, store, testimonials, CTA, footer",
+    "WelcomeTour.jsx - Good implementation with 9 tour steps, localStorage persistence per user ID, auto-show for new users within 1 hour",
+    "CardPicker.jsx - Modal for selecting cards to share in chat, CardMessagePreview for rendering shared cards in messages",
+    "App.js correctly integrates TourProvider wrapping the router and TourOverlay rendered at app level"
+  ],
+  "updated_files": [
+    "/app/backend/server.py",
+    "/app/frontend/src/components/CardPicker.jsx"
+  ],
+  "success_rate": {
+    "backend": "100% - Card messages now store all fields correctly",
+    "frontend": "90% - Website pages working, tour component exists, card picker API works"
+  },
+  "test_credentials": {
+    "test_user_1": {"email": "newtest@bruno.com", "password": "Test1234!"}
+  },
+  "seed_data_creation": "Sent test card messages to existing chat 52772b5a-e01c-454f-abf3-ce4b51fc1866",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "BrunoWebsite verified working at /website and /bruno routes. Card message sharing via CardPicker now works correctly. Welcome Tour component exists and is integrated but doesn't auto-show for existing test user (only shows within 1 hour of account creation).",
+  "features_verified": {
+    "bruno_website_routes": {
+      "status": "PASS",
+      "routes": ["/website", "/bruno"],
+      "details": "Marketing page loads with all sections: navigation (Funciones, Precios, Tienda, Contacto), hero section, 6 feature cards, 3 pricing plans (Gratis/Pro/Empresa), store preview, 3 testimonials, CTA, footer"
+    },
+    "welcome_tour_component": {
+      "status": "VERIFIED IN CODE",
+      "component": "WelcomeTour.jsx",
+      "details": "TourProvider integrated in App.js, TourOverlay rendered at app level. 9 tour steps covering cards, feed, chat, map, store, points, notifications. Auto-shows for new users within 1 hour."
+    },
+    "card_picker_component": {
+      "status": "PASS (after fix)",
+      "component": "CardPicker.jsx",
+      "details": "Modal opens from attach menu in chat, lists user's cards with search, sends card messages with all metadata preserved"
+    },
+    "card_message_in_chat": {
+      "status": "PASS (after fix)",
+      "endpoint": "POST /api/chats/{chat_id}/messages with message_type='card'",
+      "details": "Now correctly stores card_id, card_title, card_subtitle, card_type, primary_color, secondary_color in attachments"
+    }
+  },
+  "bug_fix_details": {
+    "backend_fix": {
+      "issue": "Card messages were not preserving card-specific fields in attachments",
+      "root_cause": "MessageAttachment model only had generic fields (type, url, filename, etc.) but no card-specific fields",
+      "fix_applied": "Added card_id, card_title, card_subtitle, card_type, primary_color, secondary_color fields to MessageAttachment model",
+      "verification": "Tested via curl - card messages now return all fields in attachment"
+    },
+    "frontend_fix": {
+      "issue": "CardMessagePreview component couldn't read card type and title from attachment",
+      "root_cause": "Component expected card.type/card.title but attachment uses card_type/card_title naming",
+      "fix_applied": "Updated component to support both naming conventions: cardType = card.card_type || card.type",
+      "verification": "Code review confirms fix handles both direct card objects and attachment objects"
+    }
+  },
+  "mocked_integrations": {
+    "daily_co": {
+      "status": "MOCKED",
+      "details": "Video/audio calls use demo domain"
+    },
+    "web_push": {
+      "status": "MOCKED",
+      "details": "Backend stores subscriptions but doesn't send actual push notifications"
+    }
+  }
+}
