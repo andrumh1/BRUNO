@@ -649,6 +649,80 @@ const ChatPage = () => {
   const [loading, setLoading] = useState(true);
   const [showNewChat, setShowNewChat] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [ws, setWs] = useState(null);
+  const wsReconnectRef = useRef(null);
+
+  // WebSocket connection
+  useEffect(() => {
+    if (!token) return;
+
+    const connectWebSocket = () => {
+      try {
+        const socket = new WebSocket(`${WS_URL}/ws/chat/${token}`);
+        
+        socket.onopen = () => {
+          console.log("WebSocket connected");
+          setWs(socket);
+        };
+        
+        socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            // Handle new message for chat list update
+            if (data.type === "new_message") {
+              setChats(prev => {
+                const updated = prev.map(c => {
+                  if (c.id === data.message.chat_id) {
+                    return {
+                      ...c,
+                      last_message: data.message,
+                      last_message_at: data.message.created_at,
+                      unread_count: selectedChat?.id === c.id ? c.unread_count : (c.unread_count || 0) + 1
+                    };
+                  }
+                  return c;
+                });
+                // Sort by last message
+                return updated.sort((a, b) => 
+                  new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0)
+                );
+              });
+            }
+          } catch (e) {
+            console.error("Error parsing WS message:", e);
+          }
+        };
+        
+        socket.onclose = () => {
+          console.log("WebSocket disconnected, reconnecting...");
+          setWs(null);
+          // Reconnect after 3 seconds
+          wsReconnectRef.current = setTimeout(connectWebSocket, 3000);
+        };
+        
+        socket.onerror = (error) => {
+          console.error("WebSocket error:", error);
+        };
+        
+        return socket;
+      } catch (error) {
+        console.error("WebSocket connection error:", error);
+        return null;
+      }
+    };
+
+    const socket = connectWebSocket();
+
+    return () => {
+      if (wsReconnectRef.current) {
+        clearTimeout(wsReconnectRef.current);
+      }
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
+    };
+  }, [token, selectedChat?.id]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
