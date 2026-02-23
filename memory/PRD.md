@@ -128,6 +128,41 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - `/app/frontend/src/components/StickerPicker.jsx` - Creado
 - Tests: Integrados en iteration_12
 
+#### 13. Tour de Bienvenida (NUEVO - 2025-02-23)
+- **Tour interactivo guiado por BRUNO IA**
+- 9 pasos: Bienvenida, Tarjetas, Feed, Chat, Mapa, Tienda, Puntos, Notificaciones, Completado
+- Auto-show para usuarios nuevos (< 1 hora desde registro)
+- Persistencia en localStorage por usuario
+- Botón "Omitir tour" disponible
+- Indicadores de progreso visual
+- Acciones al final: crear tarjeta o explorar feed
+- `/app/frontend/src/components/WelcomeTour.jsx` - Creado
+- Tests: iteration_13
+
+#### 14. Compartir Tarjetas en Chat (NUEVO - 2025-02-23)
+- **Sistema para enviar tarjetas digitales en conversaciones**
+- CardPicker: Modal para seleccionar tarjetas propias
+- Búsqueda de tarjetas
+- Vista previa visual con colores de la tarjeta
+- CardMessagePreview: Renderiza tarjetas compartidas en mensajes
+- Bug fix: MessageAttachment ahora soporta campos de tarjeta
+- `/app/frontend/src/components/CardPicker.jsx` - Creado
+- Tests: iteration_13
+
+#### 15. Página Web BRUNO.com (NUEVO - 2025-02-23)
+- **Landing page marketing completa**
+- Navegación: Funciones, Precios, Tienda, Contacto
+- Hero section con estadísticas animadas (10K+ usuarios, 50K+ tarjetas, 1M+ conexiones)
+- 6 Feature cards: Tarjetas, Chat, Mapa, NFC/QR, Red Social, BRUNO IA
+- 3 Planes de precios: Gratis, Pro ($9.99), Empresa ($29.99)
+- Preview de tienda con 4 productos
+- 3 Testimonios de usuarios
+- CTA section final
+- Footer completo con contacto y redes sociales
+- Rutas: `/website` y `/bruno`
+- `/app/frontend/src/pages/BrunoWebsite.jsx` - Creado (542 líneas)
+- Tests: iteration_13
+
 ---
 
 ### 🔄 Pendiente Fase 1
@@ -139,12 +174,12 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - [ ] Preguntas según tipo de tarjeta
 
 #### Chat
-- [x] ~~Envío de stickers (UI lista, funcionalidad pendiente)~~ ✅ COMPLETADO
-- [ ] Envío de tarjetas en chat
+- [x] ~~Envío de stickers~~ ✅ COMPLETADO
+- [x] ~~Envío de tarjetas en chat~~ ✅ COMPLETADO
 - [ ] Burbuja expandible flotante
 
 #### Páginas Web
-- [ ] BRUNO.com - Sitio web oficial
+- [x] ~~BRUNO.com - Sitio web oficial~~ ✅ COMPLETADO en /website
 
 #### Backend Refactoring (En Progreso)
 - [x] Crear estructura de routers (`/app/backend/routers/`)
@@ -162,8 +197,8 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 - [ ] Feed con Reels completo
 - [ ] Perfil tipo red social completo
-- [ ] Sistema de puntos
-- [ ] Tour de bienvenida
+- [x] ~~Sistema de puntos~~ ✅ COMPLETADO
+- [x] ~~Tour de bienvenida~~ ✅ COMPLETADO
 - [ ] Cuestionario de perfil
 
 ---
