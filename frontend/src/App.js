@@ -73,6 +73,7 @@ function App() {
         <AuthProvider>
           <BrowserRouter>
             <AppRouter />
+            <FloatingBubbles />
           </BrowserRouter>
         </AuthProvider>
       </LanguageProvider>
