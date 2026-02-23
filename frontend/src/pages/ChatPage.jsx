@@ -700,17 +700,42 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         </div>
         
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="rounded-full">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full hover:bg-green-500/10 hover:text-green-500"
+            onClick={() => startVideoCall("audio")}
+            disabled={callLoading}
+            data-testid="start-audio-call-btn"
+          >
             <Phone className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <Video className="w-5 h-5" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full hover:bg-blue-500/10 hover:text-blue-500"
+            onClick={() => startVideoCall("video")}
+            disabled={callLoading}
+            data-testid="start-video-call-btn"
+          >
+            {callLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
           </Button>
           <Button variant="ghost" size="icon" className="rounded-full">
             <MoreVertical className="w-5 h-5" />
           </Button>
         </div>
       </div>
+
+      {/* Video Call Modal */}
+      <VideoCallModal
+        isOpen={videoCallState.isOpen}
+        onClose={handleEndCall}
+        roomUrl={videoCallState.roomUrl}
+        remoteUserName={participant.display_name || participant.username}
+        isIncoming={videoCallState.isIncoming}
+        onAccept={handleAcceptCall}
+        onDecline={handleDeclineCall}
+      />
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
