@@ -475,7 +475,8 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         isOpen: true,
         roomUrl: response.data.room_url,
         isIncoming: false,
-        callId: response.data.call_id
+        callId: response.data.call_id,
+        callType: callType
       });
     } catch (error) {
       console.error("Error starting call:", error);
@@ -502,7 +503,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       await axios.post(`${API}/calls/${videoCallState.callId}/decline`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null });
+      setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null, callType: "video" });
     } catch (error) {
       console.error("Error declining call:", error);
     }
@@ -518,7 +519,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         console.error("Error ending call:", error);
       }
     }
-    setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null });
+    setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null, callType: "video" });
   };
 
   // Handle audio recording finish
