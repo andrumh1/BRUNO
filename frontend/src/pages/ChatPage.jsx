@@ -424,7 +424,8 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
             roomUrl: data.room_url,
             isIncoming: true,
             callId: data.call_id,
-            callerName: data.caller_name
+            callerName: data.caller_name,
+            callType: data.call_type || "video"
           });
         }
 
@@ -436,7 +437,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         // Handle call declined or ended
         if ((data.type === "call_declined" || data.type === "call_ended") && 
             videoCallState.callId === data.call_id) {
-          setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null });
+          setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null, callType: "video" });
         }
       } catch (e) {
         console.error("Error parsing WS message:", e);
