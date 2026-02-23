@@ -4045,7 +4045,9 @@ app.include_router(api_router)
 
 # Import and include separate routers
 from routers.notifications import router as notifications_router
+from routers.points import router as points_router
 api_router.include_router(notifications_router)
+api_router.include_router(points_router)
 
 # CORS
 app.add_middleware(
