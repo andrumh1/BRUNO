@@ -807,8 +807,25 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                           : "bg-card border border-border rounded-2xl rounded-bl-md shadow-sm"
                       }`}
                     >
-                      {/* Attachments */}
-                      {message.attachments?.length > 0 && (
+                      {/* Sticker messages */}
+                      {message.message_type === 'sticker' && message.attachments?.[0] && (
+                        <div className="flex justify-center py-2">
+                          {message.attachments[0].is_emoji || message.attachments[0].isEmoji ? (
+                            <span className="text-6xl">{message.attachments[0].emoji}</span>
+                          ) : message.attachments[0].url ? (
+                            <img 
+                              src={message.attachments[0].url}
+                              alt="sticker"
+                              className="w-24 h-24 object-contain"
+                            />
+                          ) : (
+                            <span className="text-6xl">{message.attachments[0].emoji || "🖼️"}</span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Regular Attachments (non-sticker) */}
+                      {message.message_type !== 'sticker' && message.attachments?.length > 0 && (
                         <div className="mb-2">
                           {message.attachments.map((att, idx) => (
                             <FileAttachment key={idx} file={att} isOwn={isOwn} />
@@ -817,7 +834,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                       )}
                       
                       {/* Text content */}
-                      {message.content && message.message_type !== 'audio' && (
+                      {message.content && message.message_type !== 'audio' && message.message_type !== 'sticker' && (
                         <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                       )}
                       
