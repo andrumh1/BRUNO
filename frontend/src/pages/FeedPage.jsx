@@ -376,6 +376,18 @@ const FeedPage = () => {
               <span>Feed</span>
             </button>
             <button
+              onClick={() => setActiveTab("reels")}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                activeTab === "reels"
+                  ? "bg-primary text-primary-foreground shadow-lg"
+                  : "bg-muted/50 hover:bg-muted text-muted-foreground"
+              }`}
+              data-testid="reels-tab-btn"
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span>Reels</span>
+            </button>
+            <button
               onClick={() => setActiveTab("cards")}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all ${
                 activeTab === "cards"
