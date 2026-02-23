@@ -37,8 +37,8 @@ const FloatingBubbles = () => {
     return () => clearInterval(interval);
   }, [token]);
 
-  // Don't render if user is not logged in
-  if (!user) return null;
+  // Don't render if user is not logged in or on chat page
+  if (!user || isOnChatPage) return null;
 
   return (
     <>
