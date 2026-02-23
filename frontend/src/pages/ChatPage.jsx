@@ -355,6 +355,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [typingUser, setTypingUser] = useState(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
   // Video call state
   const [videoCallState, setVideoCallState] = useState({
     isOpen: false,
