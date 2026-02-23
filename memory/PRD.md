@@ -91,6 +91,43 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - `/app/frontend/src/components/VideoCallModal.jsx` - Actualizado
 - `/app/backend/routers/video_calls.py` - Creado (router separado)
 
+#### 10. Sistema de Puntos/Gamificación (NUEVO - 2025-02-23)
+- **Sistema completo de puntos y niveles**
+- Niveles: Novato 🌱 → Activo ⭐ → Popular 🔥 → Influencer 💎 → Embajador 👑 → Leyenda 🏆
+- Check-in diario con rachas (+5 pts base, bonos a 7/30 días)
+- Puntos por acciones: posts, likes, comentarios, seguidores, compras
+- Leaderboard con ranking de usuarios
+- Historial de transacciones de puntos
+- UI completa: widget, página de puntos, check-in diario
+- Tests: 15/15 pasados
+- `/app/backend/routers/points.py` - Creado
+- `/app/frontend/src/components/PointsSystem.jsx` - Creado
+- `/app/frontend/src/pages/PointsPage.jsx` - Creado
+
+#### 11. Notificaciones Push (NUEVO - 2025-02-23)
+- **Infraestructura completa para notificaciones push**
+- Service Worker para recibir notificaciones
+- Backend: suscripción, preferencias, logs de notificaciones
+- Notificaciones para: llamadas entrantes, mensajes nuevos
+- Preferencias configurables por tipo de notificación
+- Centro de notificaciones recientes
+- `/app/frontend/public/sw.js` - Creado
+- `/app/frontend/src/contexts/NotificationContext.js` - Creado
+- `/app/backend/routers/notifications.py` - Creado
+- **Nota:** Envío real requiere pywebpush (MOCKED actualmente)
+
+#### 12. Stickers en Chat (NUEVO - 2025-02-23)
+- **Sistema completo de stickers para el chat**
+- 4 packs de stickers: BRUNO, Emojis HD, Reacciones, Negocios
+- Búsqueda de stickers
+- Stickers recientes guardados en localStorage
+- Soporte para emojis grandes y stickers con imagen
+- Picker integrado en la barra de mensajes
+- Renderización de stickers en mensajes
+- Bug fix: MessageAttachment ahora acepta stickers sin URL
+- `/app/frontend/src/components/StickerPicker.jsx` - Creado
+- Tests: Integrados en iteration_12
+
 ---
 
 ### 🔄 Pendiente Fase 1
@@ -102,7 +139,7 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - [ ] Preguntas según tipo de tarjeta
 
 #### Chat
-- [ ] Envío de stickers (UI lista, funcionalidad pendiente)
+- [x] ~~Envío de stickers (UI lista, funcionalidad pendiente)~~ ✅ COMPLETADO
 - [ ] Envío de tarjetas en chat
 - [ ] Burbuja expandible flotante
 
@@ -115,6 +152,8 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - [x] Crear utilidades (`/app/backend/utils/`)
 - [x] Router de autenticación (`auth.py`)
 - [x] Router de videollamadas (`video_calls.py`)
+- [x] Router de puntos (`points.py`)
+- [x] Router de notificaciones (`notifications.py`)
 - [ ] Migrar resto de endpoints de server.py a routers separados
 
 ---
