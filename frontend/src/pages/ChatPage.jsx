@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import VideoCallModal from "@/components/VideoCallModal";
 import axios from "axios";
 import { 
   ArrowLeft, 
@@ -353,6 +354,14 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [typingUser, setTypingUser] = useState(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  // Video call state
+  const [videoCallState, setVideoCallState] = useState({
+    isOpen: false,
+    roomUrl: null,
+    isIncoming: false,
+    callId: null
+  });
+  const [callLoading, setCallLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const audioInputRef = useRef(null);
