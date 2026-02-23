@@ -59,6 +59,23 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - Información de MEOW APP partner
 - `/app/backend/server.py` - BRUNO_SYSTEM_MESSAGE actualizado
 
+#### 7. Chat Mejorado
+- Grabación y envío de notas de voz
+- Envío de archivos (documentos, PDFs)
+- Diseño de burbujas mejorado
+- Indicador de "escribiendo..."
+- Menú de adjuntos (imagen, archivo, tarjeta, sticker)
+- Botones de llamada/videollamada (UI lista)
+- `/app/frontend/src/pages/ChatPage.jsx` - Reescrito completamente
+- Endpoints: `/api/upload/audio`, `/api/upload/file` - Creados
+
+#### 8. Feed con Reels
+- Tab de "Reels" para videos
+- Filtro de posts con contenido de video
+- Vista de video estilo TikTok/Instagram
+- Estado vacío cuando no hay reels
+- `/app/frontend/src/pages/FeedPage.jsx` - Actualizado
+
 ---
 
 ### 🔄 Pendiente Fase 1
