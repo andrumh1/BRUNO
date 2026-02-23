@@ -852,6 +852,7 @@ const ChatPage = () => {
               chat={selectedChat} 
               onBack={handleBack}
               currentUserId={user.id}
+              ws={ws}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
