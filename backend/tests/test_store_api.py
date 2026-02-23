@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://bruno-pro-network.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://bruno-ecosystem.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 TEST_EMAIL = "newtest@bruno.com"

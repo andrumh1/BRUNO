@@ -1,176 +1,166 @@
 <analysis>Here is the handover summary for the next agent:
 
 **original_problem_statement:**
-The user wants to build a comprehensive digital business card application called BRUNO. The project has evolved significantly to include e-commerce, and is now pivoting to become a full-fledged professional social network while retaining all existing functionality.
+The user wants to build a comprehensive professional social network called BRUNO, which has evolved from a digital business card and e-commerce application.
 
 **PRODUCT REQUIREMENTS:**
-The application must be a polished PWA with a minimalist but bubbly/glass design aesthetic inspired by iOS, using a specific color palette and animations.
+The user has provided a massive 9-point list of corrections and new features that redefine the project scope. This list is now the primary source of truth for all upcoming work.
 
-1.  **Core App:**
-    *   Multiple card types (Personal, Business, Pets, etc.).
-    *   Customizable QR codes and NFC card management.
-    *   Internationalization (ES/EN).
-
-2.  **E-commerce (PIUP Store):**
-    *   A store to sell physical NFC products (cards, pet tags, wristbands).
-    *   Product catalog, shopping cart, and checkout flow.
-    *   Subscription plans with different feature tiers (Publicity, Business, Enterprise).
-
-3.  **Social Network:**
-    *   A main feed for posts (image, video, multimedia).
-    *   User interactions: likes, comments, shares.
-    *   Editable user profiles with post history.
-    *   A private chat system with real-time notifications and support for text, media, and voice notes.
-
-4.  **AI Integration (BRUNO):**
-    *   An AI assistant, accessible via a floating chat button.
-    *   Functions: automatically generate card designs, assist with app navigation, and recommend products.
-
-5.  **Public Website:**
-    *   A separate official marketing website explaining the app, features, AI, and NFC technology.
+1.  **Map:** Snapchat-like UI, distance measurement, and miniature card previews.
+2.  **Cards:** Multiple view sizes (miniature, list, full), bug fixes for bubble cards, editable templates, a new Services card type, and a direct Chat button on each card.
+3.  **Feed:** Support for photo/video posts, locations, and public card updates. A new section for Reels.
+4.  **Chat:** Support for audio, images, videos, stickers, files, and card sharing. A new bubble-style UI, chat history, and implementation of voice/video calls. Chat should also be accessible as an expandable floating bubble.
+5.  **Store:** Separation of NFC products and subscriptions. Addition of a comprehensive list of PIUP products and marketing services from a partner app (MEOW APP). Subscriptions should have more compelling, distinct features.
+6.  **BRUNO IA:** The AI should be deeply familiar with all app functions, answer questions, provide support, and be able to manipulate the system (e.g., create cards based on chat prompts).
+7.  **Users:** Fix session persistence issues, implement a robust security model, create a new user onboarding questionnaire and an app tour guided by BRUNO IA.
+8.  **Public Website (BRUNO.com):** A full marketing website with the same bubble design, explaining all app features, including the store.
+9.  **Profile:** Better organization of the user profile page to separate posts, reels, and cards.
+10. **Points System:** Implement a user loyalty/gamification points system.
 
 **User's preferred language**: Spanish
 
 **what currently exists?**
-The application is a full-stack React and FastAPI/MongoDB project. It features a working social network feed where users can create, view, and like posts. The backend endpoints for comments also exist. A private chat system has been implemented, allowing users to search for others, start one-on-one conversations, and exchange text messages and images. Critical backend bugs related to MongoDB  serialization and user data inconsistencies ( vs. ) have been identified and fixed across the social and chat features.
+The application is a full-stack React and FastAPI/MongoDB project. It features a working social network feed (posts, likes), user profile pages, and a private chat system. The chat has been upgraded to use WebSockets for real-time communication. A BRUNO AI assistant, powered by GPT-5.2, is integrated into a floating chat bubble. The e-commerce store's product catalog has been massively expanded. Work has begun on many of the user's new requests, including adding a Reels tab to the feed, creating a services card type, adding a chat button to cards, and seeding dozens of new products in the backend.
 
 **Last working item**:
-- **Last item agent was working:** Finishing the private chat system. The agent implemented the frontend UI (), backend endpoints, and added functionality for attaching and sending images. The agent was waiting for a testing agent run to complete for full validation.
+- **Last item agent was working:** Implementing video calls for the chat system using WebRTC via Daily.co. The agent created the backend endpoint () to generate call rooms and a new frontend component (). The integration into the main chat UI is not yet complete.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
 - **Which testing method agent to use?** both
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Chat System Validation Pending (P0)**
-    - **Description:** A testing agent job was initiated to validate the chat system, but it was still running at the end of the previous session. The results need to be checked and any reported bugs must be fixed.
+- **Issue 1: Monolithic Backend () (P0)**
+    - **Description:** The  file contains all logic for auth, social, chat, store, profiles, AI, and video calls. It is critically unmaintainable and is a significant source of technical debt that will slow down all future development.
+    - **Attempted fixes:** None. The issue has been repeatedly identified but deprioritized.
     - **Next debug checklist:**
-        1. Check if the test report  now exists.
-        2. If it exists, read the report, analyze the findings, and apply any necessary fixes.
-        3. If it does not exist or the test run failed, call the  again to perform a full validation of the chat feature, including creating chats, sending text, and sending images.
-    - **Why fix this issue and what will be achieved with the fix?** To ensure the new chat system is robust, bug-free, and ready for users.
-    - **Status:** BLOCKED
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** both
-    - **Blocked on other issue:** Waiting for the testing agent run to complete.
+        1. Create a  directory in .
+        2. Create separate files for each domain (e.g., , , , ).
+        3. Move the corresponding FastAPI  and logic from  into these new files.
+        4. In , import and include each router.
+    - **Why fix this issue and what will be achieved with the fix?** To improve code organization, maintainability, and development speed. This is essential for the project's long-term health.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** both (regression test)
+    - **Blocked on other issue:** None.
 
 **In progress Task List**:
-- **Task 1: Complete and Validate the Private Chat System (P0)**
-    - **Where to resume:** Address the pending issue . Once the testing is complete and any bugs are fixed, the task will be finished.
-    - **What will be achieved with this?** A fully functional and validated real-time private chat system.
+- **Task 1: Complete Video Call Integration (P0)**
+    - **Where to resume:** In  or a sub-component, add a button (e.g., a video camera icon) to the chat header. On click, this button should call the  endpoint, get a room URL, and then render the  component, passing the URL to it.
+    - **What will be achieved with this?** Users will be able to initiate and join video calls from within a private chat.
     - **Status:** IN PROGRESS
     - **Should Test frontend/backend/both after fix?** both
-    - **Blocked on something:**  issue.
+    - **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
-*   **Upcoming Tasks (P0 - Social Network Phase 1):**
-    *   **Post Comments:** Implement the UI for users to view and add comments on posts. The backend is ready.
-    *   **User Profiles:** Create a public user profile page displaying their information and a gallery of their posts.
-    *   **Real-time Chat & Notifications:** The current chat relies on HTTP polling. Refactor to use WebSockets for real-time message delivery and notifications.
-*   **Future Tasks (P1-P2):**
-    *   **P1: Subscription System:** Implement subscription plans (Publicity, Business, Enterprise) with Stripe for recurring payments.
-    *   **P1: Store User Data for Re-use:** Implement backend and frontend for managing reusable data chunks (addresses, payment methods, social links).
-    *   **P2: BRUNO AI Assistant:** Integrate a large language model via a floating chat interface.
-    *   **P2: Official Website:** Develop the separate public-facing marketing website.
-    *   **P2: Order Tracking:** Add a feature for users to track their physical card orders.
+*   **Phase 1: Critical Corrections & Core Features (P0)**
+    *   **User Session:** Ensure login sessions are persistent until the user explicitly logs out.
+    *   **Map UI:** Implement the Snapchat-style map UI in  with distance calculation.
+    *   **Card Views:** Create miniature and list view components for cards.
+    - **Chat Enhancements:** Implement sending/receiving of audio files, videos, and other file types. Redesign message bubbles.
+    - **Fix Bubble Card:** Correct the layout issue where text appears in two places on  template cards.
+*   **Phase 2: Feature Expansion (P1)**
+    *   **Feed Reels:** Implement the backend and UI for the Reels tab.
+    *   **BRUNO IA Actions:** Empower the AI to create/edit user cards via chat commands.
+    *   **User Onboarding:** Create the new user questionnaire and the app tour.
+    *   **Subscriptions:** Define and implement tiered subscription plans with distinct, valuable features.
+*   **Phase 3: New Modules & Polish (P2)**
+    *   **Points System:** Design and implement the user points system.
+    *   **Public Website:** Build the  marketing website.
+    *   **Profile Page Refactor:** Reorganize the profile to better display different content types.
 
 **Completed work in this session**
-- **Social Feed Feature:**
-    - Fully implemented a functional social feed on  where users can create, view, and like posts.
-    - Tested the feature with the testing agent ().
-- **Private Chat System (v1):**
-    - Created a full-featured chat page () with a conversation list and message view.
-    - Implemented a user search endpoint ().
-    - Developed backend logic for creating chats, sending text messages, and uploading/sending images.
-    - Added a chat navigation icon to the main header.
-- **Critical Backend Bug Fixes:**
-    - ** Serialization:** Systematically fixed a recurring bug across , , and  endpoints where returning a raw MongoDB document after an insert caused a . The fix involves creating a clean dictionary for the response, excluding the  field.
-    - **User Model Inconsistency:** Corrected logic in all , , and  endpoints to use the  field from the User model instead of the non-existent  field, ensuring correct user attribution is displayed.
+- **Chat System Validation:** Validated the core chat functionality with  ().
+- **Floating UI Bubbles:** Implemented app-wide floating bubbles for BRUNO AI and Chat.
+- **Public User Profiles:** Created the  page showing user details and their posts.
+- **Functional BRUNO AI Chat:** Replaced the placeholder with a working AI chat powered by GPT-5.2.
+- **Real-time Chat with WebSockets:** Upgraded the chat system to use WebSockets for real-time messaging and typing indicators.
+- **WebSocket Bug Fix:** Ran a full test () that automatically detected and corrected a bug in the WebSocket authentication logic.
+- **Started Massive Feature Update (Phase 1):**
+    - **Store Expansion:** Seeded the database with ~36 new PIUP products.
+    - **New Card Type:** Added the Services card type.
+    - **Card-to-Chat:** Added a Chat button on business cards to directly message the owner.
+    - **Reels Tab:** Added a UI tab for Reels on the feed page.
+    - **Audio Uploads:** Added a backend endpoint  for chat.
+    - **Video Call Foundation:** Began implementation of video calls with Daily.co (backend endpoint and frontend component created).
 
 **Earlier issues found/mentioned but not fixed**
-- None.
+- The monolithic  file remains the most significant unaddressed issue.
 
 **Known issue recurrence from previous fork**
-- The  serialization issue was a recurring problem within the last session. The agent fixed it in multiple places. The next agent must be careful to avoid re-introducing it in new endpoints that write to MongoDB.
+- The MongoDB  serialization bug remains a potential risk for any new database write operations. Always return clean Pydantic models or dictionaries, not the raw result of an insert/update.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Backend:** FastAPI, Pydantic, MongoDB (), JWT.
+*   **Real-time:** WebSockets for chat. WebRTC (via Daily.co) for video calls (in progress).
+*   **AI Integration:**  library to connect to GPT-5.2.
+*   **Backend:** FastAPI, Pydantic, Motor (async MongoDB), JWT.
 *   **Frontend:** React, React Router, Axios, Tailwind CSS, shadcn/ui, .
-*   **Bug Pattern:** Be aware of the  serialization issue when returning data directly after a MongoDB  or  operation. The document dictionary is mutated in place and becomes non-serializable.
 
 **key DB schema**
-*   **User:** , , .
-*   **Post:** , , .
-*   **Comment:** , , .
-*   **Like:** , .
-*   **ChatRoom:** , , .
-*   **Message:** , , , , .
+- **Product:** The schema is now implicitly more complex, with categories like 'HOGAR', 'RESTAURANTES', 'OFICINAS', 'MASCOTAS'.
+- **Card:** A new  enum value: .
 
 **changes in tech stack**
-- None.
+- **Backend:** Added usage: websockets [--version | <uri>].
+- **Frontend:** Added .
 
 **All files of reference**
-*   **New Files:**
-    *   
-*   **Heavily Modified:**
-    *   : Added all chat and user search endpoints; fixed numerous bugs across social and chat logic.
-    *   : Integrated main navigation and added a link to the new chat page.
-    *   : Added the  route.
-    *   : Updated to reflect completed work.
+*   **New/Critical:** , , , , , .
+*   **Supporting:** , , .
 
 **Areas that need refactoring**:
-*   ** is critically monolithic.** It now handles auth, cards, store, social media, and chat. It MUST be broken down into a , , and  structure immediately.
-*   **Shared Header/Navbar:** The main navigation is still hardcoded in . It should be extracted into a single, reusable  or  component to be used across all pages.
+*   ** is the highest priority.** It must be broken down into a  structure immediately.
+*   **** has grown very complex. It should be refactored into smaller, manageable components (e.g., , , , ).
+*   **** still contains the main navigation header. This should be extracted into a reusable  component.
 
 **key api endpoints**
-*   : Gets the main social feed.
-*   : Creates a new post.
-*   : Likes/unlikes a post.
-*   : Creates a new comment.
-*   : **NEW**, searches for users.
-*   : **NEW**, gets all chat rooms for the current user.
-*   : **NEW**, creates or gets a chat with another user.
-*   : **NEW**, sends a message to a chat.
-*   : Used for uploading images for chat attachments.
+*   **User Profile:** 
+*   **AI Chat:** 
+*   **Real-time Chat:** 
+*   **Video Calls:**  (NEW, IN-PROGRESS)
+*   **File Uploads:**  (NEW)
+*   **Auth:**  (NEW)
 
 **Critical Info for New Agent**
-*   Your first action should be to check the status of the testing agent run for the chat system. Look for . Address any findings before proceeding.
-*   Be extremely vigilant about the  serialization bug when adding new backend endpoints that write to the database. The established pattern is to return a Pydantic model or a newly constructed dictionary, not the one used in the  call.
-*   The project is large and complex. Prioritize refactoring  and creating a shared navigation component to improve maintainability.
+*   **The 9-Point Plan is Everything:** The user's message () is the new product roadmap. All work should be prioritized based on this list.
+*   **Finish Video Calls First:** The immediate task is to complete the video call integration that was just started.
+*   **Refactor the Backend:** You cannot delay refactoring  any longer. The project's complexity now demands it. Tackle this immediately after finishing the video call feature.
 
 **documents and test reports created in this job**
-*    (updated)
 *   
+*   
+*    (updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. puedes seguir con las gestiones que tenias pendientes y seguir con el proceso que llevabas porfavor (continue with the pending tasks and the process you were following) - **Status: In Progress**. Agent was waiting for the testing agent.
-9. puedes seguir con la gestion de correcciones (you can continue with managing the corrections) - **Status: Completed**. Agent continued fixing bugs.
-8. procigue con Bruno porfa (proceed with Bruno please) - **Status: Completed**. Agent started the next feature.
-7. User selects 3. Sistema de Chat PRivado (Private Chat System) from the list of options. - **Status: Completed**. Agent started working on the chat system.
-6. User message: si porfvoor (yes please) - **Status: Completed**. User approved the agent's plan.
-5.  Agent asks to confirm the plan for the next steps. - **Status: Awaiting user response**. (The user responded with si porfvoor).
+1.  **User:** Provides a massive 9-point list of corrections and new features, completely overhauling the project scope. **Status: In Progress**.
+2.  **User:** Confirms the agent's plan and choice of WebRTC library (Daily.co). **Status: Completed**.
+3.  **User:** Asks the agent to proceed with the full 4-point implementation plan at once. **Status: Completed**.
+4.  **User:** Asks the agent to continue. **Status: Completed**.
+5.  **User:** Asks the agent to fix the UI and continue. (This was after the chat feature was validated but the user couldn't see the UI element). **Status: Completed**.
 
 **Project Health Check:**
 *   **Broken:** None.
-*   **Mocked:** , .
+*   **Mocked:** , ,  (stub).
 
 **3rd Party Integrations**
-*   **Emergent-managed Google Auth:** For social login.
-*   **Cloudinary:** For image storage.
-*   **Stripe:** For payments (partially integrated for the store).
+*   **OpenAI GPT-5.2:** (Text Generation) — uses Emergent LLM Key.
+*   **Daily.co:** (Video Calls) — requires User API Key. (Implementation is In Progress).
+*   **Cloudinary:** (Image Storage) — requires User API Key.
+*   **Stripe:** (Payments) — requires User API Key.
+*   **Emergent-managed Google Auth:** (Social Login).
 
 **Testing status**
-- **Testing agent used after significant changes:** YES.
+- **Testing agent used after significant changes:** YES, two successful runs.
 - **Troubleshoot agent used after agent stuck in loop:** NO
-- **Test files created:** 
-- **Known regressions:** None. A testing agent run for the chat system was initiated but had not completed by the end of the session.
+- **Test files created:** , .
+- **Known regressions:** None.
 
 **Credentials to test flow:**
 *   **Username:** 
 *   **Password:** 
 
 **What agent forgot to execute**
-The agent did not forget any explicit requests. However, the technical debt of the monolithic  file and the non-reusable header component remains and should be addressed proactively to ensure the project's long-term health. The agent was also blocked waiting for a  run to complete.</analysis>
+The agent has not forgotten any tasks but has been forced to deprioritize critical technical debt (refactoring ) in favor of implementing a massive wave of new user features. This is a significant risk to the project's stability and future velocity.</analysis>
