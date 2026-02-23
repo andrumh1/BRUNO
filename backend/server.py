@@ -3763,6 +3763,20 @@ async def start_video_call(
     }
     await ws_manager.broadcast_to_users(call_notification, other_participants)
     
+    # Send push notifications to offline participants
+    from routers.notifications import send_push_notification
+    call_type_text = "voz" if request.call_type == "audio" else "video"
+    for participant_id in other_participants:
+        await send_push_notification(participant_id, {
+            "title": f"Llamada de {current_user.name}",
+            "body": f"Tienes una llamada de {call_type_text} entrante",
+            "type": "incoming_call",
+            "call_id": call_id,
+            "chat_id": request.chat_id,
+            "caller_name": current_user.name,
+            "call_type": request.call_type
+        })
+    
     return VideoCallResponse(
         room_url=room_url,
         room_name=room_name,
