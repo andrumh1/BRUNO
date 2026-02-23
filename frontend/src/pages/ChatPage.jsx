@@ -458,6 +458,68 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Video call functions
+  const startVideoCall = async (callType = "video") => {
+    if (!chat?.id) return;
+    setCallLoading(true);
+    try {
+      const response = await axios.post(`${API}/calls/start`, {
+        chat_id: chat.id,
+        call_type: callType
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setVideoCallState({
+        isOpen: true,
+        roomUrl: response.data.room_url,
+        isIncoming: false,
+        callId: response.data.call_id
+      });
+    } catch (error) {
+      console.error("Error starting call:", error);
+    } finally {
+      setCallLoading(false);
+    }
+  };
+
+  const handleAcceptCall = async () => {
+    if (!videoCallState.callId) return;
+    try {
+      await axios.post(`${API}/calls/${videoCallState.callId}/answer`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setVideoCallState(prev => ({ ...prev, isIncoming: false }));
+    } catch (error) {
+      console.error("Error answering call:", error);
+    }
+  };
+
+  const handleDeclineCall = async () => {
+    if (!videoCallState.callId) return;
+    try {
+      await axios.post(`${API}/calls/${videoCallState.callId}/decline`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null });
+    } catch (error) {
+      console.error("Error declining call:", error);
+    }
+  };
+
+  const handleEndCall = async () => {
+    if (videoCallState.callId) {
+      try {
+        await axios.post(`${API}/calls/${videoCallState.callId}/end`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (error) {
+        console.error("Error ending call:", error);
+      }
+    }
+    setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null });
+  };
+
   // Handle audio recording finish
   useEffect(() => {
     if (audioBlob && !isRecording) {
