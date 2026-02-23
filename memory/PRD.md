@@ -86,18 +86,14 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - [ ] Links NFC corregidos
 - [ ] Preguntas según tipo de tarjeta
 
-#### Feed
-- [ ] Línea gráfica unificada con tarjetas
-- [ ] Sección de Reels y videos
-- [ ] Republicar tarjetas
-
 #### Chat
-- [ ] Envío de audios
-- [ ] Envío de stickers
-- [ ] Envío de archivos
+- [ ] Envío de stickers (UI lista, funcionalidad pendiente)
+- [ ] Envío de tarjetas en chat
 - [ ] Burbuja expandible flotante
-- [ ] Historial multimedia
-- [ ] Videollamadas (WebRTC/Daily.co)
+- [ ] Videollamadas funcionales (WebRTC/Daily.co)
+
+#### Páginas Web
+- [ ] BRUNO.com - Sitio web oficial
 
 ---
 
