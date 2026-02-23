@@ -131,7 +131,10 @@ const ChatView = ({ chat, onBack, currentUserId }) => {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [pendingMedia, setPendingMedia] = useState(null);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
   const participant = chat?.other_participants?.[0] || {};
 
   const fetchMessages = useCallback(async () => {
@@ -159,19 +162,57 @@ const ChatView = ({ chat, onBack, currentUserId }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const response = await axios.post(`${API}/upload/image`, formData, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data"
+        }
+      });
+      
+      const mediaType = file.type.startsWith("video/") ? "video" : "image";
+      setPendingMedia({
+        type: mediaType,
+        url: response.data.url,
+        filename: file.name
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("Error al subir archivo");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || sending) return;
+    if ((!newMessage.trim() && !pendingMedia) || sending) return;
 
     setSending(true);
     try {
+      const messageData = {
+        content: newMessage.trim(),
+        message_type: pendingMedia ? pendingMedia.type : "text",
+        attachments: pendingMedia ? [pendingMedia] : []
+      };
+      
       const response = await axios.post(
         `${API}/chats/${chat.id}/messages`,
-        { content: newMessage.trim(), message_type: "text" },
+        messageData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setMessages([...messages, response.data]);
       setNewMessage("");
+      setPendingMedia(null);
     } catch (error) {
       console.error("Error sending message:", error);
     } finally {
