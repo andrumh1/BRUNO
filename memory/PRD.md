@@ -5,47 +5,44 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 
 ## What's Been Implemented
 
-### Session: 2026-02-23 - Burbujas Flotantes ✅ NEW
+### Session: 2026-02-23 - Grandes Mejoras ✅ NEW
 
-**FloatingBubbles.jsx Implementado:**
-- Burbuja de Chat (esquina inferior derecha) - acceso rápido a mensajes
-- Burbuja de BRUNO IA (esquina inferior izquierda) - asistente IA (próximamente)
-- Solo visible para usuarios logueados
-- Contador de mensajes no leídos en la burbuja de chat
-- Modal informativo de BRUNO IA con features próximas
-- Ocultas en la página /chat para evitar duplicación
+**1. Perfiles de Usuario** ✅
+- Página `/profile/:userId` con banner, avatar, stats
+- Contador de seguidores/siguiendo
+- Galería de posts del usuario
+- Tabs: Publicaciones, Media, Guardados
+- Follow/Unfollow funcional
+
+**2. BRUNO IA (GPT-5.2)** ✅
+- Chat flotante con asistente IA
+- Integración GPT-5.2 via EMERGENT_LLM_KEY
+- Historial de conversaciones persistente
+- Ayuda con diseño de tarjetas y navegación
+
+**3. WebSockets Chat** ✅
+- Mensajes en tiempo real
+- Indicador "está escribiendo..."
+- Notificación de mensajes leídos
+- Reconexión automática
+
+**4. Burbujas Flotantes** ✅
+- Chat (derecha) - acceso rápido a mensajes con badge de no leídos
+- BRUNO IA (izquierda) - chat con asistente IA
+- Solo visibles para usuarios logueados
+- Ocultas en página /chat
 
 ---
 
 ### Session: 2026-02-21 - Sistema de Chat Privado ✅
 
 **Chat System Implementado:**
-
-1. **ChatPage.jsx** ✅
-   - Lista de conversaciones con último mensaje y hora
-   - Vista de chat con mensajes agrupados por fecha
-   - Búsqueda de conversaciones
-   - Modal para iniciar nueva conversación
-   - Soporte para envío de imágenes/videos
-   - Polling automático cada 5 segundos para nuevos mensajes
-
-2. **API Endpoints Chat** ✅
-   - `GET /api/chats` - Lista de conversaciones del usuario
-   - `POST /api/chats?participant_id={id}` - Crear/obtener chat directo
-   - `GET /api/chats/{id}/messages` - Mensajes de un chat
-   - `POST /api/chats/{id}/messages` - Enviar mensaje
-   - `GET /api/users/search?q={query}` - Buscar usuarios
-
-3. **Funcionalidades** ✅
-   - Mensajes de texto
-   - Adjuntar imágenes/videos
-   - Indicador de mensaje leído (✓ / ✓✓)
-   - Contador de mensajes no leídos
-   - Preview del último mensaje en lista
-
-4. **Navegación** ✅
-   - Icono de chat en FeedPage para usuarios logueados
-   - Rutas `/chat` y `/chat/:chatId`
+- Lista de conversaciones con último mensaje y hora
+- Vista de chat con mensajes agrupados por fecha
+- Búsqueda de conversaciones
+- Modal para iniciar nueva conversación
+- Soporte para envío de imágenes/videos
+- Indicadores de lectura (✓ / ✓✓)
 
 ---
 
@@ -53,20 +50,10 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 
 **Feed Social Implementado:**
 - FeedPage con pestañas "Feed" y "Explorar"
-- Crear posts de texto
+- Crear posts de texto, imagen, video
 - Likes con contador
 - Comentarios
 - Compartir posts
-
----
-
-### Session Anterior - Bug Fixes & Store
-
-**Completado:**
-- Sincronización de tarjetas
-- NFC redirect
-- Tienda PIUP
-- Animaciones Spring iOS
 
 ---
 
@@ -76,16 +63,17 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 - [x] Feed social con posts ✅
 - [x] Likes y comentarios ✅
 - [x] Sistema de chat privado ✅
-- [x] **Burbujas flotantes (Chat + BRUNO IA)** ✅ NEW
+- [x] Burbujas flotantes (Chat + BRUNO IA) ✅
+- [x] **Perfiles de Usuario** ✅ NEW
+- [x] **BRUNO IA con GPT-5.2** ✅ NEW
+- [x] **WebSockets para chat** ✅ NEW
 
 ### P1 (Próximo)
-- [ ] Perfiles públicos de usuario
-- [ ] Subir imágenes/videos a posts (mejorar CreatePost)
-- [ ] Notificaciones en tiempo real (WebSockets)
 - [ ] Notas de voz en chat
+- [ ] Sistema de notificaciones mejorado
+- [ ] Editar perfil de usuario (avatar, banner, bio)
 
 ### P2 (Siguiente)
-- [ ] Asistente IA "BRUNO" con GPT-5.2
 - [ ] Sistema de suscripciones con Stripe
 - [ ] Página web oficial de marketing
 
@@ -96,60 +84,61 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 
 ---
 
-## Test Credentials
-- **Email:** `newtest@bruno.com`
-- **Password:** `Test1234!`
-
 ## API Endpoints
 
+### User Profile
+- `GET /api/users/{id}/profile` - Perfil público
+- `GET /api/users/{id}/posts` - Posts del usuario
+- `POST /api/users/{id}/follow` - Follow/Unfollow
+
+### BRUNO AI
+- `POST /api/ai/chat` - Enviar mensaje a BRUNO IA
+- `GET /api/ai/history` - Historial de conversaciones
+- `DELETE /api/ai/history` - Limpiar historial
+
+### WebSocket
+- `ws://*/ws/chat/{token}` - Conexión WebSocket para chat
+
 ### Chat System
-- `GET /api/chats` - Lista de chats del usuario
-- `POST /api/chats?participant_id={id}` - Crear chat directo
-- `GET /api/chats/{id}/messages` - Obtener mensajes
+- `GET /api/chats` - Lista de chats
+- `POST /api/chats?participant_id={id}` - Crear chat
+- `GET /api/chats/{id}/messages` - Mensajes
 - `POST /api/chats/{id}/messages` - Enviar mensaje
-- `GET /api/users/search?q={query}` - Buscar usuarios
 
 ### Social Feed
 - `POST /api/posts` - Crear post
-- `GET /api/posts` - Feed de posts
-- `POST /api/posts/{id}/like` - Toggle like
+- `GET /api/posts` - Feed
+- `POST /api/posts/{id}/like` - Like
 - `GET/POST /api/posts/{id}/comments` - Comentarios
+
+---
 
 ## Key Files
 
-### Floating Bubbles
-- `/app/frontend/src/components/FloatingBubbles.jsx` - Burbujas flotantes Chat + IA
-- `/app/frontend/src/App.js` - Incluido globalmente
+### User Profile
+- `/app/frontend/src/pages/UserProfilePage.jsx`
+- `/app/frontend/src/App.js` - Ruta /profile/:userId
+
+### BRUNO AI & Floating Bubbles
+- `/app/frontend/src/components/FloatingBubbles.jsx`
+- `/app/backend/server.py` - Líneas 3095-3200 (AI endpoints)
+
+### WebSocket
+- `/app/backend/server.py` - Líneas 3200-3350 (WS endpoints)
+- `/app/frontend/src/pages/ChatPage.jsx` - Integración WS
 
 ### Chat System
-- `/app/frontend/src/pages/ChatPage.jsx` - Página principal de chat
-- `/app/frontend/src/App.js` - Rutas /chat y /chat/:chatId
-- `/app/backend/server.py` - Endpoints (líneas 2656-2850)
-
-### Social Feed
-- `/app/frontend/src/pages/FeedPage.jsx` - Feed con tabs
-- `/app/frontend/src/components/PostCard.jsx` - Post component
-- `/app/frontend/src/components/CreatePost.jsx` - Crear post
-
-## Data Models
-
-### Chat
-- **ChatRoom:** id, type, participants[], last_message_id, last_message_at
-- **Message:** id, chat_id, sender_id, content, message_type, attachments[], is_read, read_by[]
-- **MessageAttachment:** type, url, filename, size, duration
-
-### Social
-- **Post:** id, user_id, content, media[], likes_count, comments_count
-- **Comment:** id, post_id, user_id, content
-- **Like:** id, user_id, target_id, target_type
+- `/app/frontend/src/pages/ChatPage.jsx`
+- `/app/backend/server.py` - Líneas 2760-2900
 
 ---
 
 ## Test Reports
-- `/app/test_reports/iteration_7.json` - Tests de Red Social (100% passed)
-- `/app/test_reports/iteration_8.json` - Tests de Chat (24/24 passed - 100%)
+- `/app/test_reports/iteration_7.json` - Tests de Red Social (100%)
+- `/app/test_reports/iteration_8.json` - Tests de Chat (100%)
+- `/app/test_reports/iteration_9.json` - Tests de Profile, AI, WS (100%)
 
-## Test Credentials (Chat Testing)
+## Test Credentials
 - **User 1:** `newtest@bruno.com` / `Test1234!`
 - **User 2:** `chattest2@bruno.com` / `Test1234!`
 
