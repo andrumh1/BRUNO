@@ -3699,6 +3699,160 @@ async def clear_ai_chat_history(
     return {"deleted_count": result.deleted_count}
 
 # ============================================================================
+# VIDEO CALL ENDPOINTS
+# ============================================================================
+
+class VideoCallRequest(BaseModel):
+    chat_id: str
+    call_type: str = "video"  # video or audio
+
+class VideoCallResponse(BaseModel):
+    room_url: str
+    room_name: str
+    call_id: str
+
+# Note: For production, you would use Daily.co API to create rooms
+# This is a simplified implementation using local room management
+DAILY_DEMO_DOMAIN = "https://bruno-demo.daily.co"  # Replace with your Daily.co domain
+
+@api_router.post("/calls/start", response_model=VideoCallResponse)
+async def start_video_call(
+    request: VideoCallRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Start a video call in a chat"""
+    # Verify user is participant in the chat
+    chat = await db.chats.find_one({
+        "id": request.chat_id,
+        "participants": current_user.id
+    })
+    
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    
+    # Generate unique room name
+    room_name = f"bruno-call-{request.chat_id}-{str(uuid.uuid4())[:8]}"
+    room_url = f"{DAILY_DEMO_DOMAIN}/{room_name}"
+    call_id = str(uuid.uuid4())
+    
+    # Store call record
+    call_doc = {
+        "id": call_id,
+        "chat_id": request.chat_id,
+        "room_name": room_name,
+        "room_url": room_url,
+        "call_type": request.call_type,
+        "started_by": current_user.id,
+        "participants": chat["participants"],
+        "status": "ringing",
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "ended_at": None
+    }
+    await db.video_calls.insert_one(call_doc)
+    
+    # Notify other participants via WebSocket
+    other_participants = [p for p in chat["participants"] if p != current_user.id]
+    call_notification = {
+        "type": "incoming_call",
+        "call_id": call_id,
+        "chat_id": request.chat_id,
+        "room_url": room_url,
+        "call_type": request.call_type,
+        "caller_id": current_user.id,
+        "caller_name": current_user.name
+    }
+    await ws_manager.broadcast_to_users(call_notification, other_participants)
+    
+    return VideoCallResponse(
+        room_url=room_url,
+        room_name=room_name,
+        call_id=call_id
+    )
+
+@api_router.post("/calls/{call_id}/answer")
+async def answer_call(
+    call_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Answer an incoming call"""
+    call = await db.video_calls.find_one({
+        "id": call_id,
+        "participants": current_user.id,
+        "status": "ringing"
+    })
+    
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found or already answered")
+    
+    await db.video_calls.update_one(
+        {"id": call_id},
+        {"$set": {"status": "active", "answered_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Notify caller that call was answered
+    await ws_manager.send_personal_message({
+        "type": "call_answered",
+        "call_id": call_id
+    }, call["started_by"])
+    
+    return {"status": "answered", "room_url": call["room_url"]}
+
+@api_router.post("/calls/{call_id}/decline")
+async def decline_call(
+    call_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Decline an incoming call"""
+    call = await db.video_calls.find_one({
+        "id": call_id,
+        "participants": current_user.id,
+        "status": "ringing"
+    })
+    
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+    
+    await db.video_calls.update_one(
+        {"id": call_id},
+        {"$set": {"status": "declined", "ended_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Notify caller that call was declined
+    await ws_manager.send_personal_message({
+        "type": "call_declined",
+        "call_id": call_id
+    }, call["started_by"])
+    
+    return {"status": "declined"}
+
+@api_router.post("/calls/{call_id}/end")
+async def end_call(
+    call_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """End an active call"""
+    call = await db.video_calls.find_one({
+        "id": call_id,
+        "participants": current_user.id
+    })
+    
+    if not call:
+        raise HTTPException(status_code=404, detail="Call not found")
+    
+    await db.video_calls.update_one(
+        {"id": call_id},
+        {"$set": {"status": "ended", "ended_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Notify all participants that call ended
+    await ws_manager.broadcast_to_users({
+        "type": "call_ended",
+        "call_id": call_id
+    }, call["participants"])
+    
+    return {"status": "ended"}
+
+# ============================================================================
 # WEBSOCKET ENDPOINTS
 # ============================================================================
 
