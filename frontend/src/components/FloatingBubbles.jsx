@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageCircle, Sparkles, X } from "lucide-react";
 import axios from "axios";
@@ -9,8 +9,12 @@ const API = `${BACKEND_URL}/api`;
 
 const FloatingBubbles = () => {
   const { user, token } = useAuth();
+  const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [showAITooltip, setShowAITooltip] = useState(false);
+
+  // Hide bubbles on chat page
+  const isOnChatPage = location.pathname.startsWith("/chat");
 
   // Fetch unread messages count
   useEffect(() => {
