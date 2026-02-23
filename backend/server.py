@@ -4041,13 +4041,14 @@ async def health_check():
     return {"status": "healthy", "service": "BRUNO API"}
 
 # Include router in app
-app.include_router(api_router)
-
-# Import and include separate routers
+# First, import and include separate routers in api_router
 from routers.notifications import router as notifications_router
 from routers.points import router as points_router
 api_router.include_router(notifications_router)
 api_router.include_router(points_router)
+
+# Then include api_router in app
+app.include_router(api_router)
 
 # CORS
 app.add_middleware(
