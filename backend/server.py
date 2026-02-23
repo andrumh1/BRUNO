@@ -1465,8 +1465,60 @@ async def upload_image(
             "format": result['format']
         }
     except Exception as e:
-        logger.error(f"Error uploading image: {e}")
+        logging.error(f"Error uploading image: {e}")
         raise HTTPException(status_code=500, detail=f"Error uploading image: {str(e)}")
+
+@api_router.post("/upload/audio")
+async def upload_audio(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload an audio file to Cloudinary"""
+    try:
+        contents = await file.read()
+        
+        result = cloudinary.uploader.upload(
+            contents,
+            folder=f"bruno/audio/{current_user.id}",
+            resource_type="video",  # Cloudinary uses 'video' for audio too
+        )
+        
+        return {
+            "url": result['secure_url'],
+            "public_id": result['public_id'],
+            "duration": result.get('duration'),
+            "format": result.get('format')
+        }
+    except Exception as e:
+        logging.error(f"Error uploading audio: {e}")
+        raise HTTPException(status_code=500, detail=f"Error uploading audio: {str(e)}")
+
+@api_router.post("/upload/file")
+async def upload_file(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload a generic file to Cloudinary"""
+    try:
+        contents = await file.read()
+        
+        result = cloudinary.uploader.upload(
+            contents,
+            folder=f"bruno/files/{current_user.id}",
+            resource_type="raw",
+            public_id=f"{uuid.uuid4()}_{file.filename}"
+        )
+        
+        return {
+            "url": result['secure_url'],
+            "public_id": result['public_id'],
+            "filename": file.filename,
+            "size": len(contents),
+            "format": file.filename.split('.')[-1] if '.' in file.filename else 'unknown'
+        }
+    except Exception as e:
+        logging.error(f"Error uploading file: {e}")
+        raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
 
 @api_router.post("/upload/avatar")
 async def upload_avatar(
