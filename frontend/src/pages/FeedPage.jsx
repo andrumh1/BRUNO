@@ -397,7 +397,7 @@ const FeedPage = () => {
               }`}
               data-testid="reels-tab-btn"
             >
-              <TrendingUp className="w-4 h-4" />
+              <Film className="w-4 h-4" />
               <span>Reels</span>
             </button>
             <button
