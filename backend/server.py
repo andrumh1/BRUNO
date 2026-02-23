@@ -2652,6 +2652,137 @@ async def search_users(
     
     return result
 
+# -------------------- USER PROFILE --------------------
+
+@api_router.get("/users/{user_id}/profile")
+async def get_user_profile(user_id: str):
+    """Get public profile of a user"""
+    # Get user
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get profile
+    profile = await db.user_profiles.find_one({"user_id": user_id}, {"_id": 0})
+    
+    # Get followers/following counts
+    followers_count = await db.follows.count_documents({"following_id": user_id})
+    following_count = await db.follows.count_documents({"follower_id": user_id})
+    
+    # Get posts count
+    posts_count = await db.posts.count_documents({"user_id": user_id, "is_deleted": False})
+    
+    username = user.get("name") or user.get("email", "Unknown").split("@")[0]
+    
+    return {
+        "id": user_id,
+        "name": user.get("name"),
+        "email": user.get("email"),
+        "username": username,
+        "display_name": profile.get("display_name") if profile else username,
+        "avatar_url": profile.get("avatar_url") if profile else None,
+        "banner_url": profile.get("banner_url") if profile else None,
+        "bio": profile.get("bio") if profile else None,
+        "location": profile.get("location") if profile else None,
+        "website": profile.get("website") if profile else None,
+        "is_verified": profile.get("is_verified", False) if profile else False,
+        "created_at": user.get("created_at"),
+        "followers_count": followers_count,
+        "following_count": following_count,
+        "posts_count": posts_count
+    }
+
+@api_router.get("/users/{user_id}/posts")
+async def get_user_posts(
+    user_id: str,
+    skip: int = 0,
+    limit: int = 20,
+    current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    """Get posts from a specific user"""
+    posts = await db.posts.find(
+        {"user_id": user_id, "is_deleted": False},
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Get user info
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
+    profile = await db.user_profiles.find_one({"user_id": user_id}, {"_id": 0})
+    
+    username = user.get("name") if user else "Unknown"
+    
+    # Enrich posts
+    result = []
+    for post in posts:
+        # Check if current user liked the post
+        is_liked = False
+        if current_user:
+            like = await db.likes.find_one({
+                "user_id": current_user.id,
+                "target_id": post["id"],
+                "target_type": "post"
+            })
+            is_liked = like is not None
+        
+        result.append({
+            **post,
+            "user": {
+                "id": user_id,
+                "username": username,
+                "display_name": profile.get("display_name") if profile else username,
+                "avatar_url": profile.get("avatar_url") if profile else None,
+                "is_verified": profile.get("is_verified", False) if profile else False
+            },
+            "is_liked": is_liked
+        })
+    
+    return result
+
+@api_router.post("/users/{user_id}/follow")
+async def toggle_follow(
+    user_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Follow or unfollow a user"""
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot follow yourself")
+    
+    # Check if already following
+    existing = await db.follows.find_one({
+        "follower_id": current_user.id,
+        "following_id": user_id
+    })
+    
+    if existing:
+        # Unfollow
+        await db.follows.delete_one({"_id": existing["_id"]})
+        return {"following": False}
+    else:
+        # Follow
+        follow_doc = {
+            "id": str(uuid.uuid4()),
+            "follower_id": current_user.id,
+            "following_id": user_id,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.follows.insert_one(follow_doc)
+        
+        # Create notification
+        notification = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "type": "follow",
+            "message": f"{current_user.name} comenzó a seguirte",
+            "from_user_id": current_user.id,
+            "target_id": current_user.id,
+            "target_type": "user",
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.notifications.insert_one(notification)
+        
+        return {"following": True}
+
 # -------------------- CHAT / MESSAGING --------------------
 
 @api_router.get("/chats")
