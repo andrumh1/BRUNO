@@ -129,6 +129,11 @@ Build a comprehensive digital business card application called "BRUNO" - a highl
 ---
 
 ## Test Reports
-- `/app/test_reports/iteration_7.json` - Tests de Red Social
+- `/app/test_reports/iteration_7.json` - Tests de Red Social (100% passed)
+- `/app/test_reports/iteration_8.json` - Tests de Chat (24/24 passed - 100%)
 
-*Last Updated: 2026-02-21*
+## Test Credentials (Chat Testing)
+- **User 1:** `newtest@bruno.com` / `Test1234!`
+- **User 2:** `chattest2@bruno.com` / `Test1234!`
+
+*Last Updated: 2026-02-23*
