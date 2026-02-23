@@ -359,7 +359,8 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
     isOpen: false,
     roomUrl: null,
     isIncoming: false,
-    callId: null
+    callId: null,
+    callType: "video" // "video" or "audio"
   });
   const [callLoading, setCallLoading] = useState(false);
   const messagesEndRef = useRef(null);
