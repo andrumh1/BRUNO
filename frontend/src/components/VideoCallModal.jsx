@@ -167,12 +167,24 @@ const VideoCallModal = ({
   remoteUserName,
   isIncoming,
   onAccept,
-  onDecline 
+  onDecline,
+  callType = "video" // "video" or "audio"
 }) => {
   const [callObject, setCallObject] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [callState, setCallState] = useState('idle'); // idle, ringing, connected
+  const [callDuration, setCallDuration] = useState(0);
   const containerRef = React.useRef(null);
+  const durationTimerRef = React.useRef(null);
+  
+  const isAudioOnly = callType === "audio";
+
+  // Format call duration
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Initialize call
   useEffect(() => {
@@ -182,14 +194,21 @@ const VideoCallModal = ({
       try {
         const Daily = (await import('@daily-co/daily-js')).default;
         const newCallObject = Daily.createCallObject({
-          videoSource: true,
+          videoSource: !isAudioOnly, // Disable video for audio-only calls
           audioSource: true,
         });
         
         newCallObject.on('joining-meeting', () => setCallState('connecting'));
-        newCallObject.on('joined-meeting', () => setCallState('connected'));
+        newCallObject.on('joined-meeting', () => {
+          setCallState('connected');
+          // Start duration timer
+          durationTimerRef.current = setInterval(() => {
+            setCallDuration(prev => prev + 1);
+          }, 1000);
+        });
         newCallObject.on('left-meeting', () => {
           setCallState('idle');
+          if (durationTimerRef.current) clearInterval(durationTimerRef.current);
           onClose();
         });
         newCallObject.on('error', (e) => {
@@ -211,12 +230,13 @@ const VideoCallModal = ({
     initCall();
 
     return () => {
+      if (durationTimerRef.current) clearInterval(durationTimerRef.current);
       if (callObject) {
         callObject.leave();
         callObject.destroy();
       }
     };
-  }, [isOpen, roomUrl, isIncoming]);
+  }, [isOpen, roomUrl, isIncoming, isAudioOnly]);
 
   const handleAccept = async () => {
     if (callObject && roomUrl) {
