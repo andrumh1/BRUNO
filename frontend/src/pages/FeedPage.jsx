@@ -9,8 +9,9 @@ import SocialLinkButton from "@/components/SocialLinkButton";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import PostCard from "@/components/PostCard";
 import CreatePost from "@/components/CreatePost";
+import ReelsFeed from "@/components/ReelsFeed";
 import axios from "axios";
-import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag, Home, CreditCard, RefreshCw, MessageCircle } from "lucide-react";
+import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag, Home, CreditCard, RefreshCw, MessageCircle, Globe, User, Film } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
