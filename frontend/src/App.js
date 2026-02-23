@@ -62,6 +62,7 @@ function AppRouter() {
       <Route path="/chat" element={<ChatPage />} />
       <Route path="/chat/:chatId" element={<ChatPage />} />
       <Route path="/profile/:userId" element={<UserProfilePage />} />
+      <Route path="/my-profile" element={<MyProfilePage />} />
       <Route path="/points" element={<PointsPage />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/cards/new" element={<CreateCardPage />} />
