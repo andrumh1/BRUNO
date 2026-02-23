@@ -74,10 +74,12 @@ function App() {
     <ThemeProvider>
       <LanguageProvider>
         <AuthProvider>
-          <BrowserRouter>
-            <AppRouter />
-            <FloatingBubbles />
-          </BrowserRouter>
+          <NotificationProvider>
+            <BrowserRouter>
+              <AppRouter />
+              <FloatingBubbles />
+            </BrowserRouter>
+          </NotificationProvider>
         </AuthProvider>
       </LanguageProvider>
     </ThemeProvider>
