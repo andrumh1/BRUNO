@@ -398,10 +398,48 @@ const ChatView = ({ chat, onBack, currentUserId }) => {
         <div ref={messagesEndRef} />
       </div>
       
+      {/* Pending Media Preview */}
+      {pendingMedia && (
+        <div className="px-3 py-2 border-t bg-muted/50 flex items-center gap-2">
+          {pendingMedia.type === "image" ? (
+            <img src={pendingMedia.url} alt="" className="w-16 h-16 rounded object-cover" />
+          ) : (
+            <video src={pendingMedia.url} className="w-16 h-16 rounded object-cover" />
+          )}
+          <span className="text-sm flex-1 truncate">{pendingMedia.filename}</span>
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setPendingMedia(null)}
+            className="h-8 w-8"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+      
       {/* Input */}
       <form onSubmit={handleSend} className="p-3 border-t bg-card flex items-center gap-2">
-        <Button type="button" variant="ghost" size="icon">
-          <ImageIcon className="w-5 h-5" />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <Button 
+          type="button" 
+          variant="ghost" 
+          size="icon"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+        >
+          {uploading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <ImageIcon className="w-5 h-5" />
+          )}
         </Button>
         
         <Input
