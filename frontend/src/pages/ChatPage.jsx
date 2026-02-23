@@ -349,7 +349,9 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         
         <div className="flex-1">
           <h3 className="font-semibold">{participant.display_name || participant.username}</h3>
-          <p className="text-xs text-muted-foreground">En línea</p>
+          <p className="text-xs text-muted-foreground">
+            {isTyping ? `${typingUser || participant.display_name} está escribiendo...` : "En línea"}
+          </p>
         </div>
         
         <div className="flex items-center gap-1">
