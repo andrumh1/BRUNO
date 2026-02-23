@@ -86,6 +86,7 @@ const CreateCardPage = () => {
       personal: "personal_classic",
       empresarial: "empresarial_pro",
       negocio: "negocio_showcase",
+      servicios: "servicios_portfolio",
       lugares: "lugares_tour",
       guardian: "guardian_safe",
       curriculum: "curriculum_clean",
