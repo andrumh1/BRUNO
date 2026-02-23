@@ -232,4 +232,4 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 ---
 
-*Last Updated: 2025-02-23 - Videollamadas implementadas y testeadas*
+*Last Updated: 2025-02-23 - Videollamadas y llamadas de voz implementadas*
