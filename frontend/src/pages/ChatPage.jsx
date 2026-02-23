@@ -574,6 +574,39 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
     }
   };
 
+  // Send sticker
+  const handleSendSticker = async (sticker) => {
+    if (!sticker || !chat?.id) return;
+    
+    setSending(true);
+    try {
+      const messageData = {
+        content: sticker.isEmoji ? sticker.emoji : `[sticker:${sticker.id}]`,
+        message_type: "sticker",
+        attachments: [{
+          type: "sticker",
+          sticker_id: sticker.id,
+          emoji: sticker.emoji,
+          url: sticker.url || null,
+          is_emoji: sticker.isEmoji || false
+        }]
+      };
+      
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: "send_message", chat_id: chat.id, ...messageData }));
+      } else {
+        await axios.post(`${API}/chats/${chat.id}/messages`, messageData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (error) {
+      console.error("Error sending sticker:", error);
+    } finally {
+      setSending(false);
+      setShowStickerPicker(false);
+    }
+  };
+
   const handleFileSelect = async (e, type = "image") => {
     const file = e.target.files[0];
     if (!file) return;
