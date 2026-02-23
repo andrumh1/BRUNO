@@ -738,6 +738,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         isIncoming={videoCallState.isIncoming}
         onAccept={handleAcceptCall}
         onDecline={handleDeclineCall}
+        callType={videoCallState.callType}
       />
 
       {/* Messages */}
