@@ -79,8 +79,11 @@ function App() {
         <AuthProvider>
           <NotificationProvider>
             <BrowserRouter>
-              <AppRouter />
-              <FloatingBubbles />
+              <TourProvider>
+                <AppRouter />
+                <FloatingBubbles />
+                <TourOverlay />
+              </TourProvider>
             </BrowserRouter>
           </NotificationProvider>
         </AuthProvider>
