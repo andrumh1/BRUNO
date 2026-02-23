@@ -54,6 +54,7 @@ function AppRouter() {
       <Route path="/store/cancel" element={<StorePage />} />
       <Route path="/chat" element={<ChatPage />} />
       <Route path="/chat/:chatId" element={<ChatPage />} />
+      <Route path="/profile/:userId" element={<UserProfilePage />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/cards/new" element={<CreateCardPage />} />
       <Route path="/cards/:cardId/edit" element={<EditCardPage />} />
