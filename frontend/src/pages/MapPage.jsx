@@ -49,9 +49,10 @@ const MapPage = () => {
   const wsRef = useRef(null);
   const locationWatchRef = useRef(null);
 
-  // Get user's current location
+  // Get user's current location and watch for updates
   useEffect(() => {
     if (navigator.geolocation) {
+      // Get initial location
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setUserLocation({
@@ -64,8 +65,97 @@ const MapPage = () => {
         },
         { enableHighAccuracy: true }
       );
+      
+      // Watch for location updates
+      locationWatchRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const newLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserLocation(newLocation);
+          
+          // Send location update to WebSocket
+          if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({
+              action: "location_update",
+              location: newLocation
+            }));
+          }
+        },
+        (error) => console.error("Location watch error:", error),
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+      );
     }
+    
+    return () => {
+      if (locationWatchRef.current) {
+        navigator.geolocation.clearWatch(locationWatchRef.current);
+      }
+    };
   }, []);
+
+  // WebSocket for real-time user locations
+  useEffect(() => {
+    if (!token) return;
+    
+    const connectWS = () => {
+      try {
+        const ws = new WebSocket(`${WS_URL}/ws/map/${token}`);
+        
+        ws.onopen = () => {
+          console.log("Map WebSocket connected");
+          wsRef.current = ws;
+          
+          // Send initial location
+          if (userLocation) {
+            ws.send(JSON.stringify({
+              action: "location_update",
+              location: userLocation
+            }));
+          }
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === "users_nearby") {
+              setOnlineUsers(data.users || []);
+            } else if (data.type === "user_location_update") {
+              setOnlineUsers(prev => {
+                const existing = prev.find(u => u.id === data.user.id);
+                if (existing) {
+                  return prev.map(u => u.id === data.user.id ? data.user : u);
+                }
+                return [...prev, data.user];
+              });
+            } else if (data.type === "user_disconnected") {
+              setOnlineUsers(prev => prev.filter(u => u.id !== data.user_id));
+            }
+          } catch (e) {}
+        };
+        
+        ws.onclose = () => {
+          console.log("Map WebSocket disconnected");
+          setTimeout(connectWS, 3000);
+        };
+        
+        return ws;
+      } catch (e) {
+        console.error("WebSocket error:", e);
+        return null;
+      }
+    };
+    
+    const ws = connectWS();
+    
+    return () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, [token, userLocation]);
 
   // Fetch cards with location
   useEffect(() => {
