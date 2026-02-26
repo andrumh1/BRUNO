@@ -262,6 +262,25 @@ const MapPage = () => {
     }
   };
 
+  // Start chat with user
+  const startChatWithUser = async (userId) => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    
+    try {
+      const response = await axios.post(
+        `${API}/chats?participant_id=${userId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      navigate(`/chat/${response.data.id}`);
+    } catch (error) {
+      console.error("Error starting chat:", error);
+    }
+  };
+
   // Filter cards by search
   const filteredCards = cards.filter(card => 
     card.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
