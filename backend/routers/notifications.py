@@ -1,10 +1,11 @@
-"""Push notifications routes."""
-from fastapi import APIRouter, HTTPException, Depends
+"""Push notifications routes with email support."""
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 import uuid
 import json
+import os
 
 import sys
 sys.path.insert(0, '/app/backend')
@@ -15,8 +16,20 @@ from models.user import User
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
-# For production, use pywebpush library
-# pip install pywebpush
+# Notification types
+NOTIFICATION_TYPES = {
+    "incoming_call": {"title": "Llamada entrante", "icon": "phone"},
+    "new_message": {"title": "Nuevo mensaje", "icon": "message"},
+    "new_follower": {"title": "Nuevo seguidor", "icon": "user-plus"},
+    "post_like": {"title": "Nuevo like", "icon": "heart"},
+    "post_comment": {"title": "Nuevo comentario", "icon": "message-circle"},
+    "product_favorited": {"title": "Favorito en tu producto", "icon": "star"},
+    "product_cart_added": {"title": "Producto agregado al carrito", "icon": "shopping-cart"},
+    "new_story": {"title": "Nueva historia", "icon": "camera"},
+    "mention": {"title": "Te mencionaron", "icon": "at-sign"},
+    "order_update": {"title": "Actualización de pedido", "icon": "package"},
+    "promotion": {"title": "Promoción especial", "icon": "tag"}
+}
 
 
 class PushSubscription(BaseModel):
@@ -37,6 +50,7 @@ class NotificationPayload(BaseModel):
     tag: Optional[str] = "bruno-notification"
     type: Optional[str] = None
     data: Optional[dict] = {}
+    url: Optional[str] = None
 
 
 @router.post("/subscribe")
