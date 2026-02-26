@@ -75,6 +75,9 @@ function AppRouter() {
       <Route path="/my-profile" element={<MyProfilePage />} />
       <Route path="/points" element={<PointsPage />} />
       <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
+      <Route path="/analytics" element={<AnalyticsPage />} />
+      <Route path="/analytics/:cardId" element={<AnalyticsPage />} />
+      <Route path="/camera" element={<BrunoCameraPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />
       <Route path="/marketplace/new" element={<NewProductPage />} />
       <Route path="/marketplace/my-products" element={<MyProductsPage />} />
