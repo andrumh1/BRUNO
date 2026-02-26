@@ -4055,8 +4055,12 @@ async def health_check():
 # First, import and include separate routers in api_router
 from routers.notifications import router as notifications_router
 from routers.points import router as points_router
+from routers.marketplace import router as marketplace_router
+from routers.stories import router as stories_router
 api_router.include_router(notifications_router)
 api_router.include_router(points_router)
+api_router.include_router(marketplace_router)
+api_router.include_router(stories_router)
 
 # Then include api_router in app
 app.include_router(api_router)
