@@ -4242,6 +4242,161 @@ async def websocket_chat(websocket: WebSocket, token: str):
         logging.error(f"WebSocket error: {str(e)}")
         ws_manager.disconnect(websocket, user.id)
 
+
+# ============================================================================
+# MAP WEBSOCKET - Real-time user locations
+# ============================================================================
+
+class MapConnectionManager:
+    def __init__(self):
+        self.active_connections: dict = {}  # user_id -> {websocket, location}
+    
+    async def connect(self, websocket: WebSocket, user_id: str):
+        await websocket.accept()
+        self.active_connections[user_id] = {
+            "websocket": websocket,
+            "location": None
+        }
+    
+    def disconnect(self, user_id: str):
+        if user_id in self.active_connections:
+            del self.active_connections[user_id]
+    
+    def update_location(self, user_id: str, location: dict):
+        if user_id in self.active_connections:
+            self.active_connections[user_id]["location"] = location
+    
+    def get_nearby_users(self, user_id: str, max_distance_km: float = 50):
+        """Get users within max_distance_km"""
+        current = self.active_connections.get(user_id)
+        if not current or not current["location"]:
+            return []
+        
+        current_loc = current["location"]
+        nearby = []
+        
+        for uid, data in self.active_connections.items():
+            if uid == user_id or not data["location"]:
+                continue
+            
+            # Calculate distance
+            lat1, lng1 = current_loc["lat"], current_loc["lng"]
+            lat2, lng2 = data["location"]["lat"], data["location"]["lng"]
+            
+            R = 6371  # Earth's radius in km
+            dLat = (lat2 - lat1) * 3.14159 / 180
+            dLng = (lng2 - lng1) * 3.14159 / 180
+            a = (pow(sin(dLat/2), 2) + 
+                 cos(lat1 * 3.14159 / 180) * cos(lat2 * 3.14159 / 180) * 
+                 pow(sin(dLng/2), 2))
+            c = 2 * atan2(sqrt(a), sqrt(1-a))
+            distance = R * c
+            
+            if distance <= max_distance_km:
+                nearby.append({
+                    "id": uid,
+                    "location": data["location"],
+                    "distance_km": round(distance, 2)
+                })
+        
+        return nearby
+    
+    async def broadcast_location_update(self, user_id: str, user_info: dict):
+        """Broadcast user location to nearby users"""
+        for uid, data in self.active_connections.items():
+            if uid != user_id:
+                try:
+                    await data["websocket"].send_json({
+                        "type": "user_location_update",
+                        "user": user_info
+                    })
+                except:
+                    pass
+
+map_manager = MapConnectionManager()
+
+# Import math functions for distance calculation
+from math import sin, cos, sqrt, atan2
+
+@app.websocket("/ws/map/{token}")
+async def map_websocket(websocket: WebSocket, token: str):
+    """WebSocket endpoint for real-time map locations"""
+    user = await get_current_user_from_token(token)
+    if not user:
+        await websocket.close(code=1008)
+        return
+    
+    await map_manager.connect(websocket, user.id)
+    
+    # Get user profile for display
+    profile = await db.user_profiles.find_one({"user_id": user.id}, {"_id": 0})
+    user_doc = await db.users.find_one({"id": user.id}, {"_id": 0, "hashed_password": 0})
+    
+    user_info = {
+        "id": user.id,
+        "name": user_doc.get("name", ""),
+        "avatar_url": profile.get("avatar_url") if profile else None,
+        "subscription_tier": user_doc.get("subscription_tier", "free"),
+        "location": None
+    }
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            action = data.get("action")
+            
+            if action == "location_update":
+                location = data.get("location")
+                if location and "lat" in location and "lng" in location:
+                    map_manager.update_location(user.id, location)
+                    user_info["location"] = location
+                    
+                    # Get nearby users and send back
+                    nearby = map_manager.get_nearby_users(user.id)
+                    
+                    # Enrich nearby users with profile info
+                    enriched_nearby = []
+                    for nearby_user in nearby:
+                        nearby_profile = await db.user_profiles.find_one(
+                            {"user_id": nearby_user["id"]}, {"_id": 0}
+                        )
+                        nearby_user_doc = await db.users.find_one(
+                            {"id": nearby_user["id"]}, 
+                            {"_id": 0, "hashed_password": 0}
+                        )
+                        if nearby_user_doc:
+                            enriched_nearby.append({
+                                "id": nearby_user["id"],
+                                "name": nearby_user_doc.get("name", ""),
+                                "avatar_url": nearby_profile.get("avatar_url") if nearby_profile else None,
+                                "subscription_tier": nearby_user_doc.get("subscription_tier", "free"),
+                                "location": nearby_user["location"],
+                                "distance_km": nearby_user["distance_km"]
+                            })
+                    
+                    await websocket.send_json({
+                        "type": "users_nearby",
+                        "users": enriched_nearby
+                    })
+                    
+                    # Broadcast to other users
+                    await map_manager.broadcast_location_update(user.id, user_info)
+                    
+    except WebSocketDisconnect:
+        map_manager.disconnect(user.id)
+        # Notify others user disconnected
+        for uid, data in map_manager.active_connections.items():
+            try:
+                await data["websocket"].send_json({
+                    "type": "user_disconnected",
+                    "user_id": user.id
+                })
+            except:
+                pass
+    except Exception as e:
+        logging.error(f"Map WebSocket error: {str(e)}")
+        map_manager.disconnect(user.id)
+
 # ============================================================================
 # PUBLIC ROUTES
 # ============================================================================
