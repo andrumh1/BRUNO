@@ -326,3 +326,21 @@ async def mark_all_notifications_read(
     )
     
     return {"status": "all_marked_read"}
+
+
+@router.get("/unread-count")
+async def get_unread_count(
+    current_user: User = Depends(get_current_user)
+):
+    """Get unread notification count"""
+    count = await db.notification_logs.count_documents({
+        "user_id": current_user.id,
+        "read": {"$ne": True}
+    })
+    return {"count": count}
+
+
+@router.get("/types")
+async def get_notification_types():
+    """Get all notification types with their info"""
+    return NOTIFICATION_TYPES
