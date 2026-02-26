@@ -160,28 +160,37 @@ const PostCard = ({ post, onLike, onComment, onDelete }) => {
             </div>
           </Link>
           
-          {user?.id === post.user_id && (
-            <div className="relative">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8"
-                onClick={() => setShowMenu(!showMenu)}
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-              {showMenu && (
-                <div className="absolute right-0 top-8 bg-background border rounded-lg shadow-lg py-1 z-50 min-w-[120px]">
+          {/* Menu for post owner OR report button for others */}
+          <div className="relative">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={() => setShowMenu(!showMenu)}
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </Button>
+            {showMenu && (
+              <div className="absolute right-0 top-8 bg-background border rounded-lg shadow-lg py-1 z-50 min-w-[140px]">
+                {user?.id === post.user_id ? (
                   <button 
                     onClick={handleDelete}
                     className="w-full px-4 py-2 text-sm text-left hover:bg-muted text-destructive"
                   >
                     Eliminar
                   </button>
-                </div>
-              )}
-            </div>
-          )}
+                ) : (
+                  <ReportButton
+                    contentType="post"
+                    contentId={post.id}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start px-4 py-2 text-sm text-left hover:bg-muted text-destructive rounded-none h-auto"
+                  />
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Content */}
