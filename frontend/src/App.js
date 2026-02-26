@@ -11,6 +11,7 @@ import FloatingBubbles from "@/components/FloatingBubbles";
 import FloatingChatBubble from "@/components/FloatingChatBubble";
 import CameraFloatingButton from "@/components/CameraFloatingButton";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 // Pages
 import LandingPage from "@/pages/LandingPage";
