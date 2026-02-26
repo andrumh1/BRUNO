@@ -103,7 +103,7 @@ function RecenterMap({ center }) {
 
 const MapPage = () => {
   const navigate = useNavigate();
-  const { token, user, loading: authLoading } = useAuth();
+  const { token, user, isLoading: authLoading } = useAuth();
   
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
