@@ -6,6 +6,8 @@ from typing import Optional, List
 import uuid
 import json
 import os
+import asyncio
+import logging
 
 import sys
 sys.path.insert(0, '/app/backend')
@@ -13,6 +15,18 @@ sys.path.insert(0, '/app/backend')
 from utils.database import db
 from utils.security import get_current_user
 from models.user import User
+
+# Email setup
+try:
+    import resend
+    resend.api_key = os.environ.get('RESEND_API_KEY', '')
+    RESEND_AVAILABLE = bool(resend.api_key)
+    SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'noreply@bruno.app')
+except ImportError:
+    RESEND_AVAILABLE = False
+    SENDER_EMAIL = None
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
