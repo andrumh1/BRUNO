@@ -6,130 +6,145 @@ The user wants to build a comprehensive professional social network called BRUNO
 **PRODUCT REQUIREMENTS (Consolidated):**
 
 *   **Core 9 Points:**
-    1.  **Map:** Snapchat-like UI with distance measurement.
-    2.  **Cards:** Multiple view sizes, editable templates, and bug fixes.
-    3.  **Feed:** Support for photo/video posts, locations, and public card updates.
-    4.  **Chat:** Support for all media types, voice/video calls, and a floating bubble UI.
-    5.  **Store:** Separate NFC products/subscriptions; integrate a partner app's (MEOW APP) product list.
-    6.  **BRUNO IA:** An AI assistant deeply integrated into the app for support and system manipulation.
-    7.  **Users:** Fix session persistence, implement a robust security model, and create a guided app tour.
-    8.  **Public Website (BRUNO.com):** A full marketing website.
-    9.  **Profile:** Better organization of posts, reels, and cards.
-*   **Recent Additions:**
-    *   **Marketplace:** A new section for users to publish product/service cards, complete with a product questionnaire, chat-based contact, and a shopping cart.
-    *   **Stories:** Implementation of 24-hour stories on user profiles and static catalog-style stories on cards.
-    *   **Gamification:** A user loyalty/gamification points system.
-    *   **Reels:** A TikTok-style vertical video feed.
-    *   **Push Notifications:** For incoming calls and other key events.
+    1.  **Map:** Snapchat-like UI with distance measurement. (Initial implementation done, needs polish).
+    2.  **Cards:** Multiple view sizes (mini/list), editable templates.
+    3.  **Feed:** Support for photo/video posts with location tags, and public card updates.
+    4.  **Chat:** Support for all media types, voice/video calls, and a floating bubble UI (Bubble UI is DONE).
+    5.  **Store:** Unified with Marketplace. (DONE).
+    6.  **BRUNO IA:** An AI assistant deeply integrated into the app for support, recommendations, and system manipulation. (Expanded with recommendations and mascot).
+    7.  **Users:** Fix session persistence, implement a robust security model, and create a guided app tour (Tour is DONE).
+    8.  **Public Website (BRUNO.com):** A full marketing website. (DONE).
+    9.  **Profile:** Better organization of posts, reels, and cards. (Initial implementation DONE).
+*   **Recent Additions & User Requests:**
+    *   **Marketplace:** A section for users to publish product/service cards, now unified with the main PIUP store. (DONE).
+    *   **Stories:** 24-hour user stories and static catalog-style stories on cards. (DONE).
+    *   **Reels:** A TikTok-style vertical video feed. (DONE).
+    *   **Push & Email Notifications:** A comprehensive, user-configurable notification system. (DONE).
+    *   **Floating Chat:** A non-intrusive, site-wide floating chat bubble. (DONE).
+    *   **Verified Badges:** For Pro and Business users. (DONE).
+    *   **BRUNO Camera:** A custom in-app camera with an editor for photos and videos. (DONE).
+    *   **Analytics Dashboard:** An advanced analytics page for subscribed users. (DONE).
+    *   **BRUNO Mascot:** Integrated the official dog mascot image for the BRUNO AI. (DONE).
+    *   **Bug Fixes:** Identify and fix functionality errors in dropdowns and forms.
+    *   **Novel Features:** Implement innovative social media functionalities.
 
 **User's preferred language**: Spanish
 
 **what currently exists?**
-The application is a full-stack React and FastAPI/MongoDB project. It's a functional social network with a real-time chat (WebSockets), video/audio calls (Daily.co), a BRUNO AI assistant (GPT-5.2), a points system, chat stickers, a guided tour, a public marketing website, a detailed user profile page with tabs, and a TikTok-style Reels feed. The backend is being progressively refactored from a monolith () into a router-based structure. Work has just begun on the Marketplace and Stories features.
+The application is a feature-rich full-stack social network built with React, FastAPI, and MongoDB. Key features include real-time chat (WebSockets) with a floating UI, video/audio calls (Daily.co), an AI assistant (BRUNO IA), a gamification/points system, a unified Marketplace/Store, user stories, a Reels feed, a custom in-app camera with an editor, an analytics dashboard, verified user badges, and a live map. The backend is undergoing a progressive refactoring from a  monolith to a modular router-based architecture.
 
 **Last working item**:
-- **Last item agent was working:** The agent started the implementation of three major new features requested by the user: a **Marketplace**, **24-hour user stories**, and **static card stories**. The agent created the initial backend routers (, ) and the foundational frontend components (, , ).
-- **Status:** IN PROGRESS
-- **Agent Testing Done:** N
+- **Last item agent was working:** The agent implemented a large batch of features based on user requests:
+    1.  An advanced analytics dashboard for subscribed users.
+    2.  A custom in-app camera (BRUNO Camera) with a photo/video editor.
+    3.  Integrated the BRUNO dog mascot image as the avatar for the BRUNO IA.
+    4.  Added a Map icon to the main navigation bar in the feed.
+    5.  The agent also prepared to fix form/dropdown bugs and introduce novel features as requested.
+- **Status:** USER VERIFICATION PENDING
+- **Agent Testing Done:** Y
 - **Which testing method agent to use?** both
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Incomplete Backend Refactoring (P0)**
-    - **Description:** The  file still contains a significant amount of logic for the store, user profiles, AI, and other core functionalities. While routers for auth, calls, chat, notifications, and posts have been created, the refactoring is incomplete. This remains a major source of technical debt.
-    - **Attempted fixes:** The agent successfully moved several domains into a  directory.
+- **Issue 1: Form & Dropdown Bugs (P0)**
+    - **Description:** The user reported that some dropdowns and forms have functionality errors, such as not updating correctly. The agent did not perform a specific audit to identify and fix these.
     - **Next debug checklist:**
-        1.  Continue identifying distinct domains within  (e.g., , , ).
-        2.  Create new router files (e.g., , ) in the  directory.
-        3.  Move the relevant FastAPI  logic and helper functions from  to the new files.
-        4.  Import and include the new routers in , then remove the old code.
-    - **Why fix this issue and what will be achieved with the fix?** To improve code organization, maintainability, and development speed. Completing this is essential for the project's long-term health and stability.
+        1.  Manually test all forms (Login, Register, New Product, Profile Edit, etc.) and dropdowns throughout the application.
+        2.  Use the browser's developer tools to inspect network requests and console logs for errors upon submission or interaction.
+        3.  Call the  with a specific instruction to stress-test all user input forms and interactive elements.
+        4.  Correct any identified state management issues or incorrect API payloads in the relevant React components.
+    - **Why fix this issue and what will be achieved with the fix?** To resolve user-facing bugs and improve the core usability and reliability of the application.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?** both
+    - **Blocked on other issue:** None
+- **Issue 2: Incomplete Backend Refactoring (P1)**
+    - **Description:** The  file still contains a significant amount of logic that needs to be moved to modular routers (e.g., profiles, AI). This is a major source of technical debt.
+    - **Attempted fixes:** The agent successfully created routers for auth, calls, chat, marketplace, notifications, posts, points, stories, and most recently, .
+    - **Next debug checklist:**
+        1.  Identify the next logical domain within  (e.g.,  or ).
+        2.  Create a new router file (e.g., ) in .
+        3.  Move the relevant FastAPI  logic and helper functions from  to the new file.
+        4.  Import and include the new router in , then remove the old code.
+    - **Why fix this issue and what will be achieved with the fix?** To improve code organization, maintainability, and development speed.
     - **Status:** IN PROGRESS
     - **Is recurring issue?** Y
-    - **Should Test frontend/backend/both after fix?** both (full regression test)
+    - **Should Test frontend/backend/both after fix?** backend (regression test)
     - **Blocked on other issue:** None
 
 **In progress Task List**:
-- **Task 1: Complete Marketplace & Stories Implementation (P0)**
-    - **Description**: The user has requested a Marketplace and two types of Stories features. The initial files have been created, but the core logic is missing.
-    - **Where to resume**:
-        1.  **Backend:** Flesh out the endpoints in  and  for creating, fetching, and interacting with marketplace listings and stories. Define the necessary Pydantic models and database schemas.
-        2.  **Frontend:** Build out the UI and logic in  to display listings. Implement the UI in  to display 24h stories (like Instagram) and in  for the static catalog view on cards.
-        3.  **Integration:** Connect the frontend components to the backend APIs. Add navigation links to the new Marketplace page.
-    - **What will be achieved with this?**: This will deliver on the user's latest major feature requests, adding e-commerce and richer content capabilities to the application.
-    - **Status**: IN PROGRESS
-    - **Should Test frontend/backend/both after fix?**: both
-    - **Blocked on something**: None.
+None. The last set of tasks was completed and tested by the agent.
 
 **Upcoming and Future Tasks**
-*   **Phase 1: Core User Requests (P0)**
-    *   **Map UI:** Implement the Snapchat-style map view in  with real-time user locations and distance calculations.
-    *   **Card Views:** Create miniature and list view components for business cards, to be used on the map and in search results.
+*   **Upcoming Tasks (P0):**
+    *   **Novel Social Features:** Discuss with the user to define and implement novel social features. This is a high-priority but vague request that needs clarification.
+    *   **Card View Variations:** Create miniature and list view components for business cards, to be used on the map and in search results.
     *   **Editable Card Templates:** Allow users to customize their card templates directly from the UI.
-*   **Phase 2: Feature Enhancements (P1)**
-    *   **Feed Improvements:** Add support for posting with location tags and public card updates to the main feed.
-    *   **Advanced Chat:** Implement full support for arbitrary file sharing and ensure chat history is robustly persisted.
-    *   **BRUNO IA Actions:** Grant the AI the ability to create/edit user cards and perform other system actions based on natural language prompts from the user.
-*   **Phase 3: Subscriptions & Polish (P2)**
-    *   **Subscription Tiers:** Define and implement compelling, distinct features for paid subscription plans to monetize the platform.
-    *   **Security Model:** Conduct a review and hardening of the application's security model, particularly around authentication and data access.
+    *   **Feed with Location:** Add the ability to tag posts with a location.
+*   **Future Tasks (P1):**
+    *   **Advanced Chat:** Implement full support for arbitrary file sharing.
+    *   **BRUNO IA Actions:** Grant the AI the ability to create/edit user cards and perform other system actions on behalf of the user.
+    *   **Subscription Features:** Define and implement more compelling, distinct features for paid subscription plans.
+    *   **Security Model Review:** Conduct a comprehensive review and hardening of the application's security model.
 
 **Completed work in this session**
-- **Video & Audio Calls:** Integrated video and audio-only calls into the chat system using Daily.co, including UI modals and backend endpoints.
-- **Backend Refactoring (Partial):** Initiated the critical refactoring of  by creating a  directory and migrating , , , , and  logic.
-- **Push Notifications:** Implemented a system for delivering web push notifications for incoming calls.
-- **Points System:** Built a complete gamification system with a backend API and a UI widget on the user's profile.
-- **Chat Stickers & Card Sharing:** Enhanced the chat by adding a sticker picker and the ability to share business cards directly in conversations.
-- **App Tour:** Created a guided tour for new users, orchestrated by the BRUNO IA component.
-- **Public Website:** Built and launched a multipage marketing website for .
-- **Full User Profile:** Implemented a comprehensive My Profile page with stats, points, and tabs for Posts, Reels, Cards, and Saved items.
-- **Reels Feed:** Developed a TikTok-style full-screen, vertical scrolling interface for watching short-form videos.
+- **Advanced Analytics:** Implemented a full analytics backend router and a frontend dashboard page, gated by subscription tier.
+- **BRUNO Camera & Editor:** Created a new page with a custom camera UI, including a photo/video editor with filters and stickers.
+- **BRUNO Mascot Integration:** Replaced the generic AI icon with the official dog mascot image across the app.
+- **Navigation Improvement:** Added a Map icon to the main navigation bar.
+- **Verified User Badges:** Implemented a  component and integrated it into posts and chat to show Pro/Business status.
+- **Live Map UI:** Built a functional map page that shows real-time user locations via WebSockets.
+- **Backend Refactoring ():** Created a new  router and migrated all store, subscription, and PIUP product logic out of .
+- **Email Notifications (Resend):** Integrated  for sending email notifications as a user-configurable option.
+- **Floating Chat UI:** Replaced the full-page chat with a floating bubble UI that allows for multiple concurrent chat windows.
+- **Unified Marketplace:** Merged the PIUP store (subscriptions, NFC cards) into the main Marketplace as featured sections.
+- **Comprehensive Notifications:** Expanded the notification system to 11 different event types and added a dedicated settings page.
+- **Marketplace & Stories:** Completed the full implementation of the marketplace and user stories features.
 
 **Earlier issues found/mentioned but not fixed**
-- The monolithic  file remains the most significant partially-addressed issue.
-- The user's original request to fix a bubble card layout issue was marked as resolved by the agent, but it would be prudent to double-check this during testing as it was a user-reported bug.
+- The user's request to identifica errores de funcionalidad en espegables y formularios y corrigelos was acknowledged but not acted upon. This is now listed as a high-priority pending issue.
 
 **Known issue recurrence from previous fork**
-- **MongoDB ObjectId Serialization:** This remains a potential risk. All new endpoints that interact with MongoDB must be carefully designed to return clean Pydantic models or dictionaries, explicitly excluding the  field or converting  types to strings before sending the response.
+- **MongoDB ObjectId Serialization:** This remains a potential risk. All new endpoints interacting with MongoDB must be carefully designed to exclude the  field or convert  types to strings before sending the response.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Real-time:** WebSockets (Chat), WebRTC/Daily.co (Calls).
+*   **Real-time:** WebSockets (Chat, Map), WebRTC/Daily.co (Calls).
 *   **Backend:** FastAPI, Pydantic, Motor, JWT. Structure is transitioning to  modules.
 *   **Frontend:** React, React Router, Axios, Tailwind CSS, shadcn/ui, , .
+*   **Email:** Resend.
 *   **Push Notifications:** Service Workers, Web Push API.
 
 **key DB schema**
-- **User:** Added  and .
-- **Message:** The  sub-document is now more complex, supporting  and  types.
-- **New Collections (Implicit):** , . Schemas need to be defined.
+- **User:** Added  (String, e.g., Free, Pro, Business).
+- **New Collections:**  (stores user interaction events).
 
 **changes in tech stack**
-- **Backend:**  for push notifications.
-- **Frontend:**  for the app tour.
+- **Backend:**  library for handling email dispatch.
 
 **All files of reference**
-*   **New/Critical:** , , , ,  (entire directory).
+*   **New/Critical:** , , , , , .
 *   **Supporting:** , .
 
 **Areas that need refactoring**:
-*   **:** Must be fully broken down into routers. This is the highest priority.
-*   **:** Remains a very large and complex component. It should be broken down into smaller hooks and components (e.g., for handling calls, attachments, message rendering).
+*   **:** Must be fully broken down into routers (e.g., , ). This is the highest priority technical debt.
+*   **:** The component is now large and handles WebSocket connections, state management, and rendering. It could be broken down into smaller hooks and components.
 
 **key api endpoints**
-*   **Calls:** , , 
-*   **Points:** , 
-*   **Notifications:** 
-*   **Marketplace (New/Stub):** 
-*   **Stories (New/Stub):** 
+*   
+*   
+*   
+*   
+*   
+*   
 
 **Critical Info for New Agent**
-*   **Prioritize User's Latest Request:** The immediate focus must be on building out the **Marketplace** and **Stories** features as per the user's last instruction.
-*   **Continue Backend Refactor:** Do not let the backend refactoring stall. Weave this work in with the feature development. A clean backend is essential for future speed.
-*   **Consult the 9-Point Plan:** The original list from the first handoff is still the master roadmap. Refer to it for upcoming tasks after the current ones are complete.
-*   **Test Extensively:** The application is now very large. Use the  after completing the Marketplace/Stories implementation to ensure no regressions have been introduced.
+*   **Prioritize User Feedback:** The immediate focus should be on getting user feedback for the latest batch of features and then addressing the pending issues, especially the form/dropdown bugs.
+*   **Clarify Vague Requests:** The user has asked for novel social features. Before implementing, you must ask for clarification and specific examples of what they envision.
+*   **Continue Backend Refactor:** This is a recurring task. Weave this work in with feature development to keep the codebase healthy. The next logical target is moving profile or AI endpoints out of .
+*   **Test Extensively:** The application's complexity is high. Use  after any significant change to prevent regressions.
 
 **documents and test reports created in this job**
 *   
@@ -139,32 +154,35 @@ The application is a full-stack React and FastAPI/MongoDB project. It's a functi
 *    (updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **User (Last Message):** Confirms the agent's plan for the Marketplace and Stories, specifying choices for implementation (Chat + Cart for marketplace, configurable stories). Re-emphasizes the importance of the original 9 points. **Status: In Progress**.
-- **User:** Asks for a Marketplace, 24h user stories, and static card stories (as catalogs). **Status: In Progress**.
-- **User:** Asks for Reels to be like TikTok, for the Profile page to be implemented, and for a website icon to be added to the navigation. **Status: Completed**.
-- **User:** Approves adding push notifications and asks the agent to continue with the 9-point list and agent recommendations. **Status: Completed**.
-- **User:** Approves adding audio calls and asks the agent to continue with corrections and applications. **Status: Completed**.
+- **User:** Confirms plan for analytics, camera, mascot, and bug fixes. Gives priority to novel features and the original 9-point plan. **Status: In Progress**.
+- **User:** Asks for advanced analytics, a BRUNO-styled camera with editor, bug fixes for forms, integration of the BRUNO dog mascot, and novel social features. Provides image of the mascot. **Status: In Progress**.
+- **User:** Confirms continuing with the Next Action Items and the original 9-point plan. **Status: In Progress**.
+- **User:** Confirms plan for notifications, store unification, and floating chat. **Status: Completed**.
+- **User:** Asks for multiple notification types (push + optional email), unification of the store with the marketplace, and a floating bubble chat UI. **Status: Completed**.
+- **User:** Confirms choices for Marketplace and Stories implementation, and enhancement of Bruno IA. **Status: Completed**.
 
 **Project Health Check:**
-*   **Broken:** None.
-*   **Mocked:**  is still a stub. , , and  are new stubs.
+*   **Broken:** None reported, but user mentioned form/dropdown issues.
+*   **Mocked:** None. All major components are now functional stubs or complete implementations.
 
 **3rd Party Integrations**
 *   **OpenAI GPT-5.2:** (Text Generation) — uses Emergent LLM Key.
 *   **Daily.co:** (Video/Audio Calls) — requires User API Key.
 *   **Cloudinary:** (Image Storage) — requires User API Key.
 *   **Stripe:** (Payments) — requires User API Key.
+*   **Resend:** (Email) — requires User API Key.
 *   **Emergent-managed Google Auth:** (Social Login).
 
 **Testing status**
-- **Testing agent used after significant changes:** YES, used successfully multiple times in the last session.
+- **Testing agent used after significant changes:** YES, used successfully after each major feature batch.
 - **Troubleshoot agent used after agent stuck in loop:** NO
 - **Test files created:** Multiple  reports in .
-- **Known regressions:** None, thanks to consistent testing.
+- **Known regressions:** None reported by the testing agent.
 
 **Credentials to test flow:**
 *   **Username:** 
 *   **Password:** 
 
 **What agent forgot to execute**
-The agent has successfully followed the user's priorities. The only outstanding debt is the full completion of the  refactoring, which was correctly deprioritized in favor of urgent user-requested features but must not be forgotten.</analysis>
+- The agent did not perform a specific audit or implement fixes for the errores de funcionalidad en espegables y formularios (functionality errors in dropdowns and forms) that the user requested. This task was acknowledged in the plan but not executed.
+- The agent did not seek clarification on the funcionalizades novedosas referente a las redes sciales (novel social media features) request, leaving it undefined.</analysis>
