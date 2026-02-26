@@ -100,6 +100,7 @@ function App() {
               <TourProvider>
                 <AppRouter />
                 <FloatingBubbles />
+                <FloatingChatBubble />
                 <TourOverlay />
               </TourProvider>
             </BrowserRouter>
