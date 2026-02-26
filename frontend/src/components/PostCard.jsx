@@ -150,9 +150,7 @@ const PostCard = ({ post, onLike, onComment, onDelete }) => {
                 <span className="font-semibold text-sm">
                   {post.user?.display_name || post.user?.username}
                 </span>
-                {post.user?.is_verified && (
-                  <span className="text-primary text-xs">✓</span>
-                )}
+                <InlineVerifiedBadge tier={post.user?.subscription_tier} />
               </div>
               <span className="text-xs text-muted-foreground">
                 {formatDate(post.created_at)}
