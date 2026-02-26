@@ -39,11 +39,17 @@ async def get_current_user_from_token(authorization: str = Header(None)):
     import jwt
     try:
         payload = jwt.decode(token, os.environ.get("JWT_SECRET", "super-secret-key"), algorithms=["HS256"])
+        # Try both formats - user_id and sub (email)
         user_id = payload.get("user_id")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
+        email = payload.get("sub")
         
-        user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+        if user_id:
+            user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+        elif email:
+            user = await db.users.find_one({"email": email}, {"_id": 0, "password": 0})
+        else:
+            raise HTTPException(status_code=401, detail="Invalid token format")
+        
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
         
