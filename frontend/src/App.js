@@ -69,6 +69,11 @@ function AppRouter() {
       <Route path="/profile/:userId" element={<UserProfilePage />} />
       <Route path="/my-profile" element={<MyProfilePage />} />
       <Route path="/points" element={<PointsPage />} />
+      <Route path="/marketplace" element={<MarketplacePage />} />
+      <Route path="/marketplace/new" element={<NewProductPage />} />
+      <Route path="/marketplace/my-products" element={<MyProductsPage />} />
+      <Route path="/marketplace/cart" element={<CartPage />} />
+      <Route path="/marketplace/:productId" element={<ProductDetailPage />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/cards/new" element={<CreateCardPage />} />
       <Route path="/cards/:cardId/edit" element={<EditCardPage />} />
