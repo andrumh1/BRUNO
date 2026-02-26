@@ -34,7 +34,9 @@ import {
   Shield,
   Palette,
   Moon,
-  Sun
+  Sun,
+  FileText,
+  Trash2
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
