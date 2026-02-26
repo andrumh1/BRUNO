@@ -503,7 +503,7 @@ const MapPage = () => {
       )}
 
       {/* Selected Card Detail */}
-      {selectedCard && !showCardList && (
+      {selectedCard && !showCardList && !selectedUser && (
         <div className="absolute inset-x-0 bottom-0 z-30 bg-card rounded-t-3xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300">
           <div className="p-4">
             <div className="w-12 h-1 bg-muted rounded-full mx-auto mb-4" />
@@ -582,6 +582,73 @@ const MapPage = () => {
                 onClick={() => navigate(`/c/${selectedCard.id}`)}
               >
                 <Eye className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Selected Online User Detail */}
+      {selectedUser && !showCardList && (
+        <div className="absolute inset-x-0 bottom-0 z-30 bg-card rounded-t-3xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300">
+          <div className="p-4">
+            <div className="w-12 h-1 bg-muted rounded-full mx-auto mb-4" />
+            
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2"
+              onClick={() => setSelectedUser(null)}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+            
+            <div className="flex gap-4 items-center">
+              <AvatarWithBadge
+                src={selectedUser.avatar_url}
+                name={selectedUser.name}
+                tier={selectedUser.subscription_tier}
+                size="lg"
+              />
+              
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-lg truncate">{selectedUser.name}</h3>
+                <div className="flex items-center gap-2 text-sm text-green-500">
+                  <Wifi className="w-4 h-4" />
+                  <span>En línea ahora</span>
+                </div>
+                
+                {selectedUser.location && userLocation && (
+                  <div className="inline-flex items-center gap-1 mt-2 px-3 py-1 bg-primary/10 rounded-full text-sm font-medium text-primary">
+                    <Route className="w-4 h-4" />
+                    {calculateDistance(
+                      userLocation.lat,
+                      userLocation.lng,
+                      selectedUser.location.lat,
+                      selectedUser.location.lng
+                    )} de distancia
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-4">
+              <Button 
+                className="flex-1"
+                onClick={() => {
+                  startChatWithUser(selectedUser.id);
+                }}
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Enviar mensaje
+              </Button>
+              <Button 
+                variant="outline"
+                className="flex-1"
+                onClick={() => navigate(`/profile/${selectedUser.id}`)}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Ver perfil
               </Button>
             </div>
           </div>
