@@ -249,17 +249,94 @@ async def send_push_notification(user_id: str, payload: dict, send_email: bool =
         # TODO: Actual push send with pywebpush
     
     # Send email notification if allowed
-    if email_allowed:
+    if email_allowed and RESEND_AVAILABLE:
         # Get user email
-        user_doc = await db.users.find_one({"id": user_id}, {"email": 1})
+        user_doc = await db.users.find_one({"id": user_id}, {"email": 1, "name": 1})
         if user_doc and user_doc.get("email"):
-            notification_log["email_sent"] = True
-            # TODO: Integrate with email service (SendGrid/Resend)
-            # await send_email_notification(user_doc["email"], payload)
+            try:
+                email_sent = await send_email_notification(
+                    user_doc["email"],
+                    user_doc.get("name", "Usuario"),
+                    payload
+                )
+                notification_log["email_sent"] = email_sent
+            except Exception as e:
+                logger.error(f"Failed to send email: {e}")
     
     await db.notification_logs.insert_one(notification_log)
     
     return {"push_sent": notification_log["push_sent"], "email_sent": notification_log["email_sent"]}
+
+
+async def send_email_notification(recipient_email: str, recipient_name: str, payload: dict) -> bool:
+    """Send email notification using Resend"""
+    if not RESEND_AVAILABLE:
+        return False
+    
+    notification_type = payload.get("type", "general")
+    title = payload.get("title", "Notificación de BRUNO")
+    body = payload.get("body", "")
+    url = payload.get("url", "https://bruno.app")
+    
+    # Build HTML email
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+            <tr>
+                <td style="padding: 40px 30px; text-align: center; background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%);">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">BRUNO</h1>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 40px 30px;">
+                    <h2 style="color: #1a1a1a; margin: 0 0 20px 0; font-size: 24px;">Hola {recipient_name},</h2>
+                    <h3 style="color: #FF6B35; margin: 0 0 15px 0; font-size: 18px;">{title}</h3>
+                    <p style="color: #4a4a4a; margin: 0 0 30px 0; font-size: 16px; line-height: 1.6;">{body}</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td align="center">
+                                <a href="{url}" style="display: inline-block; background-color: #FF6B35; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Ver en BRUNO</a>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 30px; background-color: #f9f9f9; text-align: center;">
+                    <p style="color: #888888; margin: 0; font-size: 14px;">
+                        Recibiste este email porque tienes activadas las notificaciones por email en BRUNO.
+                    </p>
+                    <p style="color: #888888; margin: 10px 0 0 0; font-size: 12px;">
+                        <a href="https://bruno.app/settings/notifications" style="color: #FF6B35;">Administrar notificaciones</a>
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+    
+    params = {
+        "from": SENDER_EMAIL,
+        "to": [recipient_email],
+        "subject": f"BRUNO: {title}",
+        "html": html_content
+    }
+    
+    try:
+        # Run sync SDK in thread to keep FastAPI non-blocking
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Email sent to {recipient_email}: {result.get('id')}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send email to {recipient_email}: {e}")
+        return False
 
 
 # Unified notification sender for different event types
