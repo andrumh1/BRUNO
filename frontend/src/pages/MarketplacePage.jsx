@@ -252,6 +252,30 @@ const MarketplacePage = () => {
   const [cartCount, setCartCount] = useState(0);
   const [favorites, setFavorites] = useState(new Set());
   const [viewMode, setViewMode] = useState('grid');
+  const [piupProducts, setPiupProducts] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [showPiupSection, setShowPiupSection] = useState(true);
+
+  // Fetch PIUP store products (featured)
+  useEffect(() => {
+    const fetchPiupProducts = async () => {
+      try {
+        const response = await axios.get(`${API}/store/products`);
+        // Get first 6 featured products
+        setPiupProducts(response.data.slice(0, 6));
+        
+        // Subscription plans
+        setSubscriptions([
+          { id: "free", name: "BRUNO Free", price: 0, features: ["1 tarjeta digital", "QR básico", "Perfil público"], icon: "🆓" },
+          { id: "pro", name: "BRUNO Pro", price: 9.99, features: ["5 tarjetas", "NFC activado", "Analytics", "Sin marca de agua"], icon: "⭐", popular: true },
+          { id: "business", name: "BRUNO Business", price: 29.99, features: ["Tarjetas ilimitadas", "Equipo de 10", "API access", "Soporte prioritario"], icon: "🏢" }
+        ]);
+      } catch (error) {
+        console.error("Error fetching PIUP products:", error);
+      }
+    };
+    fetchPiupProducts();
+  }, []);
 
   // Fetch categories
   useEffect(() => {
