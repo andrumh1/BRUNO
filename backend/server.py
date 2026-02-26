@@ -2833,7 +2833,8 @@ async def get_posts(
             "username": username,
             "avatar_url": profile.get("avatar_url") if profile else None,
             "display_name": display_name or username,
-            "is_verified": profile.get("is_verified", False) if profile else False
+            "is_verified": user.get("is_verified", False) if user else False,
+            "subscription_tier": user.get("subscription_tier", "free") if user else "free"
         }
         
         # Check if current user liked this post
