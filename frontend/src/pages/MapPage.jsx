@@ -43,6 +43,11 @@ const MapPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCardList, setShowCardList] = useState(false);
   const [mapStyle, setMapStyle] = useState("streets");
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [showOnlineUsers, setShowOnlineUsers] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const wsRef = useRef(null);
+  const locationWatchRef = useRef(null);
 
   // Get user's current location
   useEffect(() => {
