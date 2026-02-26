@@ -276,10 +276,10 @@ async def export_user_data(current_user: dict = Depends(get_current_user_from_to
 # ADMIN MODERATION (for future use)
 # ============================================
 
-@router.get("/admin/reports")
+@router.get("/api/admin/reports")
 async def get_pending_reports(
     status: str = "pending",
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_from_token)
 ):
     """Get reports for moderation - Admin only"""
     if not db:
