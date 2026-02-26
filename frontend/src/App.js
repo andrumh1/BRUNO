@@ -101,6 +101,7 @@ function AppRouter() {
       <Route path="/cards/:cardId/qr" element={<ProtectedRoute><QRCodePage /></ProtectedRoute>} />
       <Route path="/nfc/activate" element={<ProtectedRoute><ActivateNFCPage /></ProtectedRoute>} />
       <Route path="/nfc/write" element={<ProtectedRoute><NFCWritePage /></ProtectedRoute>} />
+      <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccountPage /></ProtectedRoute>} />
       
       {/* Fallback */}
       <Route path="*" element={<FeedPage />} />
