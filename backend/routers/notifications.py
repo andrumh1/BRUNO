@@ -103,14 +103,30 @@ async def get_notification_status(
     }
 
 
-# Notification preferences
+# Notification preferences - expanded
 class NotificationPreferences(BaseModel):
+    # Push notifications
+    push_enabled: bool = True
     calls: bool = True
     messages: bool = True
     likes: bool = True
     comments: bool = True
     followers: bool = True
+    product_favorites: bool = True
+    product_cart: bool = True
+    stories: bool = True
+    mentions: bool = True
+    order_updates: bool = True
     promotions: bool = False
+    
+    # Email notifications
+    email_enabled: bool = False
+    email_messages: bool = False
+    email_followers: bool = False
+    email_product_activity: bool = False
+    email_order_updates: bool = True
+    email_promotions: bool = False
+    email_weekly_digest: bool = False
 
 
 @router.get("/preferences")
