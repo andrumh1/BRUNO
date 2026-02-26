@@ -351,6 +351,8 @@ const FeedPage = () => {
                   </Button>
                 </Link>
               )}
+              {/* Notification Bell */}
+              {user && <NotificationBell />}
               <LanguageSwitcher variant="minimal" />
               {user ? (
                 <>
