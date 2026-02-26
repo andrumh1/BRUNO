@@ -15,6 +15,17 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  /* Safe area for mobile devices */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Safe area utilities for mobile */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 code {
