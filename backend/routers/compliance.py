@@ -38,7 +38,7 @@ async def get_current_user_from_token(authorization: str = Header(None)):
     
     import jwt
     try:
-        payload = jwt.decode(token, os.environ.get("JWT_SECRET", "super-secret-key"), algorithms=["HS256"])
+        payload = jwt.decode(token, os.environ.get("SECRET_KEY", "super-secret-key"), algorithms=["HS256"])
         # Try both formats - user_id and sub (email)
         user_id = payload.get("user_id")
         email = payload.get("sub")
