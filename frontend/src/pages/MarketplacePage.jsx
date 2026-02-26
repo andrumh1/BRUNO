@@ -22,7 +22,10 @@ import {
   Loader2,
   Star,
   Eye,
-  Share2
+  Share2,
+  Crown,
+  Sparkles,
+  Zap
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
