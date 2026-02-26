@@ -214,17 +214,29 @@ const MyProfilePage = () => {
                 </button>
               </Link>
               
-              <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
-                <Bell className="w-5 h-5 text-blue-500" />
-                <span className="flex-1 text-left">Notificaciones</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </button>
+              <Link to="/settings/notifications" onClick={() => setShowSettings(false)}>
+                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
+                  <Bell className="w-5 h-5 text-blue-500" />
+                  <span className="flex-1 text-left">Notificaciones</span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </Link>
               
-              <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
-                <Shield className="w-5 h-5 text-green-500" />
-                <span className="flex-1 text-left">Privacidad</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </button>
+              <Link to="/privacy" onClick={() => setShowSettings(false)}>
+                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
+                  <Shield className="w-5 h-5 text-green-500" />
+                  <span className="flex-1 text-left">Política de Privacidad</span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </Link>
+              
+              <Link to="/terms" onClick={() => setShowSettings(false)}>
+                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
+                  <FileText className="w-5 h-5 text-gray-500" />
+                  <span className="flex-1 text-left">Términos de Servicio</span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </Link>
               
               <Link to="/website" onClick={() => setShowSettings(false)}>
                 <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
@@ -243,6 +255,14 @@ const MyProfilePage = () => {
               </Link>
               
               <div className="border-t my-2" />
+              
+              <Link to="/settings/delete-account" onClick={() => setShowSettings(false)}>
+                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors">
+                  <Trash2 className="w-5 h-5" />
+                  <span className="flex-1 text-left">Eliminar Cuenta</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </Link>
               
               <button 
                 onClick={handleLogout}
