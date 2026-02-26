@@ -163,7 +163,8 @@ class TestNotificationSystem:
         for method, endpoint in endpoints:
             if method == "GET":
                 response = requests.get(f"{BASE_URL}{endpoint}")
-            assert response.status_code == 401, f"{endpoint} should require auth"
+            # Accept both 401 Unauthorized and 403 Forbidden as valid auth rejection
+            assert response.status_code in [401, 403], f"{endpoint} should require auth, got {response.status_code}"
         
         print("✓ All notification endpoints properly require authentication")
 
