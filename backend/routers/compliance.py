@@ -296,11 +296,11 @@ async def get_pending_reports(
     
     return reports
 
-@router.put("/admin/reports/{report_id}")
+@router.put("/api/admin/reports/{report_id}")
 async def update_report_status(
     report_id: str,
     action: str,  # 'dismiss', 'warn_user', 'remove_content', 'suspend_user'
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_from_token)
 ):
     """Update report status - Admin only"""
     if not db:
