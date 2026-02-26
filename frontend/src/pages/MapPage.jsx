@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { MiniCard, MapMarkerCard } from "@/components/CardVariants";
+import { AvatarWithBadge } from "@/components/VerifiedBadge";
 import axios from "axios";
 import { 
   MapPin, 
@@ -18,11 +19,15 @@ import {
   Route,
   X,
   MessageCircle,
-  Eye
+  Eye,
+  Users,
+  Radio,
+  Wifi
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
 
 const MapPage = () => {
   const navigate = useNavigate();
