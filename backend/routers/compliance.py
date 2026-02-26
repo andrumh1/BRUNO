@@ -69,7 +69,7 @@ async def create_report(
     current_user: dict = Depends(get_current_user_from_token)
 ):
     """Submit a content report"""
-    if not db:
+    if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
     
     report_doc = {
@@ -92,7 +92,7 @@ async def create_report(
 @router.get("/api/reports/my")
 async def get_my_reports(current_user: dict = Depends(get_current_user_from_token)):
     """Get user's submitted reports"""
-    if not db:
+    if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
     
     reports = await db.reports.find(
@@ -112,7 +112,7 @@ async def delete_account(
     current_user: dict = Depends(get_current_user_from_token)
 ):
     """Delete user account and all associated data - Required by Apple"""
-    if not db:
+    if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
     
     if request.confirm_text != "ELIMINAR MI CUENTA":
@@ -208,7 +208,7 @@ async def delete_account(
 @router.get("/api/profile/export")
 async def export_user_data(current_user: dict = Depends(get_current_user_from_token)):
     """Export all user data - GDPR compliance"""
-    if not db:
+    if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
     
     user_id = current_user["id"]
@@ -288,7 +288,7 @@ async def get_pending_reports(
     current_user: dict = Depends(get_current_user_from_token)
 ):
     """Get reports for moderation - Admin only"""
-    if not db:
+    if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
     
     # Check if user is admin (subscription tier check or role check)
@@ -309,7 +309,7 @@ async def update_report_status(
     current_user: dict = Depends(get_current_user_from_token)
 ):
     """Update report status - Admin only"""
-    if not db:
+    if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
     
     if current_user.get("subscription_tier") not in ["admin", "business"]:
