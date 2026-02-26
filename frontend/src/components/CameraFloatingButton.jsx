@@ -6,6 +6,7 @@ import { Camera, Plus } from "lucide-react";
 /**
  * Floating Camera Button - Instagram style
  * Appears on Feed, Profile, and other main pages
+ * Hidden on mobile (< 768px) since we have MobileBottomNav
  */
 const CameraFloatingButton = () => {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ const CameraFloatingButton = () => {
   return (
     <button
       onClick={() => navigate("/camera")}
-      className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 w-14 h-14 bg-gradient-to-br from-primary to-orange-500 rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform"
+      className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 w-14 h-14 bg-gradient-to-br from-primary to-orange-500 rounded-full shadow-lg items-center justify-center hover:scale-105 transition-transform hidden md:flex"
       data-testid="camera-floating-btn"
     >
       <div className="relative">
