@@ -311,6 +311,21 @@ const MapPage = () => {
           >
             <Layers className="w-5 h-5" />
           </Button>
+          
+          <Button 
+            variant={showOnlineUsers ? "default" : "secondary"}
+            size="icon" 
+            className={`rounded-full shadow-lg ${showOnlineUsers ? '' : 'bg-card/80 backdrop-blur-xl'}`}
+            onClick={() => setShowOnlineUsers(!showOnlineUsers)}
+            title={showOnlineUsers ? "Ocultar usuarios en línea" : "Mostrar usuarios en línea"}
+          >
+            <Users className="w-5 h-5" />
+            {onlineUsers.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                {onlineUsers.length}
+              </span>
+            )}
+          </Button>
         </div>
       </header>
 
