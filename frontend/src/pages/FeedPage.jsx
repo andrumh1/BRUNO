@@ -13,7 +13,7 @@ import ReelsFeed from "@/components/ReelsFeed";
 import { StoriesRow, CreateStoryModal } from "@/components/Stories";
 import NotificationBell from "@/components/NotificationBell";
 import axios from "axios";
-import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag, Home, CreditCard, RefreshCw, MessageCircle, Globe, User, Film, Store } from "lucide-react";
+import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag, Home, CreditCard, RefreshCw, MessageCircle, Globe, User, Film, Store, Map } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
