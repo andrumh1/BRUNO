@@ -45,6 +45,9 @@ import NewProductPage from "@/pages/NewProductPage";
 import NotificationSettingsPage from "@/pages/NotificationSettingsPage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import BrunoCameraPage from "@/pages/BrunoCameraPage";
+import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
+import TermsOfServicePage from "@/pages/TermsOfServicePage";
+import DeleteAccountPage from "@/pages/DeleteAccountPage";
 
 function AppRouter() {
   const location = useLocation();
