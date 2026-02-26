@@ -94,7 +94,7 @@ async def create_product(
     await db.marketplace_products.insert_one(product_doc)
     
     # Return without _id
-    del product_doc["_id"] if "_id" in product_doc else None
+    product_doc.pop("_id", None)
     return product_doc
 
 
