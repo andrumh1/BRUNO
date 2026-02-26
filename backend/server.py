@@ -3863,7 +3863,7 @@ async def share_card_recommendation(
         "id": str(uuid.uuid4()),
         "chat_id": chat_id,
         "sender_id": current_user.id,
-        "content": f"Te comparto esta tarjeta que puede interesarte:",
+        "content": "Te comparto esta tarjeta que puede interesarte:",
         "message_type": "card",
         "attachments": [{
             "type": "card",
