@@ -3,13 +3,13 @@ Compliance Router - Handles account deletion, reports, and data export
 Required for Apple App Store compliance
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
 import os
 
-router = APIRouter(prefix="/api", tags=["compliance"])
+router = APIRouter(tags=["compliance"])
 
 # Database connection will be passed from server.py
 db = None
@@ -17,11 +17,6 @@ db = None
 def set_db(database):
     global db
     db = database
-
-# Get current user helper
-async def get_current_user(token: str):
-    from server import get_current_user as _get_current_user
-    return await _get_current_user(token)
 
 # Models
 class ReportRequest(BaseModel):
@@ -33,6 +28,30 @@ class ReportRequest(BaseModel):
 class DeleteAccountRequest(BaseModel):
     password: str
     confirm_text: str
+
+# Helper to get current user from token
+async def get_current_user_from_token(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    import jwt
+    try:
+        payload = jwt.decode(token, os.environ.get("JWT_SECRET", "super-secret-key"), algorithms=["HS256"])
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        return user
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 # ============================================
 # REPORTS
