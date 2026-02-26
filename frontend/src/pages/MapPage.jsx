@@ -407,6 +407,41 @@ const MapPage = () => {
                   </div>
                 );
               })}
+              
+              {/* Online user markers */}
+              {showOnlineUsers && onlineUsers.map((onlineUser, index) => {
+                // Position users around the center
+                const angle = ((index + 0.5) / (onlineUsers.length + 1)) * 2 * Math.PI;
+                const radius = 20 + (index % 2) * 10;
+                const x = 50 + Math.cos(angle) * radius;
+                const y = 50 + Math.sin(angle) * radius;
+                
+                return (
+                  <div
+                    key={onlineUser.id}
+                    className="absolute z-25 cursor-pointer transition-all hover:scale-110"
+                    style={{
+                      left: `${Math.min(85, Math.max(15, x))}%`,
+                      top: `${Math.min(80, Math.max(20, y))}%`,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                    onClick={() => setSelectedUser(onlineUser)}
+                  >
+                    <div className="relative">
+                      <AvatarWithBadge
+                        src={onlineUser.avatar_url}
+                        name={onlineUser.name}
+                        tier={onlineUser.subscription_tier}
+                        size="md"
+                      />
+                      {/* Online indicator */}
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                        <Radio className="w-2 h-2 text-white animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Map Controls */}
