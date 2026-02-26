@@ -56,42 +56,47 @@ function AppRouter() {
   
   return (
     <Routes>
+      {/* Public routes */}
       <Route path="/" element={<FeedPage />} />
       <Route path="/feed" element={<FeedPage />} />
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/website" element={<BrunoWebsite />} />
       <Route path="/bruno" element={<BrunoWebsite />} />
-      <Route path="/map" element={<MapPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/help" element={<HelpPage />} />
       <Route path="/pricing" element={<PricingPage />} />
-      <Route path="/store" element={<StorePage />} />
-      <Route path="/store/success" element={<StorePage />} />
-      <Route path="/store/cancel" element={<StorePage />} />
-      <Route path="/chat" element={<ChatPage />} />
-      <Route path="/chat/:chatId" element={<ChatPage />} />
-      <Route path="/profile/:userId" element={<UserProfilePage />} />
-      <Route path="/my-profile" element={<MyProfilePage />} />
-      <Route path="/points" element={<PointsPage />} />
-      <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
-      <Route path="/analytics" element={<AnalyticsPage />} />
-      <Route path="/analytics/:cardId" element={<AnalyticsPage />} />
-      <Route path="/camera" element={<BrunoCameraPage />} />
-      <Route path="/marketplace" element={<MarketplacePage />} />
-      <Route path="/marketplace/new" element={<NewProductPage />} />
-      <Route path="/marketplace/my-products" element={<MyProductsPage />} />
-      <Route path="/marketplace/cart" element={<CartPage />} />
-      <Route path="/marketplace/:productId" element={<ProductDetailPage />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/cards/new" element={<CreateCardPage />} />
-      <Route path="/cards/:cardId/edit" element={<EditCardPage />} />
-      <Route path="/cards/:cardId/qr" element={<QRCodePage />} />
       <Route path="/c/:cardId" element={<ViewCardPage />} />
       <Route path="/n/:nfcId" element={<NFCRedirectPage />} />
-      <Route path="/nfc/activate" element={<ActivateNFCPage />} />
-      <Route path="/nfc/write" element={<NFCWritePage />} />
+      <Route path="/marketplace" element={<MarketplacePage />} />
+      <Route path="/marketplace/:productId" element={<ProductDetailPage />} />
+      <Route path="/profile/:userId" element={<UserProfilePage />} />
+      
+      {/* Protected routes */}
+      <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
+      <Route path="/store" element={<ProtectedRoute><StorePage /></ProtectedRoute>} />
+      <Route path="/store/success" element={<ProtectedRoute><StorePage /></ProtectedRoute>} />
+      <Route path="/store/cancel" element={<ProtectedRoute><StorePage /></ProtectedRoute>} />
+      <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+      <Route path="/chat/:chatId" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+      <Route path="/my-profile" element={<ProtectedRoute><MyProfilePage /></ProtectedRoute>} />
+      <Route path="/points" element={<ProtectedRoute><PointsPage /></ProtectedRoute>} />
+      <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettingsPage /></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+      <Route path="/analytics/:cardId" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+      <Route path="/camera" element={<ProtectedRoute><BrunoCameraPage /></ProtectedRoute>} />
+      <Route path="/marketplace/new" element={<ProtectedRoute><NewProductPage /></ProtectedRoute>} />
+      <Route path="/marketplace/my-products" element={<ProtectedRoute><MyProductsPage /></ProtectedRoute>} />
+      <Route path="/marketplace/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/cards/new" element={<ProtectedRoute><CreateCardPage /></ProtectedRoute>} />
+      <Route path="/cards/:cardId/edit" element={<ProtectedRoute><EditCardPage /></ProtectedRoute>} />
+      <Route path="/cards/:cardId/qr" element={<ProtectedRoute><QRCodePage /></ProtectedRoute>} />
+      <Route path="/nfc/activate" element={<ProtectedRoute><ActivateNFCPage /></ProtectedRoute>} />
+      <Route path="/nfc/write" element={<ProtectedRoute><NFCWritePage /></ProtectedRoute>} />
+      
+      {/* Fallback */}
       <Route path="*" element={<FeedPage />} />
     </Routes>
   );
