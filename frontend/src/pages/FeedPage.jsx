@@ -330,6 +330,12 @@ const FeedPage = () => {
                   <Globe className="w-5 h-5" />
                 </Button>
               </Link>
+              {/* Marketplace Icon */}
+              <Link to="/marketplace">
+                <Button variant="ghost" size="icon" className="relative spring-button" title="Marketplace">
+                  <Store className="w-5 h-5" />
+                </Button>
+              </Link>
               {/* Store Icon */}
               <Link to="/store">
                 <Button variant="ghost" size="icon" className="relative spring-button" title="Tienda PIUP">
