@@ -5,113 +5,118 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 ---
 
-## Los 9 Puntos Originales - Estado
+## Los 9 Puntos Originales - TODOS COMPLETADOS ✅
 
-| # | Punto | Estado | Detalles |
-|---|-------|--------|----------|
-| 1 | **Mapa** estilo Snapchat | ✅ COMPLETADO | UI con usuarios en tiempo real vía WebSocket |
-| 2 | **Cards** múltiples vistas | ✅ COMPLETADO | MiniCard, MediumCard, LargeCard, MapMarkerCard |
-| 3 | **Feed** fotos/videos/ubicaciones | ✅ COMPLETADO | Posts con media, Stories 24h, Reels |
-| 4 | **Chat** todos los medios, llamadas | ✅ COMPLETADO | Burbuja flotante, videollamadas, stickers |
-| 5 | **Tienda** NFC + MEOW APP | ✅ COMPLETADO | 36 productos PIUP, unificado con Marketplace |
-| 6 | **BRUNO IA** asistente integrado | ✅ COMPLETADO | Recomendaciones, búsqueda inteligente |
-| 7 | **Usuarios** sesión, seguridad, tour | ✅ COMPLETADO | Auth completo, badges verificación, tour |
-| 8 | **Website** BRUNO.com | ✅ COMPLETADO | Landing page marketing |
-| 9 | **Perfil** posts, reels, cards | ✅ COMPLETADO | Tabs, puntos, estadísticas |
+| # | Punto | Estado |
+|---|-------|--------|
+| 1 | **Mapa** estilo Snapchat | ✅ COMPLETADO |
+| 2 | **Cards** múltiples vistas | ✅ COMPLETADO |
+| 3 | **Feed** fotos/videos/ubicaciones | ✅ COMPLETADO |
+| 4 | **Chat** todos los medios, llamadas | ✅ COMPLETADO |
+| 5 | **Tienda** NFC + MEOW APP | ✅ COMPLETADO |
+| 6 | **BRUNO IA** asistente integrado | ✅ COMPLETADO |
+| 7 | **Usuarios** sesión, seguridad, tour | ✅ COMPLETADO |
+| 8 | **Website** BRUNO.com | ✅ COMPLETADO |
+| 9 | **Perfil** posts, reels, cards | ✅ COMPLETADO |
 
 ---
 
 ## Implementaciones Completadas
 
-### Fase 1 - Core (Completado)
-- Sistema de autenticación JWT + Google OAuth
-- Tarjetas digitales con 8 tipos
-- Tienda PIUP con 36 productos
-- Chat en tiempo real con WebSocket
-- Feed social con posts y media
+### Fase 1-3: Core Features (Completado anteriormente)
+- Auth, Cards, Chat, Feed, Marketplace, Stories, Notificaciones, Chat Flotante
 
-### Fase 2 - Marketplace y Stories (Completado)
-- Marketplace completo con carrito
-- Stories 24h estilo Instagram
-- Card Stories (catálogos permanentes)
-- Bruno IA con recomendaciones
+### Fase 4: Badges, Mapa, Store Router (Completado 2025-02-26)
+- Badges de verificación Pro/Business
+- Store Router modular
+- Mapa con usuarios en tiempo real
 
-### Fase 3 - Notificaciones y Chat Flotante (Completado)
-- 11 tipos de notificaciones (push + email)
-- Chat en burbuja flotante (múltiples chats)
-- Tienda PIUP unificada con Marketplace
-- Integración Resend para emails
+### Fase 5: Analytics, Cámara, Mascota BRUNO (Completado 2025-02-26)
 
-### Fase 4 - Badges, Mapa y Refactoring (Completado 2025-02-26)
+#### 1. Analíticas Avanzadas (Pro/Business)
+- **Backend:** `/app/backend/routers/analytics.py` (400 líneas)
+- **Endpoints:**
+  - `POST /api/analytics/track/card/{id}` - Tracking de vistas (público)
+  - `POST /api/analytics/track/card/{id}/duration` - Duración de visita
+  - `POST /api/analytics/track/post/{id}` - Tracking de posts
+  - `GET /api/analytics/overview` - Dashboard general (Pro/Business)
+  - `GET /api/analytics/cards/{id}` - Analytics por tarjeta (Pro/Business)
+  - `GET /api/analytics/recent-visitors/{id}` - Visitantes (Business)
+  - `GET /api/analytics/export/{id}` - Exportar CSV (Business)
+- **Métricas:**
+  - Vistas totales, únicas, hoy, semana, mes
+  - Top ubicaciones geográficas
+  - Fuentes de tráfico (referrers)
+  - Tiempo promedio de visita
+  - Visitantes recurrentes
+  - Gráfico de vistas por día (30 días)
+- **Frontend:** `/app/frontend/src/pages/AnalyticsPage.jsx`
 
-#### Badges de Verificación
-- **Componente:** `/app/frontend/src/components/VerifiedBadge.jsx`
-- **Tiers:** Free, Pro (⭐), Business (👑)
-- **Componentes:** VerifiedIcon, VerifiedBadge, InlineVerifiedBadge, AvatarWithBadge, TierSelector
-- **Integración:** Posts, Perfil, Chat, Mapa
+#### 2. Cámara BRUNO con Editor
+- **Archivo:** `/app/frontend/src/pages/BrunoCameraPage.jsx` (631 líneas)
+- **Características:**
+  - Captura de foto y video
+  - Cambio de cámara frontal/trasera
+  - **10 Filtros:** Original, BRUNO, Atardecer, Fresco, Cálido, Vintage, B&N, Vívido, Desvanecido, Drama
+  - **Stickers:** Mascota BRUNO + 9 emojis populares
+  - **Editor de texto:** 5 estilos (Normal, Negrita, Cursiva, Mono, Serif) + 10 colores
+  - **Ajustes:** Brillo y contraste con sliders
+  - **Publicación:** Directa al feed con caption
+- **Botón Flotante:** `/app/frontend/src/components/CameraFloatingButton.jsx`
+  - Estilo Instagram (centro inferior)
+  - Visible en Feed, Perfil, Dashboard para usuarios logueados
 
-#### Store Router Modular
-- **Archivo:** `/app/backend/routers/store.py` (429 líneas)
-- **Productos:** 36 items PIUP
-- **Suscripciones:** GET/POST subscription management
-- **Pedidos:** CRUD con cálculo de envío/impuestos
-- **Stripe:** Integración preparada
+#### 3. Mascota BRUNO IA
+- **Imagen:** `/app/frontend/public/bruno-mascot.webp` (134KB)
+- **Componentes:** `/app/frontend/src/components/BrunoMascot.jsx` (369 líneas)
+  - `BrunoAvatar` - Avatar con moods (default, thinking, happy, helpful, greeting, success, loading)
+  - `BrunoLoading` - Pantalla de carga con mascota
+  - `BrunoEmptyState` - Estado vacío con mascota
+  - `BrunoGreeting` - Saludo personalizado
+  - `BrunoTip` - Tips/consejos con mascota
+  - `BrunoQuickActions` - Acciones rápidas
+  - `BrunoFloatingButton` - Botón flotante mejorado
+- **Integración:** Header de cámara, chat IA, loading screens
 
-#### Mapa con Usuarios en Tiempo Real
-- **Archivo:** `/app/frontend/src/pages/MapPage.jsx` (701 líneas)
-- **WebSocket:** `/ws/map/{token}` para ubicaciones
-- **Funcionalidades:**
-  - Tarjetas cercanas con distancia
-  - Usuarios en línea con badges
-  - Búsqueda y filtros
-  - Controles de zoom
-  - "Cómo llegar" integrado
-
-#### Email con Resend
-- **Archivo:** `/app/backend/routers/notifications.py`
-- **Template:** HTML profesional con branding BRUNO
-- **Preferencias:** Opcionales por tipo de notificación
+#### 4. Navegación Mejorada
+- **Mapa en Feed:** Ícono de mapa añadido al header de FeedPage
+- **Rutas nuevas:** `/camera`, `/analytics`, `/analytics/:cardId`
 
 ---
 
 ## API Endpoints Completos
 
 ### Auth
-- `POST /api/auth/register`, `/login`, `/logout`
-- `GET /api/auth/me`, `PUT /api/auth/me`
-- `POST /api/auth/google`
+- `/api/auth/register`, `/login`, `/logout`, `/me`, `/google`
 
-### Store (NUEVO)
+### Analytics (NUEVO)
+- `POST /api/analytics/track/card/{id}` - Público
+- `POST /api/analytics/track/card/{id}/duration` - Público
+- `POST /api/analytics/track/post/{id}` - Público
+- `GET /api/analytics/overview` - Pro/Business
+- `GET /api/analytics/cards/{id}` - Pro/Business
+- `GET /api/analytics/recent-visitors/{id}` - Business
+- `GET /api/analytics/export/{id}` - Business
+
+### Store
 - `GET /api/store/products` - 36 productos PIUP
-- `GET /api/store/products/{id}`
-- `GET /api/store/subscription` - Tier actual
-- `POST /api/store/subscribe/{tier}` - Actualizar tier
+- `GET /api/store/subscription` - Estado suscripción
+- `POST /api/store/subscribe/{tier}` - Suscribirse
 - `POST /api/store/orders` - Crear pedido
-- `GET /api/store/orders` - Mis pedidos
-- `POST /api/store/checkout/{order_id}` - Stripe checkout
 
 ### Notifications
 - `GET /api/notifications/types` - 11 tipos
 - `GET/PUT /api/notifications/preferences` - Push + Email
 - `GET /api/notifications/unread-count`
-- `GET /api/notifications/recent`
-- `POST /api/notifications/mark-read/{id}`
-- `POST /api/notifications/mark-all-read`
 
 ### Marketplace
-- `GET /api/marketplace/categories`
 - CRUD `/api/marketplace/products`
 - `/api/marketplace/cart/*`
-- `/api/marketplace/my-products`
 
 ### Stories
 - `POST /api/stories/` - Stories 24h
 - `GET /api/stories/feed`
 - `POST /api/stories/card` - Card Stories
-
-### AI
-- `POST /api/ai/recommend` - Búsqueda inteligente
-- `GET /api/ai/share-card/{id}`
 
 ### WebSockets
 - `/ws/chat/{token}` - Chat en tiempo real
@@ -122,34 +127,31 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 ## Archivos Clave
 
 ### Backend Routers
+- `/app/backend/routers/analytics.py` - 400 líneas
 - `/app/backend/routers/store.py` - 429 líneas
 - `/app/backend/routers/notifications.py` - 438 líneas
 - `/app/backend/routers/marketplace.py` - 416 líneas
-- `/app/backend/routers/stories.py`
-- `/app/backend/routers/points.py`
-
-### Frontend Components
-- `/app/frontend/src/components/VerifiedBadge.jsx` - 263 líneas
-- `/app/frontend/src/components/FloatingChatBubble.jsx` - 603 líneas
-- `/app/frontend/src/components/NotificationBell.jsx`
-- `/app/frontend/src/components/Stories.jsx`
 
 ### Frontend Pages
+- `/app/frontend/src/pages/BrunoCameraPage.jsx` - 631 líneas
+- `/app/frontend/src/pages/AnalyticsPage.jsx` - 358 líneas
 - `/app/frontend/src/pages/MapPage.jsx` - 701 líneas
-- `/app/frontend/src/pages/MarketplacePage.jsx`
-- `/app/frontend/src/pages/FeedPage.jsx`
-- `/app/frontend/src/pages/MyProfilePage.jsx`
+
+### Frontend Components
+- `/app/frontend/src/components/BrunoMascot.jsx` - 369 líneas
+- `/app/frontend/src/components/VerifiedBadge.jsx` - 263 líneas
+- `/app/frontend/src/components/FloatingChatBubble.jsx` - 603 líneas
+- `/app/frontend/src/components/CameraFloatingButton.jsx` - 39 líneas
+
+### Assets
+- `/app/frontend/public/bruno-mascot.webp` - Mascota oficial
 
 ---
 
-## Test Credentials
-- **User 1:** `newtest@bruno.com` / `Test1234!`
-- **User 2:** `chattest2@bruno.com` / `Test1234!`
-
 ## Test Reports
+- `/app/test_reports/iteration_18.json` - Analytics, Cámara, Mascota (100%)
 - `/app/test_reports/iteration_17.json` - Badges, Store, Mapa (100%)
 - `/app/test_reports/iteration_16.json` - Notificaciones, Chat (100%)
-- `/app/test_reports/iteration_15.json` - Marketplace, Stories (100%)
 
 ---
 
@@ -157,18 +159,20 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 ### P0 - Alta Prioridad
 - [ ] Agregar RESEND_API_KEY para emails reales
-- [ ] Implementar pagos reales con Stripe
 - [ ] Push notifications reales con pywebpush
+- [ ] Integrar pagos Stripe completos
 
 ### P1 - Media Prioridad
+- [ ] Encuestas en Stories (estilo Instagram)
+- [ ] Reacciones animadas en posts
+- [ ] Duetos (responder videos)
 - [ ] Posts con ubicación geográfica
-- [ ] Templates de Cards editables desde UI
-- [ ] Completar refactoring de server.py
 
 ### P2 - Baja Prioridad
-- [ ] Features exclusivas por tier (Pro/Business)
-- [ ] Acciones del BRUNO IA para crear/editar tarjetas
-- [ ] Integración de realidad aumentada
+- [ ] Features exclusivas por tier detalladas
+- [ ] Modo privado temporal
+- [ ] "Cerca de ti" mejorado
+- [ ] AR para productos
 
 ---
 
@@ -176,11 +180,10 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - **OpenAI GPT-5.2:** Text Generation (Emergent LLM Key) ✅
 - **Daily.co:** Video/Audio Calls (MOCKED)
 - **Cloudinary:** Image/File Storage ✅
-- **Stripe:** Payments (prepared, key available)
+- **Stripe:** Payments (prepared)
 - **Emergent Google Auth:** Social Login ✅
-- **Resend:** Email (MOCKED - needs API key)
-- **Web Push:** (MOCKED - needs pywebpush)
+- **Resend:** Email (prepared - needs API key)
 
 ---
 
-*Last Updated: 2025-02-26 - Los 9 puntos COMPLETADOS. Badges, Store refactored, Mapa con usuarios en tiempo real.*
+*Last Updated: 2025-02-26 - Analytics Pro/Business, Cámara BRUNO con editor, Mascota BRUNO como avatar IA*
