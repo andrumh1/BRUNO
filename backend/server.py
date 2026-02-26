@@ -714,6 +714,46 @@ async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCrede
     except HTTPException:
         return None
 
+
+async def get_current_user_from_token(token: str) -> Optional[User]:
+    """Get current user from a token string directly (for WebSocket endpoints)"""
+    if not token:
+        return None
+    
+    try:
+        # Try JWT token first
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email:
+            user_dict = await db.users.find_one({"email": email}, {"_id": 0})
+            if user_dict:
+                if isinstance(user_dict.get('created_at'), str):
+                    user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
+                return User(**user_dict)
+    except JWTError:
+        pass
+    
+    # Try as session_token
+    session_doc = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+    if session_doc:
+        expires_at = session_doc["expires_at"]
+        if isinstance(expires_at, str):
+            expires_at = datetime.fromisoformat(expires_at)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        
+        now = datetime.now(timezone.utc)
+        if now > expires_at:
+            return None
+        
+        user_dict = await db.users.find_one({"id": session_doc["user_id"]}, {"_id": 0})
+        if user_dict:
+            if isinstance(user_dict.get('created_at'), str):
+                user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
+            return User(**user_dict)
+    
+    return None
+
 async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> User:
     """Get current user from JWT token or session_token cookie"""
     from fastapi import Request
