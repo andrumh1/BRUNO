@@ -82,6 +82,61 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - **Mapa en Feed:** Ícono de mapa añadido al header de FeedPage
 - **Rutas nuevas:** `/camera`, `/analytics`, `/analytics/:cardId`
 
+### Fase 6: Cumplimiento y Navegación Móvil (Completado 2025-02-26)
+
+#### 1. Navegación Móvil Estilo Instagram/Facebook
+- **Archivo:** `/app/frontend/src/components/MobileBottomNav.jsx`
+- **Características:**
+  - Barra inferior fija visible solo en móvil (<768px)
+  - 5 íconos: Inicio, Reels, Crear (destacado), Mapa, Perfil
+  - Avatar del usuario en el ícono de Perfil
+  - Safe area padding para iOS
+- **CSS:** `hidden md:hidden` para ocultar en desktop
+
+#### 2. Política de Privacidad (PÚBLICO - Requerido App Store)
+- **Archivo:** `/app/frontend/src/pages/PrivacyPolicyPage.jsx`
+- **Ruta:** `/privacy` (sin login requerido)
+- **Secciones:** Introducción, Datos Recopilados, Uso de Datos, Compartir, Derechos del Usuario, Retención, Seguridad, GDPR/CCPA
+
+#### 3. Términos de Servicio (PÚBLICO - Requerido App Store)
+- **Archivo:** `/app/frontend/src/pages/TermsOfServicePage.jsx`
+- **Ruta:** `/terms` (sin login requerido)
+- **Secciones:** Aceptación, Descripción del Servicio, Cuentas, Contenido Prohibido, Moderación, Propiedad Intelectual
+
+#### 4. Sistema de Eliminación de Cuenta (Requerido por Apple)
+- **Frontend:** `/app/frontend/src/pages/DeleteAccountPage.jsx`
+- **Ruta:** `/settings/delete-account` (protegida)
+- **Características:**
+  - Advertencia de acción irreversible
+  - Lista de datos que se eliminarán
+  - Opción de descargar datos antes de eliminar
+  - Confirmación en 2 pasos con texto "ELIMINAR MI CUENTA"
+  - Verificación de contraseña
+
+#### 5. Sistema de Reportar Contenido
+- **Frontend:** `/app/frontend/src/components/ReportContentModal.jsx`
+- **Tipos de contenido:** post, user, comment, product, message
+- **Razones:** spam, harassment, hate_speech, violence, sexual_content, misinformation, impersonation, intellectual_property, illegal_activity, other
+
+#### 6. API de Cumplimiento (Backend)
+- **Archivo:** `/app/backend/routers/compliance.py`
+- **Endpoints:**
+  - `POST /api/reports` - Crear reporte de contenido
+  - `GET /api/reports/my` - Ver reportes del usuario
+  - `GET /api/profile/export` - Exportar datos del usuario (GDPR)
+  - `DELETE /api/profile/delete-account` - Eliminar cuenta permanentemente
+  - `GET /api/admin/reports` - Reportes pendientes (Admin)
+  - `PUT /api/admin/reports/{id}` - Actualizar estado de reporte (Admin)
+
+#### 7. Mapa con Leaflet Real
+- **Archivo:** `/app/frontend/src/pages/MapPage.jsx` (refactorizado)
+- **Cambios:**
+  - Reemplazó gradientes CSS por mapa interactivo real
+  - Usa OpenStreetMap tiles (gratuito, sin API key)
+  - Marcadores personalizados para tarjetas y usuarios
+  - Cálculo de distancia con fórmula Haversine
+  - Navegación a Google Maps/Apple Maps
+
 ---
 
 ## API Endpoints Completos
