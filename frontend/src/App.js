@@ -71,6 +71,8 @@ function AppRouter() {
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/help" element={<HelpPage />} />
       <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms" element={<TermsOfServicePage />} />
       <Route path="/c/:cardId" element={<ViewCardPage />} />
       <Route path="/n/:nfcId" element={<NFCRedirectPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />
