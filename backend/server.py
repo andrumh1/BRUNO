@@ -4459,11 +4459,13 @@ from routers.points import router as points_router
 from routers.marketplace import router as marketplace_router
 from routers.stories import router as stories_router
 from routers.store import router as store_router
+from routers.analytics import router as analytics_router
 api_router.include_router(notifications_router)
 api_router.include_router(points_router)
 api_router.include_router(marketplace_router)
 api_router.include_router(stories_router)
 api_router.include_router(store_router)
+api_router.include_router(analytics_router)
 
 # Then include api_router in app
 app.include_router(api_router)
