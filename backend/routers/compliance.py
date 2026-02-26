@@ -83,8 +83,8 @@ async def create_report(
     
     return {"success": True, "report_id": str(result.inserted_id)}
 
-@router.get("/reports/my")
-async def get_my_reports(current_user: dict = Depends(get_current_user)):
+@router.get("/api/reports/my")
+async def get_my_reports(current_user: dict = Depends(get_current_user_from_token)):
     """Get user's submitted reports"""
     if not db:
         raise HTTPException(status_code=500, detail="Database not configured")
