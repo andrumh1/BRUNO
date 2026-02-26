@@ -33,6 +33,11 @@ import UserProfilePage from "@/pages/UserProfilePage";
 import MyProfilePage from "@/pages/MyProfilePage";
 import PointsPage from "@/pages/PointsPage";
 import BrunoWebsite from "@/pages/BrunoWebsite";
+import MarketplacePage from "@/pages/MarketplacePage";
+import ProductDetailPage from "@/pages/ProductDetailPage";
+import CartPage from "@/pages/CartPage";
+import MyProductsPage from "@/pages/MyProductsPage";
+import NewProductPage from "@/pages/NewProductPage";
 
 function AppRouter() {
   const location = useLocation();
