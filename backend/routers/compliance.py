@@ -199,8 +199,8 @@ async def delete_account(
 # DATA EXPORT
 # ============================================
 
-@router.get("/profile/export")
-async def export_user_data(current_user: dict = Depends(get_current_user)):
+@router.get("/api/profile/export")
+async def export_user_data(current_user: dict = Depends(get_current_user_from_token)):
     """Export all user data - GDPR compliance"""
     if not db:
         raise HTTPException(status_code=500, detail="Database not configured")
