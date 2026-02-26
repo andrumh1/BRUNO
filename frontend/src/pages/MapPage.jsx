@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { MiniCard, MapMarkerCard } from "@/components/CardVariants";
 import { AvatarWithBadge } from "@/components/VerifiedBadge";
 import axios from "axios";
 import { 
@@ -16,24 +18,92 @@ import {
   Layers,
   ZoomIn,
   ZoomOut,
-  Route,
   X,
   MessageCircle,
   Eye,
   Users,
   Radio,
-  Wifi
+  Wifi,
+  Route
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
 
+// Fix Leaflet default marker icon issue
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom marker icons
+const createCustomIcon = (color, size = 30) => {
+  return L.divIcon({
+    className: 'custom-marker',
+    html: `<div style="
+      width: ${size}px; 
+      height: ${size}px; 
+      background-color: ${color}; 
+      border-radius: 50% 50% 50% 0; 
+      transform: rotate(-45deg);
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    "></div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size],
+  });
+};
+
+const userIcon = L.divIcon({
+  className: 'user-marker',
+  html: `<div style="
+    width: 20px; 
+    height: 20px; 
+    background-color: #3B82F6; 
+    border-radius: 50%;
+    border: 4px solid white;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.3), 0 2px 8px rgba(0,0,0,0.3);
+  "></div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+});
+
+const onlineUserIcon = (avatarUrl, name) => L.divIcon({
+  className: 'online-user-marker',
+  html: `<div style="
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid #22C55E;
+    background: ${avatarUrl ? `url(${avatarUrl}) center/cover` : '#6B7280'};
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+  ">${!avatarUrl ? name?.charAt(0) || '?' : ''}</div>`,
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+});
+
+// Component to recenter map
+function RecenterMap({ center }) {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, map]);
+  return null;
+}
+
 const MapPage = () => {
   const navigate = useNavigate();
-  const { token, user } = useAuth();
-  const mapRef = useRef(null);
-  const mapInstanceRef = useRef(null);
+  const { token, user, loading: authLoading } = useAuth();
   
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +112,7 @@ const MapPage = () => {
   const [distance, setDistance] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCardList, setShowCardList] = useState(false);
-  const [mapStyle, setMapStyle] = useState("streets");
+  const [mapCenter, setMapCenter] = useState([19.4326, -99.1332]); // Default: Mexico City
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [showOnlineUsers, setShowOnlineUsers] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -52,13 +122,14 @@ const MapPage = () => {
   // Get user's current location and watch for updates
   useEffect(() => {
     if (navigator.geolocation) {
-      // Get initial location
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setUserLocation({
+          const loc = {
             lat: position.coords.latitude,
             lng: position.coords.longitude
-          });
+          };
+          setUserLocation(loc);
+          setMapCenter([loc.lat, loc.lng]);
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -66,7 +137,6 @@ const MapPage = () => {
         { enableHighAccuracy: true }
       );
       
-      // Watch for location updates
       locationWatchRef.current = navigator.geolocation.watchPosition(
         (position) => {
           const newLocation = {
@@ -75,7 +145,6 @@ const MapPage = () => {
           };
           setUserLocation(newLocation);
           
-          // Send location update to WebSocket
           if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
             wsRef.current.send(JSON.stringify({
               action: "location_update",
@@ -107,7 +176,6 @@ const MapPage = () => {
           console.log("Map WebSocket connected");
           wsRef.current = ws;
           
-          // Send initial location
           if (userLocation) {
             ws.send(JSON.stringify({
               action: "location_update",
@@ -159,12 +227,14 @@ const MapPage = () => {
 
   // Fetch cards with location
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!user || !token) {
       navigate("/login");
       return;
     }
     fetchCards();
-  }, [user, token, navigate]);
+  }, [user, token, navigate, authLoading]);
 
   const fetchCards = async () => {
     try {
@@ -175,7 +245,6 @@ const MapPage = () => {
       setCards(cardsWithLocation);
     } catch (error) {
       console.error("Error fetching cards:", error);
-      // Fallback to user's own cards
       try {
         const response = await axios.get(`${API}/cards`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -192,7 +261,7 @@ const MapPage = () => {
 
   // Calculate distance between two points (Haversine formula)
   const calculateDistance = useCallback((lat1, lng1, lat2, lng2) => {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
     const a = 
@@ -290,22 +359,34 @@ const MapPage = () => {
 
   // Center map on user location
   const centerOnUser = () => {
-    if (userLocation && mapInstanceRef.current) {
-      mapInstanceRef.current.setCenter([userLocation.lng, userLocation.lat]);
-      mapInstanceRef.current.setZoom(15);
+    if (userLocation) {
+      setMapCenter([userLocation.lat, userLocation.lng]);
     }
   };
+
+  // Loading state
+  if (loading || authLoading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Cargando mapa...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen w-full flex flex-col bg-background overflow-hidden">
       {/* Header - Snapchat style */}
-      <header className="absolute top-0 left-0 right-0 z-20 p-4 pointer-events-none">
+      <header className="absolute top-0 left-0 right-0 z-[1000] p-4 pointer-events-none">
         <div className="flex items-center justify-between pointer-events-auto">
           <Button 
             variant="secondary" 
             size="icon" 
-            className="rounded-full shadow-lg bg-card/80 backdrop-blur-xl"
+            className="rounded-full shadow-lg bg-card/90 backdrop-blur-xl"
             onClick={() => navigate("/dashboard")}
+            data-testid="map-back-btn"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
@@ -317,7 +398,8 @@ const MapPage = () => {
                 placeholder="Buscar tarjetas..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 rounded-full bg-card/80 backdrop-blur-xl border-0 shadow-lg"
+                className="pl-10 rounded-full bg-card/90 backdrop-blur-xl border-0 shadow-lg"
+                data-testid="map-search-input"
               />
             </div>
           </div>
@@ -325,8 +407,9 @@ const MapPage = () => {
           <Button 
             variant="secondary" 
             size="icon" 
-            className="rounded-full shadow-lg bg-card/80 backdrop-blur-xl"
+            className="rounded-full shadow-lg bg-card/90 backdrop-blur-xl"
             onClick={() => setShowCardList(!showCardList)}
+            data-testid="map-layers-btn"
           >
             <Layers className="w-5 h-5" />
           </Button>
@@ -334,9 +417,10 @@ const MapPage = () => {
           <Button 
             variant={showOnlineUsers ? "default" : "secondary"}
             size="icon" 
-            className={`rounded-full shadow-lg ${showOnlineUsers ? '' : 'bg-card/80 backdrop-blur-xl'}`}
+            className={`rounded-full shadow-lg ml-2 relative ${showOnlineUsers ? '' : 'bg-card/90 backdrop-blur-xl'}`}
             onClick={() => setShowOnlineUsers(!showOnlineUsers)}
             title={showOnlineUsers ? "Ocultar usuarios en línea" : "Mostrar usuarios en línea"}
+            data-testid="map-users-btn"
           >
             <Users className="w-5 h-5" />
             {onlineUsers.length > 0 && (
@@ -350,171 +434,181 @@ const MapPage = () => {
 
       {/* Map Container */}
       <div className="flex-1 relative">
-        {loading ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted">
-            <div className="text-center">
-              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-muted-foreground">Cargando mapa...</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Visual Map Representation */}
-            <div 
-              ref={mapRef}
-              className="absolute inset-0 bg-gradient-to-b from-blue-100 to-green-100"
-              style={{
-                backgroundImage: `
-                  radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 70%, rgba(34, 197, 94, 0.1) 0%, transparent 50%)
-                `
-              }}
-            >
-              {/* Grid overlay for map feel */}
-              <div 
-                className="absolute inset-0 opacity-20"
-                style={{
-                  backgroundImage: `
-                    linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)
-                  `,
-                  backgroundSize: '50px 50px'
+        <MapContainer 
+          center={mapCenter} 
+          zoom={13} 
+          style={{ height: '100%', width: '100%' }}
+          zoomControl={false}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          
+          <RecenterMap center={mapCenter} />
+          
+          {/* User location marker with accuracy circle */}
+          {userLocation && (
+            <>
+              <Circle
+                center={[userLocation.lat, userLocation.lng]}
+                radius={100}
+                pathOptions={{ 
+                  color: '#3B82F6', 
+                  fillColor: '#3B82F6', 
+                  fillOpacity: 0.1,
+                  weight: 2
                 }}
               />
-              
-              {/* User location marker */}
-              {userLocation && (
-                <div 
-                  className="absolute z-30"
-                  style={{
-                    left: '50%',
-                    top: '50%',
-                    transform: 'translate(-50%, -50%)'
-                  }}
-                >
-                  <div className="relative">
-                    <div className="w-6 h-6 bg-blue-500 rounded-full border-3 border-white shadow-lg animate-pulse" />
-                    <div className="absolute inset-0 bg-blue-500/30 rounded-full animate-ping" />
+              <Marker 
+                position={[userLocation.lat, userLocation.lng]} 
+                icon={userIcon}
+              >
+                <Popup>
+                  <div className="text-center">
+                    <strong>Tu ubicación</strong>
                   </div>
-                </div>
-              )}
-              
-              {/* Card markers - distributed around the map */}
-              {filteredCards.map((card, index) => {
-                // Calculate position based on card location relative to center
-                const angle = (index / filteredCards.length) * 2 * Math.PI;
-                const radius = 30 + (index % 3) * 15; // Vary radius
-                const x = 50 + Math.cos(angle) * radius;
-                const y = 50 + Math.sin(angle) * radius;
-                
-                return (
-                  <div
-                    key={card.id}
-                    className="absolute z-20 cursor-pointer"
-                    style={{
-                      left: `${Math.min(90, Math.max(10, x))}%`,
-                      top: `${Math.min(85, Math.max(15, y))}%`,
-                      transform: 'translate(-50%, -50%)'
-                    }}
-                    onClick={() => setSelectedCard(card)}
-                  >
-                    <MapMarkerCard 
-                      card={card} 
-                      isSelected={selectedCard?.id === card.id}
-                      onClick={() => setSelectedCard(card)}
-                    />
-                  </div>
-                );
-              })}
-              
-              {/* Online user markers */}
-              {showOnlineUsers && onlineUsers.map((onlineUser, index) => {
-                // Position users around the center
-                const angle = ((index + 0.5) / (onlineUsers.length + 1)) * 2 * Math.PI;
-                const radius = 20 + (index % 2) * 10;
-                const x = 50 + Math.cos(angle) * radius;
-                const y = 50 + Math.sin(angle) * radius;
-                
-                return (
-                  <div
-                    key={onlineUser.id}
-                    className="absolute z-25 cursor-pointer transition-all hover:scale-110"
-                    style={{
-                      left: `${Math.min(85, Math.max(15, x))}%`,
-                      top: `${Math.min(80, Math.max(20, y))}%`,
-                      transform: 'translate(-50%, -50%)'
-                    }}
-                    onClick={() => setSelectedUser(onlineUser)}
-                  >
-                    <div className="relative">
-                      <AvatarWithBadge
-                        src={onlineUser.avatar_url}
-                        name={onlineUser.name}
-                        tier={onlineUser.subscription_tier}
-                        size="md"
+                </Popup>
+              </Marker>
+            </>
+          )}
+          
+          {/* Card markers */}
+          {filteredCards.map((card) => (
+            <Marker
+              key={card.id}
+              position={[card.location.lat, card.location.lng]}
+              icon={createCustomIcon(card.background_color || '#FF6B35')}
+              eventHandlers={{
+                click: () => {
+                  setSelectedCard(card);
+                  setSelectedUser(null);
+                },
+              }}
+            >
+              <Popup>
+                <div className="min-w-[200px]">
+                  <div className="flex items-center gap-2 mb-2">
+                    {card.avatar_url ? (
+                      <img 
+                        src={card.avatar_url} 
+                        alt={card.title}
+                        className="w-10 h-10 rounded-lg object-cover"
                       />
-                      {/* Online indicator */}
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                        <Radio className="w-2 h-2 text-white animate-pulse" />
+                    ) : (
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                        style={{ backgroundColor: card.background_color || '#FF6B35' }}
+                      >
+                        {card.title?.charAt(0) || '?'}
                       </div>
+                    )}
+                    <div>
+                      <p className="font-semibold text-sm">{card.title}</p>
+                      {card.subtitle && (
+                        <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                  {card.location?.place_name && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {card.location.place_name}
+                    </p>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+          
+          {/* Online user markers */}
+          {showOnlineUsers && onlineUsers.map((onlineUser) => (
+            onlineUser.location && (
+              <Marker
+                key={onlineUser.id}
+                position={[onlineUser.location.lat, onlineUser.location.lng]}
+                icon={onlineUserIcon(onlineUser.avatar_url, onlineUser.name)}
+                eventHandlers={{
+                  click: () => {
+                    setSelectedUser(onlineUser);
+                    setSelectedCard(null);
+                  },
+                }}
+              >
+                <Popup>
+                  <div className="text-center">
+                    <strong>{onlineUser.name}</strong>
+                    <p className="text-xs text-green-500 flex items-center gap-1 justify-center mt-1">
+                      <Wifi className="w-3 h-3" /> En línea
+                    </p>
+                  </div>
+                </Popup>
+              </Marker>
+            )
+          ))}
+        </MapContainer>
 
-            {/* Map Controls */}
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2">
-              <Button 
-                variant="secondary" 
-                size="icon" 
-                className="rounded-full shadow-lg bg-card/80 backdrop-blur-xl"
-                onClick={centerOnUser}
-              >
-                <Crosshair className="w-5 h-5" />
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="icon" 
-                className="rounded-full shadow-lg bg-card/80 backdrop-blur-xl"
-              >
-                <ZoomIn className="w-5 h-5" />
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="icon" 
-                className="rounded-full shadow-lg bg-card/80 backdrop-blur-xl"
-              >
-                <ZoomOut className="w-5 h-5" />
-              </Button>
-            </div>
-          </>
-        )}
+        {/* Map Controls */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-2">
+          <Button 
+            variant="secondary" 
+            size="icon" 
+            className="rounded-full shadow-lg bg-card/90 backdrop-blur-xl"
+            onClick={centerOnUser}
+            data-testid="map-center-btn"
+          >
+            <Crosshair className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Card List Drawer */}
       {showCardList && (
-        <div className="absolute inset-x-0 bottom-0 z-30 max-h-[60vh] bg-card rounded-t-3xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300">
+        <div className="absolute inset-x-0 bottom-0 z-[1001] max-h-[60vh] bg-card rounded-t-3xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300">
           <div className="p-4">
             <div className="w-12 h-1 bg-muted rounded-full mx-auto mb-4" />
             <h3 className="font-bold mb-4">{filteredCards.length} tarjetas con ubicación</h3>
             <div className="space-y-2 max-h-[40vh] overflow-y-auto">
               {filteredCards.map((card) => (
-                <MiniCard
+                <div
                   key={card.id}
-                  card={card}
+                  className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl cursor-pointer hover:bg-muted transition-colors"
                   onClick={() => {
                     setSelectedCard(card);
                     setShowCardList(false);
+                    if (card.location) {
+                      setMapCenter([card.location.lat, card.location.lng]);
+                    }
                   }}
-                  showDistance={!!userLocation}
-                  distance={userLocation ? calculateDistance(
-                    userLocation.lat,
-                    userLocation.lng,
-                    card.location.lat,
-                    card.location.lng
-                  ) : null}
-                />
+                  data-testid={`card-list-item-${card.id}`}
+                >
+                  {card.avatar_url ? (
+                    <img 
+                      src={card.avatar_url} 
+                      alt={card.title}
+                      className="w-12 h-12 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div 
+                      className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold"
+                      style={{ backgroundColor: card.background_color || '#FF6B35' }}
+                    >
+                      {card.title?.charAt(0) || '?'}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{card.title}</p>
+                    {card.subtitle && (
+                      <p className="text-sm text-muted-foreground truncate">{card.subtitle}</p>
+                    )}
+                    {userLocation && card.location && (
+                      <p className="text-xs text-primary">
+                        {calculateDistance(userLocation.lat, userLocation.lng, card.location.lat, card.location.lng)}
+                      </p>
+                    )}
+                  </div>
+                  <MapPin className="w-5 h-5 text-muted-foreground" />
+                </div>
               ))}
             </div>
           </div>
@@ -523,22 +617,21 @@ const MapPage = () => {
 
       {/* Selected Card Detail */}
       {selectedCard && !showCardList && !selectedUser && (
-        <div className="absolute inset-x-0 bottom-0 z-30 bg-card rounded-t-3xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300">
+        <div className="absolute inset-x-0 bottom-0 z-[1001] bg-card rounded-t-3xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300">
           <div className="p-4">
             <div className="w-12 h-1 bg-muted rounded-full mx-auto mb-4" />
             
-            {/* Close button */}
             <Button
               variant="ghost"
               size="icon"
               className="absolute top-2 right-2"
               onClick={() => setSelectedCard(null)}
+              data-testid="close-card-detail"
             >
               <X className="w-5 h-5" />
             </Button>
             
             <div className="flex gap-4">
-              {/* Avatar */}
               {selectedCard.avatar_url ? (
                 <img 
                   src={selectedCard.avatar_url} 
@@ -548,27 +641,24 @@ const MapPage = () => {
                 />
               ) : (
                 <div 
-                  className="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-bold"
-                  style={{ backgroundColor: selectedCard.background_color, color: selectedCard.text_color }}
+                  className="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-bold text-white"
+                  style={{ backgroundColor: selectedCard.background_color || '#FF6B35' }}
                 >
                   {selectedCard.title?.charAt(0) || "?"}
                 </div>
               )}
               
-              {/* Info */}
               <div className="flex-1 min-w-0">
                 <h3 className="font-bold text-lg truncate">{selectedCard.title}</h3>
                 {selectedCard.subtitle && (
                   <p className="text-sm text-muted-foreground truncate">{selectedCard.subtitle}</p>
                 )}
                 
-                {/* Location */}
                 <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                   <MapPin className="w-4 h-4" />
-                  <span className="truncate">{selectedCard.location?.place_name}</span>
+                  <span className="truncate">{selectedCard.location?.place_name || 'Ubicación'}</span>
                 </div>
                 
-                {/* Distance */}
                 {distance && (
                   <div className="inline-flex items-center gap-1 mt-2 px-3 py-1 bg-primary/10 rounded-full text-sm font-medium text-primary">
                     <Route className="w-4 h-4" />
@@ -578,12 +668,12 @@ const MapPage = () => {
               </div>
             </div>
             
-            {/* Actions */}
             <div className="flex gap-3 mt-4">
               <Button 
                 className="flex-1"
-                style={{ backgroundColor: selectedCard.background_color }}
+                style={{ backgroundColor: selectedCard.background_color || '#FF6B35' }}
                 onClick={() => openDirections(selectedCard)}
+                data-testid="card-directions-btn"
               >
                 <Navigation className="w-4 h-4 mr-2" />
                 Cómo llegar
@@ -592,6 +682,7 @@ const MapPage = () => {
                 variant="outline"
                 className="flex-1"
                 onClick={() => startChat(selectedCard)}
+                data-testid="card-chat-btn"
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Chat
@@ -599,6 +690,7 @@ const MapPage = () => {
               <Button 
                 variant="ghost"
                 onClick={() => navigate(`/c/${selectedCard.id}`)}
+                data-testid="card-view-btn"
               >
                 <Eye className="w-4 h-4" />
               </Button>
@@ -609,7 +701,7 @@ const MapPage = () => {
 
       {/* Selected Online User Detail */}
       {selectedUser && !showCardList && (
-        <div className="absolute inset-x-0 bottom-0 z-30 bg-card rounded-t-3xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300">
+        <div className="absolute inset-x-0 bottom-0 z-[1001] bg-card rounded-t-3xl shadow-2xl border-t border-border animate-in slide-in-from-bottom duration-300">
           <div className="p-4">
             <div className="w-12 h-1 bg-muted rounded-full mx-auto mb-4" />
             
@@ -618,6 +710,7 @@ const MapPage = () => {
               size="icon"
               className="absolute top-2 right-2"
               onClick={() => setSelectedUser(null)}
+              data-testid="close-user-detail"
             >
               <X className="w-5 h-5" />
             </Button>
@@ -654,9 +747,8 @@ const MapPage = () => {
             <div className="flex gap-3 mt-4">
               <Button 
                 className="flex-1"
-                onClick={() => {
-                  startChatWithUser(selectedUser.id);
-                }}
+                onClick={() => startChatWithUser(selectedUser.id)}
+                data-testid="user-chat-btn"
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Enviar mensaje
@@ -665,6 +757,7 @@ const MapPage = () => {
                 variant="outline"
                 className="flex-1"
                 onClick={() => navigate(`/profile/${selectedUser.id}`)}
+                data-testid="user-profile-btn"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 Ver perfil
@@ -676,8 +769,8 @@ const MapPage = () => {
 
       {/* Empty state */}
       {!loading && cards.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <Card className="max-w-sm mx-4">
+        <div className="absolute inset-0 flex items-center justify-center z-[500] pointer-events-none">
+          <Card className="max-w-sm mx-4 pointer-events-auto">
             <CardContent className="text-center py-8">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <MapPin className="w-8 h-8 text-primary" />
@@ -686,7 +779,7 @@ const MapPage = () => {
               <p className="text-sm text-muted-foreground mb-4">
                 Agrega ubicaciones a tus tarjetas para verlas en el mapa
               </p>
-              <Button onClick={() => navigate("/cards/new")}>
+              <Button onClick={() => navigate("/cards/new")} data-testid="create-card-btn">
                 Crear Tarjeta
               </Button>
             </CardContent>
