@@ -100,10 +100,10 @@ async def get_my_reports(current_user: dict = Depends(get_current_user_from_toke
 # ACCOUNT DELETION
 # ============================================
 
-@router.delete("/profile/delete-account")
+@router.delete("/api/profile/delete-account")
 async def delete_account(
     request: DeleteAccountRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_from_token)
 ):
     """Delete user account and all associated data - Required by Apple"""
     if not db:
