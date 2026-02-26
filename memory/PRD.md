@@ -231,6 +231,20 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 ---
 
+## Fase 2 Pendiente - Monetización Interna
+
+### Publicaciones Patrocinadas
+- [ ] Sistema de publicaciones patrocinadas
+- [ ] Tarjetas destacadas en el mapa (premium)
+- [ ] Negocios promocionados en el feed
+- [ ] Sistema de monetización automática para creadores
+
+### Fase 3 Pendiente - Moderación
+- [ ] Panel de moderación de contenido
+- [ ] Filtro automático básico de contenido
+
+---
+
 ## 3rd Party Integrations
 - **OpenAI GPT-5.2:** Text Generation (Emergent LLM Key) ✅
 - **Daily.co:** Video/Audio Calls (MOCKED)
@@ -238,7 +252,8 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - **Stripe:** Payments (prepared)
 - **Emergent Google Auth:** Social Login ✅
 - **Resend:** Email (prepared - needs API key)
+- **Leaflet/OpenStreetMap:** Interactive Maps ✅ (NUEVO)
 
 ---
 
-*Last Updated: 2025-02-26 - Analytics Pro/Business, Cámara BRUNO con editor, Mascota BRUNO como avatar IA*
+*Last Updated: 2025-02-26 - Fase 6: Cumplimiento (Privacidad, Términos, Eliminar Cuenta, Reportes), Navegación Móvil, Mapa Leaflet*
