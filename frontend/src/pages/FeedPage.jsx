@@ -495,6 +495,11 @@ const FeedPage = () => {
         {/* Social Feed Tab */}
         {activeTab === "social" && (
           <div className="max-w-xl mx-auto space-y-4">
+            {/* Stories Row */}
+            <div className="bg-card rounded-xl border mb-4">
+              <StoriesRow onCreateStory={() => setShowCreateStory(true)} />
+            </div>
+            
             {/* Create Post (only for logged in users) */}
             {user && (
               <CreatePost 
