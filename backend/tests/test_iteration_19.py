@@ -248,7 +248,7 @@ class TestCardEndpoints:
             "title": f"TEST_Card_{int(time.time())}",
             "subtitle": "Test Subtitle",
             "description": "Test description from pytest",
-            "type": "personal",
+            "card_type": "personal",  # Use card_type instead of type
             "template": "classic"
         }
         
