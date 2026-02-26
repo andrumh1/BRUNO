@@ -212,8 +212,11 @@ class TestStoreOrders:
         # The actual format depends on how FastAPI parses the request
         if response.status_code == 200:
             data = response.json()
-            assert "id" in data
-            print(f"✓ Order created: {data['id']}, total: ${data['total']}")
+            # Server returns order_id not id
+            assert "order_id" in data or "id" in data
+            order_id = data.get("order_id") or data.get("id")
+            assert data["status"] == "pending_payment"
+            print(f"✓ Order created: {order_id}, total: ${data['total']}")
         else:
             # Document the format issue but don't fail - this is a known format difference
             print(f"⚠ Order creation format issue (status: {response.status_code})")
