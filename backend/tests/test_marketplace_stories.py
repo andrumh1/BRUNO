@@ -301,16 +301,16 @@ class TestStoryOperations:
     """Test story create and view operations"""
     
     def test_create_story_requires_auth(self, api_client):
-        """POST /api/stories requires authentication"""
+        """POST /api/stories/ requires authentication"""
         session = requests.Session()
-        response = session.post(f"{BASE_URL}/api/stories", json={
+        response = session.post(f"{BASE_URL}/api/stories/", json={
             "media_url": "https://via.placeholder.com/400",
             "media_type": "image"
         })
         assert response.status_code in [401, 403]
     
     def test_create_story_authenticated(self, authenticated_client):
-        """POST /api/stories creates a new story"""
+        """POST /api/stories/ creates a new story"""
         story_data = {
             "media_url": "https://via.placeholder.com/600",
             "media_type": "image",
@@ -319,7 +319,7 @@ class TestStoryOperations:
             "duration": 5
         }
         
-        response = authenticated_client.post(f"{BASE_URL}/api/stories", json=story_data)
+        response = authenticated_client.post(f"{BASE_URL}/api/stories/", json=story_data)
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         
         data = response.json()
