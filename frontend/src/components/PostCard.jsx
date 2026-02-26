@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { InlineVerifiedBadge } from "@/components/VerifiedBadge";
+import { ReportButton } from "@/components/ReportContentModal";
 import axios from "axios";
 import { 
   Heart, 
@@ -13,7 +14,8 @@ import {
   MoreHorizontal,
   Send,
   Bookmark,
-  Play
+  Play,
+  Flag
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
