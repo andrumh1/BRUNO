@@ -8,6 +8,7 @@ import { TourProvider, TourOverlay } from "@/components/WelcomeTour";
 
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
+import FloatingChatBubble from "@/components/FloatingChatBubble";
 
 // Pages
 import LandingPage from "@/pages/LandingPage";
@@ -38,6 +39,7 @@ import ProductDetailPage from "@/pages/ProductDetailPage";
 import CartPage from "@/pages/CartPage";
 import MyProductsPage from "@/pages/MyProductsPage";
 import NewProductPage from "@/pages/NewProductPage";
+import NotificationSettingsPage from "@/pages/NotificationSettingsPage";
 
 function AppRouter() {
   const location = useLocation();
