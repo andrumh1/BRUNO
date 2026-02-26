@@ -5,193 +5,140 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 ---
 
-## FASE 1 - Correcciones Críticas (COMPLETADO)
+## Los 9 Puntos Originales - Estado
 
-### Completado
-
-#### 1. Sistema de Usuarios Mejorado
-- Sesión persistente con opción de mantener sesión
-- Endpoints de logout y actualización de perfil
-- Cache de usuario en localStorage
-
-#### 2. Tienda PIUP Ampliada (36 productos)
-- Tarjetas NFC, Carnets, Hogar, Comercios, Oficinas, Mascotas, Guardian, Habladores, MEOW APP
-
-#### 3. Mapa Estilo Snapchat
-- Cálculo de distancias (Haversine)
-- Marcadores con avatares
-
-#### 4. Variantes de Tarjetas
-- MiniCard, MediumCard, LargeCard, MapMarkerCard
-
-#### 5. Nuevo Tipo de Tarjeta: Servicios
-- Para freelancers y emprendedores
-
-#### 6. BRUNO IA Mejorado
-- Sistema de recomendaciones inteligentes
-- Busca y comparte tarjetas, posts, reels
-
-#### 7. Chat Mejorado
-- Notas de voz, archivos, stickers
-- Videollamadas y llamadas de voz (Daily.co)
-- **NUEVO: Chat en Burbuja Flotante**
-
-#### 8. Feed con Reels
-- Tab de Reels estilo TikTok
-
-#### 9. Sistema de Puntos/Gamificación
-- Niveles, check-in diario, leaderboard
+| # | Punto | Estado | Detalles |
+|---|-------|--------|----------|
+| 1 | **Mapa** estilo Snapchat | ✅ COMPLETADO | UI con usuarios en tiempo real vía WebSocket |
+| 2 | **Cards** múltiples vistas | ✅ COMPLETADO | MiniCard, MediumCard, LargeCard, MapMarkerCard |
+| 3 | **Feed** fotos/videos/ubicaciones | ✅ COMPLETADO | Posts con media, Stories 24h, Reels |
+| 4 | **Chat** todos los medios, llamadas | ✅ COMPLETADO | Burbuja flotante, videollamadas, stickers |
+| 5 | **Tienda** NFC + MEOW APP | ✅ COMPLETADO | 36 productos PIUP, unificado con Marketplace |
+| 6 | **BRUNO IA** asistente integrado | ✅ COMPLETADO | Recomendaciones, búsqueda inteligente |
+| 7 | **Usuarios** sesión, seguridad, tour | ✅ COMPLETADO | Auth completo, badges verificación, tour |
+| 8 | **Website** BRUNO.com | ✅ COMPLETADO | Landing page marketing |
+| 9 | **Perfil** posts, reels, cards | ✅ COMPLETADO | Tabs, puntos, estadísticas |
 
 ---
 
-## FASE 2 - Marketplace y Stories (COMPLETADO 2025-02-26)
+## Implementaciones Completadas
 
-### 10. Marketplace Completo
-- Backend Router con CRUD completo
-- 10 categorías, filtros avanzados
-- Carrito de compras, favoritos
-- **NUEVO: Integración con Tienda PIUP**
+### Fase 1 - Core (Completado)
+- Sistema de autenticación JWT + Google OAuth
+- Tarjetas digitales con 8 tipos
+- Tienda PIUP con 36 productos
+- Chat en tiempo real con WebSocket
+- Feed social con posts y media
 
-### 11. Stories 24 Horas
-- Expiración automática
-- Crear, ver, navegar, reaccionar
+### Fase 2 - Marketplace y Stories (Completado)
+- Marketplace completo con carrito
+- Stories 24h estilo Instagram
+- Card Stories (catálogos permanentes)
+- Bruno IA con recomendaciones
 
-### 12. Stories Estáticas en Cards
-- Catálogos permanentes vinculados a tarjetas
+### Fase 3 - Notificaciones y Chat Flotante (Completado)
+- 11 tipos de notificaciones (push + email)
+- Chat en burbuja flotante (múltiples chats)
+- Tienda PIUP unificada con Marketplace
+- Integración Resend para emails
 
-### 13. Bruno IA con Recomendaciones
-- Búsqueda inteligente de tarjetas/posts
-- Compartir vía chat
+### Fase 4 - Badges, Mapa y Refactoring (Completado 2025-02-26)
 
----
+#### Badges de Verificación
+- **Componente:** `/app/frontend/src/components/VerifiedBadge.jsx`
+- **Tiers:** Free, Pro (⭐), Business (👑)
+- **Componentes:** VerifiedIcon, VerifiedBadge, InlineVerifiedBadge, AvatarWithBadge, TierSelector
+- **Integración:** Posts, Perfil, Chat, Mapa
 
-## FASE 3 - Notificaciones, Chat Flotante, Tienda Unificada (COMPLETADO 2025-02-26)
+#### Store Router Modular
+- **Archivo:** `/app/backend/routers/store.py` (429 líneas)
+- **Productos:** 36 items PIUP
+- **Suscripciones:** GET/POST subscription management
+- **Pedidos:** CRUD con cálculo de envío/impuestos
+- **Stripe:** Integración preparada
 
-### 14. Sistema de Notificaciones Completo
-- **Backend:** `/app/backend/routers/notifications.py`
-- **11 tipos de notificaciones:**
-  - Llamadas entrantes
-  - Mensajes nuevos
-  - Nuevos seguidores
-  - Likes y comentarios
-  - Favoritos en productos (vendedores)
-  - Productos agregados al carrito
-  - Stories de seguidos
-  - Menciones
-  - Actualizaciones de pedidos
-  - Promociones
-- **Push Notifications:** Activables/desactivables por tipo
-- **Email Notifications:** Opcionales con toggles individuales
-- **Frontend Components:**
-  - `NotificationBell.jsx` - Icono campana con badge de no leídos
-  - `NotificationSettingsPage.jsx` - Página de configuración
+#### Mapa con Usuarios en Tiempo Real
+- **Archivo:** `/app/frontend/src/pages/MapPage.jsx` (701 líneas)
+- **WebSocket:** `/ws/map/{token}` para ubicaciones
+- **Funcionalidades:**
+  - Tarjetas cercanas con distancia
+  - Usuarios en línea con badges
+  - Búsqueda y filtros
+  - Controles de zoom
+  - "Cómo llegar" integrado
 
-### 15. Tienda PIUP Unificada con Marketplace
-- Productos PIUP aparecen como "Productos Oficiales" destacados
-- Suscripciones (Free, Pro, Business) en sección especial
-- Badge "PIUP" para distinguir productos oficiales
-- Badge "POPULAR" en plan Pro
-- Separador visual entre PIUP y productos de comunidad
-
-### 16. Chat en Burbuja Flotante
-- **Componente:** `/app/frontend/src/components/FloatingChatBubble.jsx`
-- **Características:**
-  - Burbuja flotante en esquina inferior derecha
-  - Lista de conversaciones en popup
-  - **Múltiples ventanas de chat** (hasta 3 simultáneas)
-  - Minimizar/maximizar ventanas
-  - WebSocket para tiempo real
-  - Buscar usuarios para nuevo chat
-  - Indicador de mensajes no leídos
+#### Email con Resend
+- **Archivo:** `/app/backend/routers/notifications.py`
+- **Template:** HTML profesional con branding BRUNO
+- **Preferencias:** Opcionales por tipo de notificación
 
 ---
 
-## API Endpoints
+## API Endpoints Completos
 
 ### Auth
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/me`
-- `PUT /api/auth/me`
-- `POST /api/auth/logout`
+- `POST /api/auth/register`, `/login`, `/logout`
+- `GET /api/auth/me`, `PUT /api/auth/me`
 - `POST /api/auth/google`
 
-### Notifications (NUEVO)
-- `GET /api/notifications/types` - Lista 11 tipos con iconos
-- `GET /api/notifications/preferences` - Preferencias push+email
-- `PUT /api/notifications/preferences` - Actualizar preferencias
-- `GET /api/notifications/unread-count` - Contador no leídos
-- `GET /api/notifications/recent` - Notificaciones recientes
-- `POST /api/notifications/mark-read/{id}` - Marcar leída
-- `POST /api/notifications/mark-all-read` - Marcar todas
+### Store (NUEVO)
+- `GET /api/store/products` - 36 productos PIUP
+- `GET /api/store/products/{id}`
+- `GET /api/store/subscription` - Tier actual
+- `POST /api/store/subscribe/{tier}` - Actualizar tier
+- `POST /api/store/orders` - Crear pedido
+- `GET /api/store/orders` - Mis pedidos
+- `POST /api/store/checkout/{order_id}` - Stripe checkout
+
+### Notifications
+- `GET /api/notifications/types` - 11 tipos
+- `GET/PUT /api/notifications/preferences` - Push + Email
+- `GET /api/notifications/unread-count`
+- `GET /api/notifications/recent`
+- `POST /api/notifications/mark-read/{id}`
+- `POST /api/notifications/mark-all-read`
 
 ### Marketplace
 - `GET /api/marketplace/categories`
-- `GET /api/marketplace/products`
-- `POST /api/marketplace/products`
-- `GET /api/marketplace/products/{id}`
-- `PUT /api/marketplace/products/{id}`
-- `DELETE /api/marketplace/products/{id}`
-- `POST /api/marketplace/products/{id}/favorite`
-- `GET /api/marketplace/my-products`
-- `GET /api/marketplace/cart`
-- `POST /api/marketplace/cart/add`
-- `DELETE /api/marketplace/cart/{product_id}`
-- `DELETE /api/marketplace/cart`
+- CRUD `/api/marketplace/products`
+- `/api/marketplace/cart/*`
+- `/api/marketplace/my-products`
 
 ### Stories
-- `POST /api/stories/`
+- `POST /api/stories/` - Stories 24h
 - `GET /api/stories/feed`
-- `GET /api/stories/user/{user_id}`
-- `POST /api/stories/{id}/view`
-- `POST /api/stories/{id}/react`
-- `DELETE /api/stories/{id}`
+- `POST /api/stories/card` - Card Stories
 
-### Card Stories
-- `POST /api/stories/card`
-- `GET /api/stories/card/{card_id}`
-- `PUT /api/stories/card/{story_id}`
-- `DELETE /api/stories/card/{story_id}`
-- `PUT /api/stories/card/{card_id}/reorder`
+### AI
+- `POST /api/ai/recommend` - Búsqueda inteligente
+- `GET /api/ai/share-card/{id}`
 
-### AI Recommendations
-- `POST /api/ai/recommend`
-- `GET /api/ai/share-card/{card_id}?target_user_id=`
-
-### Videollamadas
-- `POST /api/calls/start`
-- `POST /api/calls/{id}/answer`
-- `POST /api/calls/{id}/decline`
-- `POST /api/calls/{id}/end`
-
-### Sistema de Puntos
-- `GET /api/points/me`
-- `POST /api/points/daily-check-in`
-- `GET /api/points/leaderboard`
-- `GET /api/points/history`
+### WebSockets
+- `/ws/chat/{token}` - Chat en tiempo real
+- `/ws/map/{token}` - Ubicaciones en tiempo real
 
 ---
 
-## Key Files
+## Archivos Clave
 
-### Backend
-- `/app/backend/routers/notifications.py` - Sistema de notificaciones (347 líneas)
-- `/app/backend/routers/marketplace.py` - Marketplace completo
-- `/app/backend/routers/stories.py` - Stories 24h y Card Stories
-- `/app/backend/server.py` - Servidor principal (refactoring en progreso)
+### Backend Routers
+- `/app/backend/routers/store.py` - 429 líneas
+- `/app/backend/routers/notifications.py` - 438 líneas
+- `/app/backend/routers/marketplace.py` - 416 líneas
+- `/app/backend/routers/stories.py`
+- `/app/backend/routers/points.py`
 
 ### Frontend Components
-- `/app/frontend/src/components/FloatingChatBubble.jsx` - Chat flotante (603 líneas)
-- `/app/frontend/src/components/NotificationBell.jsx` - Campana de notificaciones
-- `/app/frontend/src/components/Stories.jsx` - Stories 24h
-- `/app/frontend/src/components/CardStories.jsx` - Card Stories
+- `/app/frontend/src/components/VerifiedBadge.jsx` - 263 líneas
+- `/app/frontend/src/components/FloatingChatBubble.jsx` - 603 líneas
+- `/app/frontend/src/components/NotificationBell.jsx`
+- `/app/frontend/src/components/Stories.jsx`
 
 ### Frontend Pages
-- `/app/frontend/src/pages/NotificationSettingsPage.jsx` - Config notificaciones
-- `/app/frontend/src/pages/MarketplacePage.jsx` - Con PIUP integrado
-- `/app/frontend/src/pages/ProductDetailPage.jsx`
-- `/app/frontend/src/pages/CartPage.jsx`
-- `/app/frontend/src/pages/FeedPage.jsx` - Con Stories y NotificationBell
+- `/app/frontend/src/pages/MapPage.jsx` - 701 líneas
+- `/app/frontend/src/pages/MarketplacePage.jsx`
+- `/app/frontend/src/pages/FeedPage.jsx`
+- `/app/frontend/src/pages/MyProfilePage.jsx`
 
 ---
 
@@ -199,44 +146,41 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - **User 1:** `newtest@bruno.com` / `Test1234!`
 - **User 2:** `chattest2@bruno.com` / `Test1234!`
 
----
-
 ## Test Reports
-- `/app/test_reports/iteration_16.json` - Notificaciones, Chat Flotante, PIUP (100%)
-- `/app/test_reports/iteration_15.json` - Marketplace, Stories, AI (100%)
+- `/app/test_reports/iteration_17.json` - Badges, Store, Mapa (100%)
+- `/app/test_reports/iteration_16.json` - Notificaciones, Chat (100%)
+- `/app/test_reports/iteration_15.json` - Marketplace, Stories (100%)
 
 ---
 
 ## Próximas Tareas (Backlog)
 
 ### P0 - Alta Prioridad
-- [ ] Continuar refactoring de server.py a routers modulares
-- [ ] Integración de pagos Stripe en Marketplace
-- [ ] Integración de email real (SendGrid/Resend) para notificaciones
+- [ ] Agregar RESEND_API_KEY para emails reales
+- [ ] Implementar pagos reales con Stripe
 - [ ] Push notifications reales con pywebpush
 
 ### P1 - Media Prioridad
-- [ ] Mapa UI completo estilo Snapchat con ubicaciones en tiempo real
-- [ ] Vistas de Cards miniatura y lista para mapa
-- [ ] Templates de Cards editables
-- [ ] Feed con ubicaciones y actualizaciones públicas de cards
+- [ ] Posts con ubicación geográfica
+- [ ] Templates de Cards editables desde UI
+- [ ] Completar refactoring de server.py
 
 ### P2 - Baja Prioridad
-- [ ] Niveles de suscripción diferenciados con features exclusivas
-- [ ] Modelo de seguridad avanzado
-- [ ] Acciones del BRUNO IA para crear/editar tarjetas via chat
+- [ ] Features exclusivas por tier (Pro/Business)
+- [ ] Acciones del BRUNO IA para crear/editar tarjetas
+- [ ] Integración de realidad aumentada
 
 ---
 
 ## 3rd Party Integrations
-- **OpenAI GPT-5.2:** Text Generation (Emergent LLM Key)
+- **OpenAI GPT-5.2:** Text Generation (Emergent LLM Key) ✅
 - **Daily.co:** Video/Audio Calls (MOCKED)
-- **Cloudinary:** Image/File Storage
-- **Stripe:** Payments (key available)
-- **Emergent Google Auth:** Social Login
-- **Web Push:** (MOCKED - stores subscriptions)
-- **Email:** (MOCKED - needs SendGrid/Resend)
+- **Cloudinary:** Image/File Storage ✅
+- **Stripe:** Payments (prepared, key available)
+- **Emergent Google Auth:** Social Login ✅
+- **Resend:** Email (MOCKED - needs API key)
+- **Web Push:** (MOCKED - needs pywebpush)
 
 ---
 
-*Last Updated: 2025-02-26 - Notificaciones completas, Chat flotante, Tienda PIUP unificada*
+*Last Updated: 2025-02-26 - Los 9 puntos COMPLETADOS. Badges, Store refactored, Mapa con usuarios en tiempo real.*
