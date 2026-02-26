@@ -105,6 +105,11 @@ class UserRole(str):
     ADMIN_EMPRESA = "admin_empresa"
     SUPER_ADMIN = "super_admin"
 
+class SubscriptionTier(str):
+    FREE = "free"
+    PRO = "pro"
+    BUSINESS = "business"
+
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
@@ -113,6 +118,9 @@ class User(BaseModel):
     name: str
     role: str = UserRole.PERSONAL
     company_id: Optional[str] = None
+    subscription_tier: str = SubscriptionTier.FREE
+    subscription_expires_at: Optional[datetime] = None
+    is_verified: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = True
 
