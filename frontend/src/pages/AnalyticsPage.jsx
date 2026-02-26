@@ -104,7 +104,7 @@ const UpgradeBanner = ({ currentTier }) => {
 const AnalyticsPage = () => {
   const { cardId } = useParams();
   const navigate = useNavigate();
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState(null);
@@ -114,13 +114,15 @@ const AnalyticsPage = () => {
   const [selectedPeriod, setSelectedPeriod] = useState(30);
 
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!token) {
       navigate('/login');
       return;
     }
     
     fetchData();
-  }, [token, cardId, selectedPeriod]);
+  }, [token, cardId, selectedPeriod, authLoading]);
 
   const fetchData = async () => {
     setLoading(true);
