@@ -12,253 +12,186 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 #### 1. Sistema de Usuarios Mejorado
 - Sesión persistente con opción de mantener sesión
 - Endpoints de logout y actualización de perfil
-- Cache de usuario en localStorage para carga rápida
-- Manejo de errores de autenticación mejorado
-- `/app/frontend/src/contexts/AuthContext.js` - Actualizado
+- Cache de usuario en localStorage
 
 #### 2. Tienda PIUP Ampliada (36 productos)
-**Categorías implementadas:**
-- Tarjetas NFC (Negro, Blanco, Naranja, Dorado, Holográfica)
-- Carnets empresariales
-- Hogar (WiFi, Despensa, Alarma, Emergencia, Llaveros GPS)
-- Restaurantes y Comercios (Menú QR, WiFi, Redes, AR productos)
-- Oficinas (Citas, Apps, Pagos, Web, Inventario, Acceso, Archivos)
-- Mascotas (Tags básicos, GPS, Collares completos)
-- Guardian (Pulseras adultos, infantiles)
-- Habladores (Mesa, Pared, Mostrador, A-Frame)
-- Servicios (Diseño personalizado, Configuración empresarial)
-- MEOW APP (Redes sociales, Branding, Publicidad)
+- Tarjetas NFC, Carnets, Hogar, Comercios, Oficinas, Mascotas, Guardian, Habladores, MEOW APP
 
 #### 3. Mapa Estilo Snapchat
-- Diseño visual similar a Snapchat
-- Cálculo de distancias (fórmula Haversine)
-- Marcadores con avatares de tarjetas
-- Lista de tarjetas con distancia
-- Botón "Cómo llegar" abre Google/Apple Maps
+- Cálculo de distancias (Haversine)
+- Marcadores con avatares
 
 #### 4. Variantes de Tarjetas
-- `MiniCard` - Para mapas y selecciones rápidas
-- `MediumCard` - Para listados y grids  
-- `LargeCard` - Presentación completa
-- `MapMarkerCard` - Marcadores en mapa
-- Botón de Chat integrado en cada tarjeta
+- MiniCard, MediumCard, LargeCard, MapMarkerCard
 
 #### 5. Nuevo Tipo de Tarjeta: Servicios
-- Para emprendedores y freelancers
-- Campos adicionales: services, products, pricing, portfolio
-- Template: servicios_portfolio
+- Para freelancers y emprendedores
 
 #### 6. BRUNO IA Mejorado
-- System message extensivo con toda la info de la app
-- Conocimiento de todas las categorías de productos
-- Guía de diseño de tarjetas
-- Información de MEOW APP partner
-- **NUEVO: Sistema de Recomendaciones Inteligentes**
-- Busca tarjetas, posts y reels relevantes
-- Comparte tarjetas con usuarios que las buscan
+- Sistema de recomendaciones inteligentes
+- Busca y comparte tarjetas, posts, reels
 
 #### 7. Chat Mejorado
-- Grabación y envío de notas de voz
-- Envío de archivos (documentos, PDFs)
-- Diseño de burbujas mejorado
-- Indicador de "escribiendo..."
-- Menú de adjuntos (imagen, archivo, tarjeta, sticker)
-- **Videollamadas y llamadas de voz funcionales**
-- **Stickers y tarjetas compartibles**
+- Notas de voz, archivos, stickers
+- Videollamadas y llamadas de voz (Daily.co)
+- **NUEVO: Chat en Burbuja Flotante**
 
 #### 8. Feed con Reels
-- Tab de "Reels" para videos
-- Filtro de posts con contenido de video
-- Vista de video estilo TikTok/Instagram
+- Tab de Reels estilo TikTok
 
-#### 9. Videollamadas y Llamadas de Voz
-- Integración completa de videollamadas en el chat
-- Llamadas de solo voz con diseño minimalista
-- Backend endpoints completos
-- WebSocket notifications para llamadas entrantes
-
-#### 10. Sistema de Puntos/Gamificación
-- Sistema completo de puntos y niveles
-- Niveles: Novato → Activo → Popular → Influencer → Embajador → Leyenda
-- Check-in diario con rachas
-- Leaderboard con ranking de usuarios
-
-#### 11. Notificaciones Push
-- Infraestructura completa para notificaciones push
-- Service Worker configurado
-- Preferencias configurables por tipo
-
-#### 12. Stickers en Chat
-- 4 packs de stickers: BRUNO, Emojis HD, Reacciones, Negocios
-- Búsqueda de stickers
-- Stickers recientes
-
-#### 13. Tour de Bienvenida
-- Tour interactivo guiado por BRUNO IA
-- 9 pasos informativos
-- Auto-show para usuarios nuevos
-
-#### 14. Compartir Tarjetas en Chat
-- CardPicker para seleccionar tarjetas
-- Vista previa visual con colores de la tarjeta
-
-#### 15. Página Web BRUNO.com
-- Landing page marketing completa
-- Feature cards, pricing, testimonios
+#### 9. Sistema de Puntos/Gamificación
+- Niveles, check-in diario, leaderboard
 
 ---
 
 ## FASE 2 - Marketplace y Stories (COMPLETADO 2025-02-26)
 
-### 16. Marketplace Completo
-- **Backend Router:** `/app/backend/routers/marketplace.py` (416 líneas)
-- **Categorías:** 10 categorías (Electrónica, Ropa, Hogar, Servicios, Vehículos, Deportes, Belleza, Alimentos, Arte, Otros)
-- **Productos:**
-  - CRUD completo (crear, leer, actualizar, eliminar)
-  - Filtros: categoría, precio min/max, condición, ubicación, búsqueda
-  - Ordenamiento: más recientes, precio asc/desc, populares
-  - Imágenes múltiples (hasta 10)
-  - Condiciones: Nuevo, Usado, Reacondicionado
-  - Envío configurable
-- **Carrito de compras:**
-  - Agregar/quitar productos
-  - Control de cantidad
-  - Subtotales y total
-  - Vaciar carrito
-- **Favoritos:** Toggle de favoritos con contador
-- **Mis Productos:** Dashboard con estadísticas (vistas, favoritos)
-- **Frontend Pages:**
-  - `MarketplacePage.jsx` - Listado con grid/list view
-  - `ProductDetailPage.jsx` - Detalle de producto
-  - `NewProductPage.jsx` - Formulario de creación
-  - `CartPage.jsx` - Carrito de compras
-  - `MyProductsPage.jsx` - Gestión de productos propios
+### 10. Marketplace Completo
+- Backend Router con CRUD completo
+- 10 categorías, filtros avanzados
+- Carrito de compras, favoritos
+- **NUEVO: Integración con Tienda PIUP**
 
-### 17. Stories de 24 Horas (Estilo Instagram)
-- **Backend Router:** `/app/backend/routers/stories.py`
-- **Características:**
-  - Expiración automática a las 24h
-  - Visibilidad: público, seguidores, privado
-  - Soporte para imagen y video
-  - Captions opcionales
-  - Contador de vistas
-  - Reacciones
+### 11. Stories 24 Horas
+- Expiración automática
+- Crear, ver, navegar, reaccionar
+
+### 12. Stories Estáticas en Cards
+- Catálogos permanentes vinculados a tarjetas
+
+### 13. Bruno IA con Recomendaciones
+- Búsqueda inteligente de tarjetas/posts
+- Compartir vía chat
+
+---
+
+## FASE 3 - Notificaciones, Chat Flotante, Tienda Unificada (COMPLETADO 2025-02-26)
+
+### 14. Sistema de Notificaciones Completo
+- **Backend:** `/app/backend/routers/notifications.py`
+- **11 tipos de notificaciones:**
+  - Llamadas entrantes
+  - Mensajes nuevos
+  - Nuevos seguidores
+  - Likes y comentarios
+  - Favoritos en productos (vendedores)
+  - Productos agregados al carrito
+  - Stories de seguidos
+  - Menciones
+  - Actualizaciones de pedidos
+  - Promociones
+- **Push Notifications:** Activables/desactivables por tipo
+- **Email Notifications:** Opcionales con toggles individuales
 - **Frontend Components:**
-  - `Stories.jsx` - StoriesRow, StoryViewer, CreateStoryModal
-  - Integrado en FeedPage
-  - Navegación tap izquierda/derecha
-  - Progress bars automáticas
-  - Pausa/play
+  - `NotificationBell.jsx` - Icono campana con badge de no leídos
+  - `NotificationSettingsPage.jsx` - Página de configuración
 
-### 18. Stories Estáticas en Cards (Catálogos)
-- **Backend:** Endpoints en `/app/backend/routers/stories.py`
+### 15. Tienda PIUP Unificada con Marketplace
+- Productos PIUP aparecen como "Productos Oficiales" destacados
+- Suscripciones (Free, Pro, Business) en sección especial
+- Badge "PIUP" para distinguir productos oficiales
+- Badge "POPULAR" en plan Pro
+- Separador visual entre PIUP y productos de comunidad
+
+### 16. Chat en Burbuja Flotante
+- **Componente:** `/app/frontend/src/components/FloatingChatBubble.jsx`
 - **Características:**
-  - Sin expiración (permanentes)
-  - Vinculadas a tarjetas específicas
-  - Título, descripción, precio, link externo
-  - Orden personalizable
-  - Contador de vistas
-- **Frontend Component:**
-  - `CardStories.jsx` - CardStoriesGallery, CardStoryViewer, AddCardStoryModal
-  - Scroll horizontal tipo carrusel
-  - Edición inline para propietarios
-
-### 19. Bruno IA con Recomendaciones
-- **Nuevo Endpoint:** `POST /api/ai/recommend`
-- **Funcionalidades:**
-  - Búsqueda inteligente de tarjetas públicas
-  - Búsqueda de posts por contenido y hashtags
-  - Tipos: cards, posts, all
-  - Mensaje contextual con resultados
-- **Endpoint:** `GET /api/ai/share-card/{card_id}`
-  - Comparte tarjeta recomendada vía chat
-  - Crea conversación si no existe
-  - Notificación WebSocket
+  - Burbuja flotante en esquina inferior derecha
+  - Lista de conversaciones en popup
+  - **Múltiples ventanas de chat** (hasta 3 simultáneas)
+  - Minimizar/maximizar ventanas
+  - WebSocket para tiempo real
+  - Buscar usuarios para nuevo chat
+  - Indicador de mensajes no leídos
 
 ---
 
 ## API Endpoints
 
 ### Auth
-- `POST /api/auth/register` - Registro
-- `POST /api/auth/login` - Login
-- `GET /api/auth/me` - Usuario actual
-- `PUT /api/auth/me` - Actualizar usuario
-- `POST /api/auth/logout` - Logout
-- `POST /api/auth/google` - Login Google
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `PUT /api/auth/me`
+- `POST /api/auth/logout`
+- `POST /api/auth/google`
 
-### Marketplace (NUEVO)
-- `GET /api/marketplace/categories` - Lista categorías
-- `GET /api/marketplace/products` - Lista productos con filtros
-- `POST /api/marketplace/products` - Crear producto
-- `GET /api/marketplace/products/{id}` - Detalle producto
-- `PUT /api/marketplace/products/{id}` - Actualizar producto
-- `DELETE /api/marketplace/products/{id}` - Eliminar producto
-- `POST /api/marketplace/products/{id}/favorite` - Toggle favorito
-- `GET /api/marketplace/my-products` - Mis productos
-- `GET /api/marketplace/cart` - Ver carrito
-- `POST /api/marketplace/cart/add` - Agregar al carrito
-- `DELETE /api/marketplace/cart/{product_id}` - Quitar del carrito
-- `DELETE /api/marketplace/cart` - Vaciar carrito
+### Notifications (NUEVO)
+- `GET /api/notifications/types` - Lista 11 tipos con iconos
+- `GET /api/notifications/preferences` - Preferencias push+email
+- `PUT /api/notifications/preferences` - Actualizar preferencias
+- `GET /api/notifications/unread-count` - Contador no leídos
+- `GET /api/notifications/recent` - Notificaciones recientes
+- `POST /api/notifications/mark-read/{id}` - Marcar leída
+- `POST /api/notifications/mark-all-read` - Marcar todas
 
-### Stories (NUEVO)
-- `POST /api/stories/` - Crear story 24h
-- `GET /api/stories/feed` - Feed de stories
-- `GET /api/stories/user/{user_id}` - Stories de un usuario
-- `POST /api/stories/{id}/view` - Marcar como vista
-- `POST /api/stories/{id}/react` - Reaccionar
-- `DELETE /api/stories/{id}` - Eliminar story
+### Marketplace
+- `GET /api/marketplace/categories`
+- `GET /api/marketplace/products`
+- `POST /api/marketplace/products`
+- `GET /api/marketplace/products/{id}`
+- `PUT /api/marketplace/products/{id}`
+- `DELETE /api/marketplace/products/{id}`
+- `POST /api/marketplace/products/{id}/favorite`
+- `GET /api/marketplace/my-products`
+- `GET /api/marketplace/cart`
+- `POST /api/marketplace/cart/add`
+- `DELETE /api/marketplace/cart/{product_id}`
+- `DELETE /api/marketplace/cart`
 
-### Card Stories (NUEVO)
-- `POST /api/stories/card` - Crear story de catálogo
-- `GET /api/stories/card/{card_id}` - Stories de una tarjeta
-- `PUT /api/stories/card/{story_id}` - Actualizar
-- `DELETE /api/stories/card/{story_id}` - Eliminar
-- `PUT /api/stories/card/{card_id}/reorder` - Reordenar
+### Stories
+- `POST /api/stories/`
+- `GET /api/stories/feed`
+- `GET /api/stories/user/{user_id}`
+- `POST /api/stories/{id}/view`
+- `POST /api/stories/{id}/react`
+- `DELETE /api/stories/{id}`
 
-### AI Recommendations (NUEVO)
-- `POST /api/ai/recommend` - Buscar tarjetas/posts
-- `GET /api/ai/share-card/{card_id}?target_user_id=` - Compartir tarjeta
+### Card Stories
+- `POST /api/stories/card`
+- `GET /api/stories/card/{card_id}`
+- `PUT /api/stories/card/{story_id}`
+- `DELETE /api/stories/card/{story_id}`
+- `PUT /api/stories/card/{card_id}/reorder`
+
+### AI Recommendations
+- `POST /api/ai/recommend`
+- `GET /api/ai/share-card/{card_id}?target_user_id=`
 
 ### Videollamadas
-- `POST /api/calls/start` - Iniciar llamada
-- `POST /api/calls/{id}/answer` - Responder
-- `POST /api/calls/{id}/decline` - Rechazar
-- `POST /api/calls/{id}/end` - Terminar
+- `POST /api/calls/start`
+- `POST /api/calls/{id}/answer`
+- `POST /api/calls/{id}/decline`
+- `POST /api/calls/{id}/end`
 
 ### Sistema de Puntos
-- `GET /api/points/me` - Puntos del usuario
-- `POST /api/points/daily-check-in` - Check-in diario
-- `GET /api/points/leaderboard` - Ranking
-- `GET /api/points/history` - Historial
+- `GET /api/points/me`
+- `POST /api/points/daily-check-in`
+- `GET /api/points/leaderboard`
+- `GET /api/points/history`
 
 ---
 
 ## Key Files
 
-### Backend Routers
+### Backend
+- `/app/backend/routers/notifications.py` - Sistema de notificaciones (347 líneas)
 - `/app/backend/routers/marketplace.py` - Marketplace completo
 - `/app/backend/routers/stories.py` - Stories 24h y Card Stories
-- `/app/backend/routers/auth.py` - Autenticación
-- `/app/backend/routers/video_calls.py` - Videollamadas
-- `/app/backend/routers/points.py` - Sistema de puntos
-- `/app/backend/routers/notifications.py` - Notificaciones
-
-### Frontend Pages
-- `/app/frontend/src/pages/MarketplacePage.jsx`
-- `/app/frontend/src/pages/ProductDetailPage.jsx`
-- `/app/frontend/src/pages/CartPage.jsx`
-- `/app/frontend/src/pages/NewProductPage.jsx`
-- `/app/frontend/src/pages/MyProductsPage.jsx`
-- `/app/frontend/src/pages/FeedPage.jsx` - Con Stories integradas
-- `/app/frontend/src/pages/MyProfilePage.jsx`
+- `/app/backend/server.py` - Servidor principal (refactoring en progreso)
 
 ### Frontend Components
-- `/app/frontend/src/components/Stories.jsx`
-- `/app/frontend/src/components/CardStories.jsx`
-- `/app/frontend/src/components/ReelsFeed.jsx`
-- `/app/frontend/src/components/StickerPicker.jsx`
-- `/app/frontend/src/components/CardPicker.jsx`
+- `/app/frontend/src/components/FloatingChatBubble.jsx` - Chat flotante (603 líneas)
+- `/app/frontend/src/components/NotificationBell.jsx` - Campana de notificaciones
+- `/app/frontend/src/components/Stories.jsx` - Stories 24h
+- `/app/frontend/src/components/CardStories.jsx` - Card Stories
+
+### Frontend Pages
+- `/app/frontend/src/pages/NotificationSettingsPage.jsx` - Config notificaciones
+- `/app/frontend/src/pages/MarketplacePage.jsx` - Con PIUP integrado
+- `/app/frontend/src/pages/ProductDetailPage.jsx`
+- `/app/frontend/src/pages/CartPage.jsx`
+- `/app/frontend/src/pages/FeedPage.jsx` - Con Stories y NotificationBell
 
 ---
 
@@ -269,10 +202,8 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 ---
 
 ## Test Reports
-- `/app/test_reports/iteration_15.json` - Marketplace, Stories, AI Recommendations (100% pass)
-- `/app/test_reports/iteration_13.json` - Welcome Tour, Card Sharing, Website
-- `/app/test_reports/iteration_12.json` - Points, Notifications, Stickers
-- `/app/test_reports/iteration_11.json` - Audio calls
+- `/app/test_reports/iteration_16.json` - Notificaciones, Chat Flotante, PIUP (100%)
+- `/app/test_reports/iteration_15.json` - Marketplace, Stories, AI (100%)
 
 ---
 
@@ -280,8 +211,9 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 ### P0 - Alta Prioridad
 - [ ] Continuar refactoring de server.py a routers modulares
-- [ ] Integración de pagos en Marketplace (Stripe)
-- [ ] Upload real de archivos multimedia a Cloudinary para Stories
+- [ ] Integración de pagos Stripe en Marketplace
+- [ ] Integración de email real (SendGrid/Resend) para notificaciones
+- [ ] Push notifications reales con pywebpush
 
 ### P1 - Media Prioridad
 - [ ] Mapa UI completo estilo Snapchat con ubicaciones en tiempo real
@@ -290,21 +222,21 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - [ ] Feed con ubicaciones y actualizaciones públicas de cards
 
 ### P2 - Baja Prioridad
-- [ ] Niveles de suscripción con diferencias claras
+- [ ] Niveles de suscripción diferenciados con features exclusivas
 - [ ] Modelo de seguridad avanzado
-- [ ] Chat burbuja flotante expandible
-- [ ] Acciones del BRUNO IA para manipular sistema (crear/editar tarjetas)
+- [ ] Acciones del BRUNO IA para crear/editar tarjetas via chat
 
 ---
 
 ## 3rd Party Integrations
-- **OpenAI GPT-5.2:** Text Generation (via Emergent LLM Key)
-- **Daily.co:** Video/Audio Calls (MOCKED - uses demo domain)
+- **OpenAI GPT-5.2:** Text Generation (Emergent LLM Key)
+- **Daily.co:** Video/Audio Calls (MOCKED)
 - **Cloudinary:** Image/File Storage
-- **Stripe:** Payments (key available in environment)
+- **Stripe:** Payments (key available)
 - **Emergent Google Auth:** Social Login
-- **Web Push:** Notifications (MOCKED - stores subscriptions only)
+- **Web Push:** (MOCKED - stores subscriptions)
+- **Email:** (MOCKED - needs SendGrid/Resend)
 
 ---
 
-*Last Updated: 2025-02-26 - Marketplace, Stories 24h, Card Stories, AI Recommendations implementados y testeados*
+*Last Updated: 2025-02-26 - Notificaciones completas, Chat flotante, Tienda PIUP unificada*
