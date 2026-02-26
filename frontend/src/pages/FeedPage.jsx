@@ -661,6 +661,16 @@ const FeedPage = () => {
           </>
         )}
       </main>
+      
+      {/* Create Story Modal */}
+      <CreateStoryModal 
+        isOpen={showCreateStory}
+        onClose={() => setShowCreateStory(false)}
+        onCreated={() => {
+          setShowCreateStory(false);
+          // Optionally refresh stories
+        }}
+      />
     </div>
   );
 };
