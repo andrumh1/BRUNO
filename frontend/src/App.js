@@ -71,6 +71,7 @@ function AppRouter() {
       <Route path="/profile/:userId" element={<UserProfilePage />} />
       <Route path="/my-profile" element={<MyProfilePage />} />
       <Route path="/points" element={<PointsPage />} />
+      <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />
       <Route path="/marketplace/new" element={<NewProductPage />} />
       <Route path="/marketplace/my-products" element={<MyProductsPage />} />
