@@ -36,6 +36,7 @@ const FeedPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [viewMode, setViewMode] = useState("grid"); // grid or list
+  const [showCreateStory, setShowCreateStory] = useState(false);
 
   // Fetch posts for social feed
   const fetchPosts = useCallback(async () => {
