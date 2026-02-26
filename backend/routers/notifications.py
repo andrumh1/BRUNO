@@ -168,40 +168,118 @@ async def update_notification_preferences(
 
 
 # Helper function to send push notification (called from other parts of the app)
-async def send_push_notification(user_id: str, payload: dict):
-    """Send push notification to a user"""
+async def send_push_notification(user_id: str, payload: dict, send_email: bool = False):
+    """Send push notification to a user, optionally with email"""
     subscription_doc = await db.push_subscriptions.find_one({"user_id": user_id})
-    
-    if not subscription_doc:
-        return False
     
     # Check user preferences
     prefs = await db.notification_preferences.find_one({"user_id": user_id})
-    if prefs:
-        notification_type = payload.get("type", "")
-        if notification_type == "incoming_call" and not prefs.get("calls", True):
-            return False
-        if notification_type == "new_message" and not prefs.get("messages", True):
-            return False
-        if notification_type == "post_like" and not prefs.get("likes", True):
-            return False
-        if notification_type == "post_comment" and not prefs.get("comments", True):
-            return False
-        if notification_type == "new_follower" and not prefs.get("followers", True):
-            return False
+    notification_type = payload.get("type", "")
     
-    # In production, use pywebpush to actually send the notification
-    # For now, we'll log it and store for polling
+    push_allowed = True
+    email_allowed = False
+    
+    if prefs:
+        # Check if push is enabled globally
+        if not prefs.get("push_enabled", True):
+            push_allowed = False
+        else:
+            # Check specific notification type preferences
+            type_map = {
+                "incoming_call": "calls",
+                "new_message": "messages",
+                "post_like": "likes",
+                "post_comment": "comments",
+                "new_follower": "followers",
+                "product_favorited": "product_favorites",
+                "product_cart_added": "product_cart",
+                "new_story": "stories",
+                "mention": "mentions",
+                "order_update": "order_updates",
+                "promotion": "promotions"
+            }
+            pref_key = type_map.get(notification_type)
+            if pref_key and not prefs.get(pref_key, True):
+                push_allowed = False
+        
+        # Check email preferences
+        if prefs.get("email_enabled", False) and send_email:
+            email_type_map = {
+                "new_message": "email_messages",
+                "new_follower": "email_followers",
+                "product_favorited": "email_product_activity",
+                "product_cart_added": "email_product_activity",
+                "order_update": "email_order_updates",
+                "promotion": "email_promotions"
+            }
+            email_pref_key = email_type_map.get(notification_type)
+            if email_pref_key and prefs.get(email_pref_key, False):
+                email_allowed = True
+    
+    # Store notification log
     notification_log = {
         "id": str(uuid.uuid4()),
         "user_id": user_id,
         "payload": payload,
-        "sent": False,  # Would be True after pywebpush sends it
+        "type": notification_type,
+        "push_sent": False,
+        "email_sent": False,
+        "read": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    
+    # Send push notification if allowed and subscribed
+    if push_allowed and subscription_doc:
+        # In production, use pywebpush to actually send
+        notification_log["push_sent"] = True
+        # TODO: Actual push send with pywebpush
+    
+    # Send email notification if allowed
+    if email_allowed:
+        # Get user email
+        user_doc = await db.users.find_one({"id": user_id}, {"email": 1})
+        if user_doc and user_doc.get("email"):
+            notification_log["email_sent"] = True
+            # TODO: Integrate with email service (SendGrid/Resend)
+            # await send_email_notification(user_doc["email"], payload)
+    
     await db.notification_logs.insert_one(notification_log)
     
-    return True
+    return {"push_sent": notification_log["push_sent"], "email_sent": notification_log["email_sent"]}
+
+
+# Unified notification sender for different event types
+async def notify_user(
+    user_id: str,
+    notification_type: str,
+    title: str,
+    body: str,
+    data: dict = None,
+    url: str = None
+):
+    """
+    Unified function to send notifications from anywhere in the app.
+    Usage:
+        await notify_user(
+            user_id="xxx",
+            notification_type="new_message",
+            title="Nuevo mensaje",
+            body="Juan te envió un mensaje",
+            data={"chat_id": "xxx"},
+            url="/chat/xxx"
+        )
+    """
+    payload = {
+        "title": title,
+        "body": body,
+        "type": notification_type,
+        "data": data or {},
+        "url": url,
+        "icon": NOTIFICATION_TYPES.get(notification_type, {}).get("icon", "bell"),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    
+    return await send_push_notification(user_id, payload, send_email=True)
 
 
 # Get recent notifications (for in-app notification center)
