@@ -3724,6 +3724,186 @@ async def clear_ai_chat_history(
     result = await db.ai_conversations.delete_many(query)
     return {"deleted_count": result.deleted_count}
 
+
+class AIRecommendationInput(BaseModel):
+    query: str
+    type: str = "all"  # cards, posts, reels, all
+
+
+@api_router.post("/ai/recommend")
+async def get_ai_recommendations(
+    input_data: AIRecommendationInput,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    """Get AI-powered recommendations for cards, posts, or reels based on search query"""
+    results = {
+        "cards": [],
+        "posts": [],
+        "query": input_data.query,
+        "message": ""
+    }
+    
+    search_terms = input_data.query.lower().split()
+    
+    # Search cards
+    if input_data.type in ["cards", "all"]:
+        card_query = {
+            "is_public": True,
+            "$or": [
+                {"title": {"$regex": input_data.query, "$options": "i"}},
+                {"subtitle": {"$regex": input_data.query, "$options": "i"}},
+                {"description": {"$regex": input_data.query, "$options": "i"}},
+                {"card_type": {"$regex": input_data.query, "$options": "i"}}
+            ]
+        }
+        
+        cards = await db.cards.find(
+            card_query, 
+            {"_id": 0}
+        ).sort("views", -1).limit(10).to_list(10)
+        
+        # Enrich with user info
+        for card in cards:
+            user = await db.users.find_one(
+                {"id": card["user_id"]}, 
+                {"_id": 0, "hashed_password": 0}
+            )
+            if user:
+                card["user"] = {
+                    "id": user["id"],
+                    "name": user.get("name", ""),
+                    "avatar_url": user.get("avatar_url")
+                }
+        
+        results["cards"] = cards
+    
+    # Search posts
+    if input_data.type in ["posts", "all"]:
+        post_query = {
+            "visibility": "public",
+            "$or": [
+                {"content": {"$regex": input_data.query, "$options": "i"}},
+                {"hashtags": {"$in": search_terms}}
+            ]
+        }
+        
+        posts = await db.posts.find(
+            post_query, 
+            {"_id": 0}
+        ).sort("created_at", -1).limit(10).to_list(10)
+        
+        # Enrich with user info
+        for post in posts:
+            user = await db.users.find_one(
+                {"id": post["user_id"]},
+                {"_id": 0, "hashed_password": 0}
+            )
+            profile = await db.user_profiles.find_one(
+                {"user_id": post["user_id"]},
+                {"_id": 0}
+            )
+            if user:
+                post["user"] = {
+                    "id": user["id"],
+                    "name": user.get("name", ""),
+                    "display_name": profile.get("display_name") if profile else user.get("name", ""),
+                    "avatar_url": profile.get("avatar_url") if profile else user.get("avatar_url")
+                }
+        
+        results["posts"] = posts
+    
+    # Generate helpful message
+    total_results = len(results["cards"]) + len(results["posts"])
+    if total_results > 0:
+        if results["cards"]:
+            results["message"] = f"Encontré {len(results['cards'])} tarjetas relacionadas con '{input_data.query}'. ¿Te interesa alguna en particular?"
+        else:
+            results["message"] = f"Encontré {len(results['posts'])} publicaciones relacionadas con '{input_data.query}'."
+    else:
+        results["message"] = f"No encontré resultados para '{input_data.query}'. Prueba con términos diferentes o publica una solicitud en el feed."
+    
+    return results
+
+
+@api_router.get("/ai/share-card/{card_id}")
+async def share_card_recommendation(
+    card_id: str,
+    target_user_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Share a recommended card with a user via chat"""
+    # Get the card
+    card = await db.cards.find_one({"id": card_id}, {"_id": 0})
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    # Find or create chat with target user
+    chat = await db.chats.find_one({
+        "type": "direct",
+        "participants": {"$all": [current_user.id, target_user_id]}
+    })
+    
+    if not chat:
+        # Create new chat
+        chat_id = str(uuid.uuid4())
+        chat_doc = {
+            "id": chat_id,
+            "type": "direct",
+            "participants": [current_user.id, target_user_id],
+            "created_by": current_user.id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.chats.insert_one(chat_doc)
+    else:
+        chat_id = chat["id"]
+    
+    # Create message with card attachment
+    message_doc = {
+        "id": str(uuid.uuid4()),
+        "chat_id": chat_id,
+        "sender_id": current_user.id,
+        "content": f"Te comparto esta tarjeta que puede interesarte:",
+        "message_type": "card",
+        "attachments": [{
+            "type": "card",
+            "card_id": card["id"],
+            "card_title": card.get("title", ""),
+            "card_subtitle": card.get("subtitle", ""),
+            "card_type": card.get("card_type", ""),
+            "primary_color": card.get("background_color", "#FF6B35"),
+            "secondary_color": card.get("text_color", "#FFFFFF")
+        }],
+        "is_read": False,
+        "read_by": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.messages.insert_one(message_doc)
+    
+    # Update chat last message
+    await db.chats.update_one(
+        {"id": chat_id},
+        {
+            "$set": {
+                "last_message_id": message_doc["id"],
+                "last_message_at": message_doc["created_at"],
+                "updated_at": message_doc["created_at"]
+            }
+        }
+    )
+    
+    # Send WebSocket notification
+    await ws_manager.send_personal_message({
+        "type": "new_message",
+        "message": {**message_doc},
+        "chat_id": chat_id
+    }, target_user_id)
+    
+    return {"status": "sent", "chat_id": chat_id, "message_id": message_doc["id"]}
+
+
 # ============================================================================
 # VIDEO CALL ENDPOINTS
 # ============================================================================
