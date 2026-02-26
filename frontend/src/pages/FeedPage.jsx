@@ -331,6 +331,12 @@ const FeedPage = () => {
                   <Globe className="w-5 h-5" />
                 </Button>
               </Link>
+              {/* Map Icon */}
+              <Link to="/map">
+                <Button variant="ghost" size="icon" className="relative spring-button" title="Mapa">
+                  <Map className="w-5 h-5" />
+                </Button>
+              </Link>
               {/* Marketplace Icon */}
               <Link to="/marketplace">
                 <Button variant="ghost" size="icon" className="relative spring-button" title="Marketplace">
