@@ -290,37 +290,37 @@ class TestProfileEndpoints:
         assert "name" in data or "email" in data
         print(f"SUCCESS: Profile fetched for user {user_id}")
     
+    def test_get_my_profile(self, auth_token_and_user_id):
+        """Test fetching current user's profile via /api/profile"""
+        token, user_id = auth_token_and_user_id
+        
+        response = requests.get(f"{BASE_URL}/api/profile", headers={
+            "Authorization": f"Bearer {token}"
+        })
+        assert response.status_code == 200, f"My profile fetch failed: {response.text}"
+        print(f"SUCCESS: Current user profile fetched")
+    
     def test_update_profile(self, auth_token_and_user_id):
-        """Test updating user profile - uses PATCH or PUT"""
+        """Test updating user profile via PUT /api/profile"""
         token, user_id = auth_token_and_user_id
         
         update_data = {
-            "name": "New Test User",
+            "display_name": "New Test User",
             "bio": f"Updated bio at {int(time.time())}",
             "location": "Test City"
         }
         
-        # Try PATCH first, then PUT
-        response = requests.patch(f"{BASE_URL}/api/users/{user_id}/profile", 
+        # Profile update endpoint is at /api/profile with PUT
+        response = requests.put(f"{BASE_URL}/api/profile", 
             headers={"Authorization": f"Bearer {token}"},
             json=update_data
         )
         
-        if response.status_code == 405:
-            # Try PUT if PATCH not allowed
-            response = requests.put(f"{BASE_URL}/api/users/{user_id}/profile", 
-                headers={"Authorization": f"Bearer {token}"},
-                json=update_data
-            )
+        assert response.status_code == 200, f"Profile update failed: {response.text}"
         
-        if response.status_code == 405:
-            # Try POST if neither PUT nor PATCH allowed
-            response = requests.post(f"{BASE_URL}/api/users/{user_id}/profile", 
-                headers={"Authorization": f"Bearer {token}"},
-                json=update_data
-            )
-        
-        assert response.status_code == 200, f"Profile update failed with all methods: {response.text}"
+        # Verify update
+        data = response.json()
+        assert data.get("bio") == update_data["bio"]
         print(f"SUCCESS: Profile updated successfully")
 
 
