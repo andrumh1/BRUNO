@@ -115,6 +115,7 @@ function App() {
                 <FloatingBubbles />
                 <FloatingChatBubble />
                 <CameraFloatingButton />
+                <MobileBottomNav />
                 <TourOverlay />
               </TourProvider>
             </BrowserRouter>
