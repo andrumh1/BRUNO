@@ -2864,7 +2864,9 @@ async def get_post(post_id: str, current_user: Optional[User] = Depends(get_curr
         "id": user["id"] if user else None,
         "username": user.get("username") if user else "Unknown",
         "avatar_url": profile.get("avatar_url") if profile else None,
-        "display_name": profile.get("display_name") if profile else None
+        "display_name": profile.get("display_name") if profile else None,
+        "is_verified": user.get("is_verified", False) if user else False,
+        "subscription_tier": user.get("subscription_tier", "free") if user else "free"
     }
     
     if current_user:
