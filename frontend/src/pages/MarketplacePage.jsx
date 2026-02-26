@@ -447,7 +447,102 @@ const MarketplacePage = () => {
       />
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-8">
+        
+        {/* PIUP Featured Section */}
+        {showPiupSection && !searchQuery && !filters.category && (
+          <div className="space-y-6">
+            {/* Subscriptions */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-yellow-500" />
+                  Suscripciones BRUNO
+                </h2>
+                <Link to="/store" className="text-sm text-primary hover:underline flex items-center gap-1">
+                  Ver tienda <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {subscriptions.map((sub) => (
+                  <div 
+                    key={sub.id}
+                    className={`relative p-4 rounded-2xl border-2 transition-all hover:shadow-lg cursor-pointer ${
+                      sub.popular ? 'border-primary bg-primary/5' : 'border-border'
+                    }`}
+                    onClick={() => navigate('/store')}
+                  >
+                    {sub.popular && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-white text-xs font-bold rounded-full">
+                        POPULAR
+                      </div>
+                    )}
+                    <div className="text-3xl mb-2">{sub.icon}</div>
+                    <h3 className="font-bold">{sub.name}</h3>
+                    <div className="text-2xl font-bold text-primary mt-1">
+                      {sub.price === 0 ? "Gratis" : `$${sub.price}/mes`}
+                    </div>
+                    <ul className="mt-3 space-y-1">
+                      {sub.features.map((f, i) => (
+                        <li key={i} className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Zap className="w-3 h-3 text-primary" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* PIUP Products */}
+            {piupProducts.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-orange-500" />
+                    Productos PIUP Oficiales
+                  </h2>
+                  <Link to="/store" className="text-sm text-primary hover:underline flex items-center gap-1">
+                    Ver todos <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  {piupProducts.map((product) => (
+                    <div 
+                      key={product.id}
+                      className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 rounded-xl p-3 cursor-pointer hover:shadow-lg transition-all border border-orange-200 dark:border-orange-800"
+                      onClick={() => navigate('/store')}
+                    >
+                      <div className="aspect-square rounded-lg bg-white/50 flex items-center justify-center mb-2">
+                        <Package className="w-8 h-8 text-orange-500" />
+                      </div>
+                      <p className="font-medium text-sm line-clamp-2">{product.name}</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-primary font-bold">${product.price}</span>
+                        <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full">PIUP</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-background px-4 text-sm text-muted-foreground">
+                  Productos de la comunidad
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* User Products */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
