@@ -57,10 +57,10 @@ async def get_current_user_from_token(authorization: str = Header(None)):
 # REPORTS
 # ============================================
 
-@router.post("/reports")
+@router.post("/api/reports")
 async def create_report(
     report: ReportRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_from_token)
 ):
     """Submit a content report"""
     if not db:
