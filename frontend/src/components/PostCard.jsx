@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InlineVerifiedBadge } from "@/components/VerifiedBadge";
 import axios from "axios";
 import { 
   Heart, 
