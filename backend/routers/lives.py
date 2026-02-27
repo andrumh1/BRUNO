@@ -476,28 +476,6 @@ async def get_live_comments(
     return list(reversed(comments))  # Return in chronological order
 
 # ============================================
-# LIVE CATEGORIES
-# ============================================
-
-LIVE_CATEGORIES = [
-    {"id": "general", "name": "General", "icon": "radio"},
-    {"id": "music", "name": "Música", "icon": "music"},
-    {"id": "gaming", "name": "Gaming", "icon": "gamepad-2"},
-    {"id": "talk", "name": "Charla", "icon": "message-circle"},
-    {"id": "cooking", "name": "Cocina", "icon": "chef-hat"},
-    {"id": "fitness", "name": "Fitness", "icon": "dumbbell"},
-    {"id": "art", "name": "Arte", "icon": "palette"},
-    {"id": "education", "name": "Educación", "icon": "graduation-cap"},
-    {"id": "business", "name": "Negocios", "icon": "briefcase"},
-    {"id": "technology", "name": "Tecnología", "icon": "cpu"}
-]
-
-@router.get("/api/lives/categories")
-async def get_live_categories():
-    """Get available live categories"""
-    return LIVE_CATEGORIES
-
-# ============================================
 # WEBSOCKET FOR REAL-TIME LIVE EVENTS
 # ============================================
 
