@@ -128,13 +128,18 @@ const MobileBottomNav = () => {
                     />
                   </div>
                 ) : (
-                  <Icon 
-                    className={`
-                      ${item.isCreate ? 'w-6 h-6' : 'w-6 h-6'}
-                      ${active && !item.isCreate ? 'stroke-[2.5px]' : 'stroke-[1.5px]'}
-                    `}
-                    fill={active && !item.isCreate ? 'currentColor' : 'none'}
-                  />
+                  <div className="relative">
+                    <Icon 
+                      className={`
+                        ${item.isCreate ? 'w-6 h-6' : 'w-6 h-6'}
+                        ${active && !item.isCreate ? 'stroke-[2.5px]' : 'stroke-[1.5px]'}
+                      `}
+                      fill={active && !item.isCreate ? 'currentColor' : 'none'}
+                    />
+                    {item.hasIndicator && (
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                    )}
+                  </div>
                 )}
                 <span className={`
                   text-[10px] mt-1 font-medium
