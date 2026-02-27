@@ -34,7 +34,7 @@ class TestLivesAPI:
             "password": TEST_PASSWORD
         })
         if response.status_code == 200:
-            return response.json().get("token")
+            return response.json().get("access_token")
         return None
 
     # ============================================
