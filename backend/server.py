@@ -4461,6 +4461,7 @@ from routers.stories import router as stories_router
 from routers.store import router as store_router
 from routers.analytics import router as analytics_router
 from routers.compliance import router as compliance_router, set_db as compliance_set_db
+from routers.lives import router as lives_router, set_db as lives_set_db
 api_router.include_router(notifications_router)
 api_router.include_router(points_router)
 api_router.include_router(marketplace_router)
@@ -4471,6 +4472,10 @@ api_router.include_router(analytics_router)
 # Set database for compliance router
 compliance_set_db(db)
 app.include_router(compliance_router)
+
+# Set database for lives router
+lives_set_db(db)
+app.include_router(lives_router)
 
 # Then include api_router in app
 app.include_router(api_router)
