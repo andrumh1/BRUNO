@@ -317,7 +317,7 @@ const FeedPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* Header - Simplified for mobile */}
       <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -325,56 +325,31 @@ const FeedPage = () => {
               <img src="/bruno-logo.png" alt="BRUNO" className="bruno-logo hover:scale-105 transition-transform" />
             </Link>
             <div className="flex items-center gap-1 sm:gap-2">
-              {/* Website Icon */}
-              <Link to="/website">
+              {/* Website Icon - Desktop only */}
+              <Link to="/website" className="hidden md:block">
                 <Button variant="ghost" size="icon" className="relative spring-button" title="Sitio Web BRUNO">
                   <Globe className="w-5 h-5" />
                 </Button>
               </Link>
-              {/* Map Icon */}
-              <Link to="/map">
-                <Button variant="ghost" size="icon" className="relative spring-button" title="Mapa">
-                  <Map className="w-5 h-5" />
-                </Button>
-              </Link>
-              {/* Marketplace Icon */}
-              <Link to="/marketplace">
-                <Button variant="ghost" size="icon" className="relative spring-button" title="Marketplace">
-                  <Store className="w-5 h-5" />
-                </Button>
-              </Link>
-              {/* Store Icon */}
+              {/* Store Icon - Always visible */}
               <Link to="/store">
                 <Button variant="ghost" size="icon" className="relative spring-button" title="Tienda PIUP">
                   <ShoppingBag className="w-5 h-5" />
                 </Button>
               </Link>
-              {/* Chat Icon - only for logged in users */}
-              {user && (
-                <Link to="/chat">
-                  <Button variant="ghost" size="icon" className="relative spring-button" title="Mensajes" data-testid="chat-nav-btn">
-                    <MessageCircle className="w-5 h-5" />
-                  </Button>
-                </Link>
-              )}
               {/* Notification Bell */}
               {user && <NotificationBell />}
               <LanguageSwitcher variant="minimal" />
               {user ? (
                 <>
-                  {/* Profile Icon */}
-                  <Link to="/my-profile">
-                    <Button variant="ghost" size="icon" className="spring-button" title="Mi Perfil">
-                      <User className="w-5 h-5" />
-                    </Button>
-                  </Link>
+                  {/* Dashboard - Desktop text, Mobile icon */}
                   <Link to="/dashboard" className="hidden sm:block">
                     <Button variant="ghost" size="sm">{t("nav.myPanel")}</Button>
                   </Link>
                   <Link to="/dashboard" className="sm:hidden">
                     <Button variant="ghost" size="icon"><Grid3X3 className="w-4 h-4" /></Button>
                   </Link>
-                  <Button variant="ghost" size="icon" onClick={handleLogout}>
+                  <Button variant="ghost" size="icon" onClick={handleLogout} className="hidden md:flex">
                     <LogOut className="w-4 h-4" />
                   </Button>
                 </>
