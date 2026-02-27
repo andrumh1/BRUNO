@@ -36,11 +36,12 @@ const MobileBottomNav = () => {
       matchPaths: ['/', '/feed']
     },
     { 
-      id: 'reels',
-      icon: Film, 
-      label: 'Reels', 
-      path: '/feed?tab=reels',
-      matchPaths: ['/reels']
+      id: 'lives',
+      icon: Radio, 
+      label: 'Lives', 
+      path: '/lives',
+      matchPaths: ['/lives'],
+      hasIndicator: true
     },
     { 
       id: 'create',
