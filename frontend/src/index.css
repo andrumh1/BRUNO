@@ -1085,3 +1085,138 @@ select.bubble-native-select:focus {
   transition: opacity 0.2s ease;
 }
 
+
+
+/* ============================================
+   iOS 26.3 Style Navigation - Bubble Effects
+   ============================================ */
+
+/* Mobile nav bubble animations */
+@keyframes bubbleFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.02); }
+}
+
+@keyframes bubbleGlow {
+  0%, 100% { opacity: 0.3; filter: blur(15px); }
+  50% { opacity: 0.5; filter: blur(20px); }
+}
+
+@keyframes bubblePulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+@keyframes lightBeam {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(200%) skewX(-15deg); }
+}
+
+@keyframes orbitLight {
+  0% { transform: rotate(0deg) translateX(30px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(30px) rotate(-360deg); }
+}
+
+/* Nav container glass morphism */
+.mobile-nav-glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .mobile-nav-glass {
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Active nav item bubble */
+.nav-bubble-active {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 107, 53, 0.2) 0%,
+    rgba(255, 107, 53, 0.1) 40%,
+    transparent 70%
+  );
+  animation: bubbleFloat 3s ease-in-out infinite;
+}
+
+/* Light orb effects */
+.light-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: bubbleGlow 4s ease-in-out infinite;
+}
+
+.light-orb-1 {
+  background: radial-gradient(circle, rgba(255, 107, 53, 0.6) 0%, transparent 70%);
+  animation-delay: 0s;
+}
+
+.light-orb-2 {
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.5) 0%, transparent 70%);
+  animation-delay: 1.5s;
+}
+
+.light-orb-3 {
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, transparent 70%);
+  animation-delay: 3s;
+}
+
+/* Create button special effects */
+.create-btn-glow {
+  position: relative;
+}
+
+.create-btn-glow::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  background: linear-gradient(135deg, #FF6B35, #EC4899, #3B82F6, #FF6B35);
+  background-size: 300% 300%;
+  border-radius: 50%;
+  filter: blur(10px);
+  opacity: 0.6;
+  animation: gradientRotate 3s ease infinite;
+  z-index: -1;
+}
+
+@keyframes gradientRotate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Touch ripple effect */
+@keyframes touchRipple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.touch-ripple {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 107, 53, 0.3);
+  border-radius: 50%;
+  animation: touchRipple 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
