@@ -288,7 +288,7 @@ async def join_live(
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
     
-    live = await db.lives.find_one({"id": live_id, "status": "live"})
+    live = await db.lives.find_one({"id": live_id, "status": "live"}, {"_id": 0})
     if not live:
         raise HTTPException(status_code=404, detail="Live not found or ended")
     
