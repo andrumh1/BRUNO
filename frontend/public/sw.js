@@ -1,16 +1,65 @@
 // BRUNO Service Worker for Push Notifications
-const CACHE_NAME = 'bruno-v1';
+// Version 2 - Added cache busting and proper cleanup
+const CACHE_NAME = 'bruno-v2';
+const CACHE_VERSION = Date.now();
 
-// Install event
+// Files to NOT cache (always fetch fresh)
+const NO_CACHE = [
+  '/api/',
+  '/ws/',
+  'chrome-extension'
+];
+
+// Install event - force update
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
+  console.log('[SW] Installing service worker v2...');
+  // Skip waiting to activate immediately
   self.skipWaiting();
 });
 
-// Activate event
+// Activate event - clean old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
-  event.waitUntil(clients.claim());
+  console.log('[SW] Activating service worker v2...');
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          // Delete all old caches
+          if (cacheName !== CACHE_NAME) {
+            console.log('[SW] Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => {
+      // Claim all clients immediately
+      return clients.claim();
+    })
+  );
+});
+
+// Fetch event - Network first strategy for all requests
+self.addEventListener('fetch', (event) => {
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') return;
+  
+  // Skip URLs that shouldn't be cached
+  const url = event.request.url;
+  if (NO_CACHE.some(pattern => url.includes(pattern))) {
+    return;
+  }
+  
+  // Network first strategy - always try network first
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        return response;
+      })
+      .catch(() => {
+        // Only use cache as fallback for navigation
+        return caches.match(event.request);
+      })
+  );
 });
 
 // Push notification event
