@@ -105,6 +105,9 @@ function AppRouter() {
       <Route path="/nfc/activate" element={<ProtectedRoute><ActivateNFCPage /></ProtectedRoute>} />
       <Route path="/nfc/write" element={<ProtectedRoute><NFCWritePage /></ProtectedRoute>} />
       <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccountPage /></ProtectedRoute>} />
+      <Route path="/lives" element={<LivesListPage />} />
+      <Route path="/lives/start" element={<ProtectedRoute><StartLivePage /></ProtectedRoute>} />
+      <Route path="/lives/:liveId" element={<LiveViewerPage />} />
       
       {/* Fallback */}
       <Route path="*" element={<FeedPage />} />
