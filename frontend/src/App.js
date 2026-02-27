@@ -48,6 +48,9 @@ import BrunoCameraPage from "@/pages/BrunoCameraPage";
 import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
 import TermsOfServicePage from "@/pages/TermsOfServicePage";
 import DeleteAccountPage from "@/pages/DeleteAccountPage";
+import LivesListPage from "@/pages/LivesListPage";
+import LiveViewerPage from "@/pages/LiveViewerPage";
+import StartLivePage from "@/pages/StartLivePage";
 
 function AppRouter() {
   const location = useLocation();
