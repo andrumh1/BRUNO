@@ -462,3 +462,62 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
   - `/app/frontend/src/pages/CreateCardPage.jsx` - Recibe datos de IA
 
 ---
+
+
+## Fase 12: Notificaciones Push Completas (Completado 2025-03-10)
+
+### 1. Sistema de Push Notifications
+- **Backend:** `/app/backend/routers/push_notifications.py`
+- **Endpoints:**
+  - `GET /api/push/vapid-public-key` - Clave VAPID pública
+  - `POST /api/push/subscribe` - Suscribir dispositivo
+  - `DELETE /api/push/unsubscribe` - Desuscribir dispositivo
+  - `GET /api/push/subscriptions` - Listar suscripciones del usuario
+  - `POST /api/push/test` - Enviar notificación de prueba
+- **VAPID Keys:** Configuradas en `/app/backend/.env`
+- **Library:** pywebpush para envío de notificaciones
+
+### 2. Triggers de Notificaciones Push
+Integrados en `/app/backend/server.py`:
+- **Mensajes:** Líneas 3522-3566 - `notify_new_message()`
+- **Likes:** Líneas 2936-2952 - `notify_new_like()`
+- **Comentarios:** Líneas 2984-3003 - `notify_new_comment()`
+- **Follows:** Líneas 3169-3192 - `notify_new_follower()`
+- **Llamadas de video:** Líneas 4090-4102 - `send_push_notification()`
+
+### 3. Frontend
+- **Hook:** `/app/frontend/src/hooks/usePushNotifications.js`
+- **UI:** `/app/frontend/src/pages/NotificationSettingsPage.jsx`
+- **Service Worker:** `/app/frontend/public/sw.js` (v3)
+- **VAPID Public Key:** En `/app/frontend/.env`
+
+### 4. Colección MongoDB
+- `push_subscriptions`: `{ id, user_id, endpoint, keys, created_at, last_used }`
+
+### 5. Bug Fix
+- Corregido `GET /api/notifications` - Ahora maneja notificaciones sin `actor_id`
+
+---
+
+## Test Reports
+- `/app/test_reports/iteration_26.json` - Push notifications y camera (100% pass)
+
+---
+
+## Próximas Tareas
+
+### P1 - Importantes
+- [ ] Bug Safari/iPhone: Verificar fix de cache para nuevos usuarios
+- [ ] Algoritmos de recomendación estilo TikTok/Facebook
+- [ ] Configuración de datos de usuario (editar/actualizar más campos)
+- [ ] Más opciones en Settings (privacidad, notificaciones avanzadas)
+
+### P2 - Deseables
+- [ ] Finalizar monetización con pasarela de pago real (Stripe)
+- [ ] Más legales y condiciones
+- [ ] Refactoring de server.py (mover profile, AI a routers)
+- [ ] Soporte completo de archivos en chat
+
+---
+
+*Last Updated: 2025-03-10 - Fase 12: Push Notifications completas con triggers en likes, comments, follows, messages y video calls*
