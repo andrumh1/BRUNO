@@ -6,7 +6,7 @@ Additional test to verify public cards filtering logic
 import requests
 import json
 
-BACKEND_URL = "https://bruno-community.preview.emergentagent.com/api"
+BACKEND_URL = "https://bruno-collab.preview.emergentagent.com/api"
 
 def test_public_cards_filtering():
     """Test that public cards endpoint correctly filters cards"""

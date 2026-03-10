@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import axios from "axios";
 import {
   ArrowLeft,
   Bell,
   BellRing,
+  BellOff,
   Mail,
   Phone,
   MessageCircle,
@@ -19,7 +21,9 @@ import {
   Package,
   Tag,
   Loader2,
-  Check
+  Check,
+  Smartphone,
+  AlertCircle
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -45,9 +49,21 @@ const NotificationSettingsPage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
   
+  // Push notifications hook
+  const { 
+    isSupported, 
+    isSubscribed, 
+    permission, 
+    loading: pushLoading,
+    subscribe, 
+    unsubscribe,
+    sendTestNotification 
+  } = usePushNotifications(token);
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [testSent, setTestSent] = useState(false);
   
   const [preferences, setPreferences] = useState({
     // Push notifications
@@ -112,6 +128,26 @@ const NotificationSettingsPage = () => {
     }
   };
 
+  const handlePushToggle = async () => {
+    if (isSubscribed) {
+      await unsubscribe();
+      updatePref("push_enabled", false);
+    } else {
+      const success = await subscribe();
+      if (success) {
+        updatePref("push_enabled", true);
+      }
+    }
+  };
+
+  const handleTestNotification = async () => {
+    const success = await sendTestNotification();
+    if (success) {
+      setTestSent(true);
+      setTimeout(() => setTestSent(false), 3000);
+    }
+  };
+
   const updatePref = (key, value) => {
     setPreferences(prev => ({ ...prev, [key]: value }));
   };
@@ -170,46 +206,90 @@ const NotificationSettingsPage = () => {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
-        {/* Push Notifications Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-card rounded-xl border">
+        {/* Push Notifications Status */}
+        <div className="p-4 bg-gradient-to-r from-primary/10 to-orange-500/10 rounded-xl border border-primary/20">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-full">
-                <BellRing className="w-5 h-5 text-primary" />
+              <div className={`p-2 rounded-full ${isSubscribed ? 'bg-green-500/20' : 'bg-muted'}`}>
+                {isSubscribed ? (
+                  <BellRing className="w-6 h-6 text-green-500" />
+                ) : (
+                  <BellOff className="w-6 h-6 text-muted-foreground" />
+                )}
               </div>
               <div>
                 <h2 className="font-bold">Notificaciones Push</h2>
-                <p className="text-sm text-muted-foreground">Recibe alertas en tu dispositivo</p>
+                <p className="text-sm text-muted-foreground">
+                  {isSubscribed 
+                    ? "Activas en este dispositivo" 
+                    : permission === 'denied' 
+                      ? "Bloqueadas en este navegador"
+                      : "No configuradas"}
+                </p>
               </div>
             </div>
-            <ToggleSwitch
-              checked={preferences.push_enabled}
-              onChange={(v) => updatePref("push_enabled", v)}
-            />
+            {isSupported ? (
+              <Button
+                variant={isSubscribed ? "outline" : "default"}
+                onClick={handlePushToggle}
+                disabled={pushLoading || permission === 'denied'}
+              >
+                {pushLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : null}
+                {isSubscribed ? "Desactivar" : "Activar"}
+              </Button>
+            ) : (
+              <span className="text-xs text-muted-foreground">No soportado</span>
+            )}
           </div>
-
-          {preferences.push_enabled && (
-            <div className="space-y-2">
-              {pushNotificationItems.map((item) => (
-                <div
-                  key={item.key}
-                  className="flex items-center justify-between p-3 bg-card rounded-xl border"
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{item.label}</p>
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    </div>
-                  </div>
-                  <ToggleSwitch
-                    checked={preferences[item.key]}
-                    onChange={(v) => updatePref(item.key, v)}
-                  />
-                </div>
-              ))}
+          
+          {/* Permission denied warning */}
+          {permission === 'denied' && (
+            <div className="mt-3 p-2 bg-red-500/10 rounded-lg flex items-center gap-2 text-sm">
+              <AlertCircle className="w-4 h-4 text-red-500" />
+              <span>Debes permitir notificaciones en la configuración de tu navegador</span>
             </div>
           )}
+          
+          {/* Test notification button */}
+          {isSubscribed && (
+            <div className="mt-3 flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={handleTestNotification} disabled={testSent}>
+                <Smartphone className="w-4 h-4 mr-2" />
+                {testSent ? "Enviada!" : "Enviar notificación de prueba"}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Push Notifications Section */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+            Tipos de Notificación Push
+          </h3>
+          
+          <div className="space-y-2">
+            {pushNotificationItems.map((item) => (
+              <div
+                key={item.key}
+                className="flex items-center justify-between p-3 bg-card rounded-xl border"
+              >
+                <div className="flex items-center gap-3">
+                  <item.icon className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-sm">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.description}</p>
+                  </div>
+                </div>
+                <ToggleSwitch
+                  checked={preferences[item.key]}
+                  onChange={(v) => updatePref(item.key, v)}
+                  disabled={!isSubscribed}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Email Notifications Section */}
@@ -238,7 +318,7 @@ const NotificationSettingsPage = () => {
                   className="flex items-center justify-between p-3 bg-card rounded-xl border"
                 >
                   <div>
-                    <p className="font-medium">{item.label}</p>
+                    <p className="font-medium text-sm">{item.label}</p>
                     <p className="text-xs text-muted-foreground">{item.description}</p>
                   </div>
                   <ToggleSwitch
@@ -255,7 +335,7 @@ const NotificationSettingsPage = () => {
         <div className="p-4 bg-muted/50 rounded-xl">
           <p className="text-sm text-muted-foreground">
             Las notificaciones push requieren que permitas notificaciones en tu navegador. 
-            Las notificaciones por email se enviarán a la dirección asociada a tu cuenta.
+            Recibirás alertas incluso cuando la app esté cerrada.
           </p>
         </div>
       </div>

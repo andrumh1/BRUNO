@@ -1248,7 +1248,7 @@ async def get_card_qr(card_id: str):
         raise HTTPException(status_code=404, detail="Card not found")
     
     # Generate QR code URL (permanent - never changes)
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-community.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-collab.preview.emergentagent.com')
     card_url = f"{frontend_url}/c/{card_id}"
     
     # Get card color (default to orange) y ajustarlo para buen contraste
@@ -1729,7 +1729,7 @@ async def resolve_nfc_card(nfc_id: str):
         }
     
     # Return card URL
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-community.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-collab.preview.emergentagent.com')
     
     return {
         "found": True,
@@ -1923,7 +1923,7 @@ async def create_store_checkout(
             "quantity": 1,
         })
     
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-community.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-collab.preview.emergentagent.com')
     
     checkout_request = CheckoutSessionRequest(
         success_url=f"{frontend_url}/store/success?order_id={order_id}",
@@ -2090,7 +2090,7 @@ async def create_subscription_checkout(
     price = plan["price_monthly"] if billing_cycle == "monthly" else plan["price_yearly"]
     
     stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY)
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-community.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-collab.preview.emergentagent.com')
     
     checkout_request = CheckoutSessionRequest(
         success_url=f"{frontend_url}/subscription/success?plan={plan_id}",
@@ -2944,6 +2944,10 @@ async def toggle_like(post_id: str, current_user: User = Depends(get_current_use
             notif_doc = notification.model_dump()
             notif_doc['created_at'] = notif_doc['created_at'].isoformat()
             await db.notifications.insert_one(notif_doc)
+            
+            # Send push notification
+            from routers.push_notifications import notify_new_like
+            await notify_new_like(post["user_id"], current_user.name or "Alguien", "publicación")
         
         return {"liked": True, "likes_count": post["likes_count"] + 1}
 
@@ -2993,6 +2997,10 @@ async def create_comment(
         notif_doc = notification.model_dump()
         notif_doc['created_at'] = notif_doc['created_at'].isoformat()
         await db.notifications.insert_one(notif_doc)
+        
+        # Send push notification
+        from routers.push_notifications import notify_new_comment
+        await notify_new_comment(post["user_id"], current_user.name or "Alguien", comment_data.content[:50])
     
     # Get user info for response
     profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0})
@@ -3175,6 +3183,10 @@ async def toggle_follow(user_id: str, current_user: User = Depends(get_current_u
         notif_doc = notification.model_dump()
         notif_doc['created_at'] = notif_doc['created_at'].isoformat()
         await db.notifications.insert_one(notif_doc)
+        
+        # Send push notification
+        from routers.push_notifications import notify_new_follower
+        await notify_new_follower(user_id, current_user.name or "Alguien")
         
         return {"following": True}
 
@@ -3520,6 +3532,7 @@ async def send_message(
     )
     
     # Create notification for other participants
+    from routers.push_notifications import notify_new_message
     for participant_id in chat["participants"]:
         if participant_id != current_user.id:
             notification = Notification(
@@ -3533,6 +3546,10 @@ async def send_message(
             notif_doc = notification.model_dump()
             notif_doc['created_at'] = notif_doc['created_at'].isoformat()
             await db.notifications.insert_one(notif_doc)
+            
+            # Send push notification
+            msg_preview = message_data.content[:50] if message_data.content else "Envió un archivo"
+            await notify_new_message(participant_id, current_user.name or "Alguien", msg_preview)
     
     # Add sender info to response
     profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0})
@@ -3562,16 +3579,24 @@ async def get_notifications(
     
     # Enrich with actor info
     for notif in notifications:
-        actor = await db.users.find_one({"id": notif["actor_id"]}, {"_id": 0, "hashed_password": 0})
-        profile = await db.user_profiles.find_one({"user_id": notif["actor_id"]}, {"_id": 0})
-        username = "Unknown"
-        if actor:
-            username = actor.get("name") or actor.get("email", "Unknown").split("@")[0]
-        notif["actor"] = {
-            "id": notif["actor_id"],
-            "username": username,
-            "avatar_url": profile.get("avatar_url") if profile else None
-        }
+        actor_id = notif.get("actor_id")
+        if actor_id:
+            actor = await db.users.find_one({"id": actor_id}, {"_id": 0, "hashed_password": 0})
+            profile = await db.user_profiles.find_one({"user_id": actor_id}, {"_id": 0})
+            username = "Unknown"
+            if actor:
+                username = actor.get("name") or actor.get("email", "Unknown").split("@")[0]
+            notif["actor"] = {
+                "id": actor_id,
+                "username": username,
+                "avatar_url": profile.get("avatar_url") if profile else None
+            }
+        else:
+            notif["actor"] = {
+                "id": None,
+                "username": "Sistema",
+                "avatar_url": None
+            }
     
     return notifications
 
@@ -4088,18 +4113,22 @@ async def start_video_call(
     await ws_manager.broadcast_to_users(call_notification, other_participants)
     
     # Send push notifications to offline participants
-    from routers.notifications import send_push_notification
+    from routers.push_notifications import send_push_notification, NotificationPayload
     call_type_text = "voz" if request.call_type == "audio" else "video"
     for participant_id in other_participants:
-        await send_push_notification(participant_id, {
-            "title": f"Llamada de {current_user.name}",
-            "body": f"Tienes una llamada de {call_type_text} entrante",
-            "type": "incoming_call",
-            "call_id": call_id,
-            "chat_id": request.chat_id,
-            "caller_name": current_user.name,
-            "call_type": request.call_type
-        })
+        await send_push_notification(participant_id, NotificationPayload(
+            title=f"Llamada de {current_user.name}",
+            body=f"Tienes una llamada de {call_type_text} entrante",
+            url="/chat",
+            tag="incoming_call",
+            data={
+                "type": "incoming_call",
+                "call_id": call_id,
+                "chat_id": request.chat_id,
+                "caller_name": current_user.name,
+                "call_type": request.call_type
+            }
+        ))
     
     return VideoCallResponse(
         room_url=room_url,
@@ -4558,6 +4587,11 @@ app.include_router(moderation_router)
 # Set database for albums router
 albums_set_db(db)
 app.include_router(albums_router)
+
+# Set database for push notifications router
+from routers.push_notifications import router as push_router, set_db as push_set_db
+push_set_db(db)
+app.include_router(push_router)
 
 # Then include api_router in app
 app.include_router(api_router)

@@ -1,6 +1,6 @@
 // BRUNO Service Worker for Push Notifications
-// Version 2 - Added cache busting and proper cleanup
-const CACHE_NAME = 'bruno-v2';
+// Version 3 - Full Push Notifications + Cache Busting
+const CACHE_NAME = 'bruno-v3';
 const CACHE_VERSION = Date.now();
 
 // Files to NOT cache (always fetch fresh)
@@ -12,19 +12,17 @@ const NO_CACHE = [
 
 // Install event - force update
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v2...');
-  // Skip waiting to activate immediately
+  console.log('[SW] Installing service worker v3...');
   self.skipWaiting();
 });
 
 // Activate event - clean old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v2...');
+  console.log('[SW] Activating service worker v3...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          // Delete all old caches
           if (cacheName !== CACHE_NAME) {
             console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
@@ -32,47 +30,38 @@ self.addEventListener('activate', (event) => {
         })
       );
     }).then(() => {
-      // Claim all clients immediately
       return clients.claim();
     })
   );
 });
 
-// Fetch event - Network first strategy for all requests
+// Fetch event - Network first strategy
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
   if (event.request.method !== 'GET') return;
   
-  // Skip URLs that shouldn't be cached
   const url = event.request.url;
   if (NO_CACHE.some(pattern => url.includes(pattern))) {
     return;
   }
   
-  // Network first strategy - always try network first
   event.respondWith(
     fetch(event.request)
-      .then((response) => {
-        return response;
-      })
-      .catch(() => {
-        // Only use cache as fallback for navigation
-        return caches.match(event.request);
-      })
+      .then((response) => response)
+      .catch(() => caches.match(event.request))
   );
 });
 
-// Push notification event
+// Push notification event - Enhanced
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push received:', event);
+  console.log('[SW] Push received');
   
   let data = {
     title: 'BRUNO',
     body: 'Tienes una nueva notificación',
-    icon: '/bruno-icon.png',
-    badge: '/bruno-icon.png',
-    tag: 'bruno-notification',
-    data: {}
+    icon: '/bruno-logo.png',
+    badge: '/bruno-logo.png',
+    url: '/',
+    tag: 'bruno-notification'
   };
   
   if (event.data) {
@@ -86,22 +75,29 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: data.body,
-    icon: data.icon || '/bruno-icon.png',
-    badge: data.badge || '/bruno-icon.png',
+    icon: data.icon,
+    badge: data.badge,
     tag: data.tag,
-    data: data.data,
-    vibrate: [200, 100, 200],
-    requireInteraction: data.type === 'incoming_call',
-    actions: []
+    data: { url: data.url, ...data.data },
+    vibrate: [100, 50, 100],
+    requireInteraction: false,
+    renotify: true,
+    silent: false
   };
   
-  // Add actions for incoming calls
-  if (data.type === 'incoming_call') {
+  // Special handling for different notification types
+  if (data.tag === 'incoming_call') {
+    options.requireInteraction = true;
+    options.vibrate = [200, 100, 200, 100, 200];
     options.actions = [
-      { action: 'accept', title: 'Aceptar', icon: '/icons/phone.png' },
-      { action: 'decline', title: 'Rechazar', icon: '/icons/phone-off.png' }
+      { action: 'accept', title: '✓ Aceptar' },
+      { action: 'decline', title: '✗ Rechazar' }
     ];
-    options.tag = `call-${data.call_id}`;
+  } else if (data.tag && data.tag.startsWith('message_')) {
+    options.actions = [
+      { action: 'reply', title: 'Responder' },
+      { action: 'dismiss', title: 'Cerrar' }
+    ];
   }
   
   event.waitUntil(
@@ -109,43 +105,34 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Notification click event
+// Notification click event - Enhanced
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked:', event.action, event.notification.data);
+  console.log('[SW] Notification clicked:', event.action);
   
   event.notification.close();
   
   const data = event.notification.data || {};
-  let url = '/';
+  let url = data.url || '/';
   
-  // Handle different notification types
-  if (data.type === 'incoming_call') {
-    if (event.action === 'accept') {
-      url = `/chat/${data.chat_id}?accept_call=${data.call_id}`;
-    } else if (event.action === 'decline') {
-      // Just close, the backend will handle timeout
-      return;
-    } else {
-      url = `/chat/${data.chat_id}`;
-    }
-  } else if (data.type === 'new_message') {
-    url = `/chat/${data.chat_id}`;
-  } else if (data.type === 'new_follower') {
-    url = `/profile/${data.follower_id}`;
-  } else if (data.type === 'post_like' || data.type === 'post_comment') {
-    url = `/feed?post=${data.post_id}`;
+  // Handle actions
+  if (event.action === 'accept' && data.call_id) {
+    url = `/chat?accept_call=${data.call_id}`;
+  } else if (event.action === 'decline') {
+    return; // Just close notification
+  } else if (event.action === 'reply') {
+    url = '/chat';
+  } else if (event.action === 'dismiss') {
+    return;
   }
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if app is already open
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
           client.navigate(url);
           return client.focus();
         }
       }
-      // Open new window if not
       if (clients.openWindow) {
         return clients.openWindow(url);
       }
@@ -153,10 +140,14 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Background sync for offline messages
+// Notification close event
+self.addEventListener('notificationclose', (event) => {
+  console.log('[SW] Notification closed');
+});
+
+// Background sync
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-messages') {
     console.log('[SW] Syncing messages...');
-    // Handle offline message sync here
   }
 });
