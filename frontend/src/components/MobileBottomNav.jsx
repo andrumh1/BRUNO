@@ -29,16 +29,17 @@ const MobileBottomNav = () => {
   const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno', '/lives/'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || 
                      location.pathname.match(/^\/lives\/[^/]+$/);
-  
-  if (shouldHide) return null;
 
-  // Dynamic light animation
+  // Dynamic light animation - must be called before any early returns
   useEffect(() => {
+    if (shouldHide) return; // Don't run animation if hidden
     const interval = setInterval(() => {
       setActiveLight(prev => (prev + 1) % 8);
     }, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [shouldHide]);
+  
+  if (shouldHide) return null;
 
   const navItems = [
     { id: 'home', icon: Home, label: 'Inicio', path: '/feed', matchPaths: ['/', '/feed'] },

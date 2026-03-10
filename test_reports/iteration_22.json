@@ -1,0 +1,110 @@
+{
+  "summary": "Iteration 22: Monetization & Moderation Systems Testing. Backend: 22/22 tests PASSED. Frontend: Monetization page fully functional. Fixed React Hook order violation in MobileBottomNav.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_monetization_moderation.py",
+    "/app/test_reports/pytest/pytest_monetization_moderation.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fixed React Hook order violation in MobileBottomNav.jsx - useEffect was called after early return",
+    "All 7 mobile nav buttons working: Inicio, Explorar, Crear, Lives, Mapa, Chat, Perfil",
+    "Monetization page shows all 4 promotion types with correct pricing",
+    "Earnings tab displays creator monetization info correctly",
+    "Content moderation filter correctly detects prohibited patterns"
+  ],
+  "updated_files": [
+    "/app/frontend/src/components/MobileBottomNav.jsx",
+    "/app/backend/tests/test_monetization_moderation.py"
+  ],
+  "success_rate": {
+    "backend": "100% (22/22 passed)",
+    "frontend": "100% (all features working)"
+  },
+  "test_credentials": {
+    "email": "newtest@bruno.com",
+    "password": "Test1234!"
+  },
+  "seed_data_creation": "None needed - using existing test user",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Monetization and Moderation systems are fully functional. MobileBottomNav React Hook issue was fixed.",
+  "bugs_fixed": [
+    {
+      "file": "/app/frontend/src/components/MobileBottomNav.jsx",
+      "issue": "React Hook order violation - useEffect called after early return",
+      "fix": "Moved useEffect before the early return statement and added shouldHide dependency",
+      "severity": "medium"
+    }
+  ],
+  "features_verified": {
+    "monetization_pricing_api": {
+      "status": "PASS",
+      "endpoint": "GET /api/monetization/pricing",
+      "details": "Returns all 4 promotion types with correct pricing and creator monetization info"
+    },
+    "moderation_check_api": {
+      "status": "PASS", 
+      "endpoint": "POST /api/moderation/check",
+      "details": "Correctly filters violent, spam, and excessive caps content"
+    },
+    "monetization_page": {
+      "status": "PASS",
+      "details": "Shows promotion types, earnings tab, creator info, withdraw button"
+    },
+    "mobile_bottom_nav": {
+      "status": "PASS",
+      "details": "All 7 buttons present with iOS 26.3 bubble style, navigation working"
+    },
+    "sponsored_posts_api": {
+      "status": "PASS",
+      "details": "Auth-protected, returns user's sponsored posts"
+    },
+    "creator_earnings_api": {
+      "status": "PASS",
+      "details": "Auth-protected, returns earnings summary"
+    },
+    "public_feed_endpoints": {
+      "status": "PASS",
+      "details": "GET /api/feed/sponsored and /api/feed/promoted-businesses working"
+    },
+    "map_promoted_cards": {
+      "status": "PASS",
+      "details": "GET /api/map/promoted-cards returns promoted cards"
+    }
+  },
+  "api_endpoints_verified": {
+    "monetization": [
+      "GET /api/monetization/pricing - 200 (public pricing info)",
+      "GET /api/monetization/sponsored-posts - 401 (requires auth)",
+      "GET /api/monetization/sponsored-posts - 200 (with auth)",
+      "GET /api/monetization/creator/earnings - 401 (requires auth)",
+      "GET /api/monetization/creator/earnings - 200 (with auth)",
+      "GET /api/feed/sponsored - 200 (public sponsored posts)",
+      "GET /api/feed/promoted-businesses - 200 (public promoted businesses)",
+      "GET /api/map/promoted-cards - 200 (public promoted map cards)"
+    ],
+    "moderation": [
+      "POST /api/moderation/check - 200 (clean content passes)",
+      "POST /api/moderation/check - 200 (violent content flagged)",
+      "POST /api/moderation/check - 200 (spam content flagged)",
+      "POST /api/moderation/check - 200 (empty content passes)",
+      "GET /api/moderation/queue - 401 (requires admin auth)",
+      "GET /api/moderation/stats - 401 (requires admin auth)"
+    ]
+  },
+  "promotion_types_verified": [
+    {"type": "sponsored_post", "name": "Publicación Patrocinada", "cost_per_day": 50},
+    {"type": "map_highlight", "name": "Destacado en Mapa", "cost_per_day": 100},
+    {"type": "feed_featured", "name": "Negocio Destacado", "cost_per_day": 75},
+    {"type": "search_boost", "name": "Impulso de Búsqueda", "cost_per_day": 30}
+  ]
+}
