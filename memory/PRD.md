@@ -272,6 +272,29 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - **Meta Tags:** Cache-Control, Pragma, Expires en `index.html`
 - **Service Worker v2:** skipWaiting, cache cleanup, network-first
 
+### Fase 8: Monetización y Moderación (Completado 2025-03-10)
+
+#### 1. Sistema de Monetización
+- **Backend:** `/app/backend/routers/monetization.py`
+- **Tipos de Promoción:**
+  - Publicación Patrocinada (50 pts/día)
+  - Destacado en Mapa (100 pts/día)
+  - Negocio Destacado (75 pts/día)
+  - Impulso de Búsqueda (30 pts/día)
+- **Monetización de Creadores:** 70% de regalos
+- **Frontend:** `/app/frontend/src/pages/MonetizationPage.jsx`
+
+#### 2. Sistema de Moderación
+- **Backend:** `/app/backend/routers/moderation.py`
+- **Filtro Automático:** Violencia, odio, spam, contenido adulto
+- **Panel de Admin:** Cola de moderación, estadísticas, historial
+- **Acciones:** Advertir, eliminar, suspender, banear
+
+#### 3. Navegación Móvil iOS 26.3
+- **Estilo:** Burbujas con efectos de luz dinámicos
+- **7 Botones:** Inicio, Explorar, Crear, Lives, Mapa, Chat, Perfil
+- **Header Simplificado:** Solo Panel, Web, Tienda PIUP
+
 ---
 
 ## 3rd Party Integrations
@@ -281,8 +304,8 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - **Stripe:** Payments (prepared)
 - **Emergent Google Auth:** Social Login ✅
 - **Resend:** Email (prepared - needs API key)
-- **Leaflet/OpenStreetMap:** Interactive Maps ✅ (NUEVO)
+- **Leaflet/OpenStreetMap:** Interactive Maps ✅
 
 ---
 
-*Last Updated: 2025-02-27 - Fase 7: Sistema de Lives TikTok-style, Corrección cache Safari/iOS*
+*Last Updated: 2025-03-10 - Fase 8: Monetización (Patrocinados, Promociones), Moderación (Filtro auto, Panel admin), Nav iOS 26.3*
