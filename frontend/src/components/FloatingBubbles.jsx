@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Sparkles, X, Send, Loader2, Trash2 } from "lucide-react";
+import { Sparkles, X, Send, Loader2, Trash2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
@@ -12,12 +12,14 @@ const API = `${BACKEND_URL}/api`;
 const FloatingBubbles = () => {
   const { user, token } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [showAIChat, setShowAIChat] = useState(false);
   const [aiMessages, setAiMessages] = useState([]);
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
+  const [generatingCard, setGeneratingCard] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Hide bubbles on chat page
@@ -93,11 +95,22 @@ const FloatingBubbles = () => {
 
   const sendAIMessage = async (e) => {
     e.preventDefault();
-    if (!aiInput.trim() || aiLoading) return;
+    if (!aiInput.trim() || aiLoading || generatingCard) return;
 
     const userMessage = aiInput.trim();
     setAiInput("");
     setAiMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    
+    // Check if user wants to create a card
+    if (isCardCreationRequest(userMessage)) {
+      setAiMessages(prev => [...prev, {
+        role: "assistant",
+        content: "Generando tu tarjeta con IA..."
+      }]);
+      await generateCardWithAI(userMessage);
+      return;
+    }
+    
     setAiLoading(true);
 
     try {
@@ -133,6 +146,46 @@ const FloatingBubbles = () => {
     } catch (error) {
       console.error("Error clearing AI history:", error);
     }
+  };
+
+  // Generate card with AI
+  const generateCardWithAI = async (description) => {
+    setGeneratingCard(true);
+    try {
+      const response = await axios.post(
+        `${API}/ai/generate-card`,
+        { description },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Store generated data in sessionStorage and navigate to create card
+      sessionStorage.setItem("ai_generated_card", JSON.stringify(response.data));
+      setAiMessages(prev => [...prev, {
+        role: "assistant",
+        content: `✅ ${response.data.message}\n\nTe llevo a crear tu tarjeta...`
+      }]);
+      
+      setTimeout(() => {
+        setShowAIChat(false);
+        navigate("/cards/new?from_ai=true");
+      }, 1500);
+      
+    } catch (error) {
+      console.error("Error generating card:", error);
+      setAiMessages(prev => [...prev, {
+        role: "assistant",
+        content: "No pude generar la tarjeta. Ve a + → Nueva Tarjeta para crearla manualmente."
+      }]);
+    } finally {
+      setGeneratingCard(false);
+    }
+  };
+
+  // Check if message is asking to create a card
+  const isCardCreationRequest = (message) => {
+    const keywords = ["crear tarjeta", "crea mi tarjeta", "quiero una tarjeta", "hazme una tarjeta", 
+                      "necesito tarjeta", "crear mi", "soy ", "tengo un", "ofrezco", "busco trabajo"];
+    return keywords.some(k => message.toLowerCase().includes(k));
   };
 
   // Don't render if user is not logged in or on chat page

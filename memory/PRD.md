@@ -420,6 +420,45 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - [ ] Más legales y condiciones
 - [ ] Refactoring de server.py (mover profile, AI a routers)
 - [ ] Soporte completo de archivos en chat
-- [ ] BRUNO IA acciones (crear tarjetas, buscar profesionales automáticamente)
+
+---
+
+## Fase 11: Cámara Potenciada y BRUNO IA Acciones (Completado 2025-03-10)
+
+### 1. Cámara con Filtros TikTok/Snapchat
+- **Biblioteca:** face-api.js para detección facial en tiempo real
+- **Modelos en:** `/app/frontend/public/models/`
+- **Filtros de Color (16):**
+  - Original, Beauty, Glow, Soft, Vivid, Warm, Cool, Sunset
+  - Vintage, Drama, B&N, Cinema, Neon, Dreamy, Pop Art, Midnight
+- **Filtros de Belleza (5 niveles):**
+  - Natural, Suave, Medio, Alto, Máximo
+  - Suaviza piel con blur y ajuste de brillo
+- **Filtros AR Animalitos (12):**
+  - Gatito, Perrito, Conejito (con orejas, nariz, bigotes)
+  - Corona dorada con joyas
+  - Corazones, Estrellas, Brillos (partículas animadas)
+  - Arcoíris, Rayos de Sol, Luna, Lluvia (efectos especiales)
+- **Stickers (16):** Emojis populares (corazón, fuego, estrella, etc.)
+- **Texto:** 6 estilos (Normal, Bold, Neón, Elegante, Retro, Tech) + 10 colores
+- **Archivo:** `/app/frontend/src/pages/BrunoCameraPage.jsx` (completamente reescrito)
+
+### 2. BRUNO IA Crea Tarjetas Automáticamente
+- **Endpoint:** `POST /api/ai/generate-card`
+- **Input:** Descripción en lenguaje natural (ej: "Soy plomero en CDMX")
+- **Output:** 
+  - `card_type` detectado automáticamente
+  - `suggested_fields` con título, subtítulo, descripción, servicios, color
+  - Para trabajos: salario, contrato, modalidad, requisitos
+- **Integración Frontend:**
+  - BRUNO IA detecta intención de crear tarjeta
+  - Genera datos con IA
+  - Redirige a /cards/new?from_ai=true
+  - Muestra banner "Tarjeta generada con BRUNO IA"
+  - Pre-llena el formulario con datos sugeridos
+- **Archivos modificados:**
+  - `/app/backend/server.py` - Endpoint /api/ai/generate-card
+  - `/app/frontend/src/components/FloatingBubbles.jsx` - Detección de intención
+  - `/app/frontend/src/pages/CreateCardPage.jsx` - Recibe datos de IA
 
 ---

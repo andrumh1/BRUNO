@@ -3738,6 +3738,111 @@ async def clear_ai_chat_history(
     return {"deleted_count": result.deleted_count}
 
 
+# ==================== AI CARD CREATION ====================
+
+class AICardGenerateInput(BaseModel):
+    description: str  # e.g., "soy plomero en CDMX", "tengo una cafetería", "busco trabajo como diseñador"
+
+class AICardGenerateResponse(BaseModel):
+    card_type: str
+    suggested_fields: dict
+    message: str
+
+@api_router.post("/ai/generate-card", response_model=AICardGenerateResponse)
+async def ai_generate_card(
+    input_data: AICardGenerateInput,
+    current_user: User = Depends(get_current_user)
+):
+    """Generate card data based on natural language description"""
+    description = input_data.description.lower()
+    
+    # Determine card type based on keywords
+    card_type = "personal"
+    if any(word in description for word in ["empleo", "trabajo", "oferta", "vacante", "contratar"]):
+        if any(word in description for word in ["busco", "necesito", "quiero"]):
+            card_type = "busqueda_personal" if "personal" in description or "empleado" in description else "solicitud_servicio"
+        else:
+            card_type = "oferta_trabajo"
+    elif any(word in description for word in ["empresa", "corporativo", "compañía"]):
+        card_type = "empresarial"
+    elif any(word in description for word in ["tienda", "negocio", "vendo", "venta", "local"]):
+        card_type = "negocio"
+    elif any(word in description for word in ["servicio", "freelance", "profesional", "ofrezco"]):
+        card_type = "servicios"
+    elif any(word in description for word in ["restaurante", "café", "bar", "lugar", "ubicación"]):
+        card_type = "lugares"
+    elif any(word in description for word in ["mascota", "perro", "gato", "pet"]):
+        card_type = "mascotas"
+    elif any(word in description for word in ["curriculum", "cv", "experiencia", "habilidades"]):
+        card_type = "curriculum"
+    
+    # Generate suggested fields using AI
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        import json
+        
+        generation_prompt = f"""Genera los datos para una tarjeta digital tipo "{card_type}" basándote en esta descripción: "{input_data.description}"
+
+Responde SOLO en JSON válido con estos campos según el tipo:
+
+Para servicios/personal/empresarial/negocio:
+{{"title": "nombre", "subtitle": "profesión/eslogan", "description": "descripción corta", "services": ["servicio1", "servicio2"], "suggested_color": "#hexcolor"}}
+
+Para oferta_trabajo/busqueda_personal:
+{{"title": "título del puesto", "subtitle": "empresa/sector", "description": "descripción", "salary_min": 0, "salary_max": 0, "contract_type": "full-time/part-time/freelance", "remote_option": "remote/hybrid/on-site", "requirements": ["req1", "req2"], "suggested_color": "#hexcolor"}}
+
+Para solicitud_servicio:
+{{"title": "servicio que busca", "subtitle": "urgencia", "description": "detalles", "budget_min": 0, "budget_max": 0, "requirements": ["req1"], "suggested_color": "#hexcolor"}}
+
+Usa colores profesionales. Si hay ubicación mencionada, inclúyela. Responde SOLO JSON."""
+
+        chat = LlmChat(
+            api_key=os.environ.get("EMERGENT_LLM_KEY"),
+            session_id=f"card_gen_{current_user.id}_{uuid.uuid4()}",
+            system_message="Eres un generador de datos para tarjetas digitales. Respondes SOLO en JSON válido."
+        ).with_model("openai", "gpt-4o")
+        
+        user_message = UserMessage(text=generation_prompt)
+        ai_response = await chat.send_message(user_message)
+        
+        # Parse AI response
+        response_text = ai_response.strip()
+        # Clean markdown code blocks if present
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+        response_text = response_text.strip()
+        
+        suggested_fields = json.loads(response_text)
+        
+        # Add default fields
+        suggested_fields["card_type"] = card_type
+        suggested_fields["is_public"] = True
+        suggested_fields["show_in_feed"] = True
+        
+        return AICardGenerateResponse(
+            card_type=card_type,
+            suggested_fields=suggested_fields,
+            message=f"Tarjeta tipo '{card_type}' generada. Revisa y ajusta los campos antes de crear."
+        )
+        
+    except Exception as e:
+        logging.error(f"AI Card Generation error: {str(e)}")
+        # Fallback to basic fields
+        return AICardGenerateResponse(
+            card_type=card_type,
+            suggested_fields={
+                "title": input_data.description[:50],
+                "subtitle": "",
+                "description": input_data.description,
+                "card_type": card_type,
+                "suggested_color": "#FF5A00"
+            },
+            message=f"Tarjeta tipo '{card_type}' creada con datos básicos. Completa los campos."
+        )
+
+
 class AIRecommendationInput(BaseModel):
     query: str
     type: str = "all"  # cards, posts, reels, all

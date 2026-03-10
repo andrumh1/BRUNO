@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
@@ -13,18 +13,20 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import ProfileSpecificFields from "@/components/ProfileSpecificFields";
 import BubbleSelect from "@/components/BubbleSelect";
 import axios from "axios";
-import { ArrowLeft, Save, Upload, Image as ImageIcon, Plus, Trash2, Briefcase, GraduationCap, Award, Languages, FileText, Users, HandHelping, DollarSign, Clock, MapPin, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, Upload, Image as ImageIcon, Plus, Trash2, Briefcase, GraduationCap, Award, Languages, FileText, Users, HandHelping, DollarSign, Clock, MapPin, CheckCircle2, Sparkles } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const CreateCardPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { token } = useAuth();
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(false);
   
   // Image editor state
   const [showImageEditor, setShowImageEditor] = useState(false);
@@ -120,6 +122,46 @@ const CreateCardPage = () => {
       template_id: defaultTemplates[type] || "personal_classic"
     });
   };
+
+  // Load AI-generated card data
+  useEffect(() => {
+    const fromAI = searchParams.get("from_ai");
+    if (fromAI === "true") {
+      const aiData = sessionStorage.getItem("ai_generated_card");
+      if (aiData) {
+        try {
+          const parsed = JSON.parse(aiData);
+          const fields = parsed.suggested_fields || {};
+          
+          setFormData(prev => ({
+            ...prev,
+            card_type: parsed.card_type || prev.card_type,
+            title: fields.title || "",
+            subtitle: fields.subtitle || "",
+            description: fields.description || "",
+            background_color: fields.suggested_color || prev.background_color,
+            services: fields.services || [],
+            custom_fields: {
+              ...prev.custom_fields,
+              job_details: {
+                ...prev.custom_fields.job_details,
+                salary_min: fields.salary_min?.toString() || "",
+                salary_max: fields.salary_max?.toString() || "",
+                contract_type: fields.contract_type || "",
+                remote_option: fields.remote_option || "",
+                requirements: fields.requirements || [],
+              }
+            }
+          }));
+          
+          setAiGenerated(true);
+          sessionStorage.removeItem("ai_generated_card");
+        } catch (e) {
+          console.error("Error parsing AI data:", e);
+        }
+      }
+    }
+  }, [searchParams]);
 
   // Handle file selection and open editor
   const handleFileSelect = (e, type) => {
@@ -261,6 +303,17 @@ const CreateCardPage = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        {/* AI Generated Banner */}
+        {aiGenerated && (
+          <div className="mb-4 p-3 bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 rounded-xl border border-violet-500/30 flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-violet-500" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">Tarjeta generada con BRUNO IA</p>
+              <p className="text-xs text-muted-foreground">Revisa y ajusta los campos según necesites</p>
+            </div>
+          </div>
+        )}
+
         <div className="grid lg:grid-cols-2 gap-4 sm:gap-8">
           {/* Form */}
           <div>
