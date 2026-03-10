@@ -77,17 +77,17 @@ const BubbleSelect = ({
       className={`bubble-select-container relative ${className}`}
       style={{ zIndex: isOpen ? 9997 : "auto" }}
     >
-      {/* Trigger Button */}
+      {/* Trigger Button - Compact design */}
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`
           bubble-select-trigger
-          w-full flex items-center justify-between gap-3
-          min-h-[48px] px-4 py-3
-          rounded-2xl
-          text-left text-base
+          w-full flex items-center justify-between gap-2
+          min-h-[42px] px-3 py-2
+          rounded-xl
+          text-left text-sm
           transition-all duration-200 ease-out
           ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-[0.98]"}
           ${isOpen ? "bubble-select-trigger-open" : ""}
@@ -101,51 +101,66 @@ const BubbleSelect = ({
           ) : placeholder}
         </span>
         <ChevronDown 
-          className={`w-5 h-5 flex-shrink-0 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} 
+          className={`w-4 h-4 flex-shrink-0 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} 
         />
       </button>
 
       {/* Options Dropdown */}
       {isOpen && (
         <>
-          {/* Backdrop para móviles */}
+          {/* Full screen overlay to capture outside clicks - z-index LOWER than options */}
           <div 
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm sm:hidden"
+            className="fixed inset-0"
             style={{ zIndex: 9998 }}
-            onClick={() => setIsOpen(false)}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsOpen(false);
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsOpen(false);
+            }}
           />
           
-          {/* Options Container */}
+          {/* Options Container - Fixed position for mobile reliability */}
           <div
             ref={optionsRef}
             role="listbox"
-            className="bubble-select-options"
+            className="bubble-select-options fixed left-4 right-4 sm:absolute sm:left-0 sm:right-0"
             style={{
-              position: "absolute",
-              top: "100%",
-              left: 0,
-              right: 0,
-              marginTop: "8px",
-              zIndex: 9999,
+              top: containerRef.current ? 
+                containerRef.current.getBoundingClientRect().bottom + window.scrollY + 8 : "50%",
+              zIndex: 10000,
+              maxHeight: "250px",
             }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
           >
-            <div className="bubble-select-options-inner">
+            <div className="bubble-select-options-inner overflow-y-auto" style={{ maxHeight: "250px" }}>
               {options.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   role="option"
                   data-value={option.value}
+                  data-testid={`bubble-option-${option.value}`}
                   aria-selected={option.value === value}
-                  onClick={(e) => {
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSelect(option.value);
+                  }}
+                  onTouchStart={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     handleSelect(option.value);
                   }}
                   className={`
                     bubble-select-option
-                    w-full flex items-center gap-3 px-4 py-3
-                    text-left text-base
+                    w-full flex items-center gap-3 px-4 py-2.5
+                    text-left text-sm
                     transition-all duration-150
                     ${option.value === value ? "bubble-select-option-selected" : ""}
                   `}
@@ -156,7 +171,7 @@ const BubbleSelect = ({
                     )}
                   </span>
                   {option.value === value && (
-                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                    <Check className="w-4 h-4 text-primary flex-shrink-0" />
                   )}
                 </button>
               ))}
