@@ -374,6 +374,37 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 ---
 
+## Fase 10: BRUNO IA Mejorada y Álbumes Internos (Completado 2025-03-10)
+
+### 1. BRUNO IA - Comunicación Directa
+- **Antes:** Respuestas largas con "¡Hola!", "¡Por supuesto!", emojis excesivos
+- **Ahora:** Directo al punto, amistoso pero eficiente
+- **Formato:** Máximo 2-3 líneas para preguntas simples
+- **Capacidades activas:** Búsqueda de tarjetas, guía de navegación, resolución de problemas
+- **Ejemplos integrados:** Muestra formato correcto vs incorrecto en el prompt
+- **Archivo:** `/app/backend/server.py` - `BRUNO_SYSTEM_MESSAGE`
+
+### 2. Sistema de Álbumes Internos
+- **Funcionalidad:** Galería privada tipo "Guardados" de Instagram
+- **CRUD completo:**
+  - `POST /api/albums` - Crear álbum
+  - `GET /api/albums` - Listar álbumes
+  - `GET /api/albums/{id}` - Obtener álbum
+  - `PUT /api/albums/{id}` - Actualizar álbum
+  - `DELETE /api/albums/{id}` - Eliminar álbum
+- **Media:**
+  - `POST /api/albums/{id}/media` - Añadir foto/video
+  - `GET /api/albums/{id}/media` - Listar media
+  - `DELETE /api/albums/{id}/media/{media_id}` - Eliminar media
+  - `POST /api/albums/upload` - Upload a Cloudinary
+- **Archivos:**
+  - `/app/backend/routers/albums.py` (NUEVO)
+  - `/app/frontend/src/pages/AlbumsPage.jsx` (NUEVO)
+  - `/app/frontend/src/pages/MyProfilePage.jsx` - Tab añadido
+- **Colecciones DB:** `albums`, `album_media`
+
+---
+
 ## Próximas Tareas (Backlog)
 
 ### P0 - Urgentes
@@ -381,14 +412,14 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 ### P1 - Importantes
 - [ ] Algoritmos de recomendación estilo TikTok/Facebook
-- [ ] Configuración de datos de usuario (editar/actualizar)
-- [ ] Más opciones en Settings
+- [ ] Configuración de datos de usuario (editar/actualizar más campos)
+- [ ] Más opciones en Settings (privacidad, notificaciones avanzadas)
 
 ### P2 - Deseables
-- [ ] Álbumes internos (fotos/videos del usuario)
-- [ ] Finalizar monetización con pasarela de pago real
+- [ ] Finalizar monetización con pasarela de pago real (Stripe)
 - [ ] Más legales y condiciones
 - [ ] Refactoring de server.py (mover profile, AI a routers)
 - [ ] Soporte completo de archivos en chat
+- [ ] BRUNO IA acciones (crear tarjetas, buscar profesionales automáticamente)
 
 ---
