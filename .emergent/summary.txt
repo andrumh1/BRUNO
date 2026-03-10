@@ -1,136 +1,133 @@
 <analysis>Here is the handover summary for the next agent:
 
 **original_problem_statement:**
-The user wants to build a comprehensive professional social network called BRUNO. The project's scope is defined by a detailed 9-point list of requirements and has been progressively expanded with new features in subsequent interactions.
+The user wants to build a comprehensive professional social network called BRUNO. The project's scope is defined by a detailed 9-point list of requirements and has been progressively expanded with new features, including a large batch of corrections and feature requests from the most recent user interaction.
 
 **PRODUCT REQUIREMENTS (Consolidated):**
 
-*   **Core 9 Points:**
-    1.  **Map:** Snapchat-like UI with distance measurement. (Initial implementation done, needs polish).
-    2.  **Cards:** Multiple view sizes (mini/list), editable templates.
-    3.  **Feed:** Support for photo/video posts with location tags, and public card updates.
-    4.  **Chat:** Support for all media types, voice/video calls, and a floating bubble UI (Bubble UI is DONE).
-    5.  **Store:** Unified with Marketplace. (DONE).
-    6.  **BRUNO IA:** An AI assistant deeply integrated into the app for support, recommendations, and system manipulation. (Expanded with recommendations and mascot).
-    7.  **Users:** Fix session persistence, implement a robust security model, and create a guided app tour (Tour is DONE).
-    8.  **Public Website (BRUNO.com):** A full marketing website. (DONE).
-    9.  **Profile:** Better organization of posts, reels, and cards. (Initial implementation DONE).
-*   **Recent Additions & User Requests:**
-    *   **Marketplace:** A section for users to publish product/service cards, now unified with the main PIUP store. (DONE).
-    *   **Stories:** 24-hour user stories and static catalog-style stories on cards. (DONE).
-    *   **Reels:** A TikTok-style vertical video feed. (DONE).
-    *   **Push & Email Notifications:** A comprehensive, user-configurable notification system. (DONE).
-    *   **Floating Chat:** A non-intrusive, site-wide floating chat bubble. (DONE).
-    *   **Verified Badges:** For Pro and Business users. (DONE).
-    *   **BRUNO Camera:** A custom in-app camera with an editor for photos and videos. (DONE).
-    *   **Analytics Dashboard:** An advanced analytics page for subscribed users. (DONE).
-    *   **BRUNO Mascot:** Integrated the official dog mascot image for the BRUNO AI. (DONE).
-    *   **Bug Fixes:** Identify and fix functionality errors in dropdowns and forms.
-    *   **Novel Features:** Implement innovative social media functionalities.
+*   **Core 9 Points:** The original list covering maps, cards, feed, chat, store, AI, users, a public website, and profiles. Many parts are implemented but require polish.
+*   **Recent Core Features:** Marketplace, Stories, Reels, Push/Email Notifications, Floating Chat, Verified Badges, Custom Camera, Analytics Dashboard, and a full TikTok-style Live streaming system.
+*   **Compliance & Monetization:** A full suite of compliance features (account deletion, reporting, privacy policies) and an internal monetization system (sponsored content) have been implemented.
+*   **Latest User Requests (Urgent):**
+    1.  **UI/UX Overhaul:**
+        *   Redesign the chat icon/bubble (make it smaller).
+        *   Standardize the camera button's appearance.
+        *   Redesign the chat UI to be more like WhatsApp (dynamic, pleasant, smaller fonts).
+        *   Replace large form selection boxes with pretty bubble-style dropdowns.
+        *   Reduce the size of fonts and emoticons for better ergonomics.
+        *   Redesign the bottom navigation bar with a dynamic bubble style inspired by iOS 26.3.
+    2.  **Layout Correction:**
+        *   The Explore icon on the bottom navigation bar is incorrect and should be Marketplace.
+        *   Clean up the top header on the feed page, moving icons like Map and Marketplace to the bottom navigation bar only. The top should only have the user panel, website link, and PIUP store.
+    3.  **New Features:**
+        *   **Data Configuration:** Allow users to modify and update their data.
+        *   **Advanced Search/Discovery:** Implement large-scale recommendation algorithms (like Facebook and TikTok).
+        *   **New Card Types:** Add cards for job offer, service request, and staff search.
+        *   **Expanded Settings:** Add more functional options to the user settings page.
+        *   **Internal Albums:** Create a system for user-managed photo/video albums, requiring a storage solution.
+    4.  **Bug Fixes & Polish:**
+        *   Address a bug where new users on Safari (iPhone) see an outdated version of the app.
+        *   Finalize monetization.
+        *   Add more legalities and conditions.
+        *   Implement novel features and suggestions to improve functionality.
 
 **User's preferred language**: Spanish
 
 **what currently exists?**
-The application is a feature-rich full-stack social network built with React, FastAPI, and MongoDB. Key features include real-time chat (WebSockets) with a floating UI, video/audio calls (Daily.co), an AI assistant (BRUNO IA), a gamification/points system, a unified Marketplace/Store, user stories, a Reels feed, a custom in-app camera with an editor, an analytics dashboard, verified user badges, and a live map. The backend is undergoing a progressive refactoring from a  monolith to a modular router-based architecture.
+The application is a complex, feature-rich full-stack social network built with React, FastAPI, and MongoDB. It includes a real-time chat with a floating UI, video/audio calls, a TikTok-style Lives feature, a recommendation feed, a marketplace, user stories, an interactive map (using Leaflet), an analytics dashboard, and a full compliance suite (reporting, account deletion, privacy/terms pages). The UI features a dynamic, mobile-first bottom navigation bar. The backend is partially refactored into a modular router-based architecture, though  still contains significant legacy code.
 
 **Last working item**:
-- **Last item agent was working:** The agent implemented a large batch of features based on user requests:
-    1.  An advanced analytics dashboard for subscribed users.
-    2.  A custom in-app camera (BRUNO Camera) with a photo/video editor.
-    3.  Integrated the BRUNO dog mascot image as the avatar for the BRUNO IA.
-    4.  Added a Map icon to the main navigation bar in the feed.
-    5.  The agent also prepared to fix form/dropdown bugs and introduce novel features as requested.
-- **Status:** USER VERIFICATION PENDING
-- **Agent Testing Done:** Y
+- **Last item agent was working:** The agent was processing a large, multi-point request from the user for UI corrections, bug fixes, and new features. The agent had just acknowledged the request and was about to begin implementation, starting with the most urgent UI changes.
+- **Status:** NOT STARTED
+- **Agent Testing Done:** N/A
 - **Which testing method agent to use?** both
-- **User Testing Done:** N
+- **User Testing Done:** N/A
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Form & Dropdown Bugs (P0)**
-    - **Description:** The user reported that some dropdowns and forms have functionality errors, such as not updating correctly. The agent did not perform a specific audit to identify and fix these.
+- **Issue 1: UI/UX Redesign & Corrections (P0)**
+    - **Description:** The user has requested a significant number of specific UI changes to modernize the app and improve usability. This is the highest priority.
     - **Next debug checklist:**
-        1.  Manually test all forms (Login, Register, New Product, Profile Edit, etc.) and dropdowns throughout the application.
-        2.  Use the browser's developer tools to inspect network requests and console logs for errors upon submission or interaction.
-        3.  Call the  with a specific instruction to stress-test all user input forms and interactive elements.
-        4.  Correct any identified state management issues or incorrect API payloads in the relevant React components.
-    - **Why fix this issue and what will be achieved with the fix?** To resolve user-facing bugs and improve the core usability and reliability of the application.
+        1.  Change the Explore icon in  to Marketplace.
+        2.  Redesign dropdowns across the app (e.g., in , ) to use a bubble style instead of standard inputs.
+        3.  Refactor the chat UI () to resemble WhatsApp, with smaller fonts and background options.
+        4.  Adjust the global CSS () to reduce default font and emoticon sizes.
+        5.  Update the  to match the new bubble aesthetic of the bottom navigation bar.
+    - **Why fix this issue and what will be achieved with the fix?** To align the application with the user's specific design vision and improve the overall user experience.
     - **Status:** NOT STARTED
     - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** both
+    - **Should Test frontend/backend/both after fix?** frontend
     - **Blocked on other issue:** None
-- **Issue 2: Incomplete Backend Refactoring (P1)**
-    - **Description:** The  file still contains a significant amount of logic that needs to be moved to modular routers (e.g., profiles, AI). This is a major source of technical debt.
-    - **Attempted fixes:** The agent successfully created routers for auth, calls, chat, marketplace, notifications, posts, points, stories, and most recently, .
+- **Issue 2: Safari/iPhone Cache Bug for New Users (P1)**
+    - **Description:** The user reported that new accounts on Safari (iPhone) do not see the latest version of the app, indicating an aggressive caching problem.
+    - **Attempted fixes:** The agent added anti-cache meta tags to  and modified  to force updates. However, the fix was never verified.
     - **Next debug checklist:**
-        1.  Identify the next logical domain within  (e.g.,  or ).
-        2.  Create a new router file (e.g., ) in .
-        3.  Move the relevant FastAPI  logic and helper functions from  to the new file.
-        4.  Import and include the new router in , then remove the old code.
-    - **Why fix this issue and what will be achieved with the fix?** To improve code organization, maintainability, and development speed.
+        1.  Use the testing agent to simulate a new user session specifically on a Safari user agent.
+        2.  Verify if the anti-cache headers are being served correctly.
+        3.  If the issue persists, consider adding a version parameter to the main JavaScript/CSS bundle URLs in  (e.g., ) to ensure cache busting.
+    - **Why fix this issue and what will be achieved with the fix?** To ensure all users, especially new ones on iOS devices, receive the correct and most up-to-date version of the application.
+    - **Status:** TESTING PENDING
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** frontend
+    - **Blocked on other issue:** None
+- **Issue 3: Incomplete Backend Refactoring (P2)**
+    - **Description:** The  file remains a partial monolith, containing logic for profiles, AI, and other core features that should be in separate routers.
     - **Status:** IN PROGRESS
     - **Is recurring issue?** Y
-    - **Should Test frontend/backend/both after fix?** backend (regression test)
-    - **Blocked on other issue:** None
 
 **In progress Task List**:
-None. The last set of tasks was completed and tested by the agent.
+None. The agent was about to start on the new list of user requests.
 
 **Upcoming and Future Tasks**
-*   **Upcoming Tasks (P0):**
-    *   **Novel Social Features:** Discuss with the user to define and implement novel social features. This is a high-priority but vague request that needs clarification.
-    *   **Card View Variations:** Create miniature and list view components for business cards, to be used on the map and in search results.
-    *   **Editable Card Templates:** Allow users to customize their card templates directly from the UI.
-    *   **Feed with Location:** Add the ability to tag posts with a location.
-*   **Future Tasks (P1):**
+*   **Upcoming Tasks (P0/P1):**
+    *   **New Card Types (P1):** Create new frontend components and backend models for job offer, service request, and staff search cards.
+    *   **Advanced Search/Discovery (P1):** Begin planning and implementing a recommendation engine. This is a large task that should be broken down, starting with tracking user interactions (likes, views, follows) to build a user preference profile.
+    *   **Expanded Settings (P1):** Add new components to  for the requested functionalities (e.g., Data Configuration).
+    *   **Internal Albums/Storage (P2):** Plan and implement a feature for users to create and manage their own photo/video albums. This will require backend logic and potentially a new DB collection.
+*   **Future Tasks (P2):**
+    *   **Finalize Monetization:** Connect the monetization UI to the points system and potentially a real payment gateway like Stripe.
     *   **Advanced Chat:** Implement full support for arbitrary file sharing.
-    *   **BRUNO IA Actions:** Grant the AI the ability to create/edit user cards and perform other system actions on behalf of the user.
-    *   **Subscription Features:** Define and implement more compelling, distinct features for paid subscription plans.
-    *   **Security Model Review:** Conduct a comprehensive review and hardening of the application's security model.
+    *   **BRUNO IA Actions:** Grant the AI the ability to perform system actions on behalf of the user.
 
 **Completed work in this session**
-- **Advanced Analytics:** Implemented a full analytics backend router and a frontend dashboard page, gated by subscription tier.
-- **BRUNO Camera & Editor:** Created a new page with a custom camera UI, including a photo/video editor with filters and stickers.
-- **BRUNO Mascot Integration:** Replaced the generic AI icon with the official dog mascot image across the app.
-- **Navigation Improvement:** Added a Map icon to the main navigation bar.
-- **Verified User Badges:** Implemented a  component and integrated it into posts and chat to show Pro/Business status.
-- **Live Map UI:** Built a functional map page that shows real-time user locations via WebSockets.
-- **Backend Refactoring ():** Created a new  router and migrated all store, subscription, and PIUP product logic out of .
-- **Email Notifications (Resend):** Integrated  for sending email notifications as a user-configurable option.
-- **Floating Chat UI:** Replaced the full-page chat with a floating bubble UI that allows for multiple concurrent chat windows.
-- **Unified Marketplace:** Merged the PIUP store (subscriptions, NFC cards) into the main Marketplace as featured sections.
-- **Comprehensive Notifications:** Expanded the notification system to 11 different event types and added a dedicated settings page.
-- **Marketplace & Stories:** Completed the full implementation of the marketplace and user stories features.
+- **Map Fix:** Replaced the simulated CSS map with a real, interactive map using the **Leaflet** library.
+- **Authentication Flow Fix:** Created a centralized  React component, fixing widespread redirection bugs on pages like Analytics, Map, and New Product.
+- **Compliance System (Phase 1):** Implemented a full compliance suite, including pages for Privacy Policy and Terms, a system to report content, and a secure, multi-step process for users to export their data and delete their accounts. Created the  router.
+- **Live Streaming Feature:** Built a complete TikTok-style Lives feature. This includes a backend router (), a  to browse active streams, a  with a TikTok-like UI, and integration into the main navigation.
+- **Monetization & Moderation Systems (Phase 2 & 3):** Created backend routers (, ) and a frontend page for users to manage sponsored content and view earnings. Implemented a basic automatic content moderation filter.
+- **UI/UX Enhancements:**
+    *   Implemented a mobile-only bottom navigation bar ().
+    -   Redesigned the bottom navigation bar with a dynamic bubble style with light effects, inspired by iOS 26.3.
+    *   Cleaned up the main feed header, moving icons to the bottom navigation bar for a cleaner look.
+- **Bug Fix (Attempted):** Addressed a potential cache issue on Safari/iPhone by adding anti-cache headers to  and updating the service worker.
 
 **Earlier issues found/mentioned but not fixed**
-- The user's request to identifica errores de funcionalidad en espegables y formularios y corrigelos was acknowledged but not acted upon. This is now listed as a high-priority pending issue.
+- All items from the user's last message (chat message 400) are pending. They are now categorized under  and .
 
 **Known issue recurrence from previous fork**
-- **MongoDB ObjectId Serialization:** This remains a potential risk. All new endpoints interacting with MongoDB must be carefully designed to exclude the  field or convert  types to strings before sending the response.
+- **MongoDB ObjectId Serialization:** Remains a persistent risk. The testing agent had to fix an  issue in the  endpoint during this session, proving it's an ongoing concern. New endpoints must be carefully vetted.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Real-time:** WebSockets (Chat, Map), WebRTC/Daily.co (Calls).
-*   **Backend:** FastAPI, Pydantic, Motor, JWT. Structure is transitioning to  modules.
-*   **Frontend:** React, React Router, Axios, Tailwind CSS, shadcn/ui, , .
-*   **Email:** Resend.
-*   **Push Notifications:** Service Workers, Web Push API.
+*   **Mapping:** Leaflet.js for interactive maps.
+*   **Real-time:** WebSockets (Chat, Map, Lives), WebRTC/Daily.co (Calls, Lives).
+*   **Backend:** FastAPI, Pydantic, Motor, JWT. Progressively moving to  modules.
+*   **Frontend:** React, React Router, AuthContext, Tailwind CSS, shadcn/ui, . Now uses a centralized  for authentication.
+*   **Caching:** Service Worker () and anti-cache meta tags in .
 
 **key DB schema**
-- **User:** Added  (String, e.g., Free, Pro, Business).
-- **New Collections:**  (stores user interaction events).
+- **New Collections:** , , , .
 
 **changes in tech stack**
-- **Backend:**  library for handling email dispatch.
+- **Frontend:**  and  libraries for the interactive map.
 
 **All files of reference**
-*   **New/Critical:** , , , , , .
-*   **Supporting:** , .
+*   **New/Critical:** , , , , , , .
 
 **Areas that need refactoring**:
-*   **:** Must be fully broken down into routers (e.g., , ). This is the highest priority technical debt.
-*   **:** The component is now large and handles WebSocket connections, state management, and rendering. It could be broken down into smaller hooks and components.
+*   **:** Still the highest priority technical debt. , , and other endpoints need to be migrated to their own routers.
+*   **Form Components:** The user's request to change all dropdowns to a bubble style presents an opportunity to create a standardized, reusable dropdown component to replace the current mix of native selects and shadcn components.
 
 **key api endpoints**
 *   
@@ -139,44 +136,45 @@ None. The last set of tasks was completed and tested by the agent.
 *   
 *   
 *   
+*   
 
 **Critical Info for New Agent**
-*   **Prioritize User Feedback:** The immediate focus should be on getting user feedback for the latest batch of features and then addressing the pending issues, especially the form/dropdown bugs.
-*   **Clarify Vague Requests:** The user has asked for novel social features. Before implementing, you must ask for clarification and specific examples of what they envision.
-*   **Continue Backend Refactor:** This is a recurring task. Weave this work in with feature development to keep the codebase healthy. The next logical target is moving profile or AI endpoints out of .
-*   **Test Extensively:** The application's complexity is high. Use  after any significant change to prevent regressions.
+*   **Highest Priority:** The user's last message (chat 400) is your new roadmap. You MUST address the UI corrections and bug fixes mentioned there before moving on to new features. Start by fixing the Explore -> Marketplace icon, as it's a quick and visible win.
+*   **Seek Clarification:** The user's requests like implement algorithms like TikTok or allow data configuration are very broad. Before starting large tasks, use  to get specific requirements and break them down into smaller, manageable steps.
+*   **Verify Safari Fix:** The fix for the Safari cache issue was not verified. This is a critical bug affecting user acquisition and must be tested and confirmed as resolved.
+*   **Continue Refactoring:** Continue to chip away at the  monolith. A good next candidate would be migrating the  endpoints to a new  router.
 
 **documents and test reports created in this job**
-*   
-*   
-*   
-*   
-*    (updated)
+*    to 
+*    (updated multiple times)
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **User:** Confirms plan for analytics, camera, mascot, and bug fixes. Gives priority to novel features and the original 9-point plan. **Status: In Progress**.
-- **User:** Asks for advanced analytics, a BRUNO-styled camera with editor, bug fixes for forms, integration of the BRUNO dog mascot, and novel social features. Provides image of the mascot. **Status: In Progress**.
-- **User:** Confirms continuing with the Next Action Items and the original 9-point plan. **Status: In Progress**.
-- **User:** Confirms plan for notifications, store unification, and floating chat. **Status: Completed**.
-- **User:** Asks for multiple notification types (push + optional email), unification of the store with the marketplace, and a floating bubble chat UI. **Status: Completed**.
-- **User:** Confirms choices for Marketplace and Stories implementation, and enhancement of Bruno IA. **Status: Completed**.
+- **User (400):** Provided a very long list of required corrections, UI improvements, and new features. This is the new priority list. **Status: Pending**.
+- **User (353):** Asked the agent to continue with the planned phases (Monetization/Moderation). **Status: Completed**.
+- **User (338):** Requested a redesign of the navigation bar to be more like iOS 26.3 with bubble-style buttons and a reorganization of header icons. **Status: Completed**.
+- **User (235):** Requested the implementation of a TikTok-style Lives feature and reported a bug where new users on Safari/iPhone see an old version of the app. **Status: Completed/Pending Verification**.
+- **User (80):** Approved the agent's plan and requested the mobile navigation bar be organized like Instagram/Facebook, providing example images. **Status: Completed**.
+- **User (4):** Provided a detailed list of novel features including monetization, content moderation, privacy policies, account deletion, and a fix for the map not rendering. **Status: Completed**.
 
 **Project Health Check:**
-*   **Broken:** None reported, but user mentioned form/dropdown issues.
-*   **Mocked:** None. All major components are now functional stubs or complete implementations.
+*   **Broken:**
+    *   The Explore icon in the mobile navigation incorrectly points to the feed instead of the Marketplace.
+    *   New users on Safari/iPhone may be served a cached, outdated version of the app.
+*   **Mocked:** The Live streaming feature uses a placeholder for the actual WebRTC video stream but the surrounding UI and backend logic is complete.
 
 **3rd Party Integrations**
 *   **OpenAI GPT-5.2:** (Text Generation) — uses Emergent LLM Key.
-*   **Daily.co:** (Video/Audio Calls) — requires User API Key.
+*   **Daily.co:** (Video/Audio Calls, Lives) — requires User API Key.
 *   **Cloudinary:** (Image Storage) — requires User API Key.
 *   **Stripe:** (Payments) — requires User API Key.
 *   **Resend:** (Email) — requires User API Key.
+*   **Leaflet:** (Interactive Maps) — no key required.
 *   **Emergent-managed Google Auth:** (Social Login).
 
 **Testing status**
-- **Testing agent used after significant changes:** YES, used successfully after each major feature batch.
+- **Testing agent used after significant changes:** YES. The agent ran the testing agent successfully 5 times in this session, which found and fixed several issues, including an ObjectId bug and a React Hooks issue.
 - **Troubleshoot agent used after agent stuck in loop:** NO
-- **Test files created:** Multiple  reports in .
+- **Test files created:**  through .
 - **Known regressions:** None reported by the testing agent.
 
 **Credentials to test flow:**
@@ -184,5 +182,5 @@ None. The last set of tasks was completed and tested by the agent.
 *   **Password:** 
 
 **What agent forgot to execute**
-- The agent did not perform a specific audit or implement fixes for the errores de funcionalidad en espegables y formularios (functionality errors in dropdowns and forms) that the user requested. This task was acknowledged in the plan but not executed.
-- The agent did not seek clarification on the funcionalizades novedosas referente a las redes sciales (novel social media features) request, leaving it undefined.</analysis>
+- The agent has not yet implemented the large list of corrections and features from the user's most recent message (chat 400).
+- The agent did not verify that the implemented fix for the Safari/iPhone caching issue was successful.</analysis>

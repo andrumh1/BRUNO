@@ -218,8 +218,8 @@ sudo supervisorctl restart frontend
 ```
 
 ### Acceder a la aplicación
-- Frontend: `https://bruno-network-build.preview.emergentagent.com`
-- Backend API: `https://bruno-network-build.preview.emergentagent.com/api`
+- Frontend: `https://bruno-community.preview.emergentagent.com`
+- Backend API: `https://bruno-community.preview.emergentagent.com/api`
 
 ---
 
@@ -231,12 +231,12 @@ MONGO_URL=mongodb://localhost:27017
 DB_NAME=test_database
 CORS_ORIGINS=*
 SECRET_KEY=bruno-secret-key-2025-change-in-production
-FRONTEND_URL=https://bruno-network-build.preview.emergentagent.com
+FRONTEND_URL=https://bruno-community.preview.emergentagent.com
 ```
 
 ### Frontend (.env)
 ```env
-REACT_APP_BACKEND_URL=https://bruno-network-build.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://bruno-community.preview.emergentagent.com
 WDS_SOCKET_PORT=443
 ENABLE_HEALTH_CHECK=false
 ```

@@ -301,31 +301,28 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* Compact Header - User Panel + Website + Store only */}
       <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/")} className="flex items-center gap-3 group">
-              <img src="/bruno-logo.png" alt="BRUNO" className="h-10 group-hover:scale-105 transition-transform" />
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate("/")} className="flex items-center gap-2 group">
+              <img src="/bruno-logo.png" alt="BRUNO" className="h-8 group-hover:scale-105 transition-transform" />
             </button>
-            <div>
-              <p className="text-sm font-semibold">
+            <div className="hidden sm:block">
+              <p className="text-xs font-semibold">
                 {user?.name || user?.email?.split("@")[0]}
               </p>
-              <p className="text-xs text-muted-foreground">{user?.email}</p>
+              <p className="text-[10px] text-muted-foreground">{user?.email}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <LanguageSwitcher variant="minimal" />
-            <Link to="/">
-              <Button variant="ghost">{t("nav.explore")}</Button>
+            <Link to="/store">
+              <Button variant="ghost" size="sm" className="text-xs">Tienda PIUP</Button>
             </Link>
-            <Link to="/map">
-              <Button variant="ghost">{t("nav.map")}</Button>
-            </Link>
-            <Button variant="ghost" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              {t("nav.logout")}
+            <Button variant="ghost" size="sm" className="text-xs" onClick={handleLogout}>
+              <LogOut className="w-3.5 h-3.5 mr-1" />
+              <span className="hidden sm:inline">{t("nav.logout")}</span>
             </Button>
           </div>
         </div>

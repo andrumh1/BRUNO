@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { MessageCircle, Sparkles, X, Send, Loader2, Trash2 } from "lucide-react";
+import { Sparkles, X, Send, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
@@ -140,137 +140,115 @@ const FloatingBubbles = () => {
 
   return (
     <>
-      {/* Chat Bubble - Bottom Right */}
-      <Link
-        to="/chat"
-        className="fixed bottom-6 right-6 z-50 group"
-        data-testid="floating-chat-btn"
-      >
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/30 rounded-full blur-xl group-hover:bg-primary/50 transition-all duration-300" />
-          <div className="relative w-14 h-14 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300 cursor-pointer">
-            <MessageCircle className="w-6 h-6 text-primary-foreground" />
-          </div>
-          {unreadCount > 0 && (
-            <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md animate-pulse">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </div>
-          )}
-          <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-card rounded-lg shadow-lg text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
-            Mensajes
-          </div>
-        </div>
-      </Link>
-
-      {/* BRUNO AI Bubble - Bottom Left */}
-      <div className="fixed bottom-6 left-6 z-50">
+      {/* BRUNO AI Bubble - Bottom Left (chat is handled by FloatingChatBubble.jsx) */}
+      <div className="fixed bottom-[72px] left-3 z-50 md:bottom-6 md:left-6">
         <div 
           className="relative cursor-pointer group"
           onClick={() => setShowAIChat(!showAIChat)}
           data-testid="floating-ai-btn"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-violet-500/30 to-fuchsia-500/30 rounded-full blur-xl group-hover:from-violet-500/50 group-hover:to-fuchsia-500/50 transition-all duration-300 animate-pulse" />
-          <div className="relative w-14 h-14 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300">
-            <Sparkles className="w-6 h-6 text-white" />
+          <div className="relative w-11 h-11 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 rounded-full flex items-center justify-center shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transform hover:scale-105 active:scale-95 transition-all duration-200">
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
-          <div className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full text-[10px] font-bold text-white shadow-md">
+          <div className="absolute -top-0.5 -right-0.5 px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full text-[9px] font-bold text-white shadow-md">
             IA
           </div>
           {!showAIChat && (
-            <div className="absolute bottom-full left-0 mb-2 px-3 py-1.5 bg-card rounded-lg shadow-lg text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+            <div className="absolute bottom-full left-0 mb-2 px-2.5 py-1 bg-card rounded-lg shadow-lg text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
               BRUNO IA
             </div>
           )}
         </div>
 
-        {/* AI Chat Window */}
+        {/* AI Chat Window - Compact design */}
         {showAIChat && (
-          <div className="absolute bottom-20 left-0 w-80 sm:w-96 h-[500px] bg-card rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden animate-in slide-in-from-bottom-2 duration-200">
-            {/* Header */}
-            <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-violet-600/10 to-fuchsia-600/10">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
+          <div className="absolute bottom-14 left-0 w-72 sm:w-80 h-[400px] bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-2 duration-200">
+            {/* Compact Header */}
+            <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-violet-600/10 to-fuchsia-600/10">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-full flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm">BRUNO IA</h4>
-                  <p className="text-xs text-muted-foreground">Tu asistente personal</p>
+                  <h4 className="font-semibold text-xs">BRUNO IA</h4>
+                  <p className="text-[10px] text-muted-foreground">Tu asistente</p>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-7 w-7"
                   onClick={(e) => {
                     e.stopPropagation();
                     clearAIHistory();
                   }}
                   title="Limpiar conversación"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-7 w-7"
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowAIChat(false);
                   }}
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+            {/* Messages - Compact */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-gradient-to-b from-transparent to-muted/10">
               {aiMessages.map((msg, index) => (
                 <div
                   key={index}
                   className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm ${
+                    className={`max-w-[85%] px-2.5 py-1.5 rounded-2xl text-xs ${
                       msg.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-br-sm"
-                        : "bg-muted rounded-bl-sm"
+                        ? "bg-gradient-to-br from-primary to-primary/90 text-white rounded-br-md"
+                        : "bg-muted/80 rounded-bl-md"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   </div>
                 </div>
               ))}
               {aiLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-muted px-4 py-2 rounded-2xl rounded-bl-sm">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                  <div className="bg-muted/80 px-3 py-1.5 rounded-2xl rounded-bl-md">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <form onSubmit={sendAIMessage} className="p-3 border-t bg-card">
-              <div className="flex gap-2">
+            {/* Compact Input */}
+            <form onSubmit={sendAIMessage} className="p-2 border-t">
+              <div className="flex gap-1.5">
                 <Input
                   value={aiInput}
                   onChange={(e) => setAiInput(e.target.value)}
-                  placeholder="Escribe tu mensaje..."
-                  className="flex-1"
+                  placeholder="Escribe..."
+                  className="flex-1 h-7 text-xs rounded-full bg-muted/50 border-0 px-3"
                   disabled={aiLoading}
                   data-testid="ai-chat-input"
                 />
                 <Button
                   type="submit"
-                  size="icon"
+                  size="sm"
                   disabled={!aiInput.trim() || aiLoading}
-                  className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700"
+                  className="h-7 w-7 p-0 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700"
                   data-testid="ai-send-btn"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </form>

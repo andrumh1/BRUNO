@@ -7,35 +7,33 @@ import {
   Map,
   ShoppingBag,
   User,
-  PlusCircle,
+  Plus,
   MessageCircle,
-  Bell,
   Search,
-  Compass
+  Settings
 } from "lucide-react";
 
 /**
- * MobileBottomNav - iOS 26.3 style bubble navigation
- * Features dynamic light effects and compact bubble buttons
+ * MobileBottomNav - iOS 26.3 style compact bubble navigation
  */
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [activeLight, setActiveLight] = useState(0);
-  const [touchRipple, setTouchRipple] = useState(null);
   
   // Pages where we should hide the bottom nav
-  const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno', '/lives/'];
+  const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || 
-                     location.pathname.match(/^\/lives\/[^/]+$/);
+                     location.pathname.match(/^\/lives\/[^/]+$/) ||
+                     location.pathname.startsWith('/chat/');
 
-  // Dynamic light animation - must be called before any early returns
+  // Dynamic light animation
   useEffect(() => {
-    if (shouldHide) return; // Don't run animation if hidden
+    if (shouldHide) return;
     const interval = setInterval(() => {
       setActiveLight(prev => (prev + 1) % 8);
-    }, 2000);
+    }, 2500);
     return () => clearInterval(interval);
   }, [shouldHide]);
   
@@ -43,11 +41,10 @@ const MobileBottomNav = () => {
 
   const navItems = [
     { id: 'home', icon: Home, label: 'Inicio', path: '/feed', matchPaths: ['/', '/feed'] },
-    { id: 'explore', icon: Compass, label: 'Explorar', path: '/marketplace', matchPaths: ['/marketplace'] },
-    { id: 'create', icon: PlusCircle, label: '', path: '/camera', isCreate: true },
-    { id: 'lives', icon: Radio, label: 'Lives', path: '/lives', matchPaths: ['/lives'], hasIndicator: true },
+    { id: 'marketplace', icon: ShoppingBag, label: 'Tienda', path: '/marketplace', matchPaths: ['/marketplace'] },
+    { id: 'create', icon: Plus, label: '', path: '/camera', isCreate: true },
+    { id: 'lives', icon: Radio, label: 'Live', path: '/lives', matchPaths: ['/lives'], hasIndicator: true },
     { id: 'map', icon: Map, label: 'Mapa', path: '/map', matchPaths: ['/map'] },
-    { id: 'chat', icon: MessageCircle, label: 'Chat', path: '/chat', matchPaths: ['/chat'] },
     { id: 'profile', icon: User, label: 'Perfil', path: '/my-profile', matchPaths: ['/my-profile', '/dashboard'], showAvatar: true }
   ];
 
@@ -58,23 +55,14 @@ const MobileBottomNav = () => {
     return location.pathname === item.path;
   };
 
-  const handleNavClick = (item, e) => {
-    // Create ripple effect
-    const rect = e.currentTarget.getBoundingClientRect();
-    setTouchRipple({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-      id: Date.now()
-    });
-    setTimeout(() => setTouchRipple(null), 600);
-    
+  const handleNavClick = (item) => {
     navigate(item.path);
   };
 
   return (
     <>
       {/* Spacer */}
-      <div className="h-20 md:hidden" />
+      <div className="h-16 md:hidden" />
       
       {/* Navigation Container */}
       <nav 
@@ -82,100 +70,56 @@ const MobileBottomNav = () => {
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         data-testid="mobile-bottom-nav"
       >
-        {/* Animated Background Blur */}
-        <div className="absolute inset-0 overflow-hidden">
-          {/* Main glass background */}
-          <div className="absolute inset-0 bg-background/70 backdrop-blur-2xl" />
-          
-          {/* Dynamic light orbs */}
+        {/* Background with blur */}
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-2xl border-t border-border/50">
+          {/* Animated light orbs */}
           <div 
-            className="absolute w-32 h-32 rounded-full transition-all duration-[2000ms] ease-in-out opacity-30"
+            className="absolute w-20 h-20 rounded-full opacity-20 transition-all duration-[2000ms]"
             style={{
-              background: 'radial-gradient(circle, rgba(255,107,53,0.6) 0%, transparent 70%)',
-              left: `${10 + (activeLight % 3) * 30}%`,
-              top: '-20px',
-              filter: 'blur(20px)',
-              transform: `scale(${1 + (activeLight % 2) * 0.3})`
-            }}
-          />
-          <div 
-            className="absolute w-24 h-24 rounded-full transition-all duration-[2500ms] ease-in-out opacity-25"
-            style={{
-              background: 'radial-gradient(circle, rgba(236,72,153,0.6) 0%, transparent 70%)',
-              right: `${15 + ((activeLight + 1) % 3) * 25}%`,
+              background: 'radial-gradient(circle, rgba(255,107,53,0.5) 0%, transparent 70%)',
+              left: `${5 + (activeLight % 4) * 20}%`,
               top: '-10px',
               filter: 'blur(15px)',
-              transform: `scale(${1.2 - (activeLight % 2) * 0.2})`
             }}
           />
           <div 
-            className="absolute w-20 h-20 rounded-full transition-all duration-[3000ms] ease-in-out opacity-20"
+            className="absolute w-16 h-16 rounded-full opacity-15 transition-all duration-[2500ms]"
             style={{
-              background: 'radial-gradient(circle, rgba(59,130,246,0.5) 0%, transparent 70%)',
-              left: `${40 + ((activeLight + 2) % 4) * 10}%`,
-              top: '10px',
-              filter: 'blur(12px)'
-            }}
-          />
-          
-          {/* Top border glow line */}
-          <div 
-            className="absolute top-0 left-0 right-0 h-[1px] transition-all duration-1000"
-            style={{
-              background: `linear-gradient(90deg, 
-                transparent 0%, 
-                rgba(255,107,53,${0.3 + (activeLight % 3) * 0.1}) ${20 + activeLight * 5}%, 
-                rgba(236,72,153,0.4) 50%, 
-                rgba(59,130,246,${0.3 + ((activeLight + 1) % 3) * 0.1}) ${70 - activeLight * 3}%, 
-                transparent 100%)`
+              background: 'radial-gradient(circle, rgba(236,72,153,0.5) 0%, transparent 70%)',
+              right: `${10 + ((activeLight + 2) % 4) * 15}%`,
+              top: '-5px',
+              filter: 'blur(12px)',
             }}
           />
           
-          {/* Bubble texture overlay */}
+          {/* Top glow line */}
           <div 
-            className="absolute inset-0 opacity-[0.03]"
+            className="absolute top-0 left-0 right-0 h-[1px]"
             style={{
-              backgroundImage: `radial-gradient(circle at 20% 50%, white 1px, transparent 1px),
-                               radial-gradient(circle at 80% 30%, white 1px, transparent 1px),
-                               radial-gradient(circle at 40% 70%, white 0.5px, transparent 0.5px),
-                               radial-gradient(circle at 60% 20%, white 0.5px, transparent 0.5px)`,
-              backgroundSize: '60px 60px, 80px 80px, 40px 40px, 50px 50px'
+              background: `linear-gradient(90deg, transparent 0%, rgba(255,107,53,0.3) 30%, rgba(236,72,153,0.3) 70%, transparent 100%)`
             }}
           />
         </div>
 
-        {/* Navigation Items */}
-        <div className="relative flex items-center justify-around px-1 py-2 h-16">
-          {navItems.map((item, index) => {
+        {/* Navigation Items - Compact */}
+        <div className="relative flex items-center justify-around px-2 py-1.5 h-14">
+          {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item);
             
-            // Create button
+            // Create button - same style as others but highlighted
             if (item.isCreate) {
               return (
                 <button
                   key={item.id}
-                  onClick={(e) => handleNavClick(item, e)}
-                  className="relative flex items-center justify-center w-12 h-12 -mt-4"
+                  onClick={() => handleNavClick(item)}
+                  className="relative flex flex-col items-center justify-center w-10 h-10"
                   data-testid={`nav-${item.id}`}
                 >
-                  {/* Outer glow ring */}
                   <div 
-                    className="absolute inset-0 rounded-full animate-pulse"
-                    style={{
-                      background: 'linear-gradient(135deg, #FF6B35 0%, #EC4899 50%, #3B82F6 100%)',
-                      filter: 'blur(8px)',
-                      opacity: 0.6
-                    }}
-                  />
-                  {/* Main button */}
-                  <div 
-                    className="relative w-11 h-11 rounded-full flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform"
-                    style={{
-                      background: 'linear-gradient(135deg, #FF6B35 0%, #EC4899 100%)'
-                    }}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-orange-500 shadow-lg shadow-primary/30"
                   >
-                    <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
+                    <Icon className="w-4 h-4 text-white" strokeWidth={2.5} />
                   </div>
                 </button>
               );
@@ -184,93 +128,42 @@ const MobileBottomNav = () => {
             return (
               <button
                 key={item.id}
-                onClick={(e) => handleNavClick(item, e)}
-                className={`
-                  relative flex flex-col items-center justify-center
-                  w-12 h-12 rounded-2xl overflow-hidden
-                  transition-all duration-300 ease-out
-                  ${active ? 'scale-105' : 'hover:scale-105'}
-                `}
+                onClick={() => handleNavClick(item)}
+                className="relative flex flex-col items-center justify-center w-10 h-10 rounded-xl transition-all duration-200"
                 data-testid={`nav-${item.id}`}
               >
-                {/* Active bubble background */}
+                {/* Active background bubble */}
                 {active && (
                   <div 
-                    className="absolute inset-0 rounded-2xl"
+                    className="absolute inset-0.5 rounded-xl bg-primary/10"
                     style={{
-                      background: 'radial-gradient(ellipse at center, rgba(255,107,53,0.15) 0%, transparent 70%)',
+                      boxShadow: 'inset 0 0 8px rgba(255,107,53,0.2)'
                     }}
                   />
                 )}
                 
-                {/* Bubble glass effect on hover/active */}
-                <div 
-                  className={`
-                    absolute inset-1 rounded-xl transition-all duration-300
-                    ${active ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'}
-                  `}
-                  style={{
-                    background: active 
-                      ? 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 100%)'
-                      : 'transparent',
-                    backdropFilter: active ? 'blur(4px)' : 'none',
-                    border: active ? '1px solid rgba(255,255,255,0.1)' : 'none'
-                  }}
-                />
-                
-                {/* Icon container */}
+                {/* Icon */}
                 <div className="relative z-10 flex flex-col items-center">
                   {item.showAvatar && user?.avatar_url ? (
-                    <div className={`
-                      w-6 h-6 rounded-full overflow-hidden
-                      ${active ? 'ring-2 ring-primary/50 ring-offset-1 ring-offset-transparent' : ''}
-                    `}>
-                      <img 
-                        src={user.avatar_url} 
-                        alt={user.name}
-                        className="w-full h-full object-cover"
-                      />
+                    <div className={`w-5 h-5 rounded-full overflow-hidden ${active ? 'ring-1 ring-primary' : ''}`}>
+                      <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
                     </div>
                   ) : (
                     <div className="relative">
                       <Icon 
-                        className={`
-                          w-5 h-5 transition-all duration-300
-                          ${active ? 'text-primary' : 'text-muted-foreground'}
-                        `}
+                        className={`w-4 h-4 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}
                         strokeWidth={active ? 2.5 : 1.5}
-                        fill={active ? 'currentColor' : 'none'}
                       />
                       {item.hasIndicator && (
-                        <span 
-                          className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full"
-                          style={{
-                            boxShadow: '0 0 4px rgba(239,68,68,0.8)',
-                            animation: 'pulse 2s infinite'
-                          }}
-                        />
+                        <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
                       )}
                     </div>
                   )}
                   
-                  {/* Label - only show for non-create items */}
-                  <span className={`
-                    text-[9px] mt-0.5 font-medium transition-all duration-300
-                    ${active ? 'text-primary' : 'text-muted-foreground'}
-                  `}>
+                  <span className={`text-[8px] mt-0.5 font-medium ${active ? 'text-primary' : 'text-muted-foreground'}`}>
                     {item.label}
                   </span>
                 </div>
-                
-                {/* Active indicator dot */}
-                {active && (
-                  <div 
-                    className="absolute bottom-0.5 w-1 h-1 rounded-full bg-primary"
-                    style={{
-                      boxShadow: '0 0 6px rgba(255,107,53,0.8)'
-                    }}
-                  />
-                )}
               </button>
             );
           })}

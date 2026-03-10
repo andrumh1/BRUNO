@@ -17,6 +17,21 @@ body {
   overflow-x: hidden;
   /* Safe area for mobile devices */
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Reduced base font size for better mobile ergonomics */
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Compact text sizing for mobile */
+@media (max-width: 640px) {
+  body {
+    font-size: 13px;
+  }
+  
+  /* Reduce emoji and emoticon sizes */
+  .emoji, span[role="img"] {
+    font-size: 1.1em !important;
+  }
 }
 
 /* Safe area utilities for mobile */
@@ -1220,3 +1235,60 @@ select.bubble-native-select:focus {
   pointer-events: none;
 }
 
+
+
+
+/* ============================================
+   Beacons Style Card
+   ============================================ */
+
+.beacons-card {
+  min-height: 320px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.beacons-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Job card specific styles */
+.beacons-card[data-card-type="oferta_trabajo"],
+.beacons-card[data-card-type="busqueda_personal"],
+.beacons-card[data-card-type="solicitud_servicio"] {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+/* Compact variant */
+.beacons-card-compact {
+  min-height: 200px;
+}
+
+.beacons-card-compact .beacons-avatar {
+  width: 60px;
+  height: 60px;
+}
+
+/* Chat bubble compact styles */
+.chat-bubble-compact {
+  font-size: 12px;
+}
+
+.chat-bubble-compact .message-text {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* Compact forms for mobile */
+@media (max-width: 640px) {
+  .bubble-select-trigger {
+    min-height: 42px;
+    padding: 0.5rem 0.75rem;
+    font-size: 13px;
+  }
+  
+  .bubble-select-option {
+    padding: 0.5rem 0.75rem;
+    font-size: 13px;
+  }
+}

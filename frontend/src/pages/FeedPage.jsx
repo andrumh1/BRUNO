@@ -12,8 +12,9 @@ import CreatePost from "@/components/CreatePost";
 import ReelsFeed from "@/components/ReelsFeed";
 import { StoriesRow, CreateStoryModal } from "@/components/Stories";
 import NotificationBell from "@/components/NotificationBell";
+import BeaconsStyleCard from "@/components/BeaconsStyleCard";
 import axios from "axios";
-import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag, Home, CreditCard, RefreshCw, MessageCircle, Globe, User, Film, Store, Map } from "lucide-react";
+import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag, Home, CreditCard, RefreshCw, MessageCircle, Globe, User, Film, Store, Map, Briefcase, Users, HandHelping } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -143,32 +144,46 @@ const FeedPage = () => {
       lugares: t("cards.types.lugares"),
       guardian: t("cards.types.guardian"),
       curriculum: t("cards.types.curriculum"),
+      oferta_trabajo: "Oferta de Trabajo",
+      busqueda_personal: "Búsqueda de Personal",
+      solicitud_servicio: "Solicitud de Servicio",
     };
     return labels[type] || type;
   };
 
+  // Check if card is a job-type card (uses Beacons style)
+  const isJobCard = (cardType) => {
+    return ["oferta_trabajo", "busqueda_personal", "solicitud_servicio"].includes(cardType);
+  };
+
   // Grid Card Component
-  const GridCard = ({ card }) => (
-    <Card
-      className={`overflow-hidden transition-all group backdrop-blur-xl bg-card/80 border border-white/40 shadow-[0_18px_45px_rgba(0,0,0,0.08)] card-hover-lift ${
-        card.is_animated ? "card-bubble-animated" : "card-bubble-static"
-      }`}
-    >
-      {/* Banner or Colored Header */}
-      <div
-        className="h-32 relative"
-        style={{
-          background: card.banner_url
-            ? `url(${card.banner_url}) center/cover`
-            : `linear-gradient(135deg, ${card.background_color}, ${card.background_color}dd)`,
-        }}
+  const GridCard = ({ card }) => {
+    // Use BeaconsStyleCard for job-type cards
+    if (isJobCard(card.card_type)) {
+      return <BeaconsStyleCard card={card} />;
+    }
+
+    return (
+      <Card
+        className={`overflow-hidden transition-all group backdrop-blur-xl bg-card/80 border border-white/40 shadow-[0_18px_45px_rgba(0,0,0,0.08)] card-hover-lift ${
+          card.is_animated ? "card-bubble-animated" : "card-bubble-static"
+        }`}
       >
-        <div className="absolute top-3 right-3">
-          <div className="px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm text-xs font-medium">
-            {getCardTypeLabel(card.card_type)}
+        {/* Banner or Colored Header */}
+        <div
+          className="h-32 relative"
+          style={{
+            background: card.banner_url
+              ? `url(${card.banner_url}) center/cover`
+              : `linear-gradient(135deg, ${card.background_color}, ${card.background_color}dd)`,
+          }}
+        >
+          <div className="absolute top-3 right-3">
+            <div className="px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm text-xs font-medium">
+              {getCardTypeLabel(card.card_type)}
+            </div>
           </div>
         </div>
-      </div>
 
       <CardContent className="pt-6 pb-4 relative">
         {/* Avatar */}
@@ -245,7 +260,8 @@ const FeedPage = () => {
         </div>
       </CardContent>
     </Card>
-  );
+    );
+  };
 
   // List Card Component
   const ListCard = ({ card }) => (
@@ -468,6 +484,34 @@ const FeedPage = () => {
                   onClick={() => setFilterType("curriculum")}
                 >
                   {t("cards.types.curriculum")}
+                </Button>
+                {/* New Job Card Types */}
+                <Button
+                  variant={filterType === "oferta_trabajo" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterType("oferta_trabajo")}
+                  className="flex items-center gap-1"
+                >
+                  <Briefcase className="w-3 h-3" />
+                  Empleos
+                </Button>
+                <Button
+                  variant={filterType === "busqueda_personal" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterType("busqueda_personal")}
+                  className="flex items-center gap-1"
+                >
+                  <Users className="w-3 h-3" />
+                  Personal
+                </Button>
+                <Button
+                  variant={filterType === "solicitud_servicio" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterType("solicitud_servicio")}
+                  className="flex items-center gap-1"
+                >
+                  <HandHelping className="w-3 h-3" />
+                  Servicios
                 </Button>
               </div>
             </div>

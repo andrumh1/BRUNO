@@ -1,0 +1,83 @@
+{
+  "summary": "Iteration 23: UI/UX Changes Testing - Floating Bubbles, Mobile Nav, Dashboard Header. Most features WORKING. Found 1 CRITICAL BUG: BubbleSelect dropdown cannot select new job card types (oferta_trabajo, busqueda_personal, solicitud_servicio) - click events not registering properly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "BubbleSelect",
+        "issue": "Cannot select new job card types (oferta_trabajo, busqueda_personal, solicitud_servicio) from the dropdown. Clicking on options does not update the selection - stays on 'Personal'",
+        "selector": "[data-value='oferta_trabajo']",
+        "priority": "HIGH",
+        "file": "/app/frontend/src/components/BubbleSelect.jsx",
+        "details": "The handleSelect function is not being called when clicking on options in the dropdown. This may be a z-index/event propagation issue where the backdrop or other elements intercept clicks."
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_23.json"
+  ],
+  "action_items": [
+    "FIX CRITICAL: BubbleSelect component - clicking on dropdown options does not trigger onChange for job card types",
+    "Debug why handleSelect is not being called when clicking on oferta_trabajo, busqueda_personal, solicitud_servicio options",
+    "Check z-index of backdrop (9998) vs options container (9999) - may be causing click interception"
+  ],
+  "critical_code_review_comments": [
+    "BubbleSelect.jsx line 112-116: Backdrop div intercepts clicks before options on mobile",
+    "BubbleSelect.jsx line 140-143: onClick handler with e.preventDefault() and e.stopPropagation() may not be sufficient",
+    "The dropdown shows all 11 card types including 3 new job types but selection doesn't work for types at the bottom of the list"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend only testing)",
+    "frontend": "80% (6/7 features working, BubbleSelect selection broken)"
+  },
+  "test_credentials": {
+    "email": "newtest@bruno.com",
+    "password": "Test1234!"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "BubbleSelect dropdown issue prevents testing of job card fields (salary, contract type, remote option, urgency, etc). Once BubbleSelect is fixed, verify job-specific fields appear when selecting oferta_trabajo type.",
+  "features_verified": {
+    "floating_bubbles": {
+      "status": "PASS",
+      "details": "TWO bubbles present: BRUNO IA (violet, bottom-left) + Chat (orange, bottom-right). No duplication. Bubbles are compact (w-11 h-11)."
+    },
+    "bruno_ia_chat": {
+      "status": "PASS",
+      "details": "BRUNO IA bubble opens compact chat window with WhatsApp-style design, smaller fonts"
+    },
+    "chat_bubble": {
+      "status": "PASS",
+      "details": "Chat bubble opens 'Mensajes' popup with compact WhatsApp-style design"
+    },
+    "mobile_bottom_nav": {
+      "status": "PASS",
+      "details": "All 6 items present: Inicio, Tienda, + (Create), Live, Mapa, Perfil. Compact bubble navigation style."
+    },
+    "dashboard_header": {
+      "status": "PASS",
+      "details": "Compact header with: BRUNO logo, ES (language), Tienda PIUP, Log Out"
+    },
+    "new_job_card_types": {
+      "status": "PARTIAL",
+      "details": "Card types present in dropdown (oferta_trabajo, busqueda_personal, solicitud_servicio) but CANNOT BE SELECTED due to BubbleSelect bug"
+    },
+    "job_card_fields": {
+      "status": "BLOCKED",
+      "details": "Cannot test job-specific fields (salary, contract type, remote option, urgency, requirements, benefits) because card type selection is broken"
+    }
+  },
+  "bubble_select_debug_info": {
+    "options_count": 11,
+    "options_visible": ["personal", "empresarial", "negocio", "servicios", "lugares", "guardian", "curriculum", "mascotas", "oferta_trabajo", "busqueda_personal", "solicitud_servicio"],
+    "click_behavior": "Clicking on option with force=True does not update selection",
+    "potential_cause": "Z-index conflict between backdrop (9998) and options container (9999), or event propagation issue"
+  }
+}

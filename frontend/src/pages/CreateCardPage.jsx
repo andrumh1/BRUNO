@@ -13,7 +13,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import ProfileSpecificFields from "@/components/ProfileSpecificFields";
 import BubbleSelect from "@/components/BubbleSelect";
 import axios from "axios";
-import { ArrowLeft, Save, Upload, Image as ImageIcon, Plus, Trash2, Briefcase, GraduationCap, Award, Languages, FileText } from "lucide-react";
+import { ArrowLeft, Save, Upload, Image as ImageIcon, Plus, Trash2, Briefcase, GraduationCap, Award, Languages, FileText, Users, HandHelping, DollarSign, Clock, MapPin, CheckCircle2 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -40,6 +40,10 @@ const CreateCardPage = () => {
     { value: "guardian", label: t("cards.types.guardian"), desc: t("cards.typeDescriptions.guardian"), icon: "Shield" },
     { value: "curriculum", label: t("cards.types.curriculum"), desc: t("cards.typeDescriptions.curriculum"), icon: "FileText" },
     { value: "mascotas", label: t("cards.types.mascotas"), desc: t("cards.typeDescriptions.mascotas"), icon: "Dog" },
+    // Nuevos tipos de tarjetas laborales
+    { value: "oferta_trabajo", label: "Oferta de Trabajo", desc: "Publica ofertas de empleo para reclutar talento", icon: "Briefcase" },
+    { value: "busqueda_personal", label: "Búsqueda de Personal", desc: "Busca personal para tu empresa o proyecto", icon: "Users" },
+    { value: "solicitud_servicio", label: "Solicitud de Servicio", desc: "Solicita servicios profesionales específicos", icon: "HandHelping" },
   ];
 
   const [formData, setFormData] = useState({
@@ -69,7 +73,21 @@ const CreateCardPage = () => {
       languages: [],
       certifications: [],
       documents: [],
-      references: []
+      references: [],
+      // Nuevos campos para tarjetas laborales
+      job_details: {
+        salary_min: "",
+        salary_max: "",
+        salary_currency: "USD",
+        contract_type: "", // full-time, part-time, freelance, temporary
+        remote_option: "", // remote, hybrid, on-site
+        experience_required: "",
+        vacancies: 1,
+        urgency: "normal", // urgent, normal, low
+        benefits: [],
+        requirements: [],
+        application_deadline: ""
+      }
     }
   });
 
@@ -91,12 +109,15 @@ const CreateCardPage = () => {
       guardian: "guardian_safe",
       curriculum: "curriculum_clean",
       mascotas: "mascotas_friend",
+      oferta_trabajo: "job_offer_pro",
+      busqueda_personal: "staff_search_modern",
+      solicitud_servicio: "service_request_clean",
     };
     
     setFormData({
       ...formData,
       card_type: type,
-      template_id: defaultTemplates[type]
+      template_id: defaultTemplates[type] || "personal_classic"
     });
   };
 
@@ -803,8 +824,385 @@ const CreateCardPage = () => {
                 </>
               )}
 
+              {/* Job/Service Card Fields */}
+              {(formData.card_type === "oferta_trabajo" || formData.card_type === "busqueda_personal" || formData.card_type === "solicitud_servicio") && (
+                <>
+                  {/* Job/Service Details */}
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <div className="flex items-center gap-2">
+                        {formData.card_type === "oferta_trabajo" && <Briefcase className="w-5 h-5 text-primary" />}
+                        {formData.card_type === "busqueda_personal" && <Users className="w-5 h-5 text-primary" />}
+                        {formData.card_type === "solicitud_servicio" && <HandHelping className="w-5 h-5 text-primary" />}
+                        <CardTitle>
+                          {formData.card_type === "oferta_trabajo" && "Detalles de la Oferta"}
+                          {formData.card_type === "busqueda_personal" && "Detalles de Búsqueda"}
+                          {formData.card_type === "solicitud_servicio" && "Detalles del Servicio"}
+                        </CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Salary Range */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-1">
+                          <DollarSign className="w-4 h-4" />
+                          {formData.card_type === "solicitud_servicio" ? "Presupuesto" : "Rango Salarial"}
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <Input
+                            type="number"
+                            placeholder="Mínimo"
+                            value={formData.custom_fields.job_details?.salary_min || ""}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              custom_fields: {
+                                ...formData.custom_fields,
+                                job_details: { ...formData.custom_fields.job_details, salary_min: e.target.value }
+                              }
+                            })}
+                          />
+                          <Input
+                            type="number"
+                            placeholder="Máximo"
+                            value={formData.custom_fields.job_details?.salary_max || ""}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              custom_fields: {
+                                ...formData.custom_fields,
+                                job_details: { ...formData.custom_fields.job_details, salary_max: e.target.value }
+                              }
+                            })}
+                          />
+                          <BubbleSelect
+                            value={formData.custom_fields.job_details?.salary_currency || "USD"}
+                            onChange={(value) => setFormData({
+                              ...formData,
+                              custom_fields: {
+                                ...formData.custom_fields,
+                                job_details: { ...formData.custom_fields.job_details, salary_currency: value }
+                              }
+                            })}
+                            options={[
+                              { value: "USD", label: "USD $" },
+                              { value: "EUR", label: "EUR €" },
+                              { value: "MXN", label: "MXN $" },
+                              { value: "COP", label: "COP $" },
+                              { value: "ARS", label: "ARS $" },
+                            ]}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Contract Type */}
+                      {formData.card_type !== "solicitud_servicio" && (
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium flex items-center gap-1">
+                            <FileText className="w-4 h-4" />
+                            Tipo de Contrato
+                          </label>
+                          <BubbleSelect
+                            value={formData.custom_fields.job_details?.contract_type || ""}
+                            onChange={(value) => setFormData({
+                              ...formData,
+                              custom_fields: {
+                                ...formData.custom_fields,
+                                job_details: { ...formData.custom_fields.job_details, contract_type: value }
+                              }
+                            })}
+                            options={[
+                              { value: "full-time", label: "Tiempo Completo" },
+                              { value: "part-time", label: "Medio Tiempo" },
+                              { value: "freelance", label: "Freelance" },
+                              { value: "temporary", label: "Temporal" },
+                              { value: "internship", label: "Pasantía" },
+                            ]}
+                            placeholder="Selecciona el tipo de contrato"
+                          />
+                        </div>
+                      )}
+
+                      {/* Remote Option */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          Modalidad
+                        </label>
+                        <BubbleSelect
+                          value={formData.custom_fields.job_details?.remote_option || ""}
+                          onChange={(value) => setFormData({
+                            ...formData,
+                            custom_fields: {
+                              ...formData.custom_fields,
+                              job_details: { ...formData.custom_fields.job_details, remote_option: value }
+                            }
+                          })}
+                          options={[
+                            { value: "remote", label: "100% Remoto" },
+                            { value: "hybrid", label: "Híbrido" },
+                            { value: "on-site", label: "Presencial" },
+                          ]}
+                          placeholder="Selecciona la modalidad"
+                        />
+                      </div>
+
+                      {/* Experience Required */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Experiencia Requerida</label>
+                        <BubbleSelect
+                          value={formData.custom_fields.job_details?.experience_required || ""}
+                          onChange={(value) => setFormData({
+                            ...formData,
+                            custom_fields: {
+                              ...formData.custom_fields,
+                              job_details: { ...formData.custom_fields.job_details, experience_required: value }
+                            }
+                          })}
+                          options={[
+                            { value: "entry", label: "Sin experiencia" },
+                            { value: "junior", label: "1-2 años" },
+                            { value: "mid", label: "3-5 años" },
+                            { value: "senior", label: "5+ años" },
+                            { value: "expert", label: "10+ años" },
+                          ]}
+                          placeholder="Selecciona experiencia"
+                        />
+                      </div>
+
+                      {/* Vacancies */}
+                      {formData.card_type === "busqueda_personal" && (
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium flex items-center gap-1">
+                            <Users className="w-4 h-4" />
+                            Número de Vacantes
+                          </label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={formData.custom_fields.job_details?.vacancies || 1}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              custom_fields: {
+                                ...formData.custom_fields,
+                                job_details: { ...formData.custom_fields.job_details, vacancies: parseInt(e.target.value) || 1 }
+                              }
+                            })}
+                          />
+                        </div>
+                      )}
+
+                      {/* Urgency */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          Urgencia
+                        </label>
+                        <BubbleSelect
+                          value={formData.custom_fields.job_details?.urgency || "normal"}
+                          onChange={(value) => setFormData({
+                            ...formData,
+                            custom_fields: {
+                              ...formData.custom_fields,
+                              job_details: { ...formData.custom_fields.job_details, urgency: value }
+                            }
+                          })}
+                          options={[
+                            { value: "urgent", label: "🔴 Urgente" },
+                            { value: "normal", label: "🟡 Normal" },
+                            { value: "low", label: "🟢 Flexible" },
+                          ]}
+                        />
+                      </div>
+
+                      {/* Application Deadline */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Fecha Límite de Aplicación</label>
+                        <Input
+                          type="date"
+                          value={formData.custom_fields.job_details?.application_deadline || ""}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            custom_fields: {
+                              ...formData.custom_fields,
+                              job_details: { ...formData.custom_fields.job_details, application_deadline: e.target.value }
+                            }
+                          })}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Requirements */}
+                  <Card className="glass-card">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-primary" />
+                          <CardTitle>Requisitos</CardTitle>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const currentReqs = formData.custom_fields.job_details?.requirements || [];
+                            setFormData({
+                              ...formData,
+                              custom_fields: {
+                                ...formData.custom_fields,
+                                job_details: {
+                                  ...formData.custom_fields.job_details,
+                                  requirements: [...currentReqs, ""]
+                                }
+                              }
+                            });
+                          }}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Agregar
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {(formData.custom_fields.job_details?.requirements || []).map((req, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            placeholder="Ej: Manejo de Excel avanzado"
+                            value={req}
+                            onChange={(e) => {
+                              const newReqs = [...(formData.custom_fields.job_details?.requirements || [])];
+                              newReqs[index] = e.target.value;
+                              setFormData({
+                                ...formData,
+                                custom_fields: {
+                                  ...formData.custom_fields,
+                                  job_details: {
+                                    ...formData.custom_fields.job_details,
+                                    requirements: newReqs
+                                  }
+                                }
+                              });
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                            onClick={() => {
+                              const newReqs = (formData.custom_fields.job_details?.requirements || []).filter((_, i) => i !== index);
+                              setFormData({
+                                ...formData,
+                                custom_fields: {
+                                  ...formData.custom_fields,
+                                  job_details: {
+                                    ...formData.custom_fields.job_details,
+                                    requirements: newReqs
+                                  }
+                                }
+                              });
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      {(formData.custom_fields.job_details?.requirements || []).length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                          Agrega requisitos para tu {formData.card_type === "oferta_trabajo" ? "oferta" : formData.card_type === "busqueda_personal" ? "búsqueda" : "solicitud"}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Benefits (only for job offers) */}
+                  {formData.card_type === "oferta_trabajo" && (
+                    <Card className="glass-card">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Award className="w-5 h-5 text-primary" />
+                            <CardTitle>Beneficios</CardTitle>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentBenefits = formData.custom_fields.job_details?.benefits || [];
+                              setFormData({
+                                ...formData,
+                                custom_fields: {
+                                  ...formData.custom_fields,
+                                  job_details: {
+                                    ...formData.custom_fields.job_details,
+                                    benefits: [...currentBenefits, ""]
+                                  }
+                                }
+                              });
+                            }}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Agregar
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {(formData.custom_fields.job_details?.benefits || []).map((benefit, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <Input
+                              placeholder="Ej: Seguro médico, Home office, etc."
+                              value={benefit}
+                              onChange={(e) => {
+                                const newBenefits = [...(formData.custom_fields.job_details?.benefits || [])];
+                                newBenefits[index] = e.target.value;
+                                setFormData({
+                                  ...formData,
+                                  custom_fields: {
+                                    ...formData.custom_fields,
+                                    job_details: {
+                                      ...formData.custom_fields.job_details,
+                                      benefits: newBenefits
+                                    }
+                                  }
+                                });
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => {
+                                const newBenefits = (formData.custom_fields.job_details?.benefits || []).filter((_, i) => i !== index);
+                                setFormData({
+                                  ...formData,
+                                  custom_fields: {
+                                    ...formData.custom_fields,
+                                    job_details: {
+                                      ...formData.custom_fields.job_details,
+                                      benefits: newBenefits
+                                    }
+                                  }
+                                });
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        {(formData.custom_fields.job_details?.benefits || []).length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-2">
+                            Agrega los beneficios de la oferta
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+
               {/* Profile-specific fields for non-curriculum types */}
-              {formData.card_type !== "curriculum" && (
+              {formData.card_type !== "curriculum" && !["oferta_trabajo", "busqueda_personal", "solicitud_servicio"].includes(formData.card_type) && (
                 <ProfileSpecificFields
                   cardType={formData.card_type}
                   customFields={formData.custom_fields}

@@ -29,7 +29,7 @@ import {
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 const WS_URL = process.env.REACT_APP_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
 
-// Single Chat Window Component
+// Single Chat Window Component - Compact WhatsApp-like design
 const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws, token }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -118,19 +118,19 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
     return (
       <div
         onClick={onMinimize}
-        className="flex items-center gap-2 p-2 bg-card rounded-full shadow-lg border cursor-pointer hover:bg-muted transition-colors"
+        className="flex items-center gap-1.5 px-2 py-1.5 bg-card/95 backdrop-blur-xl rounded-full shadow-lg border border-border/50 cursor-pointer hover:bg-muted/50 transition-colors"
       >
         {participant.avatar_url ? (
-          <img src={participant.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+          <img src={participant.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover" />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white text-xs font-bold">
             {(participant.display_name || "?")[0].toUpperCase()}
           </div>
         )}
-        <span className="text-sm font-medium max-w-[100px] truncate">
+        <span className="text-xs font-medium max-w-[80px] truncate">
           {participant.display_name || participant.username}
         </span>
-        <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="p-1 hover:bg-red-100 rounded-full">
+        <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="p-0.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full">
           <X className="w-3 h-3 text-red-500" />
         </button>
       </div>
@@ -138,36 +138,36 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
   }
 
   return (
-    <div className="w-80 h-96 bg-card rounded-xl shadow-2xl border flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="p-2 border-b bg-gradient-to-r from-primary/10 to-primary/5 flex items-center gap-2">
+    <div className="w-72 h-80 bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 flex flex-col overflow-hidden">
+      {/* Compact Header */}
+      <div className="px-2.5 py-2 border-b bg-gradient-to-r from-primary/5 to-transparent flex items-center gap-2">
         {participant.avatar_url ? (
           <img src={participant.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white text-xs font-bold">
             {(participant.display_name || "?")[0].toUpperCase()}
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">{participant.display_name || participant.username}</p>
-          <p className="text-xs text-green-500">En línea</p>
+          <p className="text-xs font-semibold truncate">{participant.display_name || participant.username}</p>
+          <p className="text-[10px] text-green-500">En línea</p>
         </div>
-        <button onClick={onMinimize} className="p-1 hover:bg-muted rounded">
-          <Minimize2 className="w-4 h-4" />
+        <button onClick={onMinimize} className="p-1 hover:bg-muted rounded-full transition-colors">
+          <Minimize2 className="w-3.5 h-3.5" />
         </button>
-        <button onClick={onClose} className="p-1 hover:bg-red-100 rounded">
-          <X className="w-4 h-4 text-red-500" />
+        <button onClick={onClose} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition-colors">
+          <X className="w-3.5 h-3.5 text-red-500" />
         </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
+      {/* Messages - Compact */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-1.5 bg-gradient-to-b from-transparent to-muted/10">
         {loading ? (
           <div className="flex justify-center py-4">
-            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="text-center py-8 text-sm text-muted-foreground">
+          <div className="text-center py-6 text-xs text-muted-foreground">
             Envía un mensaje para empezar
           </div>
         ) : (
@@ -175,15 +175,17 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
             const isOwn = msg.sender_id === currentUserId;
             return (
               <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] px-3 py-1.5 rounded-2xl ${
-                  isOwn ? "bg-primary text-white rounded-br-sm" : "bg-muted rounded-bl-sm"
+                <div className={`max-w-[85%] px-2.5 py-1.5 rounded-2xl ${
+                  isOwn 
+                    ? "bg-gradient-to-br from-primary to-primary/90 text-white rounded-br-md" 
+                    : "bg-muted/80 rounded-bl-md"
                 }`}>
-                  <p className="text-sm">{msg.content}</p>
-                  <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? "justify-end" : ""}`}>
-                    <span className={`text-[10px] ${isOwn ? "text-white/70" : "text-muted-foreground"}`}>
+                  <p className="text-xs leading-relaxed">{msg.content}</p>
+                  <div className={`flex items-center gap-0.5 mt-0.5 ${isOwn ? "justify-end" : ""}`}>
+                    <span className={`text-[9px] ${isOwn ? "text-white/60" : "text-muted-foreground"}`}>
                       {formatTime(msg.created_at)}
                     </span>
-                    {isOwn && (msg.is_read ? <CheckCheck className="w-3 h-3 text-blue-200" /> : <Check className="w-3 h-3 text-white/50" />)}
+                    {isOwn && (msg.is_read ? <CheckCheck className="w-2.5 h-2.5 text-blue-200" /> : <Check className="w-2.5 h-2.5 text-white/40" />)}
                   </div>
                 </div>
               </div>
@@ -193,23 +195,23 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSend} className="p-2 border-t flex gap-2">
+      {/* Compact Input */}
+      <form onSubmit={handleSend} className="p-2 border-t flex gap-1.5">
         <Input
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Escribe..."
-          className="flex-1 h-8 text-sm rounded-full"
+          className="flex-1 h-7 text-xs rounded-full bg-muted/50 border-0 px-3"
         />
-        <Button type="submit" size="sm" className="h-8 w-8 p-0 rounded-full" disabled={sending || !newMessage.trim()}>
-          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        <Button type="submit" size="sm" className="h-7 w-7 p-0 rounded-full" disabled={sending || !newMessage.trim()}>
+          {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
         </Button>
       </form>
     </div>
   );
 };
 
-// Chat List Popup
+// Chat List Popup - Compact WhatsApp-like design
 const ChatListPopup = ({ chats, onSelectChat, onNewChat, onClose }) => {
   const [search, setSearch] = useState("");
 
@@ -220,37 +222,37 @@ const ChatListPopup = ({ chats, onSelectChat, onNewChat, onClose }) => {
   });
 
   return (
-    <div className="w-80 h-96 bg-card rounded-xl shadow-2xl border flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="p-3 border-b bg-gradient-to-r from-primary/10 to-primary/5 flex items-center justify-between">
-        <h3 className="font-bold">Mensajes</h3>
-        <div className="flex gap-1">
-          <button onClick={onNewChat} className="p-1.5 hover:bg-muted rounded-full">
-            <Plus className="w-4 h-4" />
+    <div className="w-72 h-80 bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 flex flex-col overflow-hidden">
+      {/* Compact Header */}
+      <div className="px-3 py-2.5 border-b bg-gradient-to-r from-primary/5 to-transparent flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Mensajes</h3>
+        <div className="flex gap-0.5">
+          <button onClick={onNewChat} className="p-1.5 hover:bg-muted rounded-full transition-colors">
+            <Plus className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onClose} className="p-1.5 hover:bg-red-100 rounded-full">
-            <X className="w-4 h-4 text-red-500" />
+          <button onClick={onClose} className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition-colors">
+            <X className="w-3.5 h-3.5 text-red-500" />
           </button>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="p-2 border-b">
+      {/* Compact Search */}
+      <div className="px-2 py-1.5 border-b">
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar..."
-            className="h-8 pl-8 text-sm rounded-full"
+            className="h-7 pl-7 text-xs rounded-full bg-muted/50 border-0"
           />
         </div>
       </div>
 
-      {/* Chat List */}
+      {/* Chat List - Compact */}
       <div className="flex-1 overflow-y-auto">
         {filteredChats.length === 0 ? (
-          <div className="text-center py-8 text-sm text-muted-foreground">
+          <div className="text-center py-6 text-xs text-muted-foreground">
             No hay conversaciones
           </div>
         ) : (
@@ -260,26 +262,26 @@ const ChatListPopup = ({ chats, onSelectChat, onNewChat, onClose }) => {
               <div
                 key={chat.id}
                 onClick={() => onSelectChat(chat)}
-                className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer transition-colors"
+                className="flex items-center gap-2 px-2.5 py-2 hover:bg-muted/50 cursor-pointer transition-colors"
               >
-                <div className="relative">
+                <div className="relative flex-shrink-0">
                   {participant.avatar_url ? (
-                    <img src={participant.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                    <img src={participant.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white text-xs font-bold">
                       {(participant.display_name || "?")[0].toUpperCase()}
                     </div>
                   )}
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-card" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{participant.display_name || participant.username}</p>
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="text-xs font-medium truncate">{participant.display_name || participant.username}</p>
+                  <p className="text-[10px] text-muted-foreground truncate leading-tight">
                     {chat.last_message?.content || "Sin mensajes"}
                   </p>
                 </div>
                 {chat.unread_count > 0 && (
-                  <span className="w-5 h-5 bg-primary text-white text-xs rounded-full flex items-center justify-center">
+                  <span className="min-w-[18px] h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                     {chat.unread_count}
                   </span>
                 )}
@@ -536,25 +538,25 @@ const FloatingChatBubble = () => {
 
   return (
     <>
-      {/* Main Bubble Button */}
-      <div className="fixed bottom-20 right-4 z-50">
+      {/* Compact Chat Bubble - Unified smaller design */}
+      <div className="fixed bottom-[72px] right-3 z-50 md:bottom-6 md:right-4">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-14 h-14 bg-primary rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-all hover:scale-105"
+          className="w-11 h-11 bg-gradient-to-br from-primary to-orange-600 rounded-full shadow-lg shadow-primary/25 flex items-center justify-center hover:shadow-primary/40 transition-all duration-200 hover:scale-105 active:scale-95"
           data-testid="chat-bubble-btn"
         >
-          <MessageCircle className="w-6 h-6 text-white" />
+          <MessageCircle className="w-5 h-5 text-white" strokeWidth={2} />
           {unreadTotal > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
               {unreadTotal > 9 ? "9+" : unreadTotal}
             </span>
           )}
         </button>
       </div>
 
-      {/* Chat List Popup */}
+      {/* Chat List Popup - Compact design */}
       {isOpen && !showNewChat && (
-        <div className="fixed bottom-36 right-4 z-50 animate-in slide-in-from-bottom-2">
+        <div className="fixed bottom-[120px] right-3 z-50 animate-in slide-in-from-bottom-2 md:bottom-20 md:right-4">
           <ChatListPopup
             chats={chats}
             onSelectChat={handleSelectChat}
@@ -566,7 +568,7 @@ const FloatingChatBubble = () => {
 
       {/* New Chat Modal */}
       {showNewChat && (
-        <div className="fixed bottom-36 right-4 z-50 animate-in slide-in-from-bottom-2">
+        <div className="fixed bottom-[120px] right-3 z-50 animate-in slide-in-from-bottom-2 md:bottom-20 md:right-4">
           <NewChatModal
             isOpen={showNewChat}
             onClose={() => setShowNewChat(false)}
@@ -576,8 +578,8 @@ const FloatingChatBubble = () => {
         </div>
       )}
 
-      {/* Open Chat Windows */}
-      <div className="fixed bottom-20 right-20 z-50 flex items-end gap-2">
+      {/* Open Chat Windows - More compact positioning */}
+      <div className="fixed bottom-[72px] right-16 z-50 flex items-end gap-2 md:bottom-6 md:right-20">
         {openChats.map((chat, index) => (
           <div
             key={chat.id}

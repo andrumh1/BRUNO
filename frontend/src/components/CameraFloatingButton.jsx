@@ -1,19 +1,18 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Camera, Plus } from "lucide-react";
+import { Camera } from "lucide-react";
 
 /**
- * Floating Camera Button - Instagram style
- * Appears on Feed, Profile, and other main pages
- * Hidden on mobile (< 768px) since we have MobileBottomNav
+ * Floating Camera Button - Desktop only (hidden on mobile since we have MobileBottomNav)
+ * Compact, bubble-style design matching the iOS 26.3 aesthetic
  */
 const CameraFloatingButton = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   
-  // Pages where the camera button should appear
+  // Pages where the camera button should appear (desktop only)
   const showOnPages = ["/", "/feed", "/my-profile", "/dashboard"];
   const shouldShow = showOnPages.some(page => location.pathname === page || location.pathname.startsWith("/profile"));
   
@@ -25,13 +24,10 @@ const CameraFloatingButton = () => {
   return (
     <button
       onClick={() => navigate("/camera")}
-      className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 w-14 h-14 bg-gradient-to-br from-primary to-orange-500 rounded-full shadow-lg items-center justify-center hover:scale-105 transition-transform hidden md:flex"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-11 h-11 bg-gradient-to-br from-primary to-orange-600 rounded-full shadow-lg shadow-primary/25 items-center justify-center hover:scale-105 hover:shadow-primary/40 transition-all duration-200 active:scale-95 hidden md:flex"
       data-testid="camera-floating-btn"
     >
-      <div className="relative">
-        <Camera className="w-6 h-6 text-white" />
-        <Plus className="absolute -top-1 -right-1 w-3 h-3 text-white bg-white/30 rounded-full" />
-      </div>
+      <Camera className="w-5 h-5 text-white" strokeWidth={2} />
     </button>
   );
 };
