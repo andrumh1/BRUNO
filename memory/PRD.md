@@ -309,3 +309,86 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 ---
 
 *Last Updated: 2025-03-10 - Fase 8: Monetización (Patrocinados, Promociones), Moderación (Filtro auto, Panel admin), Nav iOS 26.3*
+
+---
+
+## Fase 9: UI/UX Compacta y Tarjetas Laborales (Completado 2025-03-10)
+
+### 1. Unificación de Burbujas Flotantes
+- **Problema:** Había duplicación de burbujas de chat
+- **Solución:** Eliminada la burbuja de chat de `FloatingBubbles.jsx`, solo mantiene BRUNO IA
+- **Chat flotante:** `FloatingChatBubble.jsx` maneja todas las funciones de chat
+- **Resultado:** 2 burbujas únicas (BRUNO IA violeta izquierda + Chat naranja derecha)
+
+### 2. Diseño Compacto WhatsApp-Style
+- **Burbujas:** Reducidas de 14x14 a 11x11
+- **Chat Windows:** Más compactas (w-72 h-80)
+- **Fuentes:** Reducidas globalmente (body 14px, móvil 13px)
+- **Mensajes:** Estilo WhatsApp con bordes redondeados, gradientes
+- **Archivos modificados:**
+  - `/app/frontend/src/components/FloatingChatBubble.jsx`
+  - `/app/frontend/src/components/FloatingBubbles.jsx`
+  - `/app/frontend/src/index.css`
+
+### 3. BubbleSelect Arreglado
+- **Bug:** No se podían seleccionar opciones en móvil
+- **Causa:** onClick/onTouchEnd interceptados por overlay
+- **Solución:** Cambiado a onMouseDown/onTouchStart
+- **Z-index:** Overlay 9998, Options 10000
+- **Archivo:** `/app/frontend/src/components/BubbleSelect.jsx`
+
+### 4. Nuevos Tipos de Tarjetas Laborales
+- **Tipos añadidos:**
+  - `oferta_trabajo` - Para publicar ofertas de empleo
+  - `busqueda_personal` - Para reclutar personal
+  - `solicitud_servicio` - Para solicitar servicios
+- **Campos específicos:**
+  - Rango Salarial (mín, máx, moneda)
+  - Tipo de Contrato (tiempo completo, medio tiempo, freelance, temporal, pasantía)
+  - Modalidad (remoto, híbrido, presencial)
+  - Experiencia Requerida (sin experiencia, 1-2 años, 3-5 años, 5+, 10+)
+  - Número de Vacantes
+  - Urgencia (urgente, normal, flexible)
+  - Fecha Límite de Aplicación
+  - Requisitos (lista dinámica)
+  - Beneficios (lista dinámica, solo para ofertas)
+- **Archivos modificados:**
+  - `/app/frontend/src/pages/CreateCardPage.jsx`
+  - `/app/frontend/src/components/BeaconsStyleCard.jsx` (NUEVO)
+
+### 5. Componente BeaconsStyleCard
+- **Diseño:** Inspirado en Beacons.ai/Linktree
+- **Características:**
+  - Background con banner o gradiente
+  - Avatar redondeado con borde blanco
+  - Badge de tipo de tarjeta
+  - Badge de urgencia para tarjetas laborales
+  - Rango salarial con formato
+  - Tags de contrato/modalidad/experiencia
+  - Lista de requisitos resumida
+  - Botón de acción estilo burbuja
+
+### 6. Headers Simplificados
+- **Dashboard:** Solo logo, Tienda PIUP, logout
+- **Feed:** Website (solo desktop), Tienda, Notificaciones, Panel
+
+---
+
+## Próximas Tareas (Backlog)
+
+### P0 - Urgentes
+- [ ] Bug Safari/iPhone: Usuarios nuevos ven versión antigua (cache issue)
+
+### P1 - Importantes
+- [ ] Algoritmos de recomendación estilo TikTok/Facebook
+- [ ] Configuración de datos de usuario (editar/actualizar)
+- [ ] Más opciones en Settings
+
+### P2 - Deseables
+- [ ] Álbumes internos (fotos/videos del usuario)
+- [ ] Finalizar monetización con pasarela de pago real
+- [ ] Más legales y condiciones
+- [ ] Refactoring de server.py (mover profile, AI a routers)
+- [ ] Soporte completo de archivos en chat
+
+---
