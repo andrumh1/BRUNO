@@ -36,7 +36,8 @@ import {
   Moon,
   Sun,
   FileText,
-  Trash2
+  Trash2,
+  FolderOpen
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -438,7 +439,14 @@ const MyProfilePage = () => {
             }`}
           >
             <Bookmark className="w-5 h-5" />
-            <span className="text-sm font-medium">Guardados</span>
+            <span className="text-sm font-medium hidden sm:inline">Guardados</span>
+          </button>
+          <button
+            onClick={() => navigate("/albums")}
+            className="flex-1 py-3 flex items-center justify-center gap-2 border-b-2 border-transparent text-muted-foreground hover:text-primary transition-colors"
+          >
+            <FolderOpen className="w-5 h-5" />
+            <span className="text-sm font-medium hidden sm:inline">Álbumes</span>
           </button>
         </div>
       </div>

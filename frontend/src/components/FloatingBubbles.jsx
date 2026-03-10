@@ -76,17 +76,17 @@ const FloatingBubbles = () => {
         }
         setAiMessages(messages);
       } else {
-        // Add welcome message
+        // Add welcome message - concise and actionable
         setAiMessages([{
           role: "assistant",
-          content: "¡Hola! Soy BRUNO IA, tu asistente personal. Puedo ayudarte a:\n\n• Diseñar tarjetas digitales personalizadas\n• Explicarte las funcionalidades de la app\n• Darte recomendaciones para tu perfil profesional\n\n¿En qué puedo ayudarte hoy?"
+          content: "Soy BRUNO IA. ¿Qué necesitas?\n\n→ Crear tarjeta\n→ Buscar profesional\n→ Ayuda con la app"
         }]);
       }
     } catch (error) {
       console.error("Error loading AI history:", error);
       setAiMessages([{
         role: "assistant",
-        content: "¡Hola! Soy BRUNO IA. ¿En qué puedo ayudarte hoy?"
+        content: "BRUNO IA listo. ¿En qué te ayudo?"
       }]);
     }
   };
@@ -113,7 +113,7 @@ const FloatingBubbles = () => {
       console.error("Error sending AI message:", error);
       setAiMessages(prev => [...prev, { 
         role: "assistant", 
-        content: "Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo." 
+        content: "Error de conexión. Intenta de nuevo." 
       }]);
     } finally {
       setAiLoading(false);
@@ -128,7 +128,7 @@ const FloatingBubbles = () => {
       setSessionId(null);
       setAiMessages([{
         role: "assistant",
-        content: "¡Conversación reiniciada! ¿En qué puedo ayudarte?"
+        content: "Conversación reiniciada. ¿Qué necesitas?"
       }]);
     } catch (error) {
       console.error("Error clearing AI history:", error);
