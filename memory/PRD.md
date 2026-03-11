@@ -501,23 +501,57 @@ Integrados en `/app/backend/server.py`:
 
 ## Test Reports
 - `/app/test_reports/iteration_26.json` - Push notifications y camera (100% pass)
+- `/app/test_reports/iteration_27.json` - UI fixes: BubbleSelect, templates, chat (100% pass)
 
 ---
 
-## Próximas Tareas
+## Fase 13: Correcciones UI - Cards, Chat, Templates (Completado 2025-03-11)
+
+### 1. BubbleSelect Z-Index Fix
+- **Problema:** Dropdown de tipo de tarjeta quedaba detras de la seccion de plantillas
+- **Solucion:** Uso de createPortal para renderizar el dropdown fuera del stacking context
+- **Z-index:** Overlay 99998, Options 99999
+- **Archivo:** `/app/frontend/src/components/BubbleSelect.jsx`
+
+### 2. Preview de Tarjetas Adaptable a Plantilla
+- **Problema:** La vista previa no cambiaba al seleccionar diferentes plantillas
+- **Solucion:** 3 layouts de preview basados en template_id:
+  - **Default (Beacons-style):** Avatar centrado, nombre, social links, boton CTA
+  - **edge_actions:** Iconos QR y compartir en el borde del avatar
+  - **full_banner_bubble:** Banner dominante con burbuja de info semitransparente
+- **Archivo:** `/app/frontend/src/pages/CreateCardPage.jsx` (preview section)
+
+### 3. TemplateSelector Expandido
+- **Nuevos tipos soportados:** servicios, mascotas, oferta_trabajo, busqueda_personal, solicitud_servicio
+- **Cada tipo** tiene sus propias plantillas especificas + edge_actions + full_banner_bubble
+- **Diseno visual mejorado:** Mini-preview con gradientes por tipo de plantilla
+- **Archivo:** `/app/frontend/src/components/TemplateSelector.jsx`
+
+### 4. Chat Mejorado
+- **Header compacto:** Avatar + nombre + estado en linea (mas pequeno)
+- **Navegacion a perfil:** Click en avatar/nombre navega a /profile/{userId}
+- **Iconos de llamada:** Phone y Video en el header del chat
+- **FloatingChatBubble:** Ahora incluye iconos de Phone y Video en el header
+- **Chat list:** Items mas compactos con avatares de 12x12 -> 12x12
+- **Archivos:** `/app/frontend/src/pages/ChatPage.jsx`, `/app/frontend/src/components/FloatingChatBubble.jsx`
+
+---
+
+## Proximas Tareas
 
 ### P1 - Importantes
 - [ ] Bug Safari/iPhone: Verificar fix de cache para nuevos usuarios
-- [ ] Algoritmos de recomendación estilo TikTok/Facebook
-- [ ] Configuración de datos de usuario (editar/actualizar más campos)
-- [ ] Más opciones en Settings (privacidad, notificaciones avanzadas)
+- [ ] Algoritmos de recomendacion estilo TikTok/Facebook
+- [ ] Configuracion de datos de usuario (editar/actualizar mas campos)
+- [ ] Mas opciones en Settings (privacidad, notificaciones avanzadas)
 
 ### P2 - Deseables
-- [ ] Finalizar monetización con pasarela de pago real (Stripe)
-- [ ] Más legales y condiciones
+- [ ] Finalizar monetizacion con pasarela de pago real (Stripe)
+- [ ] Mas legales y condiciones
 - [ ] Refactoring de server.py (mover profile, AI a routers)
 - [ ] Soporte completo de archivos en chat
+- [ ] Camara estilo TikTok (mejorar UI y filtros)
 
 ---
 
-*Last Updated: 2025-03-10 - Fase 12: Push Notifications completas con triggers en likes, comments, follows, messages y video calls*
+*Last Updated: 2025-03-11 - Fase 13: BubbleSelect z-index fix, template-aware preview, chat improvements*
