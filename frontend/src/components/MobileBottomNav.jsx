@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { 
   Home, 
   Radio,
+  Film,
   Map,
   ShoppingBag,
   User,
@@ -42,7 +43,8 @@ const MobileBottomNav = () => {
 
   const navItems = [
     { id: 'home', icon: Home, label: 'Inicio', path: '/feed', matchPaths: ['/', '/feed'] },
-    { id: 'lives', icon: Radio, label: 'Live', path: '/lives', matchPaths: ['/lives'], hasIndicator: true },
+    { id: 'marketplace', icon: ShoppingBag, label: 'Tienda', path: '/marketplace', matchPaths: ['/marketplace'] },
+    { id: 'reels', icon: Film, label: 'Reels', path: '/lives', matchPaths: ['/reels', '/lives'], hasIndicator: true },
     { id: 'create', icon: Plus, label: '', path: '/camera', isCreate: true },
     { id: 'map', icon: Map, label: 'Mapa', path: '/map', matchPaths: ['/map'] },
     { id: 'notifications', icon: Bell, label: 'Alertas', path: '/settings/notifications', matchPaths: ['/settings/notifications'], hasBadge: true },
