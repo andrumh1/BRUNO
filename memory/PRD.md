@@ -502,6 +502,7 @@ Integrados en `/app/backend/server.py`:
 ## Test Reports
 - `/app/test_reports/iteration_26.json` - Push notifications y camera (100% pass)
 - `/app/test_reports/iteration_27.json` - UI fixes: BubbleSelect, templates, chat (100% pass)
+- `/app/test_reports/iteration_28.json` - Nav, hipervinculos, NFC PIUP Manager (100% - 12/12 backend, 100% frontend)
 
 ---
 
@@ -537,10 +538,35 @@ Integrados en `/app/backend/server.py`:
 
 ---
 
+## Fase 14: Navegacion, Hipervinculos y NFC PIUP Manager (Completado 2025-03-11)
+
+### 1. Navegacion Inferior Reorganizada
+- **Nuevo orden:** Inicio > Live > Crear > Mapa > Alertas(Notificaciones) > Perfil
+- **Notificaciones** ahora en la barra entre Mapa y Perfil, con badge rojo
+- **Live** movido al lado izquierdo (posicion 2)
+- **Archivo:** `/app/frontend/src/components/MobileBottomNav.jsx`
+
+### 2. Hipervinculos de Perfil Corregidos
+- **PostCard:** Username y avatar con cursor-pointer y data-testid
+- **GridCard (FeedPage):** Nuevo link "Ver perfil del autor" -> /profile/{user_id}
+- **ChatPage:** Avatar y nombre en header navegan a perfil via onClick
+- **Archivos:** PostCard.jsx, FeedPage.jsx, ChatPage.jsx
+
+### 3. NFC PIUP Manager Completo
+- **Pagina nueva:** `/nfc/manage` con 3 tabs (Mis Tags, Activar Nuevo, Tienda PIUP)
+- **23 schemas de productos** con configuracion personalizada por tipo (WiFi, Emergencia, Mascotas, Redes, Pagos, Citas, etc.)
+- **Sistema de bloqueo exclusivo BRUNO:** Tags NFC solo modificables desde la app
+- **Boton de acceso** en MyProfilePage
+- **Backend:** /nfc/configure-product, /nfc/lock, /nfc/resolve-product, /nfc/product-schemas
+- **Archivos:** NFCManagerPage.jsx, server.py
+
+---
+
 ## Proximas Tareas
 
 ### P1 - Importantes
 - [ ] Bug Safari/iPhone: Verificar fix de cache para nuevos usuarios
+- [ ] Camara estilo TikTok (mejorar UI y filtros avanzados)
 - [ ] Algoritmos de recomendacion estilo TikTok/Facebook
 - [ ] Configuracion de datos de usuario (editar/actualizar mas campos)
 - [ ] Mas opciones en Settings (privacidad, notificaciones avanzadas)
@@ -550,8 +576,7 @@ Integrados en `/app/backend/server.py`:
 - [ ] Mas legales y condiciones
 - [ ] Refactoring de server.py (mover profile, AI a routers)
 - [ ] Soporte completo de archivos en chat
-- [ ] Camara estilo TikTok (mejorar UI y filtros)
 
 ---
 
-*Last Updated: 2025-03-11 - Fase 13: BubbleSelect z-index fix, template-aware preview, chat improvements*
+*Last Updated: 2025-03-11 - Fase 14: Navegacion reorganizada, hipervinculos, NFC PIUP Manager*
