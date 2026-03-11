@@ -135,7 +135,7 @@ const PostCard = ({ post, onLike, onComment, onDelete }) => {
       <CardContent className="p-0">
         {/* Header */}
         <div className="flex items-center justify-between p-4 pb-3">
-          <Link to={`/profile/${post.user?.id}`} className="flex items-center gap-3">
+          <Link to={`/profile/${post.user?.id}`} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" data-testid="post-user-profile-link">
             {post.user?.avatar_url ? (
               <img 
                 src={post.user.avatar_url} 

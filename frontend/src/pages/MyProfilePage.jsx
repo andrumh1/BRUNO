@@ -390,6 +390,15 @@ const MyProfilePage = () => {
               <Edit3 className="w-4 h-4 mr-2" />
               Editar perfil
             </Button>
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => navigate("/nfc/manage")}
+              title="NFC PIUP Manager"
+              data-testid="nfc-manager-btn"
+            >
+              <CreditCard className="w-4 h-4" />
+            </Button>
             <Button variant="outline" size="icon">
               <Share2 className="w-4 h-4" />
             </Button>

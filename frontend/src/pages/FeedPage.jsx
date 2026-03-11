@@ -209,9 +209,16 @@ const FeedPage = () => {
 
         <div className="mt-12 space-y-3">
           <div>
-            <h3 className="text-lg font-bold truncate">{card.title}</h3>
+            <Link to={`/c/${card.id}`} className="hover:opacity-80 transition-opacity">
+              <h3 className="text-lg font-bold truncate">{card.title}</h3>
+            </Link>
             {card.subtitle && (
               <p className="text-sm text-muted-foreground truncate">{card.subtitle}</p>
+            )}
+            {card.user_id && (
+              <Link to={`/profile/${card.user_id}`} className="text-xs text-primary hover:underline cursor-pointer" data-testid="card-user-profile-link">
+                Ver perfil del autor
+              </Link>
             )}
           </div>
 

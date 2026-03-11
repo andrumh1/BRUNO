@@ -25,6 +25,7 @@ import QRCodePage from "@/pages/QRCodePage";
 import ActivateNFCPage from "@/pages/ActivateNFCPage";
 import NFCWritePage from "@/pages/NFCWritePage";
 import NFCRedirectPage from "@/pages/NFCRedirectPage";
+import NFCManagerPage from "@/pages/NFCManagerPage";
 import ContactPage from "@/pages/ContactPage";
 import HelpPage from "@/pages/HelpPage";
 import PricingPage from "@/pages/PricingPage";
@@ -105,6 +106,7 @@ function AppRouter() {
       <Route path="/cards/:cardId/edit" element={<ProtectedRoute><EditCardPage /></ProtectedRoute>} />
       <Route path="/cards/:cardId/qr" element={<ProtectedRoute><QRCodePage /></ProtectedRoute>} />
       <Route path="/nfc/activate" element={<ProtectedRoute><ActivateNFCPage /></ProtectedRoute>} />
+      <Route path="/nfc/manage" element={<ProtectedRoute><NFCManagerPage /></ProtectedRoute>} />
       <Route path="/nfc/write" element={<ProtectedRoute><NFCWritePage /></ProtectedRoute>} />
       <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccountPage /></ProtectedRoute>} />
       <Route path="/monetization" element={<ProtectedRoute><MonetizationPage /></ProtectedRoute>} />

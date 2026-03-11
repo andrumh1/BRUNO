@@ -8,6 +8,7 @@ import {
   ShoppingBag,
   User,
   Plus,
+  Bell,
   MessageCircle,
   Search,
   Settings
@@ -41,10 +42,10 @@ const MobileBottomNav = () => {
 
   const navItems = [
     { id: 'home', icon: Home, label: 'Inicio', path: '/feed', matchPaths: ['/', '/feed'] },
-    { id: 'marketplace', icon: ShoppingBag, label: 'Tienda', path: '/marketplace', matchPaths: ['/marketplace'] },
-    { id: 'create', icon: Plus, label: '', path: '/camera', isCreate: true },
     { id: 'lives', icon: Radio, label: 'Live', path: '/lives', matchPaths: ['/lives'], hasIndicator: true },
+    { id: 'create', icon: Plus, label: '', path: '/camera', isCreate: true },
     { id: 'map', icon: Map, label: 'Mapa', path: '/map', matchPaths: ['/map'] },
+    { id: 'notifications', icon: Bell, label: 'Alertas', path: '/settings/notifications', matchPaths: ['/settings/notifications'], hasBadge: true },
     { id: 'profile', icon: User, label: 'Perfil', path: '/my-profile', matchPaths: ['/my-profile', '/dashboard'], showAvatar: true }
   ];
 
@@ -156,6 +157,9 @@ const MobileBottomNav = () => {
                       />
                       {item.hasIndicator && (
                         <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                      )}
+                      {item.hasBadge && (
+                        <span className="absolute -top-1 -right-1.5 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center text-[6px] text-white font-bold">!</span>
                       )}
                     </div>
                   )}
