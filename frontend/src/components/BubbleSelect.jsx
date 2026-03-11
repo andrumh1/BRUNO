@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Check } from "lucide-react";
 
 /**
@@ -105,13 +106,13 @@ const BubbleSelect = ({
         />
       </button>
 
-      {/* Options Dropdown */}
-      {isOpen && (
+      {/* Options Dropdown - rendered via Portal to escape stacking contexts */}
+      {isOpen && createPortal(
         <>
-          {/* Full screen overlay to capture outside clicks - z-index LOWER than options */}
+          {/* Full screen overlay */}
           <div 
             className="fixed inset-0"
-            style={{ zIndex: 9998 }}
+            style={{ zIndex: 99998 }}
             onMouseDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -124,15 +125,17 @@ const BubbleSelect = ({
             }}
           />
           
-          {/* Options Container - Fixed position for mobile reliability */}
+          {/* Options Container - Fixed position via portal */}
           <div
             ref={optionsRef}
             role="listbox"
-            className="bubble-select-options fixed left-4 right-4 sm:absolute sm:left-0 sm:right-0"
+            className="bubble-select-options fixed left-4 right-4 sm:left-auto sm:right-auto"
             style={{
               top: containerRef.current ? 
-                containerRef.current.getBoundingClientRect().bottom + window.scrollY + 8 : "50%",
-              zIndex: 10000,
+                containerRef.current.getBoundingClientRect().bottom + 8 : "50%",
+              left: window.innerWidth >= 640 && containerRef.current ? containerRef.current.getBoundingClientRect().left : undefined,
+              width: window.innerWidth >= 640 && containerRef.current ? containerRef.current.getBoundingClientRect().width : undefined,
+              zIndex: 99999,
               maxHeight: "250px",
             }}
             onMouseDown={(e) => e.stopPropagation()}
@@ -177,7 +180,8 @@ const BubbleSelect = ({
               ))}
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );

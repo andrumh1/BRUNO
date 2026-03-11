@@ -295,32 +295,32 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
                 data-testid={`chat-item-${chat.id}`}
               >
                 {/* Avatar with online status */}
-                <div className="relative">
+                <div className="relative flex-shrink-0">
                   {participant.avatar_url ? (
                     <img
                       src={participant.avatar_url}
                       alt={participant.display_name}
-                      className="w-14 h-14 rounded-full object-cover border-2 border-background"
+                      className="w-12 h-12 rounded-full object-cover border-2 border-background"
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white text-lg font-bold">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white text-lg font-bold">
                       {(participant.display_name || participant.username || "?")[0].toUpperCase()}
                     </div>
                   )}
-                  <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-background" />
+                  <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background" />
                 </div>
 
                 {/* Chat Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-1">
-                    <h3 className="font-semibold truncate">
+                  <div className="flex justify-between items-center mb-0.5">
+                    <h3 className="font-semibold text-sm truncate">
                       {participant.display_name || participant.username}
                     </h3>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[10px] text-muted-foreground">
                       {formatTime(chat.last_message_at)}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
+                  <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
                     {chat.last_message?.message_type === 'audio' && <Mic className="w-3 h-3" />}
                     {chat.last_message?.message_type === 'image' && <ImageIcon className="w-3 h-3" />}
                     {chat.last_message?.content || "Sin mensajes"}
@@ -329,8 +329,8 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
 
                 {/* Unread Badge */}
                 {chat.unread_count > 0 && (
-                  <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                    <span className="text-xs text-white font-bold">
+                  <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-[10px] text-white font-bold">
                       {chat.unread_count > 9 ? "9+" : chat.unread_count}
                     </span>
                   </div>
@@ -750,55 +750,65 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/20">
       {/* Header */}
-      <div className="p-3 border-b bg-card/80 backdrop-blur-xl flex items-center gap-3 shadow-sm">
-        <Button variant="ghost" size="icon" onClick={onBack} className="md:hidden rounded-full">
-          <ArrowLeft className="w-5 h-5" />
+      <div className="p-2 border-b bg-card/80 backdrop-blur-xl flex items-center gap-2 shadow-sm">
+        <Button variant="ghost" size="icon" onClick={onBack} className="md:hidden rounded-full h-9 w-9">
+          <ArrowLeft className="w-4 h-4" />
         </Button>
         
-        {participant.avatar_url ? (
-          <img 
-            src={participant.avatar_url} 
-            alt={participant.display_name}
-            className="w-11 h-11 rounded-full object-cover border-2 border-primary/20"
-          />
-        ) : (
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold">
-            {(participant.display_name || participant.username || "?")[0].toUpperCase()}
-          </div>
-        )}
+        {/* Clickable avatar that navigates to profile */}
+        <div 
+          className="cursor-pointer" 
+          onClick={() => participant.id && navigate(`/profile/${participant.id}`)}
+          data-testid="chat-profile-link"
+        >
+          {participant.avatar_url ? (
+            <img 
+              src={participant.avatar_url} 
+              alt={participant.display_name}
+              className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 hover:border-primary/50 transition-colors"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm hover:shadow-lg transition-shadow">
+              {(participant.display_name || participant.username || "?")[0].toUpperCase()}
+            </div>
+          )}
+        </div>
         
-        <div className="flex-1">
-          <h3 className="font-semibold">{participant.display_name || participant.username}</h3>
-          <p className="text-xs text-muted-foreground">
+        <div 
+          className="flex-1 min-w-0 cursor-pointer" 
+          onClick={() => participant.id && navigate(`/profile/${participant.id}`)}
+        >
+          <h3 className="font-semibold text-sm truncate">{participant.display_name || participant.username}</h3>
+          <p className="text-[10px] text-muted-foreground">
             {isTyping ? (
               <span className="text-primary animate-pulse">escribiendo...</span>
-            ) : "En línea"}
+            ) : "En linea"}
           </p>
         </div>
         
-        <div className="flex gap-1">
+        <div className="flex gap-0.5">
           <Button 
             variant="ghost" 
             size="icon" 
-            className="rounded-full hover:bg-green-500/10 hover:text-green-500"
+            className="rounded-full h-9 w-9 hover:bg-green-500/10 hover:text-green-500"
             onClick={() => startVideoCall("audio")}
             disabled={callLoading}
             data-testid="start-audio-call-btn"
           >
-            <Phone className="w-5 h-5" />
+            <Phone className="w-4 h-4" />
           </Button>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="rounded-full hover:bg-blue-500/10 hover:text-blue-500"
+            className="rounded-full h-9 w-9 hover:bg-blue-500/10 hover:text-blue-500"
             onClick={() => startVideoCall("video")}
             disabled={callLoading}
             data-testid="start-video-call-btn"
           >
-            {callLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Video className="w-5 h-5" />}
+            {callLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
           </Button>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <MoreVertical className="w-5 h-5" />
+          <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
+            <MoreVertical className="w-4 h-4" />
           </Button>
         </div>
       </div>

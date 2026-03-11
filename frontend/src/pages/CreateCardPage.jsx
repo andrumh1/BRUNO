@@ -13,7 +13,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import ProfileSpecificFields from "@/components/ProfileSpecificFields";
 import BubbleSelect from "@/components/BubbleSelect";
 import axios from "axios";
-import { ArrowLeft, Save, Upload, Image as ImageIcon, Plus, Trash2, Briefcase, GraduationCap, Award, Languages, FileText, Users, HandHelping, DollarSign, Clock, MapPin, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowLeft, Save, Upload, Image as ImageIcon, Plus, Trash2, Briefcase, GraduationCap, Award, Languages, FileText, Users, HandHelping, DollarSign, Clock, MapPin, CheckCircle2, Sparkles, Share2 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -1432,89 +1432,166 @@ const CreateCardPage = () => {
                 <CardDescription>{t("cardForm.previewDesc")}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div
-                  className={`rounded-2xl shadow-lg relative overflow-hidden ${
-                    formData.is_animated ? "card-bubble-animated" : "card-bubble-static"
-                  }`}
-                  style={{
-                    background: `linear-gradient(135deg, ${formData.background_color}, ${formData.background_color}dd)`,
-                    color: formData.text_color,
-                  }}
-                >
-                  {/* Banner */}
-                  {formData.banner_url && (
-                    <div 
-                      className="h-32 bg-cover bg-center"
-                      style={{ backgroundImage: `url(${formData.banner_url})` }}
-                    />
-                  )}
-
-                  <div className="p-8">
-                    {/* Avatar */}
-                    {formData.avatar_url ? (
-                      <img
-                        src={formData.avatar_url}
-                        alt="Avatar"
-                        className="w-24 h-24 rounded-full object-cover border-4 mb-4"
-                        style={{ borderColor: formData.text_color }}
-                      />
-                    ) : (
-                      <div
-                        className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold mb-4 border-4"
-                        style={{
-                          backgroundColor: `${formData.text_color}20`,
-                          borderColor: formData.text_color
-                        }}
-                      >
-                        {formData.title.charAt(0) || "?"}
-                      </div>
-                    )}
-
-                    <h3 className="text-2xl font-bold mb-2">{formData.title || t("cardForm.title")}</h3>
-                    {formData.subtitle && <p className="mb-4 opacity-90">{formData.subtitle}</p>}
-                    {formData.description && (
-                      <p className="text-sm opacity-75 mb-4">{formData.description}</p>
-                    )}
-
-                    {/* Social Links Preview */}
-                    {formData.social_links.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        {formData.social_links.map((link, index) => (
-                          <div
-                            key={index}
-                            className="w-10 h-10 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: `${formData.text_color}20` }}
-                          >
-                            <span className="text-xs font-bold">
-                              {link.type.substring(0, 2).toUpperCase()}
-                            </span>
+                {/* Template: full_banner_bubble */}
+                {formData.template_id === "full_banner_bubble" ? (
+                  <div className={`rounded-2xl shadow-lg relative overflow-hidden ${formData.is_animated ? "card-bubble-animated" : ""}`}>
+                    {formData.banner_url ? (
+                      <div className="relative">
+                        <div className="h-52 bg-cover bg-center" style={{ backgroundImage: `url(${formData.banner_url})` }}>
+                          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/70" />
+                        </div>
+                        <div className="absolute inset-0 flex items-end p-4">
+                          <div className="w-full rounded-2xl bg-background/70 backdrop-blur-2xl border border-white/30 px-4 py-3 shadow-xl">
+                            <h3 className="text-lg font-bold mb-0.5">{formData.title || t("cardForm.title")}</h3>
+                            {formData.subtitle && <p className="text-xs opacity-80">{formData.subtitle}</p>}
+                            {formData.description && <p className="text-xs opacity-60 mt-1 line-clamp-2">{formData.description}</p>}
                           </div>
-                        ))}
+                        </div>
                       </div>
-                    )}
-
-                    {/* Curriculum Preview Badges */}
-                    {formData.card_type === "curriculum" && (
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        {formData.custom_fields.experience.length > 0 && (
-                          <span className="px-2 py-1 rounded-full text-xs" style={{ backgroundColor: `${formData.text_color}20` }}>
-                            {formData.custom_fields.experience.length} {t("curriculum.experience")}
-                          </span>
-                        )}
-                        {formData.custom_fields.education.length > 0 && (
-                          <span className="px-2 py-1 rounded-full text-xs" style={{ backgroundColor: `${formData.text_color}20` }}>
-                            {formData.custom_fields.education.length} {t("curriculum.education")}
-                          </span>
-                        )}
-                        {formData.custom_fields.skills.length > 0 && (
-                          <span className="px-2 py-1 rounded-full text-xs" style={{ backgroundColor: `${formData.text_color}20` }}>
-                            {formData.custom_fields.skills.length} {t("curriculum.skills")}
-                          </span>
-                        )}
+                    ) : (
+                      <div className="h-52 flex items-end p-4" style={{ background: `linear-gradient(135deg, ${formData.background_color}, ${formData.background_color}dd)` }}>
+                        <div className="w-full rounded-2xl bg-background/70 backdrop-blur-xl border border-white/30 px-4 py-3">
+                          <h3 className="text-lg font-bold">{formData.title || t("cardForm.title")}</h3>
+                          {formData.subtitle && <p className="text-xs opacity-80">{formData.subtitle}</p>}
+                        </div>
                       </div>
                     )}
                   </div>
-                </div>
+
+                ) : formData.template_id === "edge_actions" ? (
+                  /* Template: edge_actions */
+                  <div
+                    className={`rounded-2xl shadow-lg relative overflow-hidden ${formData.is_animated ? "card-bubble-animated" : ""}`}
+                    style={{ background: `linear-gradient(135deg, ${formData.background_color}, ${formData.background_color}dd)`, color: formData.text_color }}
+                  >
+                    {formData.banner_url && (
+                      <div className="h-28 bg-cover bg-center" style={{ backgroundImage: `url(${formData.banner_url})` }} />
+                    )}
+                    <div className="p-6 text-center">
+                      <div className="relative inline-block mb-3">
+                        {formData.avatar_url ? (
+                          <img src={formData.avatar_url} alt="" className="w-24 h-24 rounded-full object-cover border-4" style={{ borderColor: formData.text_color }} />
+                        ) : (
+                          <div className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold border-4" style={{ backgroundColor: `${formData.text_color}20`, borderColor: formData.text_color }}>
+                            {formData.title?.charAt(0) || "?"}
+                          </div>
+                        )}
+                        <div className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow text-xs">QR</div>
+                        <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow text-xs">
+                          <Share2 className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-bold mb-1">{formData.title || t("cardForm.title")}</h3>
+                      {formData.subtitle && <p className="text-sm opacity-80 mb-2">{formData.subtitle}</p>}
+                      {formData.description && <p className="text-xs opacity-60">{formData.description}</p>}
+                    </div>
+                  </div>
+
+                ) : (
+                  /* Default / all other templates - Beacons-inspired */
+                  <div
+                    className={`rounded-2xl shadow-lg relative overflow-hidden ${formData.is_animated ? "card-bubble-animated" : ""}`}
+                    style={{
+                      background: formData.banner_url
+                        ? `linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url(${formData.banner_url}) center/cover`
+                        : `linear-gradient(135deg, ${formData.background_color}, ${formData.background_color}dd)`,
+                      color: formData.text_color,
+                    }}
+                  >
+                    {/* Banner without overlay for non-banner backgrounds */}
+                    {!formData.banner_url && formData.banner_url === "" && null}
+
+                    <div className="p-6 pt-8 text-center">
+                      {/* Avatar */}
+                      {formData.avatar_url ? (
+                        <img
+                          src={formData.avatar_url}
+                          alt="Avatar"
+                          className="w-24 h-24 rounded-2xl object-cover border-4 border-white/80 shadow-lg mx-auto mb-3"
+                        />
+                      ) : (
+                        <div
+                          className="w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-bold mb-3 border-4 border-white/80 shadow-lg mx-auto"
+                          style={{ backgroundColor: `${formData.text_color}20` }}
+                        >
+                          {formData.title?.charAt(0) || "?"}
+                        </div>
+                      )}
+
+                      <h3 className="text-xl font-bold mb-1">{formData.title || t("cardForm.title")}</h3>
+                      {formData.subtitle && <p className="text-sm opacity-80 mb-2">{formData.subtitle}</p>}
+
+                      {/* Social Links Preview */}
+                      {formData.social_links.length > 0 && (
+                        <div className="flex flex-wrap justify-center gap-2 my-3">
+                          {formData.social_links.map((link, index) => (
+                            <div
+                              key={index}
+                              className="w-8 h-8 rounded-full flex items-center justify-center bg-white/20"
+                            >
+                              <span className="text-[10px] font-bold">
+                                {link.type?.substring(0, 2).toUpperCase()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {formData.description && (
+                        <p className="text-xs opacity-60 mt-2 line-clamp-2">{formData.description}</p>
+                      )}
+
+                      {/* Job card badges */}
+                      {["oferta_trabajo", "busqueda_personal", "solicitud_servicio"].includes(formData.card_type) && (
+                        <div className="flex flex-wrap justify-center gap-1.5 mt-3">
+                          {formData.custom_fields.job_details?.contract_type && (
+                            <span className="px-2 py-0.5 rounded-full bg-white/15 text-[10px]">
+                              {formData.custom_fields.job_details.contract_type}
+                            </span>
+                          )}
+                          {formData.custom_fields.job_details?.remote_option && (
+                            <span className="px-2 py-0.5 rounded-full bg-white/15 text-[10px]">
+                              {formData.custom_fields.job_details.remote_option}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Curriculum badges */}
+                      {formData.card_type === "curriculum" && (
+                        <div className="flex flex-wrap justify-center gap-1.5 mt-3">
+                          {formData.custom_fields.experience.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/15">
+                              {formData.custom_fields.experience.length} {t("curriculum.experience")}
+                            </span>
+                          )}
+                          {formData.custom_fields.education.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/15">
+                              {formData.custom_fields.education.length} {t("curriculum.education")}
+                            </span>
+                          )}
+                          {formData.custom_fields.skills.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/15">
+                              {formData.custom_fields.skills.length} {t("curriculum.skills")}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* CTA Button */}
+                      <div className="mt-4">
+                        <div className="w-full py-2.5 px-4 rounded-full bg-white/90 text-gray-900 font-semibold text-sm text-center">
+                          Ver Perfil
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Template name indicator */}
+                <p className="text-xs text-muted-foreground text-center mt-3">
+                  Plantilla: {formData.template_id?.replace(/_/g, ' ')}
+                </p>
               </CardContent>
             </Card>
           </div>

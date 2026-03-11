@@ -1,0 +1,75 @@
+{
+  "summary": "Frontend testing for UI fixes: BubbleSelect z-index portal fix, template-aware preview, ChatPage compact header with call icons, FloatingChatBubble header updates. All features verified working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    ".screenshots/03_create_card_page.png",
+    ".screenshots/04_bubble_select_open.png",
+    ".screenshots/05_template_edge_actions.png",
+    ".screenshots/06_template_full_banner.png",
+    ".screenshots/07_mascotas_templates.png",
+    ".screenshots/08_oferta_trabajo_templates.png",
+    ".screenshots/09_chat_page.png",
+    ".screenshots/10_chat_view_header.png"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend-only testing)",
+    "frontend": "100%"
+  },
+  "test_credentials": {
+    "email": "newtest@bruno.com",
+    "password": "Test1234!"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All UI fixes from iteration 27 verified. BubbleSelect uses createPortal with z-index 99999 to render dropdown above template cards. Template preview shows 3 layouts: default (beacons-style), edge_actions (QR icons on avatar), full_banner_bubble (banner with info bubble). ChatPage header is compact with avatar, name, Phone/Video icons. FloatingChatBubble ChatWindow header includes Phone/Video icons.",
+  "features_verified": {
+    "bubble_select_z_index_fix": {
+      "status": "PASS",
+      "details": "BubbleSelect uses createPortal to document.body with z-index 99999, verified dropdown opens above template section",
+      "code_location": "/app/frontend/src/components/BubbleSelect.jsx lines 110-185"
+    },
+    "template_preview_updates": {
+      "status": "PASS",
+      "details": "Preview changes dynamically based on template_id - verified edge_actions shows QR icons, full_banner_bubble shows banner layout",
+      "code_location": "/app/frontend/src/pages/CreateCardPage.jsx lines 1427-1530"
+    },
+    "template_name_indicator": {
+      "status": "PASS",
+      "details": "Template name displayed below preview as 'Plantilla: {template_id}'",
+      "code_location": "/app/frontend/src/pages/CreateCardPage.jsx line 1593"
+    },
+    "template_selector_all_card_types": {
+      "status": "PASS",
+      "verified_types": ["personal", "empresarial", "negocio", "servicios", "lugares", "guardian", "curriculum", "mascotas", "oferta_trabajo", "busqueda_personal", "solicitud_servicio"],
+      "code_location": "/app/frontend/src/components/TemplateSelector.jsx lines 8-81"
+    },
+    "chat_page_header_compact": {
+      "status": "PASS",
+      "details": "Header shows compact avatar bubble, name, 'En linea' status, Phone/Video call icons",
+      "selectors_verified": ["[data-testid='start-audio-call-btn']", "[data-testid='start-video-call-btn']", "[data-testid='chat-profile-link']"],
+      "code_location": "/app/frontend/src/pages/ChatPage.jsx lines 750-814"
+    },
+    "chat_profile_navigation": {
+      "status": "PASS",
+      "details": "Clicking avatar/name in chat header navigates to profile via onClick handler",
+      "code_location": "/app/frontend/src/pages/ChatPage.jsx lines 758-786"
+    },
+    "floating_chat_bubble_call_icons": {
+      "status": "PASS",
+      "details": "FloatingChatBubble ChatWindow header includes Phone (title='Llamada') and Video (title='Videollamada') icons",
+      "code_location": "/app/frontend/src/components/FloatingChatBubble.jsx lines 155-159"
+    }
+  }
+}

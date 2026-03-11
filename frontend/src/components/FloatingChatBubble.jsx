@@ -139,7 +139,7 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
 
   return (
     <div className="w-72 h-80 bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 flex flex-col overflow-hidden">
-      {/* Compact Header */}
+      {/* Compact Header with call icons */}
       <div className="px-2.5 py-2 border-b bg-gradient-to-r from-primary/5 to-transparent flex items-center gap-2">
         {participant.avatar_url ? (
           <img src={participant.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
@@ -150,8 +150,14 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
         )}
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold truncate">{participant.display_name || participant.username}</p>
-          <p className="text-[10px] text-green-500">En línea</p>
+          <p className="text-[10px] text-green-500">En linea</p>
         </div>
+        <button className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-full transition-colors" title="Llamada">
+          <Phone className="w-3.5 h-3.5 text-green-600" />
+        </button>
+        <button className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full transition-colors" title="Videollamada">
+          <Video className="w-3.5 h-3.5 text-blue-600" />
+        </button>
         <button onClick={onMinimize} className="p-1 hover:bg-muted rounded-full transition-colors">
           <Minimize2 className="w-3.5 h-3.5" />
         </button>
