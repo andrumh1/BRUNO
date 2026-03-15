@@ -1198,6 +1198,24 @@ async def get_public_cards():
 
     return [Card(**card) for card in cards]
 
+@api_router.get("/cards/explore")
+async def explore_cards(limit: int = 20, offset: int = 0):
+    """Get public cards for explore/discovery section."""
+    query = {
+        "is_public": True,
+        "$or": [
+            {"show_in_feed": True},
+            {"show_in_feed": {"$exists": False}},
+        ],
+    }
+    cards = await db.cards.find(query, {"_id": 0}).sort("created_at", -1).skip(offset).limit(limit).to_list(limit)
+    for card in cards:
+        if isinstance(card.get("created_at"), str):
+            card["created_at"] = datetime.fromisoformat(card["created_at"])
+        if isinstance(card.get("updated_at"), str):
+            card["updated_at"] = datetime.fromisoformat(card["updated_at"])
+    return [Card(**card) for card in cards]
+
 @api_router.get("/cards/{card_id}", response_model=Card)
 async def get_card(card_id: str, current_user: Optional[User] = Depends(get_current_user_optional)):
     card_dict = await db.cards.find_one({"id": card_id}, {"_id": 0})

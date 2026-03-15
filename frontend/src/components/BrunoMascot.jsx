@@ -199,11 +199,11 @@ export const BrunoFloatingButton = ({ onClick, unreadCount = 0 }) => {
         onMouseLeave={() => setIsHovered(false)}
         className="relative group"
       >
-        <div className={`w-14 h-14 rounded-full bg-gradient-to-br from-primary to-orange-500 p-1 shadow-lg hover:shadow-xl transition-all ${isHovered ? 'scale-110' : ''}`}>
+        <div className={`w-14 h-14 rounded-full bg-gradient-to-br from-primary to-orange-500 p-0.5 shadow-lg hover:shadow-xl transition-all ${isHovered ? 'scale-110' : ''}`}>
           <img 
-            src="/bruno-mascot.webp"
+            src="/mascots/bruno-logo.png"
             alt="BRUNO IA"
-            className={`w-full h-full object-contain ${isHovered ? 'animate-bounce' : ''}`}
+            className={`w-full h-full rounded-full object-cover ${isHovered ? 'animate-bounce' : ''}`}
           />
         </div>
         
@@ -291,7 +291,7 @@ const BrunoMascot = ({
     <div className="fixed bottom-24 left-4 w-80 max-h-[500px] bg-card rounded-2xl shadow-2xl border z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4">
       {/* Header */}
       <div className="p-3 bg-gradient-to-r from-primary to-orange-500 flex items-center gap-3">
-        <img src="/bruno-mascot.webp" alt="BRUNO" className="w-10 h-10 rounded-full bg-white p-1" />
+        <img src="/mascots/bruno-logo.png" alt="BRUNO" className="w-10 h-10 rounded-full object-cover border-2 border-white/30" />
         <div className="flex-1">
           <h3 className="font-bold text-white">BRUNO IA</h3>
           <p className="text-xs text-white/80">Tu asistente personal</p>

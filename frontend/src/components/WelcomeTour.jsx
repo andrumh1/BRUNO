@@ -21,20 +21,22 @@ import {
 const TOUR_STEPS = [
   {
     id: "welcome",
-    title: "¡Bienvenido a BRUNO!",
-    message: "Soy BRUNO IA, tu asistente personal. Te guiaré por todas las funciones increíbles que tenemos para ti. ¿Comenzamos?",
+    title: "Bienvenido a BRUNO!",
+    message: "Soy BRUNO, tu asistente personal. Te guiare por todas las funciones increibles que tenemos para ti. Comenzamos?",
     icon: Sparkles,
     color: "from-orange-500 to-yellow-500",
-    position: "center"
+    position: "center",
+    mascot: "/mascots/bruno-dog.webp"
   },
   {
     id: "cards",
     title: "Tarjetas Digitales",
-    message: "Crea tarjetas de presentación digitales únicas. Puedes elegir entre tarjetas personales, profesionales, de empresa o de servicios. ¡Compártelas con un solo toque!",
+    message: "Crea tarjetas de presentacion digitales unicas. Puedes elegir entre tarjetas personales, profesionales, de empresa o de servicios. Compartelas con un solo toque!",
     icon: CreditCard,
     color: "from-blue-500 to-cyan-500",
     target: "/dashboard",
-    highlight: "[data-testid='create-card-btn']"
+    highlight: "[data-testid='create-card-btn']",
+    mascot: "/mascots/bruno-human.png"
   },
   {
     id: "feed",
@@ -42,54 +44,61 @@ const TOUR_STEPS = [
     message: "Comparte publicaciones, fotos y videos con tu red. Descubre contenido de otros profesionales y haz crecer tu comunidad.",
     icon: User,
     color: "from-purple-500 to-pink-500",
-    target: "/feed"
+    target: "/feed",
+    mascot: "/mascots/bruno-dog.webp"
   },
   {
     id: "chat",
     title: "Chat en Tiempo Real",
-    message: "Comunícate con otros usuarios mediante mensajes, notas de voz, stickers, ¡y hasta videollamadas! Todo en un solo lugar.",
+    message: "Comunicarte con otros usuarios mediante mensajes, notas de voz, stickers, y hasta videollamadas! Todo en un solo lugar.",
     icon: MessageCircle,
     color: "from-green-500 to-emerald-500",
-    target: "/chat"
+    target: "/chat",
+    mascot: "/mascots/bruno-human.png"
   },
   {
     id: "map",
     title: "Mapa de Tarjetas",
-    message: "Descubre profesionales y negocios cerca de ti. El mapa te muestra tarjetas de otros usuarios con su ubicación y distancia.",
+    message: "Descubre profesionales y negocios cerca de ti. El mapa te muestra tarjetas de otros usuarios con su ubicacion y distancia.",
     icon: Map,
     color: "from-red-500 to-orange-500",
-    target: "/map"
+    target: "/map",
+    mascot: "/mascots/bruno-dog.webp"
   },
   {
     id: "store",
     title: "Tienda BRUNO",
-    message: "Explora nuestra tienda con tarjetas NFC físicas, productos para tu negocio y servicios de marketing digital.",
+    message: "Explora nuestra tienda con tarjetas NFC fisicas, productos para tu negocio y servicios de marketing digital.",
     icon: ShoppingBag,
     color: "from-amber-500 to-yellow-500",
-    target: "/store"
+    target: "/store",
+    mascot: "/mascots/bruno-human.png"
   },
   {
     id: "points",
     title: "Sistema de Puntos",
-    message: "Gana puntos por usar BRUNO: check-in diario, publicaciones, interacciones. ¡Sube de nivel y compite en el ranking!",
+    message: "Gana puntos por usar BRUNO: check-in diario, publicaciones, interacciones. Sube de nivel y compite en el ranking!",
     icon: Trophy,
     color: "from-yellow-500 to-orange-500",
-    target: "/points"
+    target: "/points",
+    mascot: "/mascots/bruno-dog.webp"
   },
   {
     id: "notifications",
     title: "Notificaciones",
-    message: "Activa las notificaciones para no perderte llamadas, mensajes o interacciones importantes. ¡Mantente conectado!",
+    message: "Activa las notificaciones para no perderte llamadas, mensajes o interacciones importantes. Mantente conectado!",
     icon: Bell,
-    color: "from-indigo-500 to-purple-500"
+    color: "from-indigo-500 to-purple-500",
+    mascot: "/mascots/bruno-human.png"
   },
   {
     id: "complete",
-    title: "¡Listo para comenzar!",
-    message: "Ya conoces lo básico de BRUNO. ¿Qué te gustaría hacer primero? Puedes crear tu primera tarjeta o explorar el feed.",
+    title: "Listo para comenzar!",
+    message: "Ya conoces lo basico de BRUNO. Que te gustaria hacer primero? Puedes crear tu primera tarjeta o explorar el feed.",
     icon: Check,
     color: "from-green-500 to-emerald-500",
     position: "center",
+    mascot: "/mascots/bruno-dog.webp",
     actions: [
       { label: "Crear mi tarjeta", path: "/cards/new", primary: true },
       { label: "Explorar feed", path: "/feed" }
@@ -222,9 +231,18 @@ export const TourOverlay = () => {
 
         {/* Content */}
         <div className="p-6 pt-8">
-          {/* Icon */}
-          <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center mx-auto mb-6 shadow-lg`}>
-            <Icon className="w-10 h-10 text-white" />
+          {/* Mascot + Icon */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            {step.mascot && (
+              <img 
+                src={step.mascot} 
+                alt="BRUNO Mascot" 
+                className="w-20 h-20 object-contain rounded-2xl"
+              />
+            )}
+            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center shadow-lg`}>
+              <Icon className="w-8 h-8 text-white" />
+            </div>
           </div>
 
           {/* Text */}

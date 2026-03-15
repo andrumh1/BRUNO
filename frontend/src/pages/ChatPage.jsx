@@ -231,6 +231,7 @@ const FileAttachment = ({ file, isOwn }) => {
 
 // Chat List Component with bubble design
 const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
+  const navigate = useNavigate();
   const formatTime = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -295,15 +296,15 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
                 data-testid={`chat-item-${chat.id}`}
               >
                 {/* Avatar with online status */}
-                <div className="relative flex-shrink-0">
+                <div className="relative flex-shrink-0" onClick={(e) => { e.stopPropagation(); if(participant.id) navigate(`/profile/${participant.id}`); }}>
                   {participant.avatar_url ? (
                     <img
                       src={participant.avatar_url}
                       alt={participant.display_name}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-background"
+                      className="w-12 h-12 rounded-full object-cover border-2 border-background cursor-pointer hover:opacity-80"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white text-lg font-bold">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white text-lg font-bold cursor-pointer hover:opacity-80">
                       {(participant.display_name || participant.username || "?")[0].toUpperCase()}
                     </div>
                   )}
@@ -313,7 +314,11 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
                 {/* Chat Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-0.5">
-                    <h3 className="font-semibold text-sm truncate">
+                    <h3 
+                      className="font-semibold text-sm truncate cursor-pointer hover:text-primary transition-colors"
+                      onClick={(e) => { e.stopPropagation(); if(participant.id) navigate(`/profile/${participant.id}`); }}
+                      data-testid="chat-list-profile-link"
+                    >
                       {participant.display_name || participant.username}
                     </h3>
                     <span className="text-[10px] text-muted-foreground">
@@ -903,7 +908,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                         </span>
                         {isOwn && (
                           message.is_read ? (
-                            <CheckCheck className="w-3.5 h-3.5 text-blue-300" />
+                            <img src="/mascots/bruno-dog.webp" alt="Visto" className="w-4 h-4 rounded-full object-cover" title="Visto" />
                           ) : (
                             <Check className="w-3.5 h-3.5 text-white/50" />
                           )

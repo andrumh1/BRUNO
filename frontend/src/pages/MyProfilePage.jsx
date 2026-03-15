@@ -56,6 +56,7 @@ const MyProfilePage = () => {
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [exploreCards, setExploreCards] = useState([]);
 
   // Fetch profile data
   const fetchProfile = useCallback(async () => {
@@ -110,17 +111,27 @@ const MyProfilePage = () => {
     }
   }, [token]);
 
+  // Fetch explore (all public) cards
+  const fetchExploreCards = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/cards/explore?limit=20`);
+      setExploreCards(response.data || []);
+    } catch (error) {
+      console.error("Error fetching explore cards:", error);
+    }
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchProfile(), fetchPosts(), fetchCards()]);
+      await Promise.all([fetchProfile(), fetchPosts(), fetchCards(), fetchExploreCards()]);
       setLoading(false);
     };
     
     if (user && token) {
       loadData();
     }
-  }, [fetchProfile, fetchPosts, fetchCards, user, token]);
+  }, [fetchProfile, fetchPosts, fetchCards, fetchExploreCards, user, token]);
 
   // Handle profile update
   const handleSaveProfile = async () => {
@@ -442,6 +453,15 @@ const MyProfilePage = () => {
             <span className="text-sm font-medium">Tarjetas</span>
           </button>
           <button
+            onClick={() => setActiveTab("explore")}
+            className={`flex-1 py-3 flex items-center justify-center gap-2 border-b-2 transition-colors ${
+              activeTab === "explore" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
+            }`}
+          >
+            <Globe className="w-5 h-5" />
+            <span className="text-sm font-medium hidden sm:inline">Explorar</span>
+          </button>
+          <button
             onClick={() => setActiveTab("saved")}
             className={`flex-1 py-3 flex items-center justify-center gap-2 border-b-2 transition-colors ${
               activeTab === "saved" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
@@ -564,6 +584,62 @@ const MyProfilePage = () => {
             <Bookmark className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">No hay posts guardados</p>
           </div>
+        )}
+
+        {/* Explore Cards */}
+        {activeTab === "explore" && (
+          exploreCards.length === 0 ? (
+            <div className="text-center py-12">
+              <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No hay tarjetas publicas aun</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {exploreCards.map(card => (
+                <Link key={card.id} to={`/c/${card.id}`}>
+                  <div 
+                    className="rounded-xl overflow-hidden relative shadow-md hover:shadow-lg transition-shadow border border-border/50"
+                  >
+                    <div 
+                      className="h-28"
+                      style={{
+                        background: card.banner_url
+                          ? `url(${card.banner_url}) center/cover`
+                          : `linear-gradient(135deg, ${card.background_color || '#f97316'}, ${card.background_color || '#ea580c'}dd)`
+                      }}
+                    />
+                    <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/90 rounded-full">
+                      <span className="text-[10px] font-medium capitalize">{card.card_type || card.type}</span>
+                    </div>
+                    <div className="p-3 bg-card relative">
+                      <div className="absolute -top-6 left-3">
+                        {card.avatar_url ? (
+                          <img src={card.avatar_url} alt="" className="w-12 h-12 rounded-full border-3 border-background object-cover shadow" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full border-3 border-background flex items-center justify-center text-lg font-bold shadow" style={{ backgroundColor: card.background_color || '#f97316', color: card.text_color || '#fff' }}>
+                            {card.title?.charAt(0) || "?"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-7">
+                        <h3 className="font-bold text-sm truncate">{card.title}</h3>
+                        {card.subtitle && <p className="text-xs text-muted-foreground truncate">{card.subtitle}</p>}
+                        {card.user_id && (
+                          <Link 
+                            to={`/profile/${card.user_id}`} 
+                            className="text-[10px] text-primary hover:underline mt-1 block"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Ver perfil del autor
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )
         )}
       </div>
     </div>

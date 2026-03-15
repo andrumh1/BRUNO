@@ -25,7 +25,7 @@ const MobileBottomNav = () => {
   const [activeLight, setActiveLight] = useState(0);
   
   // Pages where we should hide the bottom nav
-  const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno'];
+  const hiddenPaths = ['/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || 
                      location.pathname.match(/^\/lives\/[^/]+$/) ||
                      location.pathname.startsWith('/chat/');
@@ -44,7 +44,7 @@ const MobileBottomNav = () => {
   const navItems = [
     { id: 'home', icon: Home, label: 'Inicio', path: '/feed', matchPaths: ['/', '/feed'] },
     { id: 'marketplace', icon: ShoppingBag, label: 'Tienda', path: '/marketplace', matchPaths: ['/marketplace'] },
-    { id: 'reels', icon: Film, label: 'Reels', path: '/lives', matchPaths: ['/reels', '/lives'], hasIndicator: true },
+    { id: 'reels', icon: Film, label: 'Reels', path: '/reels', matchPaths: ['/reels', '/lives'], hasIndicator: true },
     { id: 'create', icon: Plus, label: '', path: '/camera', isCreate: true },
     { id: 'map', icon: Map, label: 'Mapa', path: '/map', matchPaths: ['/map'] },
     { id: 'notifications', icon: Bell, label: 'Alertas', path: '/settings/notifications', matchPaths: ['/settings/notifications'], hasBadge: true },

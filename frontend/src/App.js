@@ -52,6 +52,7 @@ import DeleteAccountPage from "@/pages/DeleteAccountPage";
 import LivesListPage from "@/pages/LivesListPage";
 import LiveViewerPage from "@/pages/LiveViewerPage";
 import StartLivePage from "@/pages/StartLivePage";
+import ReelsPage from "@/pages/ReelsPage";
 import MonetizationPage from "@/pages/MonetizationPage";
 import AlbumsPage from "@/pages/AlbumsPage";
 
@@ -111,7 +112,8 @@ function AppRouter() {
       <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccountPage /></ProtectedRoute>} />
       <Route path="/monetization" element={<ProtectedRoute><MonetizationPage /></ProtectedRoute>} />
       <Route path="/albums" element={<ProtectedRoute><AlbumsPage /></ProtectedRoute>} />
-      <Route path="/lives" element={<LivesListPage />} />
+      <Route path="/reels" element={<ReelsPage />} />
+      <Route path="/lives" element={<ReelsPage />} />
       <Route path="/lives/start" element={<ProtectedRoute><StartLivePage /></ProtectedRoute>} />
       <Route path="/lives/:liveId" element={<LiveViewerPage />} />
       

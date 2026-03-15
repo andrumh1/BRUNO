@@ -200,9 +200,9 @@ const FloatingBubbles = () => {
           onClick={() => setShowAIChat(!showAIChat)}
           data-testid="floating-ai-btn"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-violet-500/30 to-fuchsia-500/30 rounded-full blur-xl group-hover:from-violet-500/50 group-hover:to-fuchsia-500/50 transition-all duration-300 animate-pulse" />
-          <div className="relative w-11 h-11 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 rounded-full flex items-center justify-center shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transform hover:scale-105 active:scale-95 transition-all duration-200">
-            <Sparkles className="w-5 h-5 text-white" />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/30 to-orange-500/30 rounded-full blur-xl group-hover:from-primary/50 group-hover:to-orange-500/50 transition-all duration-300 animate-pulse" />
+          <div className="relative w-11 h-11 rounded-full overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transform hover:scale-105 active:scale-95 transition-all duration-200">
+            <img src="/mascots/bruno-logo.png" alt="BRUNO IA" className="w-full h-full object-cover" />
           </div>
           <div className="absolute -top-0.5 -right-0.5 px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full text-[9px] font-bold text-white shadow-md">
             IA
