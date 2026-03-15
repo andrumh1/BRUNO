@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
@@ -49,6 +49,10 @@ import BrunoCameraPage from "@/pages/BrunoCameraPage";
 import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
 import TermsOfServicePage from "@/pages/TermsOfServicePage";
 import DeleteAccountPage from "@/pages/DeleteAccountPage";
+import CookiePolicyPage from "@/pages/CookiePolicyPage";
+import LegalHubPage from "@/pages/LegalHubPage";
+import CommunityGuidelinesPage from "@/pages/CommunityGuidelinesPage";
+import DataRightsPage from "@/pages/DataRightsPage";
 import LivesListPage from "@/pages/LivesListPage";
 import LiveViewerPage from "@/pages/LiveViewerPage";
 import StartLivePage from "@/pages/StartLivePage";
@@ -80,6 +84,10 @@ function AppRouter() {
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
       <Route path="/terms" element={<TermsOfServicePage />} />
+      <Route path="/cookies" element={<CookiePolicyPage />} />
+      <Route path="/legal" element={<LegalHubPage />} />
+      <Route path="/legal/community" element={<CommunityGuidelinesPage />} />
+      <Route path="/legal/data-rights" element={<DataRightsPage />} />
       <Route path="/c/:cardId" element={<ViewCardPage />} />
       <Route path="/n/:nfcId" element={<NFCRedirectPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />
@@ -102,7 +110,7 @@ function AppRouter() {
       <Route path="/marketplace/new" element={<ProtectedRoute><NewProductPage /></ProtectedRoute>} />
       <Route path="/marketplace/my-products" element={<ProtectedRoute><MyProductsPage /></ProtectedRoute>} />
       <Route path="/marketplace/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Navigate to="/my-profile" replace /></ProtectedRoute>} />
       <Route path="/cards/new" element={<ProtectedRoute><CreateCardPage /></ProtectedRoute>} />
       <Route path="/cards/:cardId/edit" element={<ProtectedRoute><EditCardPage /></ProtectedRoute>} />
       <Route path="/cards/:cardId/qr" element={<ProtectedRoute><QRCodePage /></ProtectedRoute>} />

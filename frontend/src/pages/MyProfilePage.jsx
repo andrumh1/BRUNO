@@ -37,7 +37,13 @@ import {
   Sun,
   FileText,
   Trash2,
-  FolderOpen
+  FolderOpen,
+  Plus,
+  Eye,
+  QrCode,
+  Nfc,
+  List as ListIcon,
+  Scale
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -57,6 +63,7 @@ const MyProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [exploreCards, setExploreCards] = useState([]);
+  const [cardViewMode, setCardViewMode] = useState("grid");
 
   // Fetch profile data
   const fetchProfile = useCallback(async () => {
@@ -120,6 +127,25 @@ const MyProfilePage = () => {
       console.error("Error fetching explore cards:", error);
     }
   }, []);
+
+  const handleDeleteCard = async (cardId) => {
+    if (!window.confirm("Eliminar esta tarjeta?")) return;
+    try {
+      await axios.delete(`${API}/cards/${cardId}`, { headers: { Authorization: `Bearer ${token}` } });
+      setCards(prev => prev.filter(c => c.id !== cardId));
+    } catch (err) {
+      console.error("Error deleting card:", err);
+    }
+  };
+
+  const handleShareCard = async (card) => {
+    const url = `${window.location.origin}/c/${card.id}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: card.title, text: card.subtitle || "", url }); } catch (_) {}
+    } else {
+      navigator.clipboard.writeText(url);
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -232,6 +258,14 @@ const MyProfilePage = () => {
                 <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
                   <Bell className="w-5 h-5 text-blue-500" />
                   <span className="flex-1 text-left">Notificaciones</span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </Link>
+              
+              <Link to="/legal" onClick={() => setShowSettings(false)}>
+                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
+                  <Scale className="w-5 h-5 text-indigo-500" />
+                  <span className="flex-1 text-left">Legal y Condiciones</span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
               </Link>
@@ -453,15 +487,6 @@ const MyProfilePage = () => {
             <span className="text-sm font-medium">Tarjetas</span>
           </button>
           <button
-            onClick={() => setActiveTab("explore")}
-            className={`flex-1 py-3 flex items-center justify-center gap-2 border-b-2 transition-colors ${
-              activeTab === "explore" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
-            }`}
-          >
-            <Globe className="w-5 h-5" />
-            <span className="text-sm font-medium hidden sm:inline">Explorar</span>
-          </button>
-          <button
             onClick={() => setActiveTab("saved")}
             className={`flex-1 py-3 flex items-center justify-center gap-2 border-b-2 transition-colors ${
               activeTab === "saved" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
@@ -544,38 +569,141 @@ const MyProfilePage = () => {
           )
         )}
 
-        {/* Cards */}
+        {/* Cards - Full Dashboard Panel */}
         {activeTab === "cards" && (
-          cards.length === 0 ? (
-            <div className="text-center py-12">
-              <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">No tienes tarjetas aún</p>
-              <Link to="/cards/new">
-                <Button className="mt-4">Crear tarjeta</Button>
-              </Link>
+          <div className="space-y-4">
+            {/* Stats Row */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="glass-card rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold">{cards.length}</p>
+                <p className="text-[10px] text-muted-foreground">Tarjetas</p>
+              </div>
+              <div className="glass-card rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold">{cards.reduce((a, c) => a + (c.views || 0), 0)}</p>
+                <p className="text-[10px] text-muted-foreground">Vistas</p>
+              </div>
+              <div className="glass-card rounded-xl p-3 text-center">
+                <p className="text-2xl font-bold">{cards.filter(c => c.is_public).length}</p>
+                <p className="text-[10px] text-muted-foreground">Publicas</p>
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {cards.map(card => (
-                <Link key={card.id} to={`/c/${card.id}`}>
-                  <div 
-                    className="aspect-[1.6/1] rounded-xl overflow-hidden relative"
-                    style={{ 
-                      background: `linear-gradient(135deg, ${card.primary_color || '#f97316'}, ${card.secondary_color || '#ea580c'})`
-                    }}
-                  >
-                    <div className="absolute inset-0 p-3 flex flex-col justify-end bg-gradient-to-t from-black/50 to-transparent">
-                      <p className="text-white font-bold text-sm truncate">{card.title || 'Mi Tarjeta'}</p>
-                      <p className="text-white/70 text-xs truncate">{card.subtitle}</p>
+
+            {/* Actions Bar */}
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => navigate("/cards/new")} className="rounded-full" data-testid="create-card-btn">
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Nueva Tarjeta
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/nfc/manage")} className="rounded-full">
+                <Nfc className="w-3.5 h-3.5 mr-1" />
+                NFC
+              </Button>
+              <div className="ml-auto flex gap-1">
+                <button onClick={() => setCardViewMode("grid")} className={`p-1.5 rounded-lg ${cardViewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground"}`}>
+                  <Grid3X3 className="w-4 h-4" />
+                </button>
+                <button onClick={() => setCardViewMode("list")} className={`p-1.5 rounded-lg ${cardViewMode === "list" ? "bg-primary/10 text-primary" : "text-muted-foreground"}`}>
+                  <ListIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Cards Display */}
+            {cards.length === 0 ? (
+              <div className="text-center py-12">
+                <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">No tienes tarjetas aun</p>
+                <Button className="mt-4 rounded-full" onClick={() => navigate("/cards/new")}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Crear tarjeta
+                </Button>
+              </div>
+            ) : cardViewMode === "grid" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {cards.map(card => (
+                  <div key={card.id} className="glass-card rounded-xl overflow-hidden hover:shadow-lg transition-all">
+                    <div
+                      className="h-28 relative"
+                      style={{
+                        background: card.banner_url
+                          ? `url(${card.banner_url}) center/cover`
+                          : `linear-gradient(135deg, ${card.background_color || '#f97316'}, ${card.background_color || '#ea580c'}dd)`,
+                      }}
+                    >
+                      <div className="absolute top-2 left-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium text-white bg-black/40 backdrop-blur-sm capitalize">
+                          {card.card_type || card.type}
+                        </span>
+                      </div>
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        <button onClick={() => window.open(`/c/${card.id}`, "_blank")} className="p-1.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white">
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => navigate(`/cards/${card.id}/qr`)} className="p-1.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white">
+                          <QrCode className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/20 rounded-full">
-                      <span className="text-white text-[10px] uppercase">{card.type}</span>
+                    <div className="p-3">
+                      <h3 className="font-bold text-sm truncate">{card.title}</h3>
+                      {card.subtitle && <p className="text-xs text-muted-foreground truncate">{card.subtitle}</p>}
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" />{card.views || 0}</span>
+                          <span className={card.is_public ? "text-green-500" : "text-yellow-500"}>{card.is_public ? "Publica" : "Privada"}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={() => navigate(`/cards/${card.id}/edit`)} className="p-1.5 rounded-lg hover:bg-muted" data-testid={`edit-card-${card.id}`}>
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleShareCard(card)} className="p-1.5 rounded-lg hover:bg-muted">
+                            <Share2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDeleteCard(card.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 text-destructive">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {cards.map(card => (
+                  <div key={card.id} className="glass-card rounded-xl p-3 flex items-center gap-3 hover:shadow-md transition-all">
+                    {card.avatar_url ? (
+                      <img src={card.avatar_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0"
+                        style={{ backgroundColor: card.background_color || '#f97316' }}>
+                        {card.title?.charAt(0) || "?"}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-sm truncate">{card.title}</h3>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <span className="capitalize">{card.card_type || card.type}</span>
+                        <span><Eye className="w-2.5 h-2.5 inline" /> {card.views || 0}</span>
+                        <span className={card.is_public ? "text-green-500" : "text-yellow-500"}>{card.is_public ? "Publica" : "Privada"}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button onClick={() => navigate(`/cards/${card.id}/edit`)} className="p-1.5 rounded-lg hover:bg-muted">
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => window.open(`/c/${card.id}`, "_blank")} className="p-1.5 rounded-lg hover:bg-muted">
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleDeleteCard(card.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 text-destructive">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Saved */}
@@ -584,62 +712,6 @@ const MyProfilePage = () => {
             <Bookmark className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">No hay posts guardados</p>
           </div>
-        )}
-
-        {/* Explore Cards */}
-        {activeTab === "explore" && (
-          exploreCards.length === 0 ? (
-            <div className="text-center py-12">
-              <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">No hay tarjetas publicas aun</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {exploreCards.map(card => (
-                <Link key={card.id} to={`/c/${card.id}`}>
-                  <div 
-                    className="rounded-xl overflow-hidden relative shadow-md hover:shadow-lg transition-shadow border border-border/50"
-                  >
-                    <div 
-                      className="h-28"
-                      style={{
-                        background: card.banner_url
-                          ? `url(${card.banner_url}) center/cover`
-                          : `linear-gradient(135deg, ${card.background_color || '#f97316'}, ${card.background_color || '#ea580c'}dd)`
-                      }}
-                    />
-                    <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/90 rounded-full">
-                      <span className="text-[10px] font-medium capitalize">{card.card_type || card.type}</span>
-                    </div>
-                    <div className="p-3 bg-card relative">
-                      <div className="absolute -top-6 left-3">
-                        {card.avatar_url ? (
-                          <img src={card.avatar_url} alt="" className="w-12 h-12 rounded-full border-3 border-background object-cover shadow" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full border-3 border-background flex items-center justify-center text-lg font-bold shadow" style={{ backgroundColor: card.background_color || '#f97316', color: card.text_color || '#fff' }}>
-                            {card.title?.charAt(0) || "?"}
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-7">
-                        <h3 className="font-bold text-sm truncate">{card.title}</h3>
-                        {card.subtitle && <p className="text-xs text-muted-foreground truncate">{card.subtitle}</p>}
-                        {card.user_id && (
-                          <Link 
-                            to={`/profile/${card.user_id}`} 
-                            className="text-[10px] text-primary hover:underline mt-1 block"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Ver perfil del autor
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )
         )}
       </div>
     </div>
