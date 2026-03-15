@@ -551,26 +551,44 @@ Integrados en `/app/backend/server.py`:
 
 ---
 
-## Fase 15: Reels TikTok, Explorar en Perfil, Mascotas BRUNO (Completado 2025-03-15)
+## Fase 15: Reels TikTok, Mascotas BRUNO (Completado 2025-03-15)
 
 ### 1. ReelsPage TikTok-Style (/reels y /lives unificados)
-### 2. Panel Explorar en Perfil (GET /api/cards/explore)
-### 3. Mascotas BRUNO (logo, perro visto chat, personajes onboarding)
-### 4. Chat Profile Navigation Fix (e.stopPropagation en ChatList)
-### 5. Navegacion: Inicio > Tienda > Reels > Camara > Mapa > Alertas > Perfil
+### 2. Mascotas BRUNO (logo, perro visto chat, personajes onboarding)
+### 3. Chat Profile Navigation Fix (e.stopPropagation en ChatList)
+### 4. Navegacion: Inicio > Tienda > Reels > Camara > Mapa > Alertas > Perfil
+
+---
+
+## Fase 16: Dashboard en Perfil + Paginas Legales (Completado 2025-03-15)
+
+### 1. Dashboard Migrado al Perfil
+- **Tab "Tarjetas"** en MyProfilePage con panel completo:
+  - Stats: total tarjetas, vistas, publicas
+  - Grid/List toggle
+  - Acciones: crear, editar, compartir, QR, eliminar
+  - Botones: Nueva Tarjeta + NFC Manager
+- **/dashboard** redirige a /my-profile (Navigate)
+- **Endpoint:** GET /api/cards/explore para tarjetas publicas
+
+### 2. Paginas Legales Completas
+- **/legal** - Hub legal con 6 secciones
+- **/cookies** - Politica de Cookies
+- **/legal/community** - Normas de la Comunidad (contenido, sanciones, NFC)
+- **/legal/data-rights** - Derechos GDPR (acceso, rectificacion, olvido, portabilidad)
+- **Settings** tiene link a Legal y Condiciones
 
 ---
 
 ## Test Reports
-- iteration_26-29.json - Todos 100% pass
+- iteration_26-30.json - Todos 100% pass
 
 ---
 
 ## Proximas Tareas
 
 ### P1 - Importantes
-- [ ] Correcciones de tarjetas pendientes
-- [ ] Paginas legales adicionales (Terminos, Privacidad, Cookies)
+- [ ] Correcciones de tarjetas (plantillas, estilos, actualizacion)
 - [ ] Bug Safari/iPhone: Verificar fix de cache
 - [ ] Algoritmos de recomendacion
 
@@ -581,4 +599,4 @@ Integrados en `/app/backend/server.py`:
 
 ---
 
-*Last Updated: 2025-03-15 - Fase 15: ReelsPage, Explorar, mascotas, chat nav*
+*Last Updated: 2025-03-15 - Fase 16: Dashboard en perfil, paginas legales*
