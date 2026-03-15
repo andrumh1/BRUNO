@@ -541,42 +541,44 @@ Integrados en `/app/backend/server.py`:
 ## Fase 14: Navegacion, Hipervinculos y NFC PIUP Manager (Completado 2025-03-11)
 
 ### 1. Navegacion Inferior Reorganizada
-- **Nuevo orden:** Inicio > Live > Crear > Mapa > Alertas(Notificaciones) > Perfil
-- **Notificaciones** ahora en la barra entre Mapa y Perfil, con badge rojo
-- **Live** movido al lado izquierdo (posicion 2)
 - **Archivo:** `/app/frontend/src/components/MobileBottomNav.jsx`
 
 ### 2. Hipervinculos de Perfil Corregidos
-- **PostCard:** Username y avatar con cursor-pointer y data-testid
-- **GridCard (FeedPage):** Nuevo link "Ver perfil del autor" -> /profile/{user_id}
-- **ChatPage:** Avatar y nombre en header navegan a perfil via onClick
 - **Archivos:** PostCard.jsx, FeedPage.jsx, ChatPage.jsx
 
 ### 3. NFC PIUP Manager Completo
-- **Pagina nueva:** `/nfc/manage` con 3 tabs (Mis Tags, Activar Nuevo, Tienda PIUP)
-- **23 schemas de productos** con configuracion personalizada por tipo (WiFi, Emergencia, Mascotas, Redes, Pagos, Citas, etc.)
-- **Sistema de bloqueo exclusivo BRUNO:** Tags NFC solo modificables desde la app
-- **Boton de acceso** en MyProfilePage
-- **Backend:** /nfc/configure-product, /nfc/lock, /nfc/resolve-product, /nfc/product-schemas
 - **Archivos:** NFCManagerPage.jsx, server.py
+
+---
+
+## Fase 15: Reels TikTok, Explorar en Perfil, Mascotas BRUNO (Completado 2025-03-15)
+
+### 1. ReelsPage TikTok-Style (/reels y /lives unificados)
+### 2. Panel Explorar en Perfil (GET /api/cards/explore)
+### 3. Mascotas BRUNO (logo, perro visto chat, personajes onboarding)
+### 4. Chat Profile Navigation Fix (e.stopPropagation en ChatList)
+### 5. Navegacion: Inicio > Tienda > Reels > Camara > Mapa > Alertas > Perfil
+
+---
+
+## Test Reports
+- iteration_26-29.json - Todos 100% pass
 
 ---
 
 ## Proximas Tareas
 
 ### P1 - Importantes
-- [ ] Bug Safari/iPhone: Verificar fix de cache para nuevos usuarios
-- [ ] Camara estilo TikTok (mejorar UI y filtros avanzados)
-- [ ] Algoritmos de recomendacion estilo TikTok/Facebook
-- [ ] Configuracion de datos de usuario (editar/actualizar mas campos)
-- [ ] Mas opciones en Settings (privacidad, notificaciones avanzadas)
+- [ ] Correcciones de tarjetas pendientes
+- [ ] Paginas legales adicionales (Terminos, Privacidad, Cookies)
+- [ ] Bug Safari/iPhone: Verificar fix de cache
+- [ ] Algoritmos de recomendacion
 
 ### P2 - Deseables
-- [ ] Finalizar monetizacion con pasarela de pago real (Stripe)
-- [ ] Mas legales y condiciones
-- [ ] Refactoring de server.py (mover profile, AI a routers)
-- [ ] Soporte completo de archivos en chat
+- [ ] Monetizacion Stripe
+- [ ] Refactoring server.py
+- [ ] Configuracion expandida usuario
 
 ---
 
-*Last Updated: 2025-03-11 - Fase 14: Navegacion reorganizada, hipervinculos, NFC PIUP Manager*
+*Last Updated: 2025-03-15 - Fase 15: ReelsPage, Explorar, mascotas, chat nav*
