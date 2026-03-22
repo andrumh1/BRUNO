@@ -452,14 +452,24 @@ const BrunoCameraPage = () => {
     if (!capturedMedia || !token) return;
     setPublishing(true);
     try {
+      // Step 1: Upload media to Cloudinary
       const formData = new FormData();
       const resp = await fetch(capturedMedia.data);
       const blob = await resp.blob();
       formData.append("file", blob, `bruno_${Date.now()}.${capturedMedia.type === "photo" ? "jpg" : "webm"}`);
-      formData.append("caption", caption);
-      formData.append("media_type", capturedMedia.type);
-      await axios.post(`${API}/posts/upload`, formData, {
+      const uploadRes = await axios.post(`${API}/upload/image`, formData, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+      const mediaUrl = uploadRes.data.url;
+
+      // Step 2: Create post with uploaded media URL
+      await axios.post(`${API}/posts`, {
+        content: caption,
+        media: [{ type: capturedMedia.type === "photo" ? "image" : "video", url: mediaUrl }],
+        post_type: capturedMedia.type === "photo" ? "image" : "video",
+        visibility: "public",
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
       });
       navigate("/feed");
     } catch (err) {
