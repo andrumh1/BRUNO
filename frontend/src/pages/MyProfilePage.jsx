@@ -43,7 +43,8 @@ import {
   QrCode,
   Nfc,
   List as ListIcon,
-  Scale
+  Scale,
+  TrendingUp
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -259,13 +260,21 @@ const MyProfilePage = () => {
             onClick={e => e.stopPropagation()}
           >
             <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="font-bold">Configuración</h2>
+              <h2 className="font-bold">Configuracion</h2>
               <Button variant="ghost" size="icon" onClick={() => setShowSettings(false)}>
                 <X className="w-5 h-5" />
               </Button>
             </div>
             
             <div className="p-2">
+              <Link to="/settings" onClick={() => setShowSettings(false)}>
+                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
+                  <Settings className="w-5 h-5 text-primary" />
+                  <span className="flex-1 text-left font-medium">Configuracion completa</span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </Link>
+              
               <Link to="/points" onClick={() => setShowSettings(false)}>
                 <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
                   <Trophy className="w-5 h-5 text-yellow-500" />
@@ -273,35 +282,27 @@ const MyProfilePage = () => {
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
               </Link>
-              
-              <Link to="/settings/notifications" onClick={() => setShowSettings(false)}>
+
+              <Link to="/saved" onClick={() => setShowSettings(false)}>
                 <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
-                  <Bell className="w-5 h-5 text-blue-500" />
-                  <span className="flex-1 text-left">Notificaciones</span>
+                  <Bookmark className="w-5 h-5 text-blue-500" />
+                  <span className="flex-1 text-left">Posts Guardados</span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </Link>
+
+              <Link to="/analytics" onClick={() => setShowSettings(false)}>
+                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
+                  <TrendingUp className="w-5 h-5 text-green-500" />
+                  <span className="flex-1 text-left">Analytics</span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
               </Link>
               
-              <Link to="/legal" onClick={() => setShowSettings(false)}>
+              <Link to="/nfc-manager" onClick={() => setShowSettings(false)}>
                 <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
-                  <Scale className="w-5 h-5 text-indigo-500" />
-                  <span className="flex-1 text-left">Legal y Condiciones</span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </button>
-              </Link>
-              
-              <Link to="/privacy" onClick={() => setShowSettings(false)}>
-                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
-                  <Shield className="w-5 h-5 text-green-500" />
-                  <span className="flex-1 text-left">Política de Privacidad</span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </button>
-              </Link>
-              
-              <Link to="/terms" onClick={() => setShowSettings(false)}>
-                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
-                  <FileText className="w-5 h-5 text-gray-500" />
-                  <span className="flex-1 text-left">Términos de Servicio</span>
+                  <CreditCard className="w-5 h-5 text-indigo-500" />
+                  <span className="flex-1 text-left">NFC Manager</span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
               </Link>
@@ -313,31 +314,15 @@ const MyProfilePage = () => {
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
               </Link>
-              
-              <Link to="/help" onClick={() => setShowSettings(false)}>
-                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
-                  <HelpCircle className="w-5 h-5 text-purple-500" />
-                  <span className="flex-1 text-left">Ayuda</span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                </button>
-              </Link>
-              
-              <div className="border-t my-2" />
-              
-              <Link to="/settings/delete-account" onClick={() => setShowSettings(false)}>
-                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors">
-                  <Trash2 className="w-5 h-5" />
-                  <span className="flex-1 text-left">Eliminar Cuenta</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </Link>
-              
-              <button 
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors"
+
+              <div className="my-2 border-t" />
+
+              <button
+                onClick={() => { logout(); navigate("/login"); }}
+                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-destructive/10 transition-colors text-destructive"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="flex-1 text-left">Cerrar Sesión</span>
+                <span className="flex-1 text-left">Cerrar sesion</span>
               </button>
             </div>
           </div>

@@ -61,6 +61,7 @@ import MonetizationPage from "@/pages/MonetizationPage";
 import AlbumsPage from "@/pages/AlbumsPage";
 import HashtagPage from "@/pages/HashtagPage";
 import SavedPostsPage from "@/pages/SavedPostsPage";
+import SettingsPage from "@/pages/SettingsPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -124,6 +125,7 @@ function AppRouter() {
       <Route path="/monetization" element={<ProtectedRoute><MonetizationPage /></ProtectedRoute>} />
       <Route path="/albums" element={<ProtectedRoute><AlbumsPage /></ProtectedRoute>} />
       <Route path="/saved" element={<ProtectedRoute><SavedPostsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/reels" element={<ReelsPage />} />
       <Route path="/lives" element={<ReelsPage />} />
       <Route path="/lives/start" element={<ProtectedRoute><StartLivePage /></ProtectedRoute>} />

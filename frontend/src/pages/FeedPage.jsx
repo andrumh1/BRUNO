@@ -24,12 +24,14 @@ const FeedPage = () => {
   const { user, token, logout } = useAuth();
   const { t } = useLanguage();
   
-  // Tab state: "social" or "cards"
-  const [activeTab, setActiveTab] = useState("social");
+  // Tab state: "foryou", "social", "reels" or "cards"
+  const [activeTab, setActiveTab] = useState("foryou");
   
   // Social feed state
   const [posts, setPosts] = useState([]);
+  const [forYouPosts, setForYouPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
+  const [loadingForYou, setLoadingForYou] = useState(false);
   const [userCards, setUserCards] = useState([]);
   
   // Cards explorer state
@@ -53,6 +55,32 @@ const FeedPage = () => {
       ]);
       setTrending(trendRes.data);
       setSuggested(suggestRes.data);
+    } catch (e) {}
+  }, [token]);
+
+  // Fetch For You feed
+  const fetchForYou = useCallback(async () => {
+    if (!token) return;
+    setLoadingForYou(true);
+    try {
+      const res = await axios.get(`${API}/feed/for-you`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setForYouPosts(res.data);
+    } catch (e) {
+      console.error("Error fetching for-you:", e);
+    } finally {
+      setLoadingForYou(false);
+    }
+  }, [token]);
+
+  // Track post view for recommendation engine
+  const trackView = useCallback(async (postId) => {
+    if (!token) return;
+    try {
+      await axios.post(`${API}/feed/interaction?post_id=${postId}&interaction_type=view`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
     } catch (e) {}
   }, [token]);
 
@@ -96,14 +124,17 @@ const FeedPage = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "social") {
+    if (activeTab === "foryou") {
+      fetchForYou();
+      fetchSocial();
+    } else if (activeTab === "social") {
       fetchPosts();
       fetchSocial();
       if (token) fetchUserCards();
-    } else {
+    } else if (activeTab === "cards") {
       fetchPublicCards();
     }
-  }, [activeTab, token, fetchPosts, fetchUserCards, fetchPublicCards, fetchSocial]);
+  }, [activeTab, token, fetchPosts, fetchUserCards, fetchPublicCards, fetchSocial, fetchForYou]);
 
   // Handle new post created
   const handlePostCreated = (newPost) => {
@@ -408,6 +439,20 @@ const FeedPage = () => {
 
           {/* Tab Navigation */}
           <div className="flex gap-1 mb-3 sm:mb-4">
+            {user && (
+              <button
+                onClick={() => setActiveTab("foryou")}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                  activeTab === "foryou"
+                    ? "bg-primary text-primary-foreground shadow-lg"
+                    : "bg-muted/50 hover:bg-muted text-muted-foreground"
+                }`}
+                data-testid="foryou-tab-btn"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Para Ti</span>
+              </button>
+            )}
             <button
               onClick={() => setActiveTab("social")}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all ${
@@ -544,6 +589,134 @@ const FeedPage = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+
+        {/* For You Tab */}
+        {activeTab === "foryou" && (
+          <div className="flex gap-6 max-w-5xl mx-auto">
+            <div className="flex-1 max-w-xl mx-auto lg:mx-0 space-y-4">
+              {/* Stories */}
+              <div className="bg-card rounded-xl border mb-4">
+                <StoriesRow onCreateStory={() => setShowCreateStory(true)} />
+              </div>
+
+              {/* Refresh */}
+              <div className="flex justify-center">
+                <Button variant="ghost" size="sm" onClick={fetchForYou} disabled={loadingForYou} className="text-muted-foreground hover:text-primary" data-testid="refresh-foryou-btn">
+                  <RefreshCw className={`w-4 h-4 mr-2 ${loadingForYou ? "animate-spin" : ""}`} />
+                  Actualizar
+                </Button>
+              </div>
+
+              {loadingForYou && forYouPosts.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-muted-foreground">Preparando tu feed personalizado...</p>
+                </div>
+              )}
+
+              {!loadingForYou && forYouPosts.length === 0 && (
+                <Card className="text-center py-16 glass-card">
+                  <CardContent>
+                    <Sparkles className="w-12 h-12 text-primary mx-auto mb-4" />
+                    <h3 className="text-xl font-bold mb-2">Tu feed personalizado</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Interactua con publicaciones para que aprendamos tus gustos. 
+                      Dale like, guarda, y comenta para mejorar tus recomendaciones.
+                    </p>
+                    <Button onClick={() => setActiveTab("social")}>Explorar feed general</Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {forYouPosts.length > 0 && (
+                <div className="space-y-4" data-testid="foryou-feed">
+                  {forYouPosts.map((post) => (
+                    <div key={post.id} onMouseEnter={() => trackView(post.id)}>
+                      {/* Reason badge */}
+                      {post._for_you_reason && post._for_you_reason !== "discover" && (
+                        <div className="flex items-center gap-1.5 mb-1.5 ml-1">
+                          {post._for_you_reason === "following" && (
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                              <Users className="w-3 h-3" /> De alguien que sigues
+                            </span>
+                          )}
+                          {post._for_you_reason === "hashtag_match" && (
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                              <Hash className="w-3 h-3" /> Basado en tus intereses
+                            </span>
+                          )}
+                          {post._for_you_reason === "trending" && (
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                              <TrendingUp className="w-3 h-3" /> Trending
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <PostCard
+                        post={post}
+                        onLikeUpdate={handleLikeUpdate}
+                        onDelete={(id) => setForYouPosts(prev => prev.filter(p => p.id !== id))}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Right Sidebar */}
+            <div className="hidden lg:block w-72 shrink-0 space-y-4 sticky top-28 self-start">
+              {trending.length > 0 && (
+                <Card className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-primary" />
+                      <h3 className="font-bold text-sm">Tendencias</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {trending.slice(0, 6).map((t, i) => (
+                        <Link key={i} to={`/hashtag/${t.hashtag}`} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted transition-colors group">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Hash className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <span className="text-sm font-medium truncate group-hover:text-primary">#{t.hashtag}</span>
+                          </div>
+                          {t.count > 0 && <span className="text-[10px] text-muted-foreground shrink-0">{t.count}</span>}
+                        </Link>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              {suggested.length > 0 && (
+                <Card className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <UserPlus className="w-4 h-4 text-primary" />
+                      <h3 className="font-bold text-sm">Personas sugeridas</h3>
+                    </div>
+                    <div className="space-y-2.5">
+                      {suggested.slice(0, 5).map((u) => (
+                        <Link key={u.id} to={`/profile/${u.id}`} className="flex items-center gap-2.5 py-1 hover:opacity-80 transition-opacity">
+                          {u.avatar_url ? (
+                            <img src={u.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+                              {(u.name || "U")[0].toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate">{u.name || u.username}</p>
+                            {u.mutual_count > 0 && <p className="text-[10px] text-muted-foreground">{u.mutual_count} mutuales</p>}
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Social Feed Tab */}
         {activeTab === "social" && (
           <div className="flex gap-6 max-w-5xl mx-auto">

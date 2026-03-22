@@ -4185,6 +4185,218 @@ async def get_poll(poll_id: str):
 
 
 
+# ==================== FOR YOU PERSONALIZED FEED ====================
+
+@api_router.get("/feed/for-you")
+async def get_for_you_feed(
+    skip: int = 0, limit: int = 20,
+    current_user: User = Depends(get_current_user)
+):
+    """Personalized 'For You' feed based on user interactions, follows, and preferences"""
+    
+    # 1. Collect user's interest signals
+    # - Hashtags from posts user has liked/bookmarked/reacted to
+    liked_ids = await db.reactions.find(
+        {"user_id": current_user.id, "target_type": "post"},
+        {"_id": 0, "target_id": 1}
+    ).to_list(200)
+    liked_post_ids = [l["target_id"] for l in liked_ids]
+    
+    bookmarked = await db.bookmarks.find(
+        {"user_id": current_user.id},
+        {"_id": 0, "post_id": 1}
+    ).to_list(200)
+    bookmarked_ids = [b["post_id"] for b in bookmarked]
+    
+    interacted_ids = set(liked_post_ids + bookmarked_ids)
+    
+    # 2. Extract preferred hashtags from interacted posts
+    preferred_hashtags = []
+    if interacted_ids:
+        interacted_posts = await db.posts.find(
+            {"id": {"$in": list(interacted_ids)}, "hashtags": {"$exists": True, "$ne": []}},
+            {"_id": 0, "hashtags": 1}
+        ).to_list(200)
+        for p in interacted_posts:
+            preferred_hashtags.extend(p.get("hashtags", []))
+    
+    # Count hashtag frequency for weighting
+    hashtag_freq = {}
+    for h in preferred_hashtags:
+        hl = h.lower()
+        hashtag_freq[hl] = hashtag_freq.get(hl, 0) + 1
+    top_hashtags = sorted(hashtag_freq, key=hashtag_freq.get, reverse=True)[:15]
+    
+    # 3. Get who user follows
+    follows = await db.follows.find(
+        {"follower_id": current_user.id}, {"_id": 0, "following_id": 1}
+    ).to_list(500)
+    followed_ids = {f["following_id"] for f in follows}
+    
+    # 4. Build candidate posts from multiple sources with scoring
+    seen_ids = set()
+    scored_posts = []
+    
+    # Source A: Posts from followed users (high relevance)
+    if followed_ids:
+        following_posts = await db.posts.find(
+            {"user_id": {"$in": list(followed_ids)}, "is_deleted": {"$ne": True}, "visibility": "public"},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(limit * 2).to_list(limit * 2)
+        for p in following_posts:
+            if p["id"] not in seen_ids:
+                seen_ids.add(p["id"])
+                score = 80 + (p.get("likes_count", 0) * 0.5)
+                scored_posts.append((score, p))
+    
+    # Source B: Posts matching preferred hashtags (medium-high relevance)
+    if top_hashtags:
+        hashtag_posts = await db.posts.find(
+            {"hashtags": {"$in": top_hashtags}, "is_deleted": {"$ne": True}, "visibility": "public", "user_id": {"$ne": current_user.id}},
+            {"_id": 0}
+        ).sort("created_at", -1).limit(limit * 2).to_list(limit * 2)
+        for p in hashtag_posts:
+            if p["id"] not in seen_ids:
+                seen_ids.add(p["id"])
+                matching = sum(1 for h in p.get("hashtags", []) if h.lower() in top_hashtags)
+                score = 50 + (matching * 15) + (p.get("likes_count", 0) * 0.3)
+                scored_posts.append((score, p))
+    
+    # Source C: Trending/popular posts (medium relevance)
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    popular_posts = await db.posts.find(
+        {"created_at": {"$gte": week_ago}, "is_deleted": {"$ne": True}, "visibility": "public", "user_id": {"$ne": current_user.id}},
+        {"_id": 0}
+    ).sort("likes_count", -1).limit(limit * 2).to_list(limit * 2)
+    for p in popular_posts:
+        if p["id"] not in seen_ids:
+            seen_ids.add(p["id"])
+            score = 30 + (p.get("likes_count", 0) * 1.5) + (p.get("comments_count", 0) * 2)
+            scored_posts.append((score, p))
+    
+    # Source D: Recent posts from new users (discovery)
+    new_posts = await db.posts.find(
+        {"is_deleted": {"$ne": True}, "visibility": "public", "user_id": {"$ne": current_user.id}},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    for p in new_posts:
+        if p["id"] not in seen_ids:
+            seen_ids.add(p["id"])
+            score = 10 + (p.get("likes_count", 0) * 0.5)
+            scored_posts.append((score, p))
+    
+    # 5. Sort by score, apply pagination
+    scored_posts.sort(key=lambda x: x[0], reverse=True)
+    paginated = [p for _, p in scored_posts[skip:skip + limit]]
+    
+    # 6. Enrich with user info
+    for post in paginated:
+        user_doc = await db.users.find_one({"id": post["user_id"]}, {"_id": 0, "hashed_password": 0})
+        profile = await db.user_profiles.find_one({"user_id": post["user_id"]}, {"_id": 0})
+        username = "Unknown"
+        display_name = None
+        if user_doc:
+            username = user_doc.get("name") or user_doc.get("email", "Unknown").split("@")[0]
+        if profile:
+            display_name = profile.get("display_name")
+        post["user"] = {
+            "id": user_doc["id"] if user_doc else None,
+            "username": username,
+            "avatar_url": profile.get("avatar_url") if profile else None,
+            "display_name": display_name or username,
+            "is_verified": user_doc.get("is_verified", False) if user_doc else False,
+            "subscription_tier": user_doc.get("subscription_tier", "free") if user_doc else "free"
+        }
+        like = await db.reactions.find_one({"user_id": current_user.id, "target_id": post["id"], "target_type": "post"})
+        post["is_liked"] = like is not None
+        bm = await db.bookmarks.find_one({"user_id": current_user.id, "post_id": post["id"]})
+        post["is_bookmarked"] = bm is not None
+        post["_for_you_reason"] = (
+            "following" if post["user_id"] in followed_ids else
+            "hashtag_match" if any(h.lower() in top_hashtags for h in post.get("hashtags", [])) else
+            "trending" if post.get("likes_count", 0) > 2 else
+            "discover"
+        )
+    
+    return paginated
+
+# ---- Interaction Tracking ----
+
+@api_router.post("/feed/interaction")
+async def track_interaction(
+    post_id: str,
+    interaction_type: str = "view",
+    current_user: User = Depends(get_current_user)
+):
+    """Track user interaction with content for recommendation improvement"""
+    valid_types = ["view", "click", "expand", "share", "dwell"]
+    if interaction_type not in valid_types:
+        interaction_type = "view"
+    
+    interaction = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user.id,
+        "post_id": post_id,
+        "interaction_type": interaction_type,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.interactions.insert_one(interaction)
+    return {"tracked": True}
+
+# ---- User Preferences / Settings ----
+
+@api_router.get("/settings/preferences")
+async def get_preferences(current_user: User = Depends(get_current_user)):
+    """Get user preferences"""
+    prefs = await db.user_preferences.find_one(
+        {"user_id": current_user.id}, {"_id": 0}
+    )
+    if not prefs:
+        prefs = {
+            "user_id": current_user.id,
+            "feed_mode": "for_you",
+            "language": "es",
+            "theme": "system",
+            "notifications": {
+                "likes": True,
+                "comments": True,
+                "follows": True,
+                "messages": True,
+                "mentions": True
+            },
+            "privacy": {
+                "show_online_status": True,
+                "allow_messages_from": "everyone",
+                "show_read_receipts": True,
+                "profile_visibility": "public"
+            },
+            "content": {
+                "autoplay_videos": True,
+                "show_sensitive_content": False,
+                "default_post_visibility": "public"
+            }
+        }
+        await db.user_preferences.insert_one({**prefs})
+    
+    prefs.pop("_id", None)
+    return prefs
+
+@api_router.put("/settings/preferences")
+async def update_preferences(prefs_data: dict, current_user: User = Depends(get_current_user)):
+    """Update user preferences"""
+    allowed_keys = {"feed_mode", "language", "theme", "notifications", "privacy", "content"}
+    update = {k: v for k, v in prefs_data.items() if k in allowed_keys}
+    
+    await db.user_preferences.update_one(
+        {"user_id": current_user.id},
+        {"$set": update},
+        upsert=True
+    )
+    
+    return await get_preferences(current_user)
+
+
+
 # -------------------- CHAT / MESSAGING --------------------
 
 @api_router.get("/chats")
