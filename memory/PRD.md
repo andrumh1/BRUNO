@@ -1,90 +1,121 @@
-# BRUNO - Digital Business Card & Social Network
+# BRUNO Social Network - PRD
 
-## Problem Statement
-Build a comprehensive digital business card application called "BRUNO" - a polished PWA with social networking features, e-commerce, and AI assistant.
+## Original Problem Statement
+Build a comprehensive social networking platform called "BRUNO" with digital business cards, social feeds, stories, marketplace, and advanced social features.
 
----
+## Core Architecture
+- **Frontend:** React + TailwindCSS + Shadcn UI + Framer Motion
+- **Backend:** FastAPI + MongoDB
+- **Auth:** JWT + Google OAuth (Emergent-managed)
+- **Storage:** Cloudinary (images)
+- **AI:** OpenAI GPT-5.2 (Emergent LLM Key)
+- **Maps:** Leaflet
+- **Payments:** Stripe (planned)
 
-## Los 9 Puntos Originales - TODOS COMPLETADOS
+## What's Been Implemented
 
-| # | Punto | Estado |
-|---|-------|--------|
-| 1 | **Mapa** estilo Snapchat | COMPLETADO |
-| 2 | **Cards** multiples vistas | COMPLETADO |
-| 3 | **Feed** fotos/videos/ubicaciones | COMPLETADO |
-| 4 | **Chat** todos los medios, llamadas | COMPLETADO |
-| 5 | **Tienda** NFC + MEOW APP | COMPLETADO |
-| 6 | **BRUNO IA** asistente integrado | COMPLETADO |
-| 7 | **Usuarios** sesion, seguridad, tour | COMPLETADO |
-| 8 | **Website** BRUNO.com | COMPLETADO |
-| 9 | **Perfil** posts, reels, cards | COMPLETADO |
+### Phase 17: TikTok Camera & Cache Fix
+- TikTok-style camera UI for creating content
+- Service worker (sw.js v4) for Safari cache-busting
 
----
+### Phase 18: Responsive Nav & Social System
+- Fully responsive navigation bar (mobile/tablet/desktop)
+- Follow/unfollow/block functionality
 
-## Fases Completadas
+### Phase 19: Modern Social Features
+- Trending hashtags with dedicated page
+- Suggested users ("People you may know")
+- Post bookmarks/saving
+- Multi-emoji reactions
+- Reposting functionality
+- Polls backend API
 
-### Fases 1-16: Core Features + UI (ver CHANGELOG)
-### Fase 17: Camara TikTok + Safari Cache Fix
-### Fase 18: Nav Responsive + Social System (Follow/Block/Report)
-### Fase 19: Modernizacion Social (Trending, Bookmarks, Reactions, Reposts, Polls, Hashtags, Explore)
-### Fase 20: For You Feed Personalizado + Settings Expandido
+### Phase 20: "For You" Feed & Settings
+- Personalized algorithmic feed with recommendation engine
+- Centralized settings page
 
-### Fase 21: Correccion de Tarjetas (2025-03-22)
-- **Overflow corregido:** ViewCardPage, BeaconsStyleCard, CardVariants - todos usan overflow-hidden + img tags (no background-image) para banners
-- **Templates actualizados:** Banner como img con object-cover, gradientes como divs separados, contenedor con rounded-2xl
-- **Edicion preserva ID/ruta:** PUT /api/cards/{id} mantiene mismo ID, todas las tarjetas compartidas se actualizan automaticamente
-- **Rutas unificadas:** Todas las refs a /dashboard migradas a /my-profile (CreateCard, EditCard, ActivateNFC, etc.)
-- **Propagacion de cambios:** Al editar una tarjeta, todos los que la guardaron/compartieron ven los cambios inmediatamente (mismo ID, misma URL /c/{id})
-- **Card previews en perfil:** Banners contenidos con overflow-hidden
+### Phase 21: Card System Fixes
+- Fixed UI overflow bugs on business cards
+- Replaced legacy /dashboard links with /my-profile
 
----
+### Phase 22 (Current - Mar 2026): Advanced Social Features
+- **Polls in Stories:** Full UI for creating polls in story creation modal (Foto/Video + Encuesta tabs). Poll display + voting inside story viewer with animated progress bars.
+- **Animated Reactions:** Framer-motion powered reaction popup with spring animations, floating particle effects on like/react, and animated bookmark toggle.
+- **@User Mentions:** Clickable @username links in posts and comments (linking to /profile/username). @mention autocomplete dropdown in post creation with real-time user search via /api/users/mention-search. Backend processes mentions and sends push notifications to mentioned users.
+- **Push Notifications Fix:** Fixed VAPID key mismatch in NotificationContext.js to use REACT_APP_VAPID_PUBLIC_KEY from environment instead of hardcoded key. VAPID keys now match between frontend and backend.
 
-## API Endpoints Clave
-### Cards: POST, GET, PUT, DELETE /api/cards/{id}, /api/cards/{id}/qr
-### Social: follow, block, bookmark, react, repost, trending, suggested, hashtag, explore, polls
-### Feed: /api/feed/for-you (personalizado), /api/feed/interaction (tracking)
-### Settings: GET/PUT /api/settings/preferences
-### Auth, Chat, Store, NFC, AI, etc.
+## Key API Endpoints
 
----
+### Social Graph
+- POST /api/users/{user_id}/block, /unblock
+- GET /api/users/followers, /following
+
+### Content Interaction
+- POST /api/posts/{post_id}/bookmark, /repost, /react, /like
+- POST /api/posts/{post_id}/comments
+
+### Discovery & Feeds
+- GET /api/social/suggested, /trending, /explore
+- GET /api/posts/saved, /api/hashtags/{tag}
+- GET /api/social/feed/for-you
+- GET /api/feed/for-you
+
+### Polls
+- POST /api/social/polls (create)
+- GET /api/social/polls/{poll_id} (view)
+- POST /api/social/polls/{poll_id}/vote (vote)
+
+### Mentions
+- GET /api/users/mention-search?q= (autocomplete)
+
+### Stories
+- POST /api/stories/ (create, supports poll_id)
+- GET /api/stories/feed
+- POST /api/stories/{id}/view
+
+### Push Notifications
+- POST /api/push/subscribe
+- DELETE /api/push/unsubscribe
+- POST /api/push/test
+
+## DB Schema
+- **users:** id, email, name, role, subscription_tier, preferences, blocked_by
+- **posts:** id, user_id, content, media, hashtags, mentions, likes_count, comments_count
+- **polls:** id, creator_id, question, options[{text, votes}], total_votes, voters[]
+- **stories:** id, user_id, media_url, media_type, caption, poll_id, visibility, expires_at
+- **reactions:** id, user_id, target_id, target_type, reaction_type
+- **bookmarks:** user_id, post_id
+- **notifications:** id, user_id, actor_id, type, target_id, message
+- **push_subscriptions:** id, user_id, endpoint, keys
+
+## Prioritized Backlog
+
+### P1: Card Analytics Feature
+- Backend: Endpoints to track card views (who, when, source URL)
+- Frontend: CardAnalyticsPage.jsx with charts and metrics
+
+### P2: Stripe Monetization
+- Integrate Stripe for premium features (card analytics)
+- Payment flow for subscriptions
+
+### P2: Backend Refactoring
+- Migrate endpoints from server.py (5700+ lines) into modular routers
+- social.py router exists but is underutilized
+- Group by domain: polls, bookmarks, reactions, mentions, feed
+
+### P2: Frontend Component Refactoring
+- Break down FeedPage.jsx (980+ lines)
+- Break down MyProfilePage.jsx
+- Break down CreateCardPage.jsx / EditCardPage.jsx
+
+## Test Credentials
+- Email: newtest@bruno.com
+- Password: Test1234!
 
 ## 3rd Party Integrations
-- **OpenAI GPT-5.2:** Text Generation (Emergent LLM Key)
-- **Daily.co:** Video/Audio Calls (MOCKED)
-- **Cloudinary:** Image Storage
-- **Emergent Google Auth:** Social Login
-- **Leaflet/OpenStreetMap:** Maps
-- **face-api.js:** AR Filters
-
----
-
-## Test Reports
-- iteration_35.json - Card fixes (100% frontend, 88% backend)
-- iteration_34.json - For You feed + Settings (100%)
-- iteration_33.json - Modern social features (100%)
-- iteration_32.json - Nav responsive + Social (100%)
-- iteration_31.json - Camara TikTok (100%)
-
----
-
-## Proximas Tareas
-
-### P2 - Monetizacion
-- [ ] Stripe real para pagos
-- [ ] Planes premium funcionales
-- [ ] RESEND para emails reales
-
-### P2 - Refactoring
-- [ ] server.py -> routers modulares
-- [ ] MyProfilePage.jsx -> sub-componentes
-
-### P3 - Backlog
-- [ ] Encuestas integradas en Stories UI
-- [ ] Reacciones animadas (lottie/framer-motion)
-- [ ] Push notifications reales
-- [ ] Algoritmo ML avanzado
-- [ ] Mentions (@user) con autocomplete
-
----
-
-*Last Updated: 2025-03-22 - Fase 21: Correccion de Tarjetas (overflow, templates, edicion, rutas)*
+- OpenAI GPT-5.2 (Emergent LLM Key)
+- Daily.co (Video Calls)
+- Cloudinary (Image Storage)
+- Stripe (Payments - planned)
+- Leaflet (Maps)
+- Emergent Google Auth
