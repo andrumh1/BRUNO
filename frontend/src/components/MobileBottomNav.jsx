@@ -3,34 +3,28 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   Home, 
-  Radio,
   Film,
   Map,
   ShoppingBag,
   User,
   Plus,
-  Bell,
-  MessageCircle,
-  Search,
-  Settings
+  Bell
 } from "lucide-react";
 
 /**
- * MobileBottomNav - iOS 26.3 style compact bubble navigation
+ * MobileBottomNav - Responsive bottom navigation visible on ALL screen sizes
  */
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const [activeLight, setActiveLight] = useState(0);
   
-  // Pages where we should hide the bottom nav
   const hiddenPaths = ['/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || 
                      location.pathname.match(/^\/lives\/[^/]+$/) ||
                      location.pathname.startsWith('/chat/');
 
-  // Dynamic light animation
   useEffect(() => {
     if (shouldHide) return;
     const interval = setInterval(() => {
@@ -58,18 +52,14 @@ const MobileBottomNav = () => {
     return location.pathname === item.path;
   };
 
-  const handleNavClick = (item) => {
-    navigate(item.path);
-  };
-
   return (
     <>
-      {/* Spacer */}
-      <div className="h-16 md:hidden" />
+      {/* Spacer to prevent content from hiding behind nav */}
+      <div className="h-16" />
       
-      {/* Navigation Container */}
+      {/* Navigation Container - visible on ALL screen sizes */}
       <nav 
-        className="fixed bottom-0 left-0 right-0 z-[9999] md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-[9999]"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         data-testid="mobile-bottom-nav"
       >
@@ -99,30 +89,27 @@ const MobileBottomNav = () => {
           <div 
             className="absolute top-0 left-0 right-0 h-[1px]"
             style={{
-              background: `linear-gradient(90deg, transparent 0%, rgba(255,107,53,0.3) 30%, rgba(236,72,153,0.3) 70%, transparent 100%)`
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,107,53,0.3) 30%, rgba(236,72,153,0.3) 70%, transparent 100%)'
             }}
           />
         </div>
 
-        {/* Navigation Items - Compact */}
-        <div className="relative flex items-center justify-around px-2 py-1.5 h-14">
+        {/* Navigation Items */}
+        <div className="relative flex items-center justify-around max-w-xl mx-auto px-2 py-1.5 h-14">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item);
             
-            // Create button - same style as others but highlighted
             if (item.isCreate) {
               return (
                 <button
                   key={item.id}
-                  onClick={() => handleNavClick(item)}
-                  className="relative flex flex-col items-center justify-center w-10 h-10"
+                  onClick={() => navigate(item.path)}
+                  className="relative flex flex-col items-center justify-center w-11 h-11"
                   data-testid={`nav-${item.id}`}
                 >
-                  <div 
-                    className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-orange-500 shadow-lg shadow-primary/30"
-                  >
-                    <Icon className="w-4 h-4 text-white" strokeWidth={2.5} />
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-orange-500 shadow-lg shadow-primary/30">
+                    <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
                   </div>
                 </button>
               );
@@ -131,21 +118,17 @@ const MobileBottomNav = () => {
             return (
               <button
                 key={item.id}
-                onClick={() => handleNavClick(item)}
-                className="relative flex flex-col items-center justify-center w-10 h-10 rounded-xl transition-all duration-200"
+                onClick={() => navigate(item.path)}
+                className="relative flex flex-col items-center justify-center w-11 h-11 rounded-xl transition-all duration-200"
                 data-testid={`nav-${item.id}`}
               >
-                {/* Active background bubble */}
                 {active && (
                   <div 
                     className="absolute inset-0.5 rounded-xl bg-primary/10"
-                    style={{
-                      boxShadow: 'inset 0 0 8px rgba(255,107,53,0.2)'
-                    }}
+                    style={{ boxShadow: 'inset 0 0 8px rgba(255,107,53,0.2)' }}
                   />
                 )}
                 
-                {/* Icon */}
                 <div className="relative z-10 flex flex-col items-center">
                   {item.showAvatar && user?.avatar_url ? (
                     <div className={`w-5 h-5 rounded-full overflow-hidden ${active ? 'ring-1 ring-primary' : ''}`}>
@@ -154,7 +137,7 @@ const MobileBottomNav = () => {
                   ) : (
                     <div className="relative">
                       <Icon 
-                        className={`w-4 h-4 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}
+                        className={`w-5 h-5 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}
                         strokeWidth={active ? 2.5 : 1.5}
                       />
                       {item.hasIndicator && (
@@ -166,7 +149,7 @@ const MobileBottomNav = () => {
                     </div>
                   )}
                   
-                  <span className={`text-[8px] mt-0.5 font-medium ${active ? 'text-primary' : 'text-muted-foreground'}`}>
+                  <span className={`text-[9px] mt-0.5 font-medium ${active ? 'text-primary' : 'text-muted-foreground'}`}>
                     {item.label}
                   </span>
                 </div>

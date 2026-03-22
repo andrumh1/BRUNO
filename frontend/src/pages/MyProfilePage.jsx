@@ -64,6 +64,10 @@ const MyProfilePage = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [exploreCards, setExploreCards] = useState([]);
   const [cardViewMode, setCardViewMode] = useState("grid");
+  const [showFollowers, setShowFollowers] = useState(null);
+  const [followersList, setFollowersList] = useState([]);
+  const [followingList, setFollowingList] = useState([]);
+  const [listLoading, setListLoading] = useState(false);
 
   // Fetch profile data
   const fetchProfile = useCallback(async () => {
@@ -180,6 +184,22 @@ const MyProfilePage = () => {
   const handleLogout = () => {
     logout();
     navigate("/login");
+  };
+
+  // Load followers/following list
+  const loadFollowersList = async (type) => {
+    if (!user) return;
+    setShowFollowers(type);
+    setListLoading(true);
+    try {
+      const res = await axios.get(`${API}/users/${user.id}/${type}`);
+      if (type === "followers") setFollowersList(res.data);
+      else setFollowingList(res.data);
+    } catch (e) {
+      console.error("Error loading list:", e);
+    } finally {
+      setListLoading(false);
+    }
   };
 
   if (!user) {
@@ -352,14 +372,14 @@ const MyProfilePage = () => {
                 <p className="text-xl font-bold">{posts.length}</p>
                 <p className="text-xs text-muted-foreground">Posts</p>
               </div>
-              <div className="text-center">
+              <button className="text-center hover:opacity-70 transition-opacity" onClick={() => loadFollowersList("followers")} data-testid="my-followers-count">
                 <p className="text-xl font-bold">{profile?.followers_count || 0}</p>
                 <p className="text-xs text-muted-foreground">Seguidores</p>
-              </div>
-              <div className="text-center">
+              </button>
+              <button className="text-center hover:opacity-70 transition-opacity" onClick={() => loadFollowersList("following")} data-testid="my-following-count">
                 <p className="text-xl font-bold">{profile?.following_count || 0}</p>
                 <p className="text-xs text-muted-foreground">Siguiendo</p>
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -714,6 +734,52 @@ const MyProfilePage = () => {
           </div>
         )}
       </div>
+
+      {/* Followers/Following Modal */}
+      {showFollowers && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setShowFollowers(null)}>
+          <div className="bg-card w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[70vh] flex flex-col animate-in slide-in-from-bottom" onClick={e => e.stopPropagation()} data-testid="followers-modal">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="font-bold">{showFollowers === "followers" ? "Seguidores" : "Siguiendo"}</h3>
+              <Button variant="ghost" size="icon" onClick={() => setShowFollowers(null)}>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {listLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+              ) : (
+                (showFollowers === "followers" ? followersList : followingList).length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    {showFollowers === "followers" ? "Aun no tienes seguidores" : "No sigues a nadie"}
+                  </div>
+                ) : (
+                  (showFollowers === "followers" ? followersList : followingList).map(u => (
+                    <Link
+                      key={u.id}
+                      to={`/profile/${u.id}`}
+                      onClick={() => setShowFollowers(null)}
+                      className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors"
+                    >
+                      {u.avatar_url ? (
+                        <img src={u.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                          {(u.name || "U")[0].toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{u.name || "Usuario"}</p>
+                        {u.bio && <p className="text-xs text-muted-foreground truncate">{u.bio}</p>}
+                      </div>
+                    </Link>
+                  ))
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

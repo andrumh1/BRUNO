@@ -3548,7 +3548,7 @@ async def search_users(
 # -------------------- USER PROFILE --------------------
 
 @api_router.get("/users/{user_id}/profile")
-async def get_user_profile(user_id: str):
+async def get_user_profile(user_id: str, request: Request = None, current_user: Optional[User] = Depends(get_current_user_optional)):
     """Get public profile of a user"""
     # Get user
     user = await db.users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
@@ -3567,6 +3567,18 @@ async def get_user_profile(user_id: str):
     
     username = user.get("name") or user.get("email", "Unknown").split("@")[0]
     
+    # Check relationship with current user
+    is_following = False
+    is_blocked_by_me = False
+    is_blocked_by_them = False
+    if current_user and current_user.id != user_id:
+        follow = await db.follows.find_one({"follower_id": current_user.id, "following_id": user_id})
+        is_following = follow is not None
+        block = await db.blocks.find_one({"blocker_id": current_user.id, "blocked_id": user_id})
+        is_blocked_by_me = block is not None
+        block2 = await db.blocks.find_one({"blocker_id": user_id, "blocked_id": current_user.id})
+        is_blocked_by_them = block2 is not None
+    
     return {
         "id": user_id,
         "name": user.get("name"),
@@ -3582,7 +3594,10 @@ async def get_user_profile(user_id: str):
         "created_at": user.get("created_at"),
         "followers_count": followers_count,
         "following_count": following_count,
-        "posts_count": posts_count
+        "posts_count": posts_count,
+        "is_following": is_following,
+        "is_blocked_by_me": is_blocked_by_me,
+        "is_blocked_by_them": is_blocked_by_them
     }
 
 @api_router.get("/users/{user_id}/posts")
@@ -3675,6 +3690,98 @@ async def toggle_follow(
         await db.notifications.insert_one(notification)
         
         return {"following": True}
+
+
+# -------------------- BLOCK / UNBLOCK --------------------
+
+@api_router.post("/users/{user_id}/block")
+async def toggle_block(user_id: str, current_user: User = Depends(get_current_user)):
+    """Block or unblock a user"""
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot block yourself")
+    
+    existing = await db.blocks.find_one({"blocker_id": current_user.id, "blocked_id": user_id})
+    
+    if existing:
+        await db.blocks.delete_one({"_id": existing["_id"]})
+        return {"blocked": False}
+    else:
+        block_doc = {
+            "id": str(uuid.uuid4()),
+            "blocker_id": current_user.id,
+            "blocked_id": user_id,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.blocks.insert_one(block_doc)
+        # Also unfollow in both directions
+        await db.follows.delete_many({"follower_id": current_user.id, "following_id": user_id})
+        await db.follows.delete_many({"follower_id": user_id, "following_id": current_user.id})
+        return {"blocked": True}
+
+# -------------------- FOLLOWERS / FOLLOWING LISTS --------------------
+
+@api_router.get("/users/{user_id}/followers")
+async def get_followers(user_id: str, skip: int = 0, limit: int = 50):
+    """Get list of followers for a user"""
+    follows = await db.follows.find(
+        {"following_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    result = []
+    for f in follows:
+        u = await db.users.find_one({"id": f["follower_id"]}, {"_id": 0, "hashed_password": 0})
+        p = await db.user_profiles.find_one({"user_id": f["follower_id"]}, {"_id": 0})
+        if u:
+            result.append({
+                "id": u["id"],
+                "name": u.get("name"),
+                "avatar_url": p.get("avatar_url") if p else None,
+                "bio": p.get("bio") if p else None,
+                "followed_at": f.get("created_at")
+            })
+    return result
+
+@api_router.get("/users/{user_id}/following")
+async def get_following(user_id: str, skip: int = 0, limit: int = 50):
+    """Get list of users that a user follows"""
+    follows = await db.follows.find(
+        {"follower_id": user_id}, {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    result = []
+    for f in follows:
+        u = await db.users.find_one({"id": f["following_id"]}, {"_id": 0, "hashed_password": 0})
+        p = await db.user_profiles.find_one({"user_id": f["following_id"]}, {"_id": 0})
+        if u:
+            result.append({
+                "id": u["id"],
+                "name": u.get("name"),
+                "avatar_url": p.get("avatar_url") if p else None,
+                "bio": p.get("bio") if p else None,
+                "followed_at": f.get("created_at")
+            })
+    return result
+
+@api_router.get("/users/me/blocked")
+async def get_blocked_users(current_user: User = Depends(get_current_user)):
+    """Get list of blocked users"""
+    blocks = await db.blocks.find(
+        {"blocker_id": current_user.id}, {"_id": 0}
+    ).to_list(100)
+    
+    result = []
+    for b in blocks:
+        u = await db.users.find_one({"id": b["blocked_id"]}, {"_id": 0, "hashed_password": 0})
+        p = await db.user_profiles.find_one({"user_id": b["blocked_id"]}, {"_id": 0})
+        if u:
+            result.append({
+                "id": u["id"],
+                "name": u.get("name"),
+                "avatar_url": p.get("avatar_url") if p else None,
+                "blocked_at": b.get("created_at")
+            })
+    return result
+
 
 # -------------------- CHAT / MESSAGING --------------------
 
