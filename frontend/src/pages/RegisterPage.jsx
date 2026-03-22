@@ -36,7 +36,7 @@ const RegisterPage = () => {
     try {
       const response = await axios.post(`${API}/auth/register`, formData);
       login(response.data.user, response.data.access_token);
-      navigate("/dashboard");
+      navigate("/my-profile");
     } catch (err) {
       setError(err.response?.data?.detail || "Error al registrarse");
     } finally {

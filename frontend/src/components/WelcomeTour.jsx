@@ -34,7 +34,7 @@ const TOUR_STEPS = [
     message: "Crea tarjetas de presentacion digitales unicas. Puedes elegir entre tarjetas personales, profesionales, de empresa o de servicios. Compartelas con un solo toque!",
     icon: CreditCard,
     color: "from-blue-500 to-cyan-500",
-    target: "/dashboard",
+    target: "/my-profile",
     highlight: "[data-testid='create-card-btn']",
     mascot: "/mascots/bruno-human.png"
   },

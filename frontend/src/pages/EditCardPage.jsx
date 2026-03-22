@@ -261,8 +261,8 @@ const EditCardPage = () => {
       }
       
       // Show success and navigate
-      alert(t("cardForm.savedSuccess") || "¡Tarjeta actualizada exitosamente!");
-      navigate("/dashboard");
+      alert(t("cardForm.savedSuccess") || "Tarjeta actualizada!");
+      navigate("/my-profile");
     } catch (error) {
       console.error("Error updating card:", error);
       const errorMsg = error.response?.data?.detail || t("common.error");
@@ -291,7 +291,7 @@ const EditCardPage = () => {
           <CardContent className="text-center py-16">
             <h2 className="text-2xl font-bold mb-2">{t("common.error")}</h2>
             <p className="text-muted-foreground mb-6">{error}</p>
-            <Button onClick={() => navigate("/dashboard")}>
+            <Button onClick={() => navigate("/my-profile")}>
               {t("dashboard.title")}
             </Button>
           </CardContent>
@@ -305,7 +305,7 @@ const EditCardPage = () => {
       <header className="border-b border-border bg-card/50 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/my-profile")}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <img src="/bruno-mascot.png" alt="BRUNO" className="h-8" />
@@ -950,7 +950,7 @@ const EditCardPage = () => {
                   type="button"
                   variant="outline"
                   className="flex-1"
-                  onClick={() => navigate("/dashboard")}
+                  onClick={() => navigate("/my-profile")}
                 >
                   {t("cardForm.cancel")}
                 </Button>

@@ -628,13 +628,18 @@ const MyProfilePage = () => {
                 {cards.map(card => (
                   <div key={card.id} className="glass-card rounded-xl overflow-hidden hover:shadow-lg transition-all">
                     <div
-                      className="h-28 relative"
+                      className="h-28 relative overflow-hidden"
                       style={{
-                        background: card.banner_url
-                          ? `url(${card.banner_url}) center/cover`
-                          : `linear-gradient(135deg, ${card.background_color || '#f97316'}, ${card.background_color || '#ea580c'}dd)`,
+                        backgroundColor: card.background_color || '#f97316',
                       }}
                     >
+                      {card.banner_url ? (
+                        <img src={card.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0" style={{
+                          background: `linear-gradient(135deg, ${card.background_color || '#f97316'}, ${card.background_color || '#ea580c'}dd)`,
+                        }} />
+                      )}
                       <div className="absolute top-2 left-2">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-medium text-white bg-black/40 backdrop-blur-sm capitalize">
                           {card.card_type || card.type}

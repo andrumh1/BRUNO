@@ -91,28 +91,35 @@ const BeaconsStyleCard = ({
     <div 
       className="beacons-card relative overflow-hidden rounded-3xl shadow-xl"
       style={{
-        background: card.banner_url 
-          ? `linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url(${card.banner_url}) center/cover`
-          : `linear-gradient(135deg, ${card.background_color || "#FF5A00"}, ${card.background_color || "#FF5A00"}dd)`
+        backgroundColor: card.background_color || "#FF5A00",
       }}
       data-testid={`beacons-card-${card.id}`}
     >
+      {/* Background image */}
+      {card.banner_url ? (
+        <div className="absolute inset-0">
+          <img src={card.banner_url} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/70" />
+        </div>
+      ) : (
+        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${card.background_color || "#FF5A00"}, ${card.background_color || "#FF5A00"}dd)` }} />
+      )}
       {/* Card Type Badge */}
-      <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm text-xs font-medium text-gray-800">
+      <div className="relative z-10 absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm text-xs font-medium text-gray-800">
         {getCardTypeIcon(card.card_type)}
         <span>{getCardTypeLabel(card.card_type)}</span>
       </div>
 
       {/* Urgency Badge for job cards */}
       {isJobCard && jobDetails.urgency && (
-        <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full ${getUrgencyBadge(jobDetails.urgency).bg} text-white text-xs font-medium flex items-center gap-1`}>
+        <div className={`relative z-10 absolute top-3 right-3 px-2.5 py-1 rounded-full ${getUrgencyBadge(jobDetails.urgency).bg} text-white text-xs font-medium flex items-center gap-1`}>
           <span>{getUrgencyBadge(jobDetails.urgency).icon}</span>
           <span>{getUrgencyBadge(jobDetails.urgency).text}</span>
         </div>
       )}
 
       {/* Main Content */}
-      <div className="p-6 pt-14 text-center" style={{ color: card.text_color || "#FFFFFF" }}>
+      <div className="relative z-10 p-6 pt-14 text-center" style={{ color: card.text_color || "#FFFFFF" }}>
         {/* Avatar */}
         <div className="relative inline-block mb-4">
           {card.avatar_url ? (

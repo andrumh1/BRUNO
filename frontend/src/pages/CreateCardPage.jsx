@@ -275,7 +275,7 @@ const CreateCardPage = () => {
       const response = await axios.post(`${API}/cards`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      navigate(`/dashboard`);
+      navigate(`/my-profile`);
     } catch (error) {
       console.error("Error creating card:", error);
       alert(t("common.error"));
@@ -289,7 +289,7 @@ const CreateCardPage = () => {
       <header className="border-b border-border bg-card/50 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/my-profile")}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <img src="/bruno-mascot.png" alt="BRUNO" className="bruno-logo-sm" />
@@ -1412,7 +1412,7 @@ const CreateCardPage = () => {
                   type="button"
                   variant="outline"
                   className="flex-1"
-                  onClick={() => navigate("/dashboard")}
+                  onClick={() => navigate("/my-profile")}
                 >
                   {t("cardForm.cancel")}
                 </Button>

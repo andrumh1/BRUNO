@@ -183,7 +183,7 @@ const PricingPage = () => {
               </>
             )}
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => navigate("/dashboard")}>
+              <Button variant="outline" className="flex-1" onClick={() => navigate("/my-profile")}>
                 Ir al Panel
               </Button>
               <Button className="flex-1" onClick={() => setPaymentStatus(null)}>

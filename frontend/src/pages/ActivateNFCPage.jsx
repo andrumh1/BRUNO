@@ -46,7 +46,7 @@ const ActivateNFCPage = () => {
       );
       setSuccess(true);
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("/my-profile");
       }, 2000);
     } catch (error) {
       console.error("Error activating NFC:", error);
@@ -76,7 +76,7 @@ const ActivateNFCPage = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/50 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/my-profile")}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
@@ -160,7 +160,7 @@ const ActivateNFCPage = () => {
                   type="button"
                   variant="outline"
                   className="flex-1"
-                  onClick={() => navigate("/dashboard")}
+                  onClick={() => navigate("/my-profile")}
                 >
                   Cancelar
                 </Button>

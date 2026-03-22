@@ -385,7 +385,7 @@ const MapPage = () => {
             variant="secondary" 
             size="icon" 
             className="rounded-full shadow-lg bg-card/90 backdrop-blur-xl"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/my-profile")}
             data-testid="map-back-btn"
           >
             <ArrowLeft className="w-5 h-5" />

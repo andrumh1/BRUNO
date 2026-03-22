@@ -13,7 +13,7 @@ const CameraFloatingButton = () => {
   const { user } = useAuth();
   
   // Pages where the camera button should appear (desktop only)
-  const showOnPages = ["/", "/feed", "/my-profile", "/dashboard"];
+  const showOnPages = ["/", "/feed", "/my-profile", "/my-profile"];
   const shouldShow = showOnPages.some(page => location.pathname === page || location.pathname.startsWith("/profile"));
   
   // Don't show on camera page itself or if not logged in

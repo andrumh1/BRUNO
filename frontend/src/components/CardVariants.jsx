@@ -49,14 +49,12 @@ export const MediumCard = ({ card, onChat, onView }) => {
   return (
     <div className="bg-card rounded-2xl border border-border overflow-hidden hover:shadow-xl transition-all group">
       {/* Banner */}
-      <div 
-        className="h-24 relative"
-        style={{
-          background: card.banner_url 
-            ? `url(${card.banner_url}) center/cover`
-            : `linear-gradient(135deg, ${card.background_color}, ${card.background_color}cc)`
-        }}
-      >
+      <div className="h-24 relative overflow-hidden">
+        {card.banner_url ? (
+          <img src={card.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${card.background_color}, ${card.background_color}cc)` }} />
+        )}
         {/* Type badge */}
         <div className="absolute top-2 right-2 px-2 py-1 bg-black/50 backdrop-blur-sm rounded-full text-[10px] font-medium text-white capitalize">
           {card.card_type}
