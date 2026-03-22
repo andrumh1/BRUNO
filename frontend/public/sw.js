@@ -1,78 +1,67 @@
-// BRUNO Service Worker for Push Notifications
-// Version 3 - Full Push Notifications + Cache Busting
-const CACHE_NAME = 'bruno-v3';
-const CACHE_VERSION = Date.now();
+// BRUNO Service Worker v4 - Push Notifications + Safari Cache Fix
+const SW_VERSION = 'v4';
+const CACHE_NAME = 'bruno-' + SW_VERSION;
 
-// Files to NOT cache (always fetch fresh)
-const NO_CACHE = [
-  '/api/',
-  '/ws/',
-  'chrome-extension'
-];
+// Always bypass cache for these patterns
+const NEVER_CACHE = ['/api/', '/ws/', 'chrome-extension', '/sockjs-node'];
 
-// Install event - force update
-self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v3...');
+// Install - force immediate activation
+self.addEventListener('install', () => {
+  console.log('[SW] Installing', SW_VERSION);
   self.skipWaiting();
 });
 
-// Activate event - clean old caches
+// Activate - purge all old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker v3...');
+  console.log('[SW] Activating', SW_VERSION);
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      return clients.claim();
-    })
+    caches.keys().then((names) =>
+      Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
+    ).then(() => self.clients.claim())
   );
 });
 
-// Fetch event - Network first strategy
+// Fetch - network-first, never cache HTML
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  
   const url = event.request.url;
-  if (NO_CACHE.some(pattern => url.includes(pattern))) {
+  if (NEVER_CACHE.some((p) => url.includes(p))) return;
+
+  // HTML navigation requests: always network, never cache
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' }).catch(() => caches.match('/index.html'))
+    );
     return;
   }
-  
+
+  // All other assets: network-first with brief cache fallback
   event.respondWith(
     fetch(event.request)
-      .then((response) => response)
+      .then((response) => {
+        if (response.ok && url.match(/\.(js|css|png|jpg|webp|woff2?)$/)) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
       .catch(() => caches.match(event.request))
   );
 });
 
-// Push notification event - Enhanced
+// Push notification
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push received');
-  
   let data = {
     title: 'BRUNO',
-    body: 'Tienes una nueva notificación',
+    body: 'Tienes una nueva notificacion',
     icon: '/bruno-logo.png',
     badge: '/bruno-logo.png',
     url: '/',
-    tag: 'bruno-notification'
+    tag: 'bruno-notification',
   };
-  
   if (event.data) {
-    try {
-      const payload = event.data.json();
-      data = { ...data, ...payload };
-    } catch (e) {
-      data.body = event.data.text();
-    }
+    try { data = { ...data, ...event.data.json() }; } catch (e) { data.body = event.data.text(); }
   }
-  
   const options = {
     body: data.body,
     icon: data.icon,
@@ -82,72 +71,47 @@ self.addEventListener('push', (event) => {
     vibrate: [100, 50, 100],
     requireInteraction: false,
     renotify: true,
-    silent: false
+    silent: false,
   };
-  
-  // Special handling for different notification types
   if (data.tag === 'incoming_call') {
     options.requireInteraction = true;
     options.vibrate = [200, 100, 200, 100, 200];
     options.actions = [
-      { action: 'accept', title: '✓ Aceptar' },
-      { action: 'decline', title: '✗ Rechazar' }
+      { action: 'accept', title: 'Aceptar' },
+      { action: 'decline', title: 'Rechazar' },
     ];
-  } else if (data.tag && data.tag.startsWith('message_')) {
+  } else if (data.tag?.startsWith('message_')) {
     options.actions = [
       { action: 'reply', title: 'Responder' },
-      { action: 'dismiss', title: 'Cerrar' }
+      { action: 'dismiss', title: 'Cerrar' },
     ];
   }
-  
-  event.waitUntil(
-    self.registration.showNotification(data.title, options)
-  );
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
-// Notification click event - Enhanced
+// Notification click
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked:', event.action);
-  
   event.notification.close();
-  
   const data = event.notification.data || {};
   let url = data.url || '/';
-  
-  // Handle actions
-  if (event.action === 'accept' && data.call_id) {
-    url = `/chat?accept_call=${data.call_id}`;
-  } else if (event.action === 'decline') {
-    return; // Just close notification
-  } else if (event.action === 'reply') {
-    url = '/chat';
-  } else if (event.action === 'dismiss') {
-    return;
-  }
-  
+  if (event.action === 'accept' && data.call_id) url = `/chat?accept_call=${data.call_id}`;
+  else if (event.action === 'decline' || event.action === 'dismiss') return;
+  else if (event.action === 'reply') url = '/chat';
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(url);
-          return client.focus();
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (c.url.includes(self.location.origin) && 'focus' in c) {
+          c.navigate(url);
+          return c.focus();
         }
       }
-      if (clients.openWindow) {
-        return clients.openWindow(url);
-      }
+      if (clients.openWindow) return clients.openWindow(url);
     })
   );
 });
 
-// Notification close event
-self.addEventListener('notificationclose', (event) => {
-  console.log('[SW] Notification closed');
-});
+self.addEventListener('notificationclose', () => {});
 
-// Background sync
 self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-messages') {
-    console.log('[SW] Syncing messages...');
-  }
+  if (event.tag === 'sync-messages') console.log('[SW] Syncing messages...');
 });

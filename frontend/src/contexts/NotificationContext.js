@@ -39,7 +39,7 @@ export const NotificationProvider = ({ children }) => {
     
     const registerSW = async () => {
       try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
+        const registration = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
         console.log('Service Worker registered:', registration);
         
         // Check existing subscription
