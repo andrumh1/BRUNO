@@ -59,6 +59,8 @@ import StartLivePage from "@/pages/StartLivePage";
 import ReelsPage from "@/pages/ReelsPage";
 import MonetizationPage from "@/pages/MonetizationPage";
 import AlbumsPage from "@/pages/AlbumsPage";
+import HashtagPage from "@/pages/HashtagPage";
+import SavedPostsPage from "@/pages/SavedPostsPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -93,6 +95,7 @@ function AppRouter() {
       <Route path="/marketplace" element={<MarketplacePage />} />
       <Route path="/marketplace/:productId" element={<ProductDetailPage />} />
       <Route path="/profile/:userId" element={<UserProfilePage />} />
+      <Route path="/hashtag/:tag" element={<HashtagPage />} />
       
       {/* Protected routes */}
       <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
@@ -120,6 +123,7 @@ function AppRouter() {
       <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccountPage /></ProtectedRoute>} />
       <Route path="/monetization" element={<ProtectedRoute><MonetizationPage /></ProtectedRoute>} />
       <Route path="/albums" element={<ProtectedRoute><AlbumsPage /></ProtectedRoute>} />
+      <Route path="/saved" element={<ProtectedRoute><SavedPostsPage /></ProtectedRoute>} />
       <Route path="/reels" element={<ReelsPage />} />
       <Route path="/lives" element={<ReelsPage />} />
       <Route path="/lives/start" element={<ProtectedRoute><StartLivePage /></ProtectedRoute>} />

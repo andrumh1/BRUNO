@@ -14,7 +14,7 @@ import { StoriesRow, CreateStoryModal } from "@/components/Stories";
 import NotificationBell from "@/components/NotificationBell";
 import BeaconsStyleCard from "@/components/BeaconsStyleCard";
 import axios from "axios";
-import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag, Home, CreditCard, RefreshCw, MessageCircle, Globe, User, Film, Store, Map, Briefcase, Users, HandHelping } from "lucide-react";
+import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag, Home, CreditCard, RefreshCw, MessageCircle, Globe, User, Film, Store, Map, Briefcase, Users, HandHelping, Hash, UserPlus, Bookmark, Sparkles } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -39,6 +39,22 @@ const FeedPage = () => {
   const [filterType, setFilterType] = useState("all");
   const [viewMode, setViewMode] = useState("grid"); // grid or list
   const [showCreateStory, setShowCreateStory] = useState(false);
+  const [trending, setTrending] = useState([]);
+  const [suggested, setSuggested] = useState([]);
+
+  // Fetch trending & suggested
+  const fetchSocial = useCallback(async () => {
+    try {
+      const [trendRes, suggestRes] = await Promise.all([
+        axios.get(`${API}/social/trending`).catch(() => ({ data: [] })),
+        token 
+          ? axios.get(`${API}/social/suggested`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: [] }))
+          : Promise.resolve({ data: [] })
+      ]);
+      setTrending(trendRes.data);
+      setSuggested(suggestRes.data);
+    } catch (e) {}
+  }, [token]);
 
   // Fetch posts for social feed
   const fetchPosts = useCallback(async () => {
@@ -82,11 +98,12 @@ const FeedPage = () => {
   useEffect(() => {
     if (activeTab === "social") {
       fetchPosts();
+      fetchSocial();
       if (token) fetchUserCards();
     } else {
       fetchPublicCards();
     }
-  }, [activeTab, token, fetchPosts, fetchUserCards, fetchPublicCards]);
+  }, [activeTab, token, fetchPosts, fetchUserCards, fetchPublicCards, fetchSocial]);
 
   // Handle new post created
   const handlePostCreated = (newPost) => {
@@ -366,10 +383,10 @@ const FeedPage = () => {
               {user ? (
                 <>
                   {/* Dashboard - Desktop text, Mobile icon */}
-                  <Link to="/dashboard" className="hidden sm:block">
+                  <Link to="/my-profile" className="hidden sm:block">
                     <Button variant="ghost" size="sm">{t("nav.myPanel")}</Button>
                   </Link>
-                  <Link to="/dashboard" className="sm:hidden">
+                  <Link to="/my-profile" className="sm:hidden">
                     <Button variant="ghost" size="icon"><Grid3X3 className="w-4 h-4" /></Button>
                   </Link>
                   <Button variant="ghost" size="icon" onClick={handleLogout} className="hidden md:flex">
@@ -529,79 +546,156 @@ const FeedPage = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Social Feed Tab */}
         {activeTab === "social" && (
-          <div className="max-w-xl mx-auto space-y-4">
-            {/* Stories Row */}
-            <div className="bg-card rounded-xl border mb-4">
-              <StoriesRow onCreateStory={() => setShowCreateStory(true)} />
-            </div>
-            
-            {/* Create Post (only for logged in users) */}
-            {user && (
-              <CreatePost 
-                onPostCreated={handlePostCreated} 
-                userCards={userCards}
-              />
-            )}
-            
-            {/* Refresh Button */}
-            <div className="flex justify-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={fetchPosts}
-                disabled={loadingPosts}
-                className="text-muted-foreground hover:text-primary"
-                data-testid="refresh-feed-btn"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${loadingPosts ? "animate-spin" : ""}`} />
-                Actualizar
-              </Button>
-            </div>
-            
-            {/* Loading State */}
-            {loadingPosts && posts.length === 0 && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Cargando publicaciones...</p>
+          <div className="flex gap-6 max-w-5xl mx-auto">
+            {/* Main Feed */}
+            <div className="flex-1 max-w-xl mx-auto lg:mx-0 space-y-4">
+              {/* Stories Row */}
+              <div className="bg-card rounded-xl border mb-4">
+                <StoriesRow onCreateStory={() => setShowCreateStory(true)} />
               </div>
-            )}
-            
-            {/* Empty State */}
-            {!loadingPosts && posts.length === 0 && (
-              <Card className="text-center py-16 glass-card">
-                <CardContent>
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Home className="w-8 h-8 text-primary" />
+              
+              {/* Create Post (only for logged in users) */}
+              {user && (
+                <CreatePost 
+                  onPostCreated={handlePostCreated} 
+                  userCards={userCards}
+                />
+              )}
+              
+              {/* Refresh Button */}
+              <div className="flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={fetchPosts}
+                  disabled={loadingPosts}
+                  className="text-muted-foreground hover:text-primary"
+                  data-testid="refresh-feed-btn"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${loadingPosts ? "animate-spin" : ""}`} />
+                  Actualizar
+                </Button>
+              </div>
+              
+              {/* Loading State */}
+              {loadingPosts && posts.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Cargando publicaciones...</p>
+                </div>
+              )}
+              
+              {/* Empty State */}
+              {!loadingPosts && posts.length === 0 && (
+                <Card className="text-center py-16 glass-card">
+                  <CardContent>
+                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Home className="w-8 h-8 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Bienvenido al Feed!</h3>
+                    <p className="text-muted-foreground mb-6">
+                      {user 
+                        ? "Se el primero en publicar algo. Comparte tu tarjeta o cuenta algo interesante!"
+                        : "Inicia sesion para ver y crear publicaciones en la comunidad."
+                      }
+                    </p>
+                    {!user && (
+                      <Link to="/login">
+                        <Button>{t("nav.login")}</Button>
+                      </Link>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Posts List */}
+              {posts.length > 0 && (
+                <div className="space-y-4" data-testid="posts-feed">
+                  {posts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      onLikeUpdate={handleLikeUpdate}
+                      onDelete={handlePostDelete}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Right Sidebar - Desktop Only */}
+            <div className="hidden lg:block w-72 shrink-0 space-y-4 sticky top-28 self-start" data-testid="feed-sidebar">
+              {/* Trending Hashtags */}
+              <Card className="overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    <h3 className="font-bold text-sm">Tendencias</h3>
                   </div>
-                  <h3 className="text-xl font-bold mb-2">¡Bienvenido al Feed!</h3>
-                  <p className="text-muted-foreground mb-6">
-                    {user 
-                      ? "Sé el primero en publicar algo. ¡Comparte tu tarjeta o cuenta algo interesante!"
-                      : "Inicia sesión para ver y crear publicaciones en la comunidad."
-                    }
-                  </p>
-                  {!user && (
-                    <Link to="/login">
-                      <Button>{t("nav.login")}</Button>
-                    </Link>
-                  )}
+                  <div className="space-y-2">
+                    {trending.slice(0, 6).map((t, i) => (
+                      <Link key={i} to={`/hashtag/${t.hashtag}`} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted transition-colors group" data-testid={`trending-${t.hashtag}`}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Hash className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <span className="text-sm font-medium truncate group-hover:text-primary">#{t.hashtag}</span>
+                        </div>
+                        {t.count > 0 && <span className="text-[10px] text-muted-foreground shrink-0">{t.count}</span>}
+                      </Link>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
-            )}
-            
-            {/* Posts List */}
-            {posts.length > 0 && (
-              <div className="space-y-4" data-testid="posts-feed">
-                {posts.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    onLike={handleLikeUpdate}
-                    onDelete={handlePostDelete}
-                  />
-                ))}
-              </div>
-            )}
+
+              {/* Suggested Users */}
+              {suggested.length > 0 && (
+                <Card className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <UserPlus className="w-4 h-4 text-primary" />
+                      <h3 className="font-bold text-sm">Personas sugeridas</h3>
+                    </div>
+                    <div className="space-y-2.5">
+                      {suggested.slice(0, 5).map((u) => (
+                        <Link key={u.id} to={`/profile/${u.id}`} className="flex items-center gap-2.5 py-1 hover:opacity-80 transition-opacity" data-testid={`suggested-user-${u.id}`}>
+                          {u.avatar_url ? (
+                            <img src={u.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+                              {(u.name || "U")[0].toUpperCase()}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold truncate">{u.name || u.username}</p>
+                            {u.mutual_count > 0 && (
+                              <p className="text-[10px] text-muted-foreground">{u.mutual_count} mutual{u.mutual_count > 1 ? "es" : ""}</p>
+                            )}
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Quick Links */}
+              {user && (
+                <Card className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="space-y-1">
+                      <Link to="/saved" className="flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-muted transition-colors text-sm">
+                        <Bookmark className="w-4 h-4 text-primary" /> Guardados
+                      </Link>
+                      <Link to="/my-profile" className="flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-muted transition-colors text-sm">
+                        <User className="w-4 h-4 text-primary" /> Mi Perfil
+                      </Link>
+                      <Link to="/analytics" className="flex items-center gap-2.5 py-2 px-2 rounded-lg hover:bg-muted transition-colors text-sm">
+                        <Sparkles className="w-4 h-4 text-primary" /> Analytics
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         )}
 
