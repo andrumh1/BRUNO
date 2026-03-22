@@ -1281,7 +1281,7 @@ async def get_card_qr(card_id: str):
         raise HTTPException(status_code=404, detail="Card not found")
     
     # Generate QR code URL (permanent - never changes)
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social-1.preview.emergentagent.com')
     card_url = f"{frontend_url}/c/{card_id}"
     
     # Get card color (default to orange) y ajustarlo para buen contraste
@@ -1762,7 +1762,7 @@ async def resolve_nfc_card(nfc_id: str):
         }
     
     # Return card URL
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social-1.preview.emergentagent.com')
     
     return {
         "found": True,
@@ -1858,7 +1858,7 @@ async def resolve_nfc_product(nfc_id: str):
     if nfc_card.get("card_id"):
         card = await db.cards.find_one({"id": nfc_card["card_id"]}, {"_id": 0})
         if card:
-            frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social.preview.emergentagent.com')
+            frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social-1.preview.emergentagent.com')
             result["redirect_url"] = f"{frontend_url}/c/{nfc_card['card_id']}"
             result["card_title"] = card.get("title", "")
     
@@ -2239,7 +2239,7 @@ async def create_store_checkout(
             "quantity": 1,
         })
     
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social-1.preview.emergentagent.com')
     
     checkout_request = CheckoutSessionRequest(
         success_url=f"{frontend_url}/store/success?order_id={order_id}",
@@ -2406,7 +2406,7 @@ async def create_subscription_checkout(
     price = plan["price_monthly"] if billing_cycle == "monthly" else plan["price_yearly"]
     
     stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY)
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social-1.preview.emergentagent.com')
     
     checkout_request = CheckoutSessionRequest(
         success_url=f"{frontend_url}/subscription/success?plan={plan_id}",
