@@ -1289,7 +1289,7 @@ async def get_card_qr(card_id: str):
         raise HTTPException(status_code=404, detail="Card not found")
     
     # Generate QR code URL (permanent - never changes)
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social-1.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://polls-reactions-feed.preview.emergentagent.com')
     card_url = f"{frontend_url}/c/{card_id}"
     
     # Get card color (default to orange) y ajustarlo para buen contraste
@@ -1770,7 +1770,7 @@ async def resolve_nfc_card(nfc_id: str):
         }
     
     # Return card URL
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social-1.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://polls-reactions-feed.preview.emergentagent.com')
     
     return {
         "found": True,
@@ -1866,7 +1866,7 @@ async def resolve_nfc_product(nfc_id: str):
     if nfc_card.get("card_id"):
         card = await db.cards.find_one({"id": nfc_card["card_id"]}, {"_id": 0})
         if card:
-            frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social-1.preview.emergentagent.com')
+            frontend_url = os.environ.get('FRONTEND_URL', 'https://polls-reactions-feed.preview.emergentagent.com')
             result["redirect_url"] = f"{frontend_url}/c/{nfc_card['card_id']}"
             result["card_title"] = card.get("title", "")
     
@@ -2247,7 +2247,7 @@ async def create_store_checkout(
             "quantity": 1,
         })
     
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social-1.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://polls-reactions-feed.preview.emergentagent.com')
     
     checkout_request = CheckoutSessionRequest(
         success_url=f"{frontend_url}/store/success?order_id={order_id}",
@@ -2414,7 +2414,7 @@ async def create_subscription_checkout(
     price = plan["price_monthly"] if billing_cycle == "monthly" else plan["price_yearly"]
     
     stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY)
-    frontend_url = os.environ.get('FRONTEND_URL', 'https://bruno-social-1.preview.emergentagent.com')
+    frontend_url = os.environ.get('FRONTEND_URL', 'https://polls-reactions-feed.preview.emergentagent.com')
     
     checkout_request = CheckoutSessionRequest(
         success_url=f"{frontend_url}/subscription/success?plan={plan_id}",
@@ -3127,6 +3127,10 @@ async def create_post(
     
     # Remove _id before returning (MongoDB adds it)
     post_doc.pop("_id", None)
+    
+    # Process @mentions
+    await _notify_mentions(post_data.content, current_user.id, current_user.name or "Alguien", post_doc["id"], "post")
+    
     return post_doc
 
 @api_router.get("/posts")
@@ -3354,6 +3358,9 @@ async def create_comment(
         "display_name": display_name or username
     }
     
+    # Process @mentions in comment
+    await _notify_mentions(comment_data.content, current_user.id, current_user.name or "Alguien", post_id, "comment")
+    
     return comment_doc
 
 @api_router.get("/posts/{post_id}/comments")
@@ -3524,6 +3531,75 @@ async def toggle_follow(user_id: str, current_user: User = Depends(get_current_u
         await notify_new_follower(user_id, current_user.name or "Alguien")
         
         return {"following": True}
+
+# -------------------- @MENTION SEARCH --------------------
+
+@api_router.get("/users/mention-search")
+async def mention_search(
+    q: str,
+    limit: int = 8,
+    current_user: User = Depends(get_current_user)
+):
+    """Quick search for @mention autocomplete (min 1 char)"""
+    if len(q) < 1:
+        return []
+    
+    users = await db.users.find({
+        "$and": [
+            {"id": {"$ne": current_user.id}},
+            {"name": {"$regex": f"^{q}", "$options": "i"}}
+        ]
+    }, {"_id": 0, "hashed_password": 0}).limit(limit).to_list(limit)
+    
+    result = []
+    for u in users:
+        profile = await db.user_profiles.find_one({"user_id": u["id"]}, {"_id": 0})
+        username = u.get("name") or u.get("email", "Unknown").split("@")[0]
+        result.append({
+            "id": u["id"],
+            "username": username,
+            "display_name": profile.get("display_name") if profile else username,
+            "avatar_url": profile.get("avatar_url") if profile else None,
+        })
+    
+    return result
+
+# -------------------- @MENTION NOTIFICATION --------------------
+
+async def _notify_mentions(content: str, actor_id: str, actor_name: str, target_id: str, target_type: str):
+    """Parse @mentions from content and send notifications"""
+    if not content:
+        return
+    mentions = re_module.findall(r'@(\w+)', content)
+    if not mentions:
+        return
+    
+    for mention_name in set(mentions):
+        mentioned_user = await db.users.find_one(
+            {"name": {"$regex": f"^{mention_name}$", "$options": "i"}},
+            {"_id": 0}
+        )
+        if mentioned_user and mentioned_user["id"] != actor_id:
+            notif = {
+                "id": str(uuid.uuid4()),
+                "user_id": mentioned_user["id"],
+                "actor_id": actor_id,
+                "type": "mention",
+                "target_id": target_id,
+                "target_type": target_type,
+                "message": f"{actor_name} te mencionó en una publicación",
+                "is_read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.notifications.insert_one(notif)
+            
+            from routers.push_notifications import send_push_notification, NotificationPayload
+            await send_push_notification(mentioned_user["id"], NotificationPayload(
+                title="Te mencionaron",
+                body=f"{actor_name} te mencionó",
+                url="/feed",
+                tag="mention"
+            ))
 
 # -------------------- USER SEARCH --------------------
 

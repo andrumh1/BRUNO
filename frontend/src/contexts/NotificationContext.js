@@ -4,8 +4,8 @@ import { useAuth } from './AuthContext';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
-// VAPID public key (should match backend)
-const VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+// VAPID public key from environment (must match backend)
+const VAPID_PUBLIC_KEY = process.env.REACT_APP_VAPID_PUBLIC_KEY || 'BJ2OATyxWfoFhVFIvzd-zBx4m5f436mDu4D-PNEqqtF9NXrTUOzyIm4UdkSnvFa-DY88RzgFCDMqOWvjDRtamx8';
 
 const NotificationContext = createContext(null);
 

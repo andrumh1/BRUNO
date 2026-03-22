@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 
 # Get backend URL from frontend .env
-BACKEND_URL = "https://bruno-social-1.preview.emergentagent.com/api"
+BACKEND_URL = "https://polls-reactions-feed.preview.emergentagent.com/api"
 
 # Test credentials - as specified in review request
 TEST_EMAIL = "testuser@bruno.com"

@@ -19,13 +19,14 @@ STORY_DURATION_HOURS = 24
 
 
 class StoryCreate(BaseModel):
-    media_url: str
-    media_type: str = "image"  # image, video
+    media_url: str = ""
+    media_type: str = "image"  # image, video, poll
     caption: Optional[str] = None
     duration: int = 5  # seconds for viewing
     visibility: str = "public"  # public, followers, private
     link_url: Optional[str] = None
     link_text: Optional[str] = None
+    poll_id: Optional[str] = None  # attach a poll to story
 
 
 class CardStoryCreate(BaseModel):
