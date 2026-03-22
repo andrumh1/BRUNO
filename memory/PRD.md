@@ -31,31 +31,46 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - Service Worker v4 con network-first para HTML, cache-busting para Safari/iPhone
 
 ### Fase 18: Nav Responsive + Social System (2025-03-22)
-- **Nav bar responsive:** Visible en TODAS las pantallas (mobile, tablet, desktop). Eliminado md:hidden.
-- **Follow/Unfollow:** Toggle completo con actualización de contadores en tiempo real
-- **Block/Unblock:** Con auto-unfollow bidireccional. Pantalla de bloqueo con opción desbloquear
-- **Report:** Opción de reportar usuario desde menú contextual
-- **Followers/Following lists:** Modal clickeable desde contadores en perfil propio y ajeno
-- **UserProfilePage:** Mejorado con botones de follow/chat/block/report + tabs posts/media/tarjetas
-- **MyProfilePage:** Contadores de seguidores/siguiendo clickeables con modal de lista
+- Nav bar responsive visible en TODAS las pantallas (mobile, tablet, desktop)
+- Follow/Unfollow con contadores, Block/Unblock con auto-unfollow, Report
+- Followers/Following lists con modal clickeable
+
+### Fase 19: Modernizacion Social Completa (2025-03-22)
+- **Trending Hashtags:** Sidebar con hashtags mas usados, pagina dedicada /hashtag/{tag}
+- **Personas Sugeridas:** Algoritmo por follows mutuos, usuarios populares y recientes
+- **Bookmarks/Guardados:** Toggle en posts, pagina /saved con todos los guardados
+- **Reacciones Multi-emoji:** like, love, fire, laugh, wow, sad - popup en long-press
+- **Repost/Compartir:** Repostear en perfil, contador de shares, indicador visual
+- **Hashtag Auto-parsing:** Extraccion automatica de hashtags del contenido
+- **Explore Feed:** Descubrimiento por trending, recientes, media, cards
+- **Polls/Encuestas:** Crear, votar, ver resultados - integrado con stories
+- **PostCard Modernizado:** Acciones completas con bookmark, repost, reactions, hashtag pills
+- **Feed Sidebar Desktop:** Tendencias + Sugeridos + Quick links en pantallas grandes
 
 ---
 
 ## API Endpoints Clave
 
-### Auth
-- POST `/api/auth/register`, `/login`, `/logout`
-- GET `/api/auth/me`, `/api/auth/google`
+### Auth: /api/auth/register, /login, /logout, /me, /google
+### Social (Fase 18-19):
+- POST /api/users/{id}/follow - Toggle follow
+- POST /api/users/{id}/block - Toggle block
+- GET /api/users/{id}/followers, /following
+- GET /api/users/me/blocked
+- POST /api/posts/{id}/bookmark - Toggle bookmark
+- GET /api/posts/saved/list - Saved posts
+- POST /api/posts/{id}/react?reaction_type={type} - Multi-emoji reaction
+- GET /api/posts/{id}/reactions - Reaction counts
+- POST /api/posts/{id}/repost - Repost with quote
+- GET /api/social/trending - Trending hashtags
+- GET /api/social/suggested - Suggested users
+- GET /api/social/hashtag/{tag} - Posts by hashtag
+- GET /api/social/explore?category={type} - Explore feed
+- POST /api/social/polls - Create poll
+- POST /api/social/polls/{id}/vote - Vote on poll
+- GET /api/social/polls/{id} - Get poll
 
-### Social (NEW in Fase 18)
-- POST `/api/users/{userId}/follow` - Toggle follow
-- POST `/api/users/{userId}/block` - Toggle block (auto-unfollows)
-- GET `/api/users/{userId}/followers` - List followers
-- GET `/api/users/{userId}/following` - List following
-- GET `/api/users/me/blocked` - List blocked users
-- GET `/api/users/{userId}/profile` - Profile with is_following, is_blocked_by_me, is_blocked_by_them
-
-### Cards, Posts, Upload, Chat, Store, NFC, etc.
+### Cards, Posts, Upload, Chat, Store, NFC, AI, etc.
 (Endpoints detallados en fases anteriores)
 
 ---
@@ -66,12 +81,13 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - **Cloudinary:** Image Storage
 - **Emergent Google Auth:** Social Login
 - **Leaflet/OpenStreetMap:** Maps
-- **face-api.js:** AR Filters
+- **face-api.js:** AR Filters en camara
 
 ---
 
 ## Test Reports
-- iteration_32.json - Nav responsive + Social system (100%)
+- iteration_33.json - Modern social features (100% - 27/27 backend, frontend OK)
+- iteration_32.json - Nav responsive + Social system (100% - 14/14)
 - iteration_31.json - Camara TikTok + Safari cache (100%)
 - iteration_30.json - Dashboard en perfil + legales (100%)
 
@@ -79,29 +95,27 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 
 ## Proximas Tareas
 
-### P1 - Correccion de tarjetas
-- [ ] Templates y estilos de tarjetas mejorados
-- [ ] Vista previa correcta por tipo de tarjeta
+### P1 - Correcciones pendientes
+- [ ] Correcciones de tarjetas (templates, estilos avanzados)
+- [ ] Configuracion expandida de usuario
 
-### P1 - Algoritmos de recomendacion
-- [ ] Tracking de interacciones (likes, vistas, guardados)
-- [ ] Perfiles de preferencias
-
-### P2 - Monetizacion
+### P2 - Monetizacion y Refinamiento
 - [ ] Stripe real para pagos
-- [ ] Planes premium
+- [ ] Planes premium funcionales
+- [ ] RESEND para emails reales
 
 ### P2 - Refactoring
-- [ ] server.py -> routers modulares
-- [ ] MyProfilePage.jsx -> sub-componentes
+- [ ] server.py -> routers modulares (mover endpoints sociales a /routers/social.py)
+- [ ] MyProfilePage.jsx -> sub-componentes mas manejables
 
 ### P3 - Backlog
-- [ ] Encuestas en Stories
-- [ ] Reacciones animadas
-- [ ] RESEND para emails reales
-- [ ] Configuracion expandida de usuario
-- [ ] Push notifications reales
+- [ ] Encuestas integradas en Stories UI
+- [ ] Reacciones animadas (lottie/framer-motion)
+- [ ] Push notifications reales con Firebase/Resend
+- [ ] Algoritmo de recomendacion avanzado (ML)
+- [ ] Mentions (@user) con autocomplete
+- [ ] DMs (mensajes directos) desde perfil
 
 ---
 
-*Last Updated: 2025-03-22 - Fase 18: Nav Responsive + Social System (Follow/Block/Report)*
+*Last Updated: 2025-03-22 - Fase 19: Modernizacion Social Completa (Trending, Bookmarks, Reactions, Reposts, Polls)*
