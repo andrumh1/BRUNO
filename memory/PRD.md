@@ -27,30 +27,24 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 ### Fase 17: Camara TikTok + Safari Cache Fix
 ### Fase 18: Nav Responsive + Social System (Follow/Block/Report)
 ### Fase 19: Modernizacion Social (Trending, Bookmarks, Reactions, Reposts, Polls, Hashtags, Explore)
+### Fase 20: For You Feed Personalizado + Settings Expandido
 
-### Fase 20: For You Feed + Settings Expandido (2025-03-22)
-- **Feed "Para Ti" personalizado:** Algoritmo que puntua posts por:
-  - Posts de usuarios seguidos (peso alto)
-  - Posts con hashtags del historial de interacciones (peso medio-alto)
-  - Posts trending con muchos likes/comentarios (peso medio)
-  - Posts de descubrimiento de nuevos usuarios (peso bajo)
-  - Cada post muestra razon de recomendacion: "De alguien que sigues", "Basado en tus intereses", "Trending"
-- **Interaction Tracking:** POST /api/feed/interaction registra views, clicks, expands, shares, dwell time
-- **Settings Completo:** Pagina /settings con secciones:
-  - Cuenta: editar perfil, contrasena, bloqueados
-  - Notificaciones: toggles para likes, comentarios, follows, mensajes, menciones
-  - Privacidad: estado online, confirmaciones lectura, quien puede enviar mensajes, visibilidad perfil
-  - Contenido: autoplay videos, contenido sensible, visibilidad por defecto de posts
-  - Apariencia: tema (claro/oscuro/sistema), idioma (es/en/pt), modo de feed (Para Ti/Cronologico)
-- **Panel de Perfil mejorado:** Links directos a /settings, /saved, /analytics, /nfc-manager
+### Fase 21: Correccion de Tarjetas (2025-03-22)
+- **Overflow corregido:** ViewCardPage, BeaconsStyleCard, CardVariants - todos usan overflow-hidden + img tags (no background-image) para banners
+- **Templates actualizados:** Banner como img con object-cover, gradientes como divs separados, contenedor con rounded-2xl
+- **Edicion preserva ID/ruta:** PUT /api/cards/{id} mantiene mismo ID, todas las tarjetas compartidas se actualizan automaticamente
+- **Rutas unificadas:** Todas las refs a /dashboard migradas a /my-profile (CreateCard, EditCard, ActivateNFC, etc.)
+- **Propagacion de cambios:** Al editar una tarjeta, todos los que la guardaron/compartieron ven los cambios inmediatamente (mismo ID, misma URL /c/{id})
+- **Card previews en perfil:** Banners contenidos con overflow-hidden
 
 ---
 
-## API Endpoints (Fase 20 new)
-- GET /api/feed/for-you - Feed personalizado con _for_you_reason
-- POST /api/feed/interaction - Tracking de interacciones
-- GET /api/settings/preferences - Obtener preferencias
-- PUT /api/settings/preferences - Actualizar preferencias
+## API Endpoints Clave
+### Cards: POST, GET, PUT, DELETE /api/cards/{id}, /api/cards/{id}/qr
+### Social: follow, block, bookmark, react, repost, trending, suggested, hashtag, explore, polls
+### Feed: /api/feed/for-you (personalizado), /api/feed/interaction (tracking)
+### Settings: GET/PUT /api/settings/preferences
+### Auth, Chat, Store, NFC, AI, etc.
 
 ---
 
@@ -65,17 +59,15 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 ---
 
 ## Test Reports
-- iteration_34.json - For You feed + Settings (100% - 30/30 backend)
-- iteration_33.json - Modern social features (100% - 27/27 backend)
-- iteration_32.json - Nav responsive + Social system (100%)
-- iteration_31.json - Camara TikTok + Safari cache (100%)
+- iteration_35.json - Card fixes (100% frontend, 88% backend)
+- iteration_34.json - For You feed + Settings (100%)
+- iteration_33.json - Modern social features (100%)
+- iteration_32.json - Nav responsive + Social (100%)
+- iteration_31.json - Camara TikTok (100%)
 
 ---
 
 ## Proximas Tareas
-
-### P1 - Correcciones
-- [ ] Correcciones de tarjetas (templates, estilos avanzados, preview mejorada)
 
 ### P2 - Monetizacion
 - [ ] Stripe real para pagos
@@ -92,8 +84,7 @@ Build a comprehensive digital business card application called "BRUNO" - a polis
 - [ ] Push notifications reales
 - [ ] Algoritmo ML avanzado
 - [ ] Mentions (@user) con autocomplete
-- [ ] DMs mejorados
 
 ---
 
-*Last Updated: 2025-03-22 - Fase 20: For You Feed Personalizado + Settings Expandido*
+*Last Updated: 2025-03-22 - Fase 21: Correccion de Tarjetas (overflow, templates, edicion, rutas)*
