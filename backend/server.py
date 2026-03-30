@@ -5711,6 +5711,11 @@ from routers.card_analytics import router as card_analytics_router, set_db as ca
 card_analytics_set_db(db)
 app.include_router(card_analytics_router)
 
+# Set database for stripe payments router
+from routers.stripe_payments import router as stripe_payments_router, set_db as stripe_set_db
+stripe_set_db(db)
+app.include_router(stripe_payments_router)
+
 # Then include api_router in app
 app.include_router(api_router)
 

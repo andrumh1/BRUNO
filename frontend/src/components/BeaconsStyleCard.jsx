@@ -123,14 +123,16 @@ const BeaconsStyleCard = ({
         {/* Avatar */}
         <div className="relative inline-block mb-4">
           {card.avatar_url ? (
-            <img 
-              src={card.avatar_url} 
-              alt={card.title}
-              className="w-24 h-24 rounded-2xl object-cover border-4 border-white/80 shadow-lg"
-            />
+            <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white/80 shadow-lg">
+              <img 
+                src={card.avatar_url} 
+                alt={card.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
           ) : (
             <div 
-              className="w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-bold border-4 border-white/80 shadow-lg"
+              className="w-24 h-24 rounded-2xl overflow-hidden flex items-center justify-center text-3xl font-bold border-4 border-white/80 shadow-lg"
               style={{ backgroundColor: `${card.text_color}20` }}
             >
               {card.title?.charAt(0) || "?"}

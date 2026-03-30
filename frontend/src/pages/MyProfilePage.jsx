@@ -628,7 +628,7 @@ const MyProfilePage = () => {
                 {cards.map(card => (
                   <div key={card.id} className="glass-card rounded-xl overflow-hidden hover:shadow-lg transition-all">
                     <div
-                      className="h-28 relative overflow-hidden"
+                      className="h-28 relative overflow-hidden rounded-t-xl"
                       style={{
                         backgroundColor: card.background_color || '#f97316',
                       }}
@@ -683,9 +683,11 @@ const MyProfilePage = () => {
                 {cards.map(card => (
                   <div key={card.id} className="glass-card rounded-xl p-3 flex items-center gap-3 hover:shadow-md transition-all">
                     {card.avatar_url ? (
-                      <img src={card.avatar_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                        <img src={card.avatar_url} alt="" className="w-full h-full object-cover" />
+                      </div>
                     ) : (
-                      <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0"
+                      <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center text-white font-bold flex-shrink-0"
                         style={{ backgroundColor: card.background_color || '#f97316' }}>
                         {card.title?.charAt(0) || "?"}
                       </div>

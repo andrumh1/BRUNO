@@ -12,15 +12,16 @@ export const MiniCard = ({ card, onClick, showDistance, distance }) => {
     >
       {/* Avatar */}
       {card.avatar_url ? (
-        <img 
-          src={card.avatar_url} 
-          alt={card.title}
-          className="w-10 h-10 rounded-full object-cover border-2"
-          style={{ borderColor: card.background_color }}
-        />
+        <div className="w-10 h-10 rounded-full overflow-hidden border-2 flex-shrink-0" style={{ borderColor: card.background_color }}>
+          <img 
+            src={card.avatar_url} 
+            alt={card.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
       ) : (
         <div 
-          className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
+          className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-sm font-bold flex-shrink-0"
           style={{ backgroundColor: card.background_color, color: card.text_color }}
         >
           {card.title?.charAt(0) || "?"}
@@ -73,14 +74,16 @@ export const MediumCard = ({ card, onChat, onView }) => {
         {/* Avatar */}
         <div className="flex items-end gap-3 mb-3">
           {card.avatar_url ? (
-            <img 
-              src={card.avatar_url} 
-              alt={card.title}
-              className="w-16 h-16 rounded-full object-cover border-4 border-background shadow-lg"
-            />
+            <div className="w-16 h-16 rounded-full overflow-hidden border-4 border-background shadow-lg flex-shrink-0">
+              <img 
+                src={card.avatar_url} 
+                alt={card.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
           ) : (
             <div 
-              className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold border-4 border-background shadow-lg"
+              className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-xl font-bold border-4 border-background shadow-lg flex-shrink-0"
               style={{ backgroundColor: card.background_color, color: card.text_color }}
             >
               {card.title?.charAt(0) || "?"}
@@ -148,14 +151,12 @@ export const LargeCard = ({ card, onChat, onShare, onSave }) => {
   return (
     <div className="bg-card rounded-3xl border border-border overflow-hidden shadow-xl">
       {/* Banner */}
-      <div 
-        className="h-48 md:h-64 relative"
-        style={{
-          background: card.banner_url 
-            ? `url(${card.banner_url}) center/cover`
-            : `linear-gradient(135deg, ${card.background_color}, ${card.background_color}99)`
-        }}
-      >
+      <div className="h-48 md:h-64 relative overflow-hidden">
+        {card.banner_url ? (
+          <img src={card.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${card.background_color}, ${card.background_color}99)` }} />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         
         {/* Type & Verified badges */}
@@ -176,14 +177,16 @@ export const LargeCard = ({ card, onChat, onShare, onSave }) => {
         {/* Avatar */}
         <div className="flex items-end gap-4 mb-4">
           {card.avatar_url ? (
-            <img 
-              src={card.avatar_url} 
-              alt={card.title}
-              className="w-24 h-24 rounded-full object-cover border-4 border-background shadow-xl"
-            />
+            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-background shadow-xl flex-shrink-0">
+              <img 
+                src={card.avatar_url} 
+                alt={card.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
           ) : (
             <div 
-              className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold border-4 border-background shadow-xl"
+              className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center text-3xl font-bold border-4 border-background shadow-xl flex-shrink-0"
               style={{ backgroundColor: card.background_color, color: card.text_color }}
             >
               {card.title?.charAt(0) || "?"}

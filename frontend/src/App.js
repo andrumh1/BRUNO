@@ -60,6 +60,7 @@ import ReelsPage from "@/pages/ReelsPage";
 import MonetizationPage from "@/pages/MonetizationPage";
 import AlbumsPage from "@/pages/AlbumsPage";
 import CardAnalyticsPage from "@/pages/CardAnalyticsPage";
+import PremiumPage from "@/pages/PremiumPage";
 import HashtagPage from "@/pages/HashtagPage";
 import SavedPostsPage from "@/pages/SavedPostsPage";
 import SettingsPage from "@/pages/SettingsPage";
@@ -127,6 +128,9 @@ function AppRouter() {
       <Route path="/albums" element={<ProtectedRoute><AlbumsPage /></ProtectedRoute>} />
       <Route path="/saved" element={<ProtectedRoute><SavedPostsPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/premium" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
+      <Route path="/payment/success" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
+      <Route path="/payment/cancel" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
       <Route path="/reels" element={<ReelsPage />} />
       <Route path="/lives" element={<ReelsPage />} />
       <Route path="/lives/start" element={<ProtectedRoute><StartLivePage /></ProtectedRoute>} />

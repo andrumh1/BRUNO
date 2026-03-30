@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,17 +141,19 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
     <div className="w-72 h-80 bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 flex flex-col overflow-hidden">
       {/* Compact Header with call icons */}
       <div className="px-2.5 py-2 border-b bg-gradient-to-r from-primary/5 to-transparent flex items-center gap-2">
-        {participant.avatar_url ? (
-          <img src={participant.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white text-xs font-bold">
-            {(participant.display_name || "?")[0].toUpperCase()}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold truncate">{participant.display_name || participant.username}</p>
+        <Link to={`/profile/${participant.id}`} className="shrink-0" data-testid="floating-chat-avatar-link">
+          {participant.avatar_url ? (
+            <img src={participant.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover ring-2 ring-primary/20 hover:ring-primary/50 transition-all" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white text-xs font-bold hover:shadow-lg transition-all">
+              {(participant.display_name || "?")[0].toUpperCase()}
+            </div>
+          )}
+        </Link>
+        <Link to={`/profile/${participant.id}`} className="flex-1 min-w-0" data-testid="floating-chat-name-link">
+          <p className="text-xs font-semibold truncate hover:text-primary transition-colors">{participant.display_name || participant.username}</p>
           <p className="text-[10px] text-green-500">En linea</p>
-        </div>
+        </Link>
         <button className="p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-full transition-colors" title="Llamada">
           <Phone className="w-3.5 h-3.5 text-green-600" />
         </button>
@@ -270,18 +272,20 @@ const ChatListPopup = ({ chats, onSelectChat, onNewChat, onClose }) => {
                 onClick={() => onSelectChat(chat)}
                 className="flex items-center gap-2 px-2.5 py-2 hover:bg-muted/50 cursor-pointer transition-colors"
               >
-                <div className="relative flex-shrink-0">
+                <Link to={`/profile/${participant.id}`} onClick={e => e.stopPropagation()} className="relative flex-shrink-0" data-testid="floating-list-avatar-link">
                   {participant.avatar_url ? (
-                    <img src={participant.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+                    <img src={participant.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover ring-2 ring-background hover:ring-primary/30 transition-all" />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white text-xs font-bold hover:shadow-lg transition-all">
                       {(participant.display_name || "?")[0].toUpperCase()}
                     </div>
                   )}
                   <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-card" />
-                </div>
+                </Link>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">{participant.display_name || participant.username}</p>
+                  <Link to={`/profile/${participant.id}`} onClick={e => e.stopPropagation()} className="text-xs font-medium truncate block hover:text-primary transition-colors" data-testid="floating-list-name-link">
+                    {participant.display_name || participant.username}
+                  </Link>
                   <p className="text-[10px] text-muted-foreground truncate leading-tight">
                     {chat.last_message?.content || "Sin mensajes"}
                   </p>
