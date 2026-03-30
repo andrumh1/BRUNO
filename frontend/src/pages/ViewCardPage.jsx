@@ -116,7 +116,7 @@ const ViewCardPage = () => {
       </div>
 
       {/* Top bar */}
-      <div className="relative z-20 max-w-3xl mx-auto px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex items-center justify-between">
+      <div className="relative z-20 max-w-5xl mx-auto px-3 sm:px-4 pt-3 sm:pt-4 pb-2 flex items-center justify-between">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)} data-testid="card-back-btn">
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -135,7 +135,7 @@ const ViewCardPage = () => {
         </div>
       </div>
 
-      <div className="relative z-10 max-w-3xl mx-auto px-3 sm:px-4">
+      <div className="relative z-10 max-w-5xl mx-auto px-3 sm:px-4">
         {/* ===== MAIN CARD ===== */}
         <div
           className="rounded-2xl shadow-2xl overflow-hidden border"
