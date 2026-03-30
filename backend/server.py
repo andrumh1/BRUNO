@@ -5706,6 +5706,11 @@ from routers.push_notifications import router as push_router, set_db as push_set
 push_set_db(db)
 app.include_router(push_router)
 
+# Set database for card analytics router
+from routers.card_analytics import router as card_analytics_router, set_db as card_analytics_set_db
+card_analytics_set_db(db)
+app.include_router(card_analytics_router)
+
 # Then include api_router in app
 app.include_router(api_router)
 

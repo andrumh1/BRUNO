@@ -229,9 +229,11 @@ const FileAttachment = ({ file, isOwn }) => {
   );
 };
 
-// Chat List Component with bubble design
+// Chat List Component with modern design
 const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
   const navigate = useNavigate();
+  const [searchFilter, setSearchFilter] = useState("");
+  
   const formatTime = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -246,95 +248,127 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
     return date.toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
   };
 
-  return (
-    <div className="h-full flex flex-col bg-card">
-      {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between bg-gradient-to-r from-primary/5 to-primary/10">
-        <div className="flex items-center gap-3">
-          <Link to="/feed">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <h2 className="text-xl font-bold">Mensajes</h2>
-        </div>
-        <Button variant="ghost" size="icon" onClick={onNewChat} className="rounded-full bg-primary/10 hover:bg-primary/20">
-          <Plus className="w-5 h-5" />
-        </Button>
-      </div>
+  const filteredChats = searchFilter 
+    ? chats.filter(c => {
+        const p = c.other_participants?.[0];
+        const name = (p?.display_name || p?.username || "").toLowerCase();
+        return name.includes(searchFilter.toLowerCase());
+      })
+    : chats;
 
-      {/* Search */}
-      <div className="p-3 border-b">
+  return (
+    <div className="h-full flex flex-col bg-background">
+      {/* Header */}
+      <div className="px-4 pt-4 pb-3">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Link to="/feed">
+              <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            </Link>
+            <h2 className="text-xl font-bold tracking-tight">Mensajes</h2>
+          </div>
+          <Button 
+            variant="default" 
+            size="icon" 
+            onClick={onNewChat} 
+            className="rounded-full h-10 w-10 shadow-lg shadow-primary/20"
+            data-testid="new-chat-btn"
+          >
+            <Plus className="w-5 h-5" />
+          </Button>
+        </div>
+
+        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar conversación..." className="pl-10 rounded-full bg-muted/50 border-0" />
+          <Input 
+            placeholder="Buscar conversacion..." 
+            className="pl-10 rounded-xl bg-muted/50 border-0 h-10" 
+            value={searchFilter}
+            onChange={(e) => setSearchFilter(e.target.value)}
+            data-testid="chat-search-input"
+          />
         </div>
       </div>
 
       {/* Chat List */}
-      <div className="flex-1 overflow-y-auto">
-        {chats.length === 0 ? (
+      <div className="flex-1 overflow-y-auto px-2">
+        {filteredChats.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-4">
             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
               <Send className="w-10 h-10 text-primary" />
             </div>
-            <p className="text-muted-foreground">No tienes conversaciones aún</p>
-            <Button onClick={onNewChat} className="mt-4 rounded-full">
-              Iniciar chat
-            </Button>
+            <p className="text-muted-foreground text-sm">
+              {searchFilter ? "Sin resultados" : "No tienes conversaciones aun"}
+            </p>
+            {!searchFilter && (
+              <Button onClick={onNewChat} className="mt-4 rounded-full" size="sm">
+                Iniciar chat
+              </Button>
+            )}
           </div>
         ) : (
-          chats.map((chat) => {
+          filteredChats.map((chat) => {
             const participant = chat.other_participants?.[0] || {};
+            const isActive = selectedChatId === chat.id;
             return (
               <div
                 key={chat.id}
                 onClick={() => onSelectChat(chat)}
-                className={`flex items-center gap-3 p-4 cursor-pointer transition-all hover:bg-muted/50 ${
-                  selectedChatId === chat.id ? "bg-primary/10 border-l-4 border-primary" : ""
+                className={`flex items-center gap-3 p-3 my-0.5 cursor-pointer rounded-xl transition-all ${
+                  isActive 
+                    ? "bg-primary/10 shadow-sm" 
+                    : "hover:bg-muted/60"
                 }`}
                 data-testid={`chat-item-${chat.id}`}
               >
-                {/* Avatar with online status */}
-                <div className="relative flex-shrink-0" onClick={(e) => { e.stopPropagation(); if(participant.id) navigate(`/profile/${participant.id}`); }}>
+                {/* Avatar with online indicator */}
+                <Link 
+                  to={`/profile/${participant.id}`} 
+                  onClick={(e) => e.stopPropagation()} 
+                  className="relative flex-shrink-0"
+                  data-testid="chat-list-profile-link"
+                >
                   {participant.avatar_url ? (
                     <img
                       src={participant.avatar_url}
                       alt={participant.display_name}
-                      className="w-12 h-12 rounded-full object-cover border-2 border-background cursor-pointer hover:opacity-80"
+                      className="w-12 h-12 rounded-full object-cover ring-2 ring-background hover:ring-primary/30 transition-all"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white text-lg font-bold cursor-pointer hover:opacity-80">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/80 to-primary/40 flex items-center justify-center text-white text-lg font-bold hover:shadow-lg transition-all">
                       {(participant.display_name || participant.username || "?")[0].toUpperCase()}
                     </div>
                   )}
-                  <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-background" />
-                </div>
+                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full ring-2 ring-background" />
+                </Link>
 
                 {/* Chat Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-0.5">
-                    <h3 
-                      className="font-semibold text-sm truncate cursor-pointer hover:text-primary transition-colors"
-                      onClick={(e) => { e.stopPropagation(); if(participant.id) navigate(`/profile/${participant.id}`); }}
-                      data-testid="chat-list-profile-link"
+                    <Link 
+                      to={`/profile/${participant.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-semibold text-sm truncate hover:text-primary transition-colors"
                     >
                       {participant.display_name || participant.username}
-                    </h3>
-                    <span className="text-[10px] text-muted-foreground">
+                    </Link>
+                    <span className="text-[10px] text-muted-foreground ml-2 shrink-0">
                       {formatTime(chat.last_message_at)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                    {chat.last_message?.message_type === 'audio' && <Mic className="w-3 h-3" />}
-                    {chat.last_message?.message_type === 'image' && <ImageIcon className="w-3 h-3" />}
+                    {chat.last_message?.message_type === 'audio' && <Mic className="w-3 h-3 shrink-0" />}
+                    {chat.last_message?.message_type === 'image' && <ImageIcon className="w-3 h-3 shrink-0" />}
                     {chat.last_message?.content || "Sin mensajes"}
                   </p>
                 </div>
 
                 {/* Unread Badge */}
                 {chat.unread_count > 0 && (
-                  <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center flex-shrink-0 shadow-sm shadow-primary/30">
                     <span className="text-[10px] text-white font-bold">
                       {chat.unread_count > 9 ? "9+" : chat.unread_count}
                     </span>
@@ -753,48 +787,40 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   const messageGroups = groupMessagesByDate(messages);
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-b from-background to-muted/20">
-      {/* Header */}
-      <div className="p-2 border-b bg-card/80 backdrop-blur-xl flex items-center gap-2 shadow-sm">
+    <div className="h-full flex flex-col bg-background">
+      {/* Modern Header */}
+      <div className="px-3 py-2.5 border-b bg-background/80 backdrop-blur-xl flex items-center gap-3 sticky top-0 z-10">
         <Button variant="ghost" size="icon" onClick={onBack} className="md:hidden rounded-full h-9 w-9">
           <ArrowLeft className="w-4 h-4" />
         </Button>
         
-        {/* Clickable avatar that navigates to profile */}
-        <div 
-          className="cursor-pointer" 
-          onClick={() => participant.id && navigate(`/profile/${participant.id}`)}
-          data-testid="chat-profile-link"
-        >
+        {/* Clickable avatar → profile */}
+        <Link to={`/profile/${participant.id}`} className="shrink-0" data-testid="chat-profile-link">
           {participant.avatar_url ? (
             <img 
               src={participant.avatar_url} 
               alt={participant.display_name}
-              className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 hover:border-primary/50 transition-colors"
+              className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/20 hover:ring-primary/50 transition-all"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold text-sm hover:shadow-lg transition-shadow">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/80 to-primary/40 flex items-center justify-center text-white font-bold text-sm hover:shadow-lg transition-all">
               {(participant.display_name || participant.username || "?")[0].toUpperCase()}
             </div>
           )}
-        </div>
+        </Link>
         
-        <div 
-          className="flex-1 min-w-0 cursor-pointer" 
-          onClick={() => participant.id && navigate(`/profile/${participant.id}`)}
-        >
-          <h3 className="font-semibold text-sm truncate">{participant.display_name || participant.username}</h3>
+        <Link to={`/profile/${participant.id}`} className="flex-1 min-w-0">
+          <h3 className="font-semibold text-sm truncate hover:text-primary transition-colors">{participant.display_name || participant.username}</h3>
           <p className="text-[10px] text-muted-foreground">
             {isTyping ? (
-              <span className="text-primary animate-pulse">escribiendo...</span>
+              <span className="text-primary font-medium">escribiendo<span className="animate-pulse">...</span></span>
             ) : "En linea"}
           </p>
-        </div>
+        </Link>
         
         <div className="flex gap-0.5">
           <Button 
-            variant="ghost" 
-            size="icon" 
+            variant="ghost" size="icon" 
             className="rounded-full h-9 w-9 hover:bg-green-500/10 hover:text-green-500"
             onClick={() => startVideoCall("audio")}
             disabled={callLoading}
@@ -803,17 +829,13 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
             <Phone className="w-4 h-4" />
           </Button>
           <Button 
-            variant="ghost" 
-            size="icon" 
+            variant="ghost" size="icon" 
             className="rounded-full h-9 w-9 hover:bg-blue-500/10 hover:text-blue-500"
             onClick={() => startVideoCall("video")}
             disabled={callLoading}
             data-testid="start-video-call-btn"
           >
             {callLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
-          </Button>
-          <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
-            <MoreVertical className="w-4 h-4" />
           </Button>
         </div>
       </div>
@@ -831,7 +853,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       />
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
         {loading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -841,7 +863,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
             <div key={date}>
               {/* Date separator */}
               <div className="flex justify-center mb-4">
-                <span className="px-3 py-1 bg-muted/80 rounded-full text-xs text-muted-foreground capitalize">
+                <span className="px-3 py-1 bg-muted/60 backdrop-blur-sm rounded-full text-[10px] text-muted-foreground font-medium capitalize">
                   {date}
                 </span>
               </div>
@@ -852,13 +874,13 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                 return (
                   <div
                     key={message.id}
-                    className={`flex mb-2 ${isOwn ? "justify-end" : "justify-start"}`}
+                    className={`flex mb-1.5 ${isOwn ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[75%] px-4 py-2.5 ${
+                      className={`max-w-[78%] px-3.5 py-2 ${
                         isOwn
-                          ? "bg-gradient-to-br from-primary to-primary/90 text-white rounded-2xl rounded-br-md"
-                          : "bg-card border border-border rounded-2xl rounded-bl-md shadow-sm"
+                          ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm shadow-sm shadow-primary/10"
+                          : "bg-muted/60 rounded-2xl rounded-bl-sm"
                       }`}
                     >
                       {/* Sticker messages */}
@@ -896,21 +918,33 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                         />
                       )}
                       
-                      {/* Text content */}
+                      {/* Text content with @mention parsing */}
                       {message.content && message.message_type !== 'audio' && message.message_type !== 'sticker' && message.message_type !== 'card' && (
-                        <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {message.content.split(/(@\w+)/g).map((part, pi) => {
+                            if (part.startsWith("@")) {
+                              const uname = part.slice(1);
+                              return (
+                                <Link key={pi} to={`/profile/${uname}`} className={`font-semibold underline decoration-1 underline-offset-2 ${isOwn ? "text-primary-foreground" : "text-primary"}`}>
+                                  {part}
+                                </Link>
+                              );
+                            }
+                            return <span key={pi}>{part}</span>;
+                          })}
+                        </p>
                       )}
                       
                       {/* Time and read status */}
-                      <div className={`flex items-center gap-1 mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
-                        <span className={`text-[10px] ${isOwn ? "text-white/70" : "text-muted-foreground"}`}>
+                      <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>
+                        <span className={`text-[9px] ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                           {formatTime(message.created_at)}
                         </span>
                         {isOwn && (
                           message.is_read ? (
-                            <img src="/mascots/bruno-dog.webp" alt="Visto" className="w-4 h-4 rounded-full object-cover" title="Visto" />
+                            <CheckCheck className="w-3.5 h-3.5 text-primary-foreground/60" />
                           ) : (
-                            <Check className="w-3.5 h-3.5 text-white/50" />
+                            <Check className="w-3 h-3 text-primary-foreground/40" />
                           )
                         )}
                       </div>
@@ -1014,8 +1048,8 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         onSelect={handleSendCard}
       />
       
-      {/* Input */}
-      <form onSubmit={handleSend} className="p-3 border-t bg-card/80 backdrop-blur-xl flex items-center gap-2">
+      {/* Modern Input */}
+      <form onSubmit={handleSend} className="px-3 py-2.5 border-t bg-background/80 backdrop-blur-xl flex items-center gap-2">
         <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={(e) => handleFileSelect(e, "image")} className="hidden" />
         <input ref={docInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" onChange={(e) => handleFileSelect(e, "document")} className="hidden" />
         
@@ -1023,7 +1057,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
           type="button" 
           variant="ghost" 
           size="icon"
-          className="rounded-full"
+          className="rounded-full h-9 w-9 shrink-0"
           onClick={() => setShowAttachMenu(!showAttachMenu)}
           disabled={uploading || isRecording}
         >
@@ -1038,7 +1072,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
               handleTyping();
             }}
             placeholder="Escribe un mensaje..."
-            className="rounded-full pr-10 bg-muted/50 border-0"
+            className="rounded-xl pr-10 bg-muted/40 border-0 h-10"
             disabled={isRecording}
             data-testid="chat-input"
           />
@@ -1065,7 +1099,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
           <Button 
             type="submit" 
             size="icon" 
-            className="rounded-full bg-primary hover:bg-primary/90"
+            className="rounded-full h-10 w-10 shadow-lg shadow-primary/20 shrink-0"
             disabled={sending}
             data-testid="send-message-btn"
           >
@@ -1076,7 +1110,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
             type="button" 
             size="icon"
             variant={isRecording ? "destructive" : "ghost"}
-            className="rounded-full"
+            className="rounded-full h-10 w-10 shrink-0"
             onClick={isRecording ? stopRecording : startRecording}
           >
             {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
@@ -1381,15 +1415,15 @@ const ChatPage = () => {
             ws={ws}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-muted/20">
-            <div className="text-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Send className="w-12 h-12 text-primary" />
+          <div className="flex-1 flex items-center justify-center bg-muted/10">
+            <div className="text-center max-w-sm">
+              <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl flex items-center justify-center mx-auto mb-5 rotate-6">
+                <Send className="w-10 h-10 text-primary -rotate-6" />
               </div>
-              <h3 className="font-bold text-xl mb-2">Tus Mensajes</h3>
-              <p className="text-muted-foreground mb-4">Selecciona una conversación o inicia una nueva</p>
-              <Button onClick={() => setShowNewChat(true)} className="rounded-full">
-                <Plus className="w-4 h-4 mr-2" /> Nueva Conversación
+              <h3 className="font-bold text-xl mb-2 tracking-tight">Tus Mensajes</h3>
+              <p className="text-muted-foreground text-sm mb-5">Selecciona una conversacion o inicia una nueva</p>
+              <Button onClick={() => setShowNewChat(true)} className="rounded-full shadow-lg shadow-primary/20">
+                <Plus className="w-4 h-4 mr-2" /> Nueva Conversacion
               </Button>
             </div>
           </div>

@@ -59,6 +59,7 @@ import StartLivePage from "@/pages/StartLivePage";
 import ReelsPage from "@/pages/ReelsPage";
 import MonetizationPage from "@/pages/MonetizationPage";
 import AlbumsPage from "@/pages/AlbumsPage";
+import CardAnalyticsPage from "@/pages/CardAnalyticsPage";
 import HashtagPage from "@/pages/HashtagPage";
 import SavedPostsPage from "@/pages/SavedPostsPage";
 import SettingsPage from "@/pages/SettingsPage";
@@ -108,8 +109,8 @@ function AppRouter() {
       <Route path="/my-profile" element={<ProtectedRoute><MyProfilePage /></ProtectedRoute>} />
       <Route path="/points" element={<ProtectedRoute><PointsPage /></ProtectedRoute>} />
       <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettingsPage /></ProtectedRoute>} />
-      <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
-      <Route path="/analytics/:cardId" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute><CardAnalyticsPage /></ProtectedRoute>} />
+      <Route path="/analytics/:cardId" element={<ProtectedRoute><CardAnalyticsPage /></ProtectedRoute>} />
       <Route path="/camera" element={<ProtectedRoute><BrunoCameraPage /></ProtectedRoute>} />
       <Route path="/marketplace/new" element={<ProtectedRoute><NewProductPage /></ProtectedRoute>} />
       <Route path="/marketplace/my-products" element={<ProtectedRoute><MyProductsPage /></ProtectedRoute>} />

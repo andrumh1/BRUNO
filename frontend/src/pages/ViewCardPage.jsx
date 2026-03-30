@@ -36,6 +36,15 @@ const ViewCardPage = () => {
 
   useEffect(() => { fetchCard(); }, [cardId]);
 
+  // Track card view for analytics
+  useEffect(() => {
+    if (!cardId) return;
+    axios.post(`${API}/analytics/cards/${cardId}/view`, null, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      params: { source_url: document.referrer || undefined }
+    }).catch(() => {});
+  }, [cardId, token]);
+
   const fetchCard = async () => {
     try {
       const response = await axios.get(`${API}/cards/${cardId}`);
