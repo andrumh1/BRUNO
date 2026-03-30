@@ -129,21 +129,7 @@ const NFCWritePage = () => {
       setNfcStatus("writing");
       setStatusMessage("Acerca tu tarjeta NFC al dispositivo...");
 
-      const ndef = new NDEFReader();
-      
-      // The URL to write to the NFC tag
-      const cardUrl = `${window.location.origin}/c/${selectedCard}`;
-      
-      await ndef.write({
-        records: [
-          {
-            recordType: "url",
-            data: cardUrl
-          }
-        ]
-      });
-
-      // Register NFC card in backend
+      // First register NFC card in backend to get a tracked nfc_id
       const nfcId = `nfc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       await axios.post(
         `${API}/nfc/activate`,
@@ -151,8 +137,23 @@ const NFCWritePage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      const ndef = new NDEFReader();
+      
+      // Use the backend direct redirect endpoint for instant NFC resolution
+      // This does HTTP 302 redirect server-side without loading the React SPA
+      const nfcUrl = `${window.location.origin}/api/nfc/go/${nfcId}`;
+      
+      await ndef.write({
+        records: [
+          {
+            recordType: "url",
+            data: nfcUrl
+          }
+        ]
+      });
+
       setNfcStatus("success");
-      setStatusMessage("¡Tarjeta NFC programada exitosamente!");
+      setStatusMessage("Tarjeta NFC programada exitosamente!");
       
       setTimeout(() => {
         navigate("/my-profile");
@@ -163,15 +164,15 @@ const NFCWritePage = () => {
       
       if (error.name === "NotAllowedError") {
         setNfcPermission("denied");
-        setStatusMessage("Permiso denegado. Por favor, permite el acceso a NFC en la configuración de tu navegador.");
+        setStatusMessage("Permiso denegado. Por favor, permite el acceso a NFC en la configuracion de tu navegador.");
       } else if (error.name === "NotSupportedError") {
         setStatusMessage("Tu dispositivo no soporta escritura NFC.");
       } else if (error.name === "NetworkError") {
-        setStatusMessage("Error de red. Asegúrate de que la tarjeta NFC esté cerca del dispositivo.");
+        setStatusMessage("Error de red. Asegurate de que la tarjeta NFC este cerca del dispositivo.");
       } else if (error.name === "AbortError") {
-        setStatusMessage("Operación cancelada. Inténtalo de nuevo.");
+        setStatusMessage("Operacion cancelada. Intentalo de nuevo.");
       } else if (error.name === "InvalidStateError") {
-        setStatusMessage("Estado inválido. Por favor, recarga la página e inténtalo de nuevo.");
+        setStatusMessage("Estado invalido. Por favor, recarga la pagina e intentalo de nuevo.");
       } else {
         setStatusMessage(`Error: ${error.message || "Error desconocido al escribir en NFC"}`);
       }

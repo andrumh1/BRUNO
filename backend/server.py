@@ -1780,6 +1780,27 @@ async def resolve_nfc_card(nfc_id: str):
         "nfc_id": nfc_id
     }
 
+@api_router.get("/nfc/go/{nfc_id}")
+async def nfc_direct_redirect(nfc_id: str):
+    """Direct HTTP 302 redirect for NFC tags - bypasses SPA loading entirely.
+    NFC tags should point to: {domain}/api/nfc/go/{nfc_id}
+    This gives instant redirect without waiting for React to load."""
+    from fastapi.responses import RedirectResponse
+    
+    nfc_card = await db.nfc_cards.find_one({"nfc_id": nfc_id}, {"_id": 0})
+    frontend_url = os.environ.get('FRONTEND_URL', '')
+    
+    if not nfc_card or not nfc_card.get("card_id"):
+        # Redirect to NFC activation page
+        return RedirectResponse(url=f"{frontend_url}/n/{nfc_id}", status_code=302)
+    
+    card = await db.cards.find_one({"id": nfc_card["card_id"]}, {"_id": 0})
+    if not card:
+        return RedirectResponse(url=f"{frontend_url}/n/{nfc_id}", status_code=302)
+    
+    # Instant redirect to card page
+    return RedirectResponse(url=f"{frontend_url}/c/{nfc_card['card_id']}", status_code=302)
+
 @api_router.get("/nfc/my-cards")
 async def get_my_nfc_cards(current_user: User = Depends(get_current_user)):
     nfc_cards = await db.nfc_cards.find({"user_id": current_user.id}, {"_id": 0}).to_list(1000)

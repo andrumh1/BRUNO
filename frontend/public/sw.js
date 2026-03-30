@@ -1,5 +1,5 @@
-// BRUNO Service Worker v4 - Push Notifications + Safari Cache Fix
-const SW_VERSION = 'v4';
+// BRUNO Service Worker v5 - Push Notifications + NFC Instant Redirect + Safari Cache Fix
+const SW_VERSION = 'v5';
 const CACHE_NAME = 'bruno-' + SW_VERSION;
 
 // Always bypass cache for these patterns
@@ -21,16 +21,24 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch - network-first, never cache HTML
+// Fetch - network-first strategy
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = event.request.url;
   if (NEVER_CACHE.some((p) => url.includes(p))) return;
 
-  // HTML navigation requests: always network, never cache
+  // HTML navigation requests: ALWAYS go to network, NO cache fallback
+  // This prevents NFC/card deep links from showing stale/home page
   if (event.request.mode === 'navigate' || event.request.destination === 'document') {
     event.respondWith(
-      fetch(event.request, { cache: 'no-store' }).catch(() => caches.match('/index.html'))
+      fetch(event.request, { cache: 'no-store' })
+        .then((response) => {
+          // Cache the latest index.html for true offline fallback
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', clone));
+          return response;
+        })
+        .catch(() => caches.match('/index.html'))
     );
     return;
   }

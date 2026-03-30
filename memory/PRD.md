@@ -52,6 +52,11 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
   - Polls (create, vote, get)
   - Legacy /profile/{user_id}/follow route maintained
 - **server.py reduced from 5740 → 5183 lines**
+- **NFC Instant Redirect Fix** (2026-03-30):
+  - Created backend direct redirect endpoint `GET /api/nfc/go/{nfcId}` (HTTP 302)
+  - NFCWritePage now writes backend redirect URL to NFC tags (bypasses SPA load entirely)
+  - NFCRedirectPage uses React Router `navigate()` instead of `window.location.href` + removed 500ms delay
+  - Service Worker updated to v5 with improved navigation handling
 
 ## Key API Endpoints
 
