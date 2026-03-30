@@ -1,190 +1,151 @@
-<analysis>**original_problem_statement:**
-The user wants to build a comprehensive professional social network called BRUNO. The initial scope from the previous fork has been significantly expanded with a large number of UI/UX corrections, feature enhancements, and new functionalities requested by the user during this session.
+<analysis>**original_problem_statement**: 
+The user wants to implement advanced social features (polls, animated reactions, push notifications, @mentions), add Card Analytics as a premium feature, integrate Stripe for monetization, and address technical debt by refactoring the monolithic backend () and large frontend components. 
+Recent requirements: Refactor the backend, fix Stripe subscription product checkout links, ensure web/native app sync, redesign the Bubble banner cards to look properly distributed and responsive, and make card views span the full screen on large horizontal monitors.
 
-**PRODUCT REQUIREMENTS (Consolidated from this session):**
+**User's preferred language**: Spanish (INSTRUCT NEXT AGENT: You MUST automatically detect the user's primary language from their messages and INSTRUCT next agent to respond in the user's preferred language only. **You MUST respond to the user and write all communication in Spanish**).
 
-*   **UI/UX Corrections:**
-    *   Fix z-index of card type dropdown ().
-    *   Ensure card template previews update correctly on selection.
-    *   Fix hyperlinks from user names/avatars in the feed and chat to navigate to the correct user profile.
-    *   Redesign chat UI to be more modern (compact headers, profile image bubbles, call icons).
-*   **Navigation:**
-    *   Multiple rearrangements of the bottom navigation bar to achieve a specific order: .
-    *   Unify Reels and Live into a single navigation item.
-    *   Ensure the bottom navigation bar remains visible when the camera page is open.
-*   **Feature Implementation & Relocation:**
-    *   Implement a full-featured NFC product activation and management system (), allowing users to configure different NFC products (e.g., for WiFi, emergencies) from within the app.
-    *   Create a dedicated Reels page with a TikTok-style vertical scrolling feed.
-    *   **Move the entire card management  from its own page () into a Tarjetas tab within the user's profile page ().**
-*   **Asset & Mascot Integration:**
-    *   Incorporate user-provided images (logo, human caricature, dog mascot) into the application.
-    *   Use the logo for the BRUNO IA chat icon.
-    *   Use the mascots in the new user .
-    *   Use the dog mascot as a read receipt indicator in the chat.
-*   **Legal & Compliance:**
-    *   Create additional legal pages (Cookies, Community Guidelines, Data Rights) and a central .
-*   **Pending from User:**
-    *   Improve the camera UI to be more modern and like TikTok, and add better/more advanced filters.
+**what currently exists?**: 
+A highly advanced, fully-featured social network application built with React, FastAPI, and MongoDB. It includes polls, reactions, mentions, card analytics, modernized chat, and Stripe integration. However, the application currently suffers from a massive technical debt issue in the backend ( is over 5700 lines), a broken Stripe Checkout redirection on the frontend, and UI layout issues on the Bubble style business cards.
 
-**User's preferred language**: Spanish
+**Last working item**: 
+    - Last item agent was working: Context gathering and planning for the current P0 bugs (Stripe checkout & Card UI layout). The agent successfully tested the backend Stripe endpoint via  and confirmed it generates a valid Stripe Checkout URL. The agent then sent an  prompt to confirm the action plan with the user.
+    - Status: IN PROGRESS
+    - Agent Testing Done: Y (Backend Stripe endpoint tested via curl)
+    - Which testing method agent to use? both
+    - User Testing Done: N
 
-**what currently exists?**
-A feature-rich full-stack social network (React/FastAPI/MongoDB). In this extensive session, the agent implemented a large volume of user requests. Key accomplishments include:
-1.  **UI/UX Overhaul:** Fixed numerous UI bugs related to card creation, chat interfaces, and profile navigation links.
-2.  **Dashboard Migration:** Successfully moved the entire card management  functionality into the , consolidating the user experience as requested. The old  route now redirects to the profile.
-3.  **NFC Product Manager:** Built a comprehensive backend and frontend system for users to activate and configure various PIUP NFC products with custom settings (e.g., WiFi credentials).
-4.  **Reels & Navigation:** Created a dedicated, TikTok-style  page and performed multiple revisions of the main navigation bar to the user's exact specification.
-5.  **Mascot Integration:** Integrated user-provided brand assets (logo, characters) into the Welcome Tour, AI Chat, and as chat read-receipts.
-6.  **Legal Framework:** Expanded the application's legal section by adding several new policy pages and a central .
-All completed work was validated by the testing agent, which reported 100% success across all features.
+**All Pending/In progress Issue list**: 
+  - Issue 1: Stripe Subscription Checkout Links Not Opening correctly (P0)
+     - Attempted fixes: Investigated by the agent. Backend returns a valid  URL. The issue is on the frontend.
+     - Next debug checklist: Check . The frontend is likely failing to properly redirect  to the  returned from the  endpoint.
+     - Why fix this issue and what will be achieved with the fix? Unblocks the core monetization flow.
+     - Status: IN PROGRESS
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? frontend
+     - Blocked on other issue: None
+  - Issue 2: Card UI Responsiveness and Bubble Layout (P0)
+     - Attempted fixes: Previous fork modified container widths in  and rewrote .
+     - Next debug checklist: Render  and . Check if the layout acts like real bubbles, if text is distributed well, and if horizontal large screens display full width. Adjust CSS if needed.
+     - Why fix this issue and what will be achieved with the fix? Improves presentation coherence across all devices.
+     - Status: IN PROGRESS
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? frontend
+     - Blocked on other issue: None
+  - Issue 3: Incomplete Backend Refactoring () (P0)
+     - Attempted fixes: Agent created  in a previous fork but didn't move endpoints.
+     - Next debug checklist: Move social endpoints (follow, block, bookmarks, reactions, reposts, suggested, trending, polls, explore) from  to . Then use  in .
+     - Why fix this issue and what will be achieved with the fix? Huge reduction in technical debt;  is currently an unmanageable 5740 lines.
+     - Status: NOT STARTED
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? backend
+     - Blocked on other issue: Complete Issue 1 & 2 first as per user priority.
+  - Issue 4: Safari/iPhone Cache Bug
+     - Attempted fixes: Implemented  cache-busting in previous forks.
+     - Status: USER VERIFICATION PENDING
+     - Is recurring issue? Y
 
-**Last working item**:
-- **Last item agent was working:** The agent's final task was to correctly migrate the card management  into the user's profile page and create a suite of new legal pages (, , etc.). This was a correction from a previous misunderstanding where the agent had created a new Explore panel instead.
-- **Status:** COMPLETED
-- **Agent Testing Done:** Y
-- **Which testing method agent to use?** NA
-- **User Testing Done:** N
-
-**All Pending/In progress Issue list**:
--   **Issue 1: Safari/iPhone Cache Bug (P1)**
-    -   **Description:** New users on Safari (iPhone) may see an outdated version of the app due to aggressive caching. This issue was carried over from the previous fork and has not been addressed.
-    -   **Attempted fixes:** None in this session. Anti-cache meta tags were added in a prior session, but their effectiveness was never verified.
-    -   **Next debug checklist:**
-        1.  Use the testing agent to simulate a new user session with a Safari user agent.
-        2.  Verify if anti-cache headers are being served correctly from .
-        3.  If the issue persists, implement cache-busting by adding a version hash to the main JS/CSS bundle URLs.
-    -   **Why fix this issue and what will be achieved with the fix?** To ensure a correct and up-to-date first-time user experience, which is critical for retention.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** frontend
-    -   **Blocked on other issue:** None
--   **Issue 2: Incomplete Backend Refactoring (P2)**
-    -   **Description:**  is extremely large and contains logic that should be moved to dedicated  modules.
-    -   **Next debug checklist:** Identify a self-contained set of endpoints (e.g., all  or  routes) in  and migrate them to a new file in .
-    -   **Why fix this issue and what will be achieved with the fix?** To reduce technical debt, improve maintainability, and make the backend more modular and scalable.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** backend
-    -   **Blocked on other issue:** None
-
-**In progress Task List**:
-There are no tasks currently in progress.
+**In progress Task List**: 
+None currently in active coding state.
 
 **Upcoming and Future Tasks**
-*   **Upcoming Tasks:**
-    *   **P0: TikTok-style Camera UI & Advanced Filters:** The user has repeatedly requested a more modern camera interface similar to TikTok, with improved filters. This is a high-priority feature request that was missed in this session.
-        -   **File to check:** 
-    *   **P1: Verify Safari/iPhone Cache Bug:** Address the long-standing caching issue.
-    *   **P1: Advanced Search/Discovery & Recommendation Engine:** Begin work on a recommendation engine by tracking user interaction events (likes, views, saves) to build user preference profiles.
-*   **Future Tasks:**
-    *   **P2: Finalize Monetization:** Integrate Stripe for real transactions.
-    *   **P2: Expanded User Settings:** Add more user-configurable options.
-    *   **Refactor :** Continue breaking down the main backend file.
-    *   **Refactor Camera Components:** Unify older camera components into .
+    Upcoming Tasks:
+    - P1: Ensure app synchronizes perfectly between browser and native app. Check for any web-specific APIs that might fail in webviews.
+    - P2: Address N+1 query patterns in followers, following, blocked users, and saved posts endpoints (flagged by Deployment Agent Health Check). Use MongoDB  operator for batch queries.
+    - P2: Add pagination (skip/limit) to cards and albums endpoints.
+    Future Tasks:
+    - P2: Continue frontend component breakdown (e.g.,  is nearly 800 lines).
 
 **Completed work in this session**
-- **Dashboard in Profile & Legal Pages (Fase 16):** Migrated the full card management dashboard into  and created , , , and  pages.
-- **Reels Page & Mascot Integration (Fase 15):** Created a  page with a TikTok-style feed, kept the nav bar visible on the camera page, and integrated user-provided mascot images into the UI.
-- **Navigation & NFC Manager (Fase 14):** Reorganized the bottom nav bar, built a comprehensive NFC product configuration system with new backend endpoints, and fixed profile hyperlinks.
-- **UI Fixes (Fase 13):** Corrected the  z-index, made the card preview template-aware, and improved the chat UI with compact headers and clickable profile links.
+- Verified  presence and successfully tested backend  endpoint via curl.
+- No files were modified in this session.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: TikTok-style Camera UI & Advanced Filters**
-    -   **Debug checklist:**
-        1.  Review  to assess the current UI.
-        2.  Research and implement a more fluid, full-screen UI similar to TikTok or Instagram Stories.
-        3.  Investigate  or other libraries for more advanced, shader-based filters beyond simple color adjustments.
-    -   **Why to solve this issue and what will be achieved with this?** This is a direct user request to modernize a core content creation feature, improving user engagement and perceived app quality.
-    -   **Should Test frontend/backend/both after fix:** frontend
-    -   **Is recurring issue?** Y (Mentioned in message 5, but not implemented).
+   - Issue 1: N+1 Query Patterns & Missing Pagination
+   - Debug checklist: Search for loops doing individual  in endpoints like . Refactor to collect IDs and use . Add  and  to  GET endpoints.
+   - Why to solve this issue and what will be achieved with this? Massively improves backend performance and prevents app crash under load.
+   - Should Test frontend/backend/both after fix: backend
+   - Is recurring issue? N
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Safari/iPhone Cache Bug; Incomplete Backend Refactoring.
--   **Recurrence count:** 2+ forks.
--   **Status:** NOT STARTED
+  - Issue recurrence in previous fork: Backend Refactoring ().
+  - Recurrence count: 5+
+  - Status: NOT STARTED
+  Note: This task has been delayed multiple times due to new feature requests. Complete the P0 Stripe and UI bugs immediately, then you MUST execute this refactoring.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Component Migration:** Moving complex state and UI logic from a dedicated page () into a tab within another component ().
-*   **React :** Used to solve a  stacking context issue with a dropdown menu.
-*   **Dynamic API Endpoints:** Created a flexible backend system with Pydantic models to handle configuration for various types of NFC products.
-*   **Route-based UI:** Conditionally rendering components and redirecting routes ( -> ) to restructure the app's information architecture.
+React (Frontend), FastAPI (Backend), MongoDB (Database), Framer Motion (Animations), PyWebPush (Notifications), Stripe Checkout (Monetization), JWT (Authentication).
 
 **key DB schema**
-- **nfc_cards:** An optional  field was added to store custom product data (e.g., ).
+  - users: {..., preferences, blocked_by}
+  - card_analytics: {card_id, viewer_ip, device, source, timestamp}
+  - polls: {id, question, options}
+  - reactions: {user_id, target_id, target_type, reaction_type}
+  - bookmarks: {user_id, post_id}
 
 **changes in tech stack**
-- No new technologies were added.
+  - None in this session.
 
-**All files of reference**
-*   : The new home for the card management dashboard.
-*   : The UI for the new NFC configuration system.
-*   : The unified, TikTok-style Reels and Live video page.
-*   : The main navigation component, which was modified multiple times.
-*   : Contains the new backend logic for NFC product configuration.
-*   : Updated to reflect all completed tasks.
-*   : The final, successful test report for this session.
+**All files of reference** 
+  - : Needs fix for Stripe redirect logic.
+  - : Works correctly, reference for data contract.
+  - : Needs UI verification.
+  - : Needs UI verification.
+  - : Target for critical refactoring.
+  - : Target file for refactored endpoints.
 
-**Areas that need refactoring**:
-*    has become a very large and complex component after absorbing the entire . It should be broken down into smaller, more manageable sub-components.
-*   The  route in  should be removed completely now that it only serves as a redirect. All internal links should be updated to point directly to .
-*    refactoring remains a high-priority technical debt item.
+**Areas that need refactoring**: 
+- : Holds over 5700 lines of code. Social endpoints must be moved to .
+- : Extremely long and needs component extraction.
 
 **key api endpoints**
-*   : New endpoint to save custom data for an NFC tag.
-*   : New endpoint to get the configuration schema for different NFC products.
-*   : New endpoint to get the configured action for an NFC product.
-*   : An alias for  that was created and then deprecated when the UI was changed.
+- 
+- 
+- 
 
-**Critical Info for New Agent**
-*   **User Language:** You **MUST** respond and communicate in **Spanish**.
-*   **Priorities:** The user wants to continue with the pending tasks. The highest priority is implementing the **TikTok-style camera UI and advanced filters**, as this was a key user request from the beginning of the session that was missed. After that, address the **Safari cache bug**.
-*   **Dashboard is in Profile:** The card management dashboard is now correctly located in a tab on the . Do not create a separate Explore or Dashboard page.
-*   **Mascot Assets:** The user's brand assets are located in  and have been integrated into the welcome tour and chat UI.
+**Critical Info for New Agent** 
+- **COMMUNICATE IN SPANISH ONLY**.
+- The backend Stripe  endpoint is working and returning a valid Stripe checkout URL. The P0 bug is on the frontend in  not redirecting correctly. Fix this immediately after reading the user's response to your  prompt.
+- Verify the Bubble card layout () and full-width rendering () on horizontal screens via screenshot tests.
+- After fixing these two user-reported bugs, you **MUST** prioritize the backend  refactoring. Do not delay it further.
 
-**documents and test reports created in this job**
-*   
-*   
-*   
-*   
-*   
-*   
-*   
-*    (Updated)
+**documents and test reports created in this job** 
+None created in this session. Existing reports:
+  - 
+  - 
 
-**Last 10 User Messages and any pending HUMAN messages**
-1.  **User (Message 378):** Clarified that they wanted the existing  page moved into the profile, not a new Explore feature. **Status: Completed.**
-2.  **User (Message 253):** Confirmed the plan to integrate mascots and other features, and asked to proceed. **Status: Completed.**
-3.  **User (Message 250):** Provided image assets and requested their integration into the app (as mascots, read-receipts, AI icon) and re-iterated the need to fix chat navigation links. **Status: Completed.**
-4.  **User (Message 223):** Requested a TikTok-style Reels feed, moving the cards panel to the profile, and keeping the nav bar visible on the camera page. **Status: Completed.**
-5.  **User (Message 208):** Requested another rearrangement of the bottom navigation bar. **Status: Completed.**
+**Last 10 User Messages and any pending HUMAN messages** 
+ - **Pending Human Message**: The agent just submitted a plan to the user via the  tool and is waiting for their approval/feedback.
+ - User (msg #383/analysis): Requests backend refactoring, fixing Stripe product checkout link, fixing the Bubble card layout info distribution, making card views take full width on horizontal screens, and ensuring web/native sync. (PENDING)
+ - User (msg #382): Approved upsell banner and requested to continue next actions. (COMPLETED)
+ - User (msg #316): Suggested to continue with next actions after Stripe implementation. (COMPLETED)
+ - User (msg #221): Reported bugs: Cards not updating/fitting screen, chat names not clickable, edit card button wrong, profile image corner overlaps. (COMPLETED)
+ - User (msg #92): Requested to continue features, modernize chat, make user names hyperlinks. (COMPLETED)
+ - User (msg #80): Asked to run Deployment Health Check. (COMPLETED)
 
 **Project Health Check:**
-*   **Broken:**
-    *   The Safari/iPhone caching issue is still unverified and potentially impacting new users.
-*   **Mocked:**
-    *   None.
+- Broken: Stripe checkout redirection in the frontend. Bubble card layouts (needs UI verification).
+- Mocked: None.
 
-**3rd Party Integrations**
-*   **OpenAI GPT-5.2:** (Text Generation) — uses Emergent LLM Key.
-*   **Daily.co:** (Video/Audio Calls, Lives) — requires User API Key.
-*   **Cloudinary:** (Image Storage) — requires User API Key.
-*   **Stripe:** (Payments) — requires User API Key.
-*   **Resend:** (Email) — requires User API Key.
-*   **Leaflet:** (Interactive Maps) — no key required.
-*   **Emergent-managed Google Auth:** (Social Login).
+**3rd Party Integrations** 
+ • OpenAI GPT-5.2 (Text Gen) — uses Emergent LLM Key
+ • Daily.co (Video/Audio) — requires User API Key
+ • Cloudinary (Image Storage) — requires User API Key
+ • Stripe (Payments) — requires User API Key ( in environment)
+ • Resend (Email) — requires User API Key
+ • Emergent-managed Google Auth (Social Login)
 
 **Testing status**
-- **Testing agent used after significant changes:** YES. The agent ran the testing agent four times ( through ), with the final run covering the dashboard migration and legal pages, achieving a 100% pass rate.
-- **Troubleshoot agent used after agent stuck in loop:** NO
-- **Test files created:** []
-- **Known regressions:** None.
+  - Testing agent used after significant changes: NO (no changes made yet).
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: None.
+  - Known regressions: Stripe checkout link logic from frontend.
 
 **Credentials to test flow:**
-*   **Username:** 
-*   **Password:** 
+  - Username: 
+  - Password: 
 
 **What agent forgot to execute**
-- The agent did not implement the user's request (from Message 5) to improve the **camera UI to be more like TikTok and to add better/more advanced filters**. This was acknowledged in the agent's final plan as a Next Action Item but was a key feature requested at the start of the session that was deferred.</analysis>
+- Nothing forgotten in this specific session as the agent was waiting for an  response. However, historically, agents keep delaying the  refactor. Ensure this gets done.</analysis>

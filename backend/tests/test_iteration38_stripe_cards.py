@@ -105,7 +105,7 @@ class TestStripeCheckout:
         """Checkout should create Stripe session and return URL"""
         response = requests.post(f"{BASE_URL}/api/payments/checkout", json={
             "package_id": "analytics_monthly",
-            "origin_url": "https://polls-reactions-feed.preview.emergentagent.com"
+            "origin_url": "https://premium-launch-13.preview.emergentagent.com"
         }, headers=auth_headers)
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         data = response.json()
@@ -192,7 +192,7 @@ class TestPaymentTransactionCreation:
         # Create a checkout session
         response = requests.post(f"{BASE_URL}/api/payments/checkout", json={
             "package_id": "premium_monthly",
-            "origin_url": "https://polls-reactions-feed.preview.emergentagent.com"
+            "origin_url": "https://premium-launch-13.preview.emergentagent.com"
         }, headers=auth_headers)
         
         if response.status_code != 200:

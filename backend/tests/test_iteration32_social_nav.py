@@ -15,7 +15,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://polls-reactions-feed.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://premium-launch-13.preview.emergentagent.com')
 
 # Test credentials
 TEST_USER_EMAIL = "newtest@bruno.com"
