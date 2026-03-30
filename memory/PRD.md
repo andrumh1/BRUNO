@@ -10,100 +10,79 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - **Storage:** Cloudinary (images)
 - **AI:** OpenAI GPT-5.2 (Emergent LLM Key)
 - **Maps:** Leaflet
-- **Payments:** Stripe (planned)
+- **Payments:** Stripe (emergentintegrations)
 
 ## What's Been Implemented
 
-### Phase 17: TikTok Camera & Cache Fix
-- TikTok-style camera UI for creating content
-- Service worker (sw.js v4) for Safari cache-busting
-
-### Phase 18: Responsive Nav & Social System
-- Fully responsive navigation bar (mobile/tablet/desktop)
-- Follow/unfollow/block functionality
-
-### Phase 19: Modern Social Features
-- Trending hashtags with dedicated page
-- Suggested users, post bookmarks, multi-emoji reactions, reposts, polls backend
-
-### Phase 20: "For You" Feed & Settings
-- Personalized algorithmic feed with recommendation engine
-- Centralized settings page
-
-### Phase 21: Card System Fixes
-- Fixed UI overflow bugs on business cards
-- Replaced legacy /dashboard links with /my-profile
+### Phase 17-21: Foundation (Previous Sessions)
+- TikTok camera, Safari cache fix, responsive nav, follow/block system
+- Trending hashtags, suggested users, bookmarks, multi-emoji reactions, reposts, polls backend
+- "For You" algorithmic feed, centralized settings
+- Card overflow fixes, legacy route cleanup
 
 ### Phase 22 (Mar 2026): Advanced Social Features
-- **Polls in Stories:** Full UI for creating polls in stories (Foto/Video + Encuesta tabs). Poll display + voting inside story viewer.
-- **Animated Reactions:** Framer-motion reaction popup with spring animations and floating particles.
-- **@User Mentions:** Clickable @username links everywhere. Autocomplete dropdown in post creation. Backend mention notifications.
-- **Push Notifications Fix:** VAPID key from env instead of hardcoded.
+- Polls in Stories (UI for create/vote), Animated reactions (framer-motion)
+- @User mentions (clickable links, autocomplete, backend notifications)
+- Push notification VAPID key fix
 
 ### Phase 23 (Mar 2026): Card Analytics + Chat Modernization
-- **Card Analytics (Premium Feature):**
-  - Backend router: `/api/analytics/cards/{id}/view` (track), `/api/analytics/cards/{id}` (detail), `/api/analytics/overview`
-  - Frontend: CardAnalyticsPage with overview stats, daily views bar chart, device breakdown, traffic sources, recent viewers
-  - Automatic view tracking on ViewCardPage load
-- **Chat Modernization:**
-  - ALL user names/avatars in chat are clickable `<Link>` hyperlinks to user profiles
-  - Modern UI: rounded search, clean message bubbles, backdrop blur header, tilted send icon empty state
-  - Chat search filter to filter conversations by name
-  - @mentions in chat messages are clickable links
-- **Global Hyperlinks:** All usernames across the app (feed sidebar, posts, comments, chat) are now clickable profile links
+- Card Analytics premium feature (track views, devices, sources, viewers)
+- Chat modernized UI (glass effects, modern bubbles, search filter)
+- All usernames as clickable profile hyperlinks throughout the app
+
+### Phase 24 (Mar 2026): Stripe + Bug Fixes
+- **Stripe Monetization:**
+  - 3 packages: Analytics Monthly ($4.99), Analytics Yearly ($39.99), Bruno Premium ($9.99)
+  - Full checkout flow: /api/payments/checkout → Stripe checkout → /payment/success
+  - Subscription management, payment history, webhook handler
+  - Premium page at /premium with pricing cards
+- **Bug Fixes:**
+  - Card edit button navigation fixed (was /edit-card/ → now /cards/{id}/edit)
+  - Card responsiveness: fully responsive for mobile/tablet/desktop/TV (sm:/md: breakpoints)
+  - Image overflow: All rounded containers now have overflow-hidden (avatars, banners)
+  - FloatingChatBubble: Names/avatars now are <Link> elements to user profiles
 
 ## Key API Endpoints
 
+### Payments (Stripe)
+- GET /api/payments/packages (public)
+- POST /api/payments/checkout (auth - creates Stripe session)
+- GET /api/payments/subscription (auth - subscription status)
+- GET /api/payments/status/{session_id} (auth - poll payment)
+- POST /api/payments/webhook/stripe (Stripe webhook)
+
 ### Card Analytics
-- POST /api/analytics/cards/{card_id}/view (public, tracks device/source)
-- GET /api/analytics/cards/{card_id}?days=30 (owner only, detailed metrics)
-- GET /api/analytics/overview (all user cards summary)
+- POST /api/analytics/cards/{card_id}/view
+- GET /api/analytics/cards/{card_id}?days=30
+- GET /api/analytics/overview
 
-### Social Graph
-- POST /api/users/{user_id}/block, /unblock
-- GET /api/users/followers, /following
-
-### Content Interaction
-- POST /api/posts/{post_id}/bookmark, /repost, /react, /like
-- GET /api/users/mention-search?q= (autocomplete)
-
-### Polls
+### Social/Content
 - POST /api/social/polls, GET /api/social/polls/{id}, POST /api/social/polls/{id}/vote
-
-### Stories
+- GET /api/users/mention-search?q=
 - POST /api/stories/ (supports poll_id)
-- GET /api/stories/feed
+
+## DB Schema Additions
+- **payment_transactions:** id, user_id, session_id, package_id, amount, currency, payment_status, paid_at
+- **card_analytics:** id, card_id, viewer_id, device, source_url, created_at
+- **users (updated):** subscription_tier, subscription_expires
 
 ## Prioritized Backlog
 
-### P2: Stripe Monetization
-- Integrate Stripe for premium features (card analytics)
-- Payment flow for subscriptions
-
 ### P2: Backend Refactoring
 - Migrate endpoints from server.py (5700+ lines) into modular routers
-- social.py router exists but underutilized
 
 ### P2: Frontend Component Refactoring
-- Break down FeedPage.jsx (980+ lines)
-- Break down MyProfilePage.jsx, CreateCardPage.jsx
+- Break down FeedPage.jsx (980+ lines), MyProfilePage.jsx
 
-## DB Schema
-- **card_analytics:** id, card_id, card_owner_id, viewer_id, source_url, user_agent, device, created_at
-- **polls:** id, creator_id, question, options[{text, votes}], total_votes, voters[]
-- **stories:** id, user_id, media_url, media_type, caption, poll_id, visibility, expires_at
-- **reactions:** id, user_id, target_id, reaction_type
-- **notifications:** id, user_id, actor_id, type, target_id, message
+### P3: Advanced ML Feed
+- Improve "For You" algorithm with collaborative filtering
+- WebSocket real-time notifications
 
 ## Test Credentials
 - Email: newtest@bruno.com
 - Password: Test1234!
-- Test Card ID: d16c2745-e082-4b22-84f8-749beb5e33fd
 
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 (Emergent LLM Key)
-- Daily.co (Video Calls)
-- Cloudinary (Image Storage)
-- Stripe (Payments - planned)
-- Leaflet (Maps)
-- Emergent Google Auth
+- Stripe (emergentintegrations - sk_test_emergent)
+- Daily.co, Cloudinary, Leaflet, Emergent Google Auth
