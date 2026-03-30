@@ -35,10 +35,23 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Card edit button, image overflow, responsiveness fixes
 - FloatingChatBubble profile links
 
-### Phase 25 (Current): Upsell + Refactoring
-- **Premium Upsell Banner** in Card Analytics: Gold "Desbloquea Analytics Pro" banner with blurred locked features preview, $4.99/mes CTA linking to /premium. Only shows for free users.
-- **Frontend Refactoring:** Extracted FeedSidebar.jsx from FeedPage.jsx (~980→~800 lines). Sidebar now includes Analytics and Premium quick links.
-- **Premium Page** at /premium: 3 pricing cards, feature grid, payment history, Stripe checkout integration.
+### Phase 25: Upsell + Refactoring
+- Premium Upsell Banner in Card Analytics
+- Frontend Refactoring: Extracted FeedSidebar.jsx
+- Premium Page at /premium: 3 pricing cards, Stripe checkout
+
+### Phase 26 (Current): P0 Bug Fixes + Backend Refactoring (2026-03-30)
+- **Stripe Checkout Redirect**: Verified working - redirects to checkout.stripe.com correctly
+- **Card View Full Width**: Removed max-w-5xl constraint, cards now span full width on 1920px+ screens
+- **BeaconsStyleCard Bubble Layout**: Redesigned with proper bubble distribution (header bubble, contact bubbles, social links, job details, gallery)
+- **ViewCardPage Responsive**: Bubble grid layout (1/2/3 columns) for contact, social, gallery sections
+- **Backend Refactoring**: Moved 17 social endpoints from server.py to routers/social.py (~557 lines removed)
+  - Follow/unfollow, Block/unblock, Followers/Following lists
+  - Bookmarks, Reactions (multi-emoji), Reposts
+  - Suggested Users, Trending, Hashtags, Explore
+  - Polls (create, vote, get)
+  - Legacy /profile/{user_id}/follow route maintained
+- **server.py reduced from 5740 → 5183 lines**
 
 ## Key API Endpoints
 
@@ -49,18 +62,25 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 ### Card Analytics
 - POST /api/analytics/cards/{id}/view, GET /api/analytics/cards/{id}, GET /api/analytics/overview
 
-### Social
-- POST /api/social/polls, POST /api/social/polls/{id}/vote
-- GET /api/users/mention-search?q=
-- POST /api/stories/ (supports poll_id)
+### Social (routers/social.py)
+- POST /api/users/{user_id}/follow, POST /api/users/{user_id}/block
+- GET /api/users/{user_id}/followers, GET /api/users/{user_id}/following
+- GET /api/users/me/blocked
+- POST /api/posts/{post_id}/bookmark, GET /api/posts/saved/list
+- POST /api/posts/{post_id}/react, GET /api/posts/{post_id}/reactions
+- POST /api/posts/{post_id}/repost
+- GET /api/social/suggested, GET /api/social/trending
+- GET /api/social/hashtag/{tag}, GET /api/social/explore
+- POST /api/social/polls, POST /api/social/polls/{id}/vote, GET /api/social/polls/{id}
 
 ## Prioritized Backlog
 
-### P2: Backend Refactoring
-- server.py still ~5740 lines with ~112 endpoints
-- Move social endpoints to routers/social.py (follows, blocks, reactions, bookmarks, reposts)
-- Move post endpoints to routers/posts.py
-- Move feed endpoints to routers/feed.py
+### P1: Web/Native Sync
+- Ensure app works in WebViews (no web-only APIs)
+
+### P2: Performance
+- Fix N+1 query patterns (use $in for batch queries in followers/following/blocked)
+- Add pagination to cards and albums endpoints
 
 ### P2: Frontend Refactoring
 - MyProfilePage.jsx (~779 lines) - extract tabs, follower modal
