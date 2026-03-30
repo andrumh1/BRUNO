@@ -18,7 +18,9 @@ import {
   Clock,
   ChevronRight,
   Loader2,
-  CreditCard
+  CreditCard,
+  Crown,
+  Lock
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
@@ -89,11 +91,22 @@ const CardAnalyticsPage = () => {
   const [cardAnalytics, setCardAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [subscription, setSubscription] = useState(null);
 
   useEffect(() => {
     if (!token) { navigate("/login"); return; }
     fetchOverview();
+    fetchSubscription();
   }, [token]);
+
+  const fetchSubscription = async () => {
+    try {
+      const res = await axios.get(`${API}/payments/subscription`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSubscription(res.data);
+    } catch (e) {}
+  };
 
   const fetchOverview = async () => {
     try {
@@ -165,6 +178,48 @@ const CardAnalyticsPage = () => {
                       <h3 className="font-semibold text-sm">Vistas diarias</h3>
                     </div>
                     <MiniBarChart data={overview.daily_views} />
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Premium Upsell Banner */}
+            {(!subscription || !subscription.is_active) && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+                <Card className="overflow-hidden border-amber-500/20 bg-gradient-to-r from-amber-500/5 via-orange-500/5 to-amber-500/5">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
+                        <Crown className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-sm mb-0.5">Desbloquea Analytics Pro</h3>
+                        <p className="text-xs text-muted-foreground">Ve quien visita tus tarjetas, desde donde y en que dispositivo. Metricas detalladas por solo <span className="font-bold text-amber-600">$4.99/mes</span></p>
+                      </div>
+                      <Link to="/premium">
+                        <Button size="sm" className="rounded-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg shadow-amber-500/20 shrink-0" data-testid="upsell-premium-btn">
+                          <Crown className="w-3.5 h-3.5 mr-1.5" /> Pro
+                        </Button>
+                      </Link>
+                    </div>
+
+                    {/* Blurred preview of premium features */}
+                    <div className="mt-3 relative">
+                      <div className="grid grid-cols-3 gap-2 opacity-40 blur-[1px] pointer-events-none select-none">
+                        <div className="bg-muted/50 rounded-lg p-2 text-center">
+                          <Lock className="w-3 h-3 mx-auto mb-1 text-muted-foreground" />
+                          <p className="text-[9px] text-muted-foreground">Visitantes por dispositivo</p>
+                        </div>
+                        <div className="bg-muted/50 rounded-lg p-2 text-center">
+                          <Lock className="w-3 h-3 mx-auto mb-1 text-muted-foreground" />
+                          <p className="text-[9px] text-muted-foreground">Fuentes de trafico</p>
+                        </div>
+                        <div className="bg-muted/50 rounded-lg p-2 text-center">
+                          <Lock className="w-3 h-3 mx-auto mb-1 text-muted-foreground" />
+                          <p className="text-[9px] text-muted-foreground">Perfil de visitantes</p>
+                        </div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
