@@ -57,6 +57,13 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
   - NFCWritePage now writes backend redirect URL to NFC tags (bypasses SPA load entirely)
   - NFCRedirectPage uses React Router `navigate()` instead of `window.location.href` + removed 500ms delay
   - Service Worker updated to v5 with improved navigation handling
+- **NFC 3-Mode Activation Page** (2026-03-30):
+  - Mode 1: Producto BRUNO con ID (for purchased physical products)
+  - Mode 2: Producto externo con NFC (select card + write to any NFC tag via Web NFC API)
+  - Mode 3: Link externo (generate shareable URL for external NFC tools)
+  - Re-encoding feature for existing NFC tags with updated URLs
+  - Backend: /api/nfc/my-cards returns redirect_url + card_title
+  - Backend: /api/nfc/update-card endpoint for changing linked card
 
 ## Key API Endpoints
 
