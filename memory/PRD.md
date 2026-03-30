@@ -24,11 +24,7 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 
 ### Phase 19: Modern Social Features
 - Trending hashtags with dedicated page
-- Suggested users ("People you may know")
-- Post bookmarks/saving
-- Multi-emoji reactions
-- Reposting functionality
-- Polls backend API
+- Suggested users, post bookmarks, multi-emoji reactions, reposts, polls backend
 
 ### Phase 20: "For You" Feed & Settings
 - Personalized algorithmic feed with recommendation engine
@@ -38,13 +34,30 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Fixed UI overflow bugs on business cards
 - Replaced legacy /dashboard links with /my-profile
 
-### Phase 22 (Current - Mar 2026): Advanced Social Features
-- **Polls in Stories:** Full UI for creating polls in story creation modal (Foto/Video + Encuesta tabs). Poll display + voting inside story viewer with animated progress bars.
-- **Animated Reactions:** Framer-motion powered reaction popup with spring animations, floating particle effects on like/react, and animated bookmark toggle.
-- **@User Mentions:** Clickable @username links in posts and comments (linking to /profile/username). @mention autocomplete dropdown in post creation with real-time user search via /api/users/mention-search. Backend processes mentions and sends push notifications to mentioned users.
-- **Push Notifications Fix:** Fixed VAPID key mismatch in NotificationContext.js to use REACT_APP_VAPID_PUBLIC_KEY from environment instead of hardcoded key. VAPID keys now match between frontend and backend.
+### Phase 22 (Mar 2026): Advanced Social Features
+- **Polls in Stories:** Full UI for creating polls in stories (Foto/Video + Encuesta tabs). Poll display + voting inside story viewer.
+- **Animated Reactions:** Framer-motion reaction popup with spring animations and floating particles.
+- **@User Mentions:** Clickable @username links everywhere. Autocomplete dropdown in post creation. Backend mention notifications.
+- **Push Notifications Fix:** VAPID key from env instead of hardcoded.
+
+### Phase 23 (Mar 2026): Card Analytics + Chat Modernization
+- **Card Analytics (Premium Feature):**
+  - Backend router: `/api/analytics/cards/{id}/view` (track), `/api/analytics/cards/{id}` (detail), `/api/analytics/overview`
+  - Frontend: CardAnalyticsPage with overview stats, daily views bar chart, device breakdown, traffic sources, recent viewers
+  - Automatic view tracking on ViewCardPage load
+- **Chat Modernization:**
+  - ALL user names/avatars in chat are clickable `<Link>` hyperlinks to user profiles
+  - Modern UI: rounded search, clean message bubbles, backdrop blur header, tilted send icon empty state
+  - Chat search filter to filter conversations by name
+  - @mentions in chat messages are clickable links
+- **Global Hyperlinks:** All usernames across the app (feed sidebar, posts, comments, chat) are now clickable profile links
 
 ## Key API Endpoints
+
+### Card Analytics
+- POST /api/analytics/cards/{card_id}/view (public, tracks device/source)
+- GET /api/analytics/cards/{card_id}?days=30 (owner only, detailed metrics)
+- GET /api/analytics/overview (all user cards summary)
 
 ### Social Graph
 - POST /api/users/{user_id}/block, /unblock
@@ -52,47 +65,16 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 
 ### Content Interaction
 - POST /api/posts/{post_id}/bookmark, /repost, /react, /like
-- POST /api/posts/{post_id}/comments
-
-### Discovery & Feeds
-- GET /api/social/suggested, /trending, /explore
-- GET /api/posts/saved, /api/hashtags/{tag}
-- GET /api/social/feed/for-you
-- GET /api/feed/for-you
-
-### Polls
-- POST /api/social/polls (create)
-- GET /api/social/polls/{poll_id} (view)
-- POST /api/social/polls/{poll_id}/vote (vote)
-
-### Mentions
 - GET /api/users/mention-search?q= (autocomplete)
 
+### Polls
+- POST /api/social/polls, GET /api/social/polls/{id}, POST /api/social/polls/{id}/vote
+
 ### Stories
-- POST /api/stories/ (create, supports poll_id)
+- POST /api/stories/ (supports poll_id)
 - GET /api/stories/feed
-- POST /api/stories/{id}/view
-
-### Push Notifications
-- POST /api/push/subscribe
-- DELETE /api/push/unsubscribe
-- POST /api/push/test
-
-## DB Schema
-- **users:** id, email, name, role, subscription_tier, preferences, blocked_by
-- **posts:** id, user_id, content, media, hashtags, mentions, likes_count, comments_count
-- **polls:** id, creator_id, question, options[{text, votes}], total_votes, voters[]
-- **stories:** id, user_id, media_url, media_type, caption, poll_id, visibility, expires_at
-- **reactions:** id, user_id, target_id, target_type, reaction_type
-- **bookmarks:** user_id, post_id
-- **notifications:** id, user_id, actor_id, type, target_id, message
-- **push_subscriptions:** id, user_id, endpoint, keys
 
 ## Prioritized Backlog
-
-### P1: Card Analytics Feature
-- Backend: Endpoints to track card views (who, when, source URL)
-- Frontend: CardAnalyticsPage.jsx with charts and metrics
 
 ### P2: Stripe Monetization
 - Integrate Stripe for premium features (card analytics)
@@ -100,17 +82,23 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 
 ### P2: Backend Refactoring
 - Migrate endpoints from server.py (5700+ lines) into modular routers
-- social.py router exists but is underutilized
-- Group by domain: polls, bookmarks, reactions, mentions, feed
+- social.py router exists but underutilized
 
 ### P2: Frontend Component Refactoring
 - Break down FeedPage.jsx (980+ lines)
-- Break down MyProfilePage.jsx
-- Break down CreateCardPage.jsx / EditCardPage.jsx
+- Break down MyProfilePage.jsx, CreateCardPage.jsx
+
+## DB Schema
+- **card_analytics:** id, card_id, card_owner_id, viewer_id, source_url, user_agent, device, created_at
+- **polls:** id, creator_id, question, options[{text, votes}], total_votes, voters[]
+- **stories:** id, user_id, media_url, media_type, caption, poll_id, visibility, expires_at
+- **reactions:** id, user_id, target_id, reaction_type
+- **notifications:** id, user_id, actor_id, type, target_id, message
 
 ## Test Credentials
 - Email: newtest@bruno.com
 - Password: Test1234!
+- Test Card ID: d16c2745-e082-4b22-84f8-749beb5e33fd
 
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 (Emergent LLM Key)
