@@ -1804,14 +1804,43 @@ async def nfc_direct_redirect(nfc_id: str):
 @api_router.get("/nfc/my-cards")
 async def get_my_nfc_cards(current_user: User = Depends(get_current_user)):
     nfc_cards = await db.nfc_cards.find({"user_id": current_user.id}, {"_id": 0}).to_list(1000)
+    frontend_url = os.environ.get('FRONTEND_URL', '')
     
     for nfc in nfc_cards:
         if isinstance(nfc.get('created_at'), str):
             nfc['created_at'] = datetime.fromisoformat(nfc['created_at'])
         if nfc.get('activated_at') and isinstance(nfc['activated_at'], str):
             nfc['activated_at'] = datetime.fromisoformat(nfc['activated_at'])
+        # Include the current redirect URL for re-encoding
+        nfc['redirect_url'] = f"{frontend_url}/api/nfc/go/{nfc['nfc_id']}"
+        card = await db.cards.find_one({"id": nfc.get("card_id", "")}, {"_id": 0, "title": 1})
+        nfc['card_title'] = card.get('title', '') if card else ''
     
     return nfc_cards
+
+@api_router.post("/nfc/update-card")
+async def update_nfc_card_link(nfc_id: str, card_id: str, current_user: User = Depends(get_current_user)):
+    """Update the card linked to an NFC tag"""
+    nfc_card = await db.nfc_cards.find_one({"nfc_id": nfc_id, "user_id": current_user.id})
+    if not nfc_card:
+        raise HTTPException(status_code=404, detail="NFC tag not found")
+    
+    card = await db.cards.find_one({"id": card_id, "user_id": current_user.id})
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+    
+    await db.nfc_cards.update_one(
+        {"nfc_id": nfc_id},
+        {"$set": {"card_id": card_id, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    frontend_url = os.environ.get('FRONTEND_URL', '')
+    return {
+        "message": "NFC card updated",
+        "nfc_id": nfc_id,
+        "card_id": card_id,
+        "redirect_url": f"{frontend_url}/api/nfc/go/{nfc_id}"
+    }
 
 @api_router.post("/nfc/configure-product")
 async def configure_nfc_product(config_input: NFCProductConfig, current_user: User = Depends(get_current_user)):
