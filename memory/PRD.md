@@ -21,15 +21,23 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 ### Phase 30: Satellite Bubble System (2026-04-05)
 - **NavScrollContext**: Shared state + sessionStorage persistence for minimized cards + touch swipe gesture (up=expand, down=minimize)
 - **Fixed Positioning from Center**: Each pill independently positioned using `calc(50% ± Npx)` to guarantee zero overlap:
-  - Card pills tray: `left:8px` to `right:calc(50%+104px)` — scrollable
+  - Card pills tray: `right:calc(50%+96px)` — scrollable, adjacent left of AI pill
   - AI pill: `right:calc(50%+60px)` 
   - BRUNO pill: `left:50% -translate-x-1/2`
   - Chat pill: `left:calc(50%+60px)`
   - User avatar tray: `left:calc(50%+104px)` to `right:8px` — scrollable
-- **Card Minimize Feature**: ViewCardPage has minimize button → adds card to context/sessionStorage → pill appears at bottom-left on scroll minimize → click pill reopens card
+- **Card Minimize Feature**: ViewCardPage has minimize button → adds card to context/sessionStorage → pill appears adjacent to AI pill on scroll minimize → click pill reopens card
+- **Card Type Badges**: Colored dot (Personal=blue, Business=green, Freelance=orange, Curriculum=purple) on each minimized card pill
 - **Bug Fix**: Clicking minimized chat avatar now calls `setMinimized(false)` to expand nav + show chat window
 - **Haptic Feedback**: Vibration API on minimize/expand state changes
 - **Touch Gestures**: Swipe up=expand, swipe down=minimize on all pill elements
+
+### Phase 31: Persistent Sessions & Polish (2026-04-05)
+- JWT token expiry extended to 30 days (was 7 days)
+- /api/auth/refresh endpoint for explicit token renewal
+- /api/auth/me auto-returns `refreshed_token` when token expires within 7 days
+- Frontend AuthContext silently updates stored token when receiving refreshed_token
+- All login paths (email, Google OAuth) store token in localStorage by default for cross-session persistence
 
 ## Key API Endpoints
 - POST /api/ai/chat, GET /api/ai/history, POST /api/upload/chat-file
