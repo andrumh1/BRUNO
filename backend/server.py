@@ -4400,14 +4400,14 @@ async def chat_with_bruno_ai(
         chat = ai_chat_sessions[session_id]
         
         # Search public cards for context
-        cards_context = await _search_public_cards_for_ai(input_data.message)
+        cards_context = await _search_public_cards_for_ai(input_data.message) or []
         
         # Build enriched message with card context
         enriched_message = input_data.message
         if cards_context:
             cards_info = "\n".join([
-                f"- [{c.get('id')}] {c.get('title','')} ({c.get('card_type','')}) - {c.get('subtitle','')} - {c.get('description','')[:80]}"
-                for c in cards_context
+                f"- [{c.get('id','?')}] {c.get('title','')} ({c.get('card_type','')}) - {c.get('subtitle','')} - {(c.get('description','') or '')[:80]}"
+                for c in cards_context if c
             ])
             enriched_message += f"\n\n[CONTEXTO DE TARJETAS ENCONTRADAS]\n{cards_info}"
         
@@ -4424,16 +4424,16 @@ async def chat_with_bruno_ai(
             "user_message": input_data.message,
             "ai_response": response,
             "attachment_url": input_data.attachment_url,
-            "cards_context": [c.get("id") for c in cards_context] if cards_context else [],
+            "cards_context": [c.get("id") for c in cards_context if c] if cards_context else [],
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.ai_conversations.insert_one(conversation_doc)
         
         # Return cards context for frontend to render previews
         cards_for_response = [
-            {"id": c.get("id"), "title": c.get("title"), "card_type": c.get("card_type"), 
-             "subtitle": c.get("subtitle", ""), "city": c.get("location", {}).get("city", "")}
-            for c in cards_context
+            {"id": c.get("id", ""), "title": c.get("title", ""), "card_type": c.get("card_type", ""), 
+             "subtitle": c.get("subtitle", ""), "city": (c.get("location") or {}).get("city", "")}
+            for c in cards_context if c
         ] if cards_context else None
         
         return AIMessageResponse(response=response, session_id=session_id, cards_context=cards_for_response)
