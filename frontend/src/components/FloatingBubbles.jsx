@@ -109,11 +109,20 @@ const CARD_TYPE_COLORS = {
   solicitud_servicio: '#06B6D4',
 };
 
+// Item type badge colors & icons
+const ITEM_TYPE_CONFIG = {
+  card: { color: null, icon: 'C' },        // Uses CARD_TYPE_COLORS
+  profile: { color: '#8B5CF6', icon: 'P' },
+  post: { color: '#3B82F6', icon: 'T' },
+  reel: { color: '#EF4444', icon: 'R' },
+  live: { color: '#EF4444', icon: 'L' },
+};
+
 const FloatingBubbles = () => {
   const { user, token } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { minimized, setMinimized, minimizedCards, removeMinimizedCard, touchHandlers } = useNavScroll();
+  const { minimized, setMinimized, minimizedItems, removeMinimizedItem, touchHandlers } = useNavScroll();
   const [showAIChat, setShowAIChat] = useState(false);
   const [aiMessages, setAiMessages] = useState([]);
   const [aiInput, setAiInput] = useState("");
@@ -226,8 +235,8 @@ const FloatingBubbles = () => {
       {/* === MINIMIZED STATE: Card tray + AI pill === */}
       {minimized && (
         <>
-          {/* Minimized card pills — scrollable, adjacent left of AI pill */}
-          {minimizedCards.length > 0 && (
+          {/* Minimized items tray — universal: cards, profiles, posts, reels, lives */}
+          {minimizedItems.length > 0 && (
             <div
               className="fixed z-[10000] bottom-[19px] overflow-x-auto scrollbar-hide transition-all duration-300 flex justify-end"
               style={{
@@ -235,49 +244,63 @@ const FloatingBubbles = () => {
                 maxWidth: 'calc(50% - 96px)',
                 paddingBottom: 'env(safe-area-inset-bottom, 0px)',
               }}
-              data-testid="minimized-cards-tray"
+              data-testid="minimized-items-tray"
             >
               <div className="flex items-center gap-1.5 w-max">
-                {minimizedCards.map((card) => {
-                  const badgeColor = CARD_TYPE_COLORS[card.card_type] || '#6B7280';
-                  const typeLabel = {personal:'Personal',business:'Negocio',freelance:'Freelance',curriculum:'CV',empresarial:'Empresa',oferta_trabajo:'Oferta',busqueda_personal:'Busqueda',solicitud_servicio:'Servicio'}[card.card_type] || card.card_type;
+                {minimizedItems.map((item) => {
+                  const isCard = item.itemType === 'card';
+                  const badgeColor = isCard
+                    ? (CARD_TYPE_COLORS[item.card_type] || '#6B7280')
+                    : (ITEM_TYPE_CONFIG[item.itemType]?.color || '#6B7280');
+                  const typeLabels = {
+                    card: {personal:'Personal',business:'Negocio',freelance:'Freelance',curriculum:'CV',empresarial:'Empresa',oferta_trabajo:'Oferta',busqueda_personal:'Busqueda',solicitud_servicio:'Servicio'}[item.card_type] || 'Tarjeta',
+                    profile: 'Perfil',
+                    post: 'Post',
+                    reel: 'Reel',
+                    live: 'En Vivo',
+                  };
+                  const typeLabel = typeLabels[item.itemType] || item.itemType;
+                  const itemKey = `${item.itemType}-${item.id}`;
+                  const routes = { card: `/c/${item.id}`, profile: `/profile/${item.id}`, post: `/feed`, reel: `/reels?id=${item.id}`, live: `/lives/${item.id}` };
+                  const targetRoute = routes[item.itemType] || '/feed';
+
                   return (
                     <button
-                      key={card.id}
-                      onClick={() => { setTooltipCard(null); setMinimized(false); navigate(`/c/${card.id}`); removeMinimizedCard(card.id); }}
-                      onTouchStart={() => { longPressTimer.current = setTimeout(() => setTooltipCard(card.id), 400); }}
+                      key={itemKey}
+                      onClick={() => { setTooltipCard(null); setMinimized(false); navigate(targetRoute); removeMinimizedItem(item.id, item.itemType); }}
+                      onTouchStart={() => { longPressTimer.current = setTimeout(() => setTooltipCard(itemKey), 400); }}
                       onTouchEnd={() => { clearTimeout(longPressTimer.current); }}
-                      onMouseDown={() => { longPressTimer.current = setTimeout(() => setTooltipCard(card.id), 400); }}
+                      onMouseDown={() => { longPressTimer.current = setTimeout(() => setTooltipCard(itemKey), 400); }}
                       onMouseUp={() => { clearTimeout(longPressTimer.current); }}
                       onMouseLeave={() => { clearTimeout(longPressTimer.current); setTooltipCard(null); }}
                       className="relative group/card shrink-0"
-                      data-testid={`minimized-card-${card.id}`}
+                      data-testid={`minimized-${item.itemType}-${item.id}`}
                     >
                       {/* Long-press tooltip */}
-                      {tooltipCard === card.id && (
-                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-foreground text-background text-[9px] font-medium whitespace-nowrap shadow-lg z-10 animate-in fade-in zoom-in-95 duration-150" data-testid="card-tooltip">
-                          <span>{card.title}</span>
+                      {tooltipCard === itemKey && (
+                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-foreground text-background text-[9px] font-medium whitespace-nowrap shadow-lg z-10 animate-in fade-in zoom-in-95 duration-150" data-testid="item-tooltip">
+                          <span>{item.title || item.name || 'Sin titulo'}</span>
                           <span className="ml-1 opacity-60">· {typeLabel}</span>
                           <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-0 h-0 border-l-[4px] border-r-[4px] border-t-[4px] border-l-transparent border-r-transparent border-t-foreground" />
                         </div>
                       )}
                       <div className="w-7 h-7 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-lg overflow-hidden transition-all hover:scale-110 active:scale-90 flex items-center justify-center">
-                        {card.thumbnail ? (
-                          <img src={card.thumbnail} alt="" className="w-full h-full object-cover" />
+                        {item.thumbnail ? (
+                          <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-[9px] font-bold text-primary">
-                            {(card.title || "?")[0].toUpperCase()}
+                            {(item.title || item.name || ITEM_TYPE_CONFIG[item.itemType]?.icon || "?")[0].toUpperCase()}
                           </span>
                         )}
                       </div>
-                      {/* Card type badge */}
+                      {/* Type badge */}
                       <div
-                        className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-[1.5px] border-background shadow-sm"
+                        className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-[1.5px] border-background shadow-sm ${item.itemType === 'live' ? 'animate-pulse' : ''}`}
                         style={{ backgroundColor: badgeColor }}
-                        data-testid={`card-badge-${card.card_type || 'unknown'}`}
+                        data-testid={`item-badge-${item.itemType}`}
                       />
                       <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full items-center justify-center text-white hidden group-hover/card:flex transition-all cursor-pointer"
-                        onClick={(e) => { e.stopPropagation(); removeMinimizedCard(card.id); }}>
+                        onClick={(e) => { e.stopPropagation(); removeMinimizedItem(item.id, item.itemType); }}>
                         <X className="w-2 h-2" />
                       </div>
                     </button>

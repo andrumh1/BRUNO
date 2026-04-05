@@ -25,8 +25,10 @@ import {
   Flag,
   X,
   CreditCard,
-  Eye
+  Eye,
+  Minimize2
 } from "lucide-react";
+import { useNavScroll } from "@/contexts/NavScrollContext";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -34,6 +36,7 @@ const UserProfilePage = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
   const { user: currentUser, token } = useAuth();
+  const { addMinimizedItem } = useNavScroll();
   
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -231,6 +234,17 @@ const UserProfilePage = () => {
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} data-testid="profile-back-btn">
               <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => {
+              addMinimizedItem({
+                id: userId,
+                itemType: 'profile',
+                title: profile.display_name || profile.name || '',
+                thumbnail: profile.avatar_url || null,
+              });
+              navigate(-1);
+            }} data-testid="profile-minimize-btn" title="Minimizar perfil">
+              <Minimize2 className="w-4 h-4" />
             </Button>
             <div>
               <h1 className="font-bold text-sm">{profile.display_name || profile.name}</h1>

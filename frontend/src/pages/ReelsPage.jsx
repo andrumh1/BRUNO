@@ -6,8 +6,9 @@ import axios from "axios";
 import {
   Heart, MessageCircle, Share2, Bookmark, Music2, Play, Pause,
   Volume2, VolumeX, User, Loader2, Radio, Film, Plus,
-  MoreVertical, Home, Eye
+  MoreVertical, Home, Eye, Minimize2
 } from "lucide-react";
+import { useNavScroll } from "@/contexts/NavScrollContext";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -19,6 +20,8 @@ const ReelItem = ({ reel, isActive }) => {
   const [isSaved, setIsSaved] = useState(false);
   const [likesCount, setLikesCount] = useState(reel.likes_count || 0);
   const { token } = useAuth();
+  const { addMinimizedItem } = useNavScroll();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (videoRef.current) {
@@ -103,6 +106,20 @@ const ReelItem = ({ reel, isActive }) => {
 
         <button onClick={(e) => { e.stopPropagation(); setIsSaved(!isSaved); }} className="flex flex-col items-center">
           <Bookmark className={`w-7 h-7 ${isSaved ? "text-yellow-400 fill-yellow-400" : "text-white"}`} />
+        </button>
+
+        <button onClick={(e) => {
+          e.stopPropagation();
+          addMinimizedItem({
+            id: reel.id,
+            itemType: 'reel',
+            title: (reel.content || reel.description || '').slice(0, 30) || 'Reel',
+            thumbnail: reel.thumbnail_url || reel.media?.[0]?.url || null,
+          });
+          navigate(-1);
+        }} className="flex flex-col items-center" data-testid="reel-minimize-btn">
+          <Minimize2 className="w-6 h-6 text-white" />
+          <span className="text-[10px] text-white mt-0.5">Min</span>
         </button>
       </div>
 

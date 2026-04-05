@@ -22,8 +22,10 @@ import {
   Frown,
   ThumbsUp,
   Repeat2,
-  X
+  X,
+  Minimize2
 } from "lucide-react";
+import { useNavScroll } from "@/contexts/NavScrollContext";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -86,6 +88,7 @@ const ReactionParticle = ({ icon: Icon, color, fill }) => (
 const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarClick }) => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
+  const { addMinimizedItem } = useNavScroll();
   const [isLiked, setIsLiked] = useState(post.is_liked || false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
   const [isBookmarked, setIsBookmarked] = useState(post.is_bookmarked || false);
@@ -285,6 +288,17 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
                   )}
                   <button onClick={() => { handleRepost(); setShowMenu(false); }} className="w-full px-4 py-2 text-sm text-left hover:bg-muted flex items-center gap-2">
                     <Repeat2 className="w-3.5 h-3.5" /> Compartir en mi perfil
+                  </button>
+                  <button onClick={() => {
+                    addMinimizedItem({
+                      id: post.id,
+                      itemType: 'post',
+                      title: (post.content || '').slice(0, 40) + ((post.content || '').length > 40 ? '...' : ''),
+                      thumbnail: post.media?.[0]?.url || post.user?.avatar_url || null,
+                    });
+                    setShowMenu(false);
+                  }} className="w-full px-4 py-2 text-sm text-left hover:bg-muted flex items-center gap-2" data-testid="post-minimize-btn">
+                    <Minimize2 className="w-3.5 h-3.5" /> Minimizar
                   </button>
                   {user?.id !== post.user_id && (
                     <ReportButton
