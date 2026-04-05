@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PostCard from "@/components/PostCard";
+import CardPreviewModal from "@/components/CardPreviewModal";
 import { PointsWidget } from "@/components/PointsSystem";
 import axios from "axios";
 import { 
@@ -44,7 +45,8 @@ import {
   Nfc,
   List as ListIcon,
   Scale,
-  TrendingUp
+  TrendingUp,
+  LayoutGrid
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -69,6 +71,18 @@ const MyProfilePage = () => {
   const [followersList, setFollowersList] = useState([]);
   const [followingList, setFollowingList] = useState([]);
   const [albums, setAlbums] = useState([]);
+  const [previewCard, setPreviewCard] = useState(null);
+  const longPressRef = useRef(null);
+  const pressStartTime = useRef(0);
+
+  const handleCardPress = (card) => {
+    pressStartTime.current = Date.now();
+    longPressRef.current = setTimeout(() => setPreviewCard(card), 500);
+  };
+  const handleCardRelease = (card) => {
+    clearTimeout(longPressRef.current);
+    if (Date.now() - pressStartTime.current < 500 && !previewCard) navigate(`/c/${card.id}`);
+  };
   const [listLoading, setListLoading] = useState(false);
 
   // Fetch profile data
@@ -617,6 +631,9 @@ const MyProfilePage = () => {
                 NFC
               </Button>
               <div className="ml-auto flex gap-1">
+                <button onClick={() => setCardViewMode("compact")} className={`p-1.5 rounded-lg ${cardViewMode === "compact" ? "bg-primary/10 text-primary" : "text-muted-foreground"}`} data-testid="profile-view-compact">
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
                 <button onClick={() => setCardViewMode("grid")} className={`p-1.5 rounded-lg ${cardViewMode === "grid" ? "bg-primary/10 text-primary" : "text-muted-foreground"}`}>
                   <Grid3X3 className="w-4 h-4" />
                 </button>
@@ -636,54 +653,75 @@ const MyProfilePage = () => {
                   Crear tarjeta
                 </Button>
               </div>
-            ) : cardViewMode === "grid" ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            ) : cardViewMode === "compact" ? (
+              /* Compact: 3 cols, smallest */
+              <div className="grid grid-cols-3 gap-2">
                 {cards.map(card => (
-                  <div key={card.id} className="glass-card rounded-xl overflow-hidden hover:shadow-lg transition-all">
-                    <div
-                      className="h-28 relative overflow-hidden rounded-t-xl"
-                      style={{
-                        backgroundColor: card.background_color || '#f97316',
-                      }}
-                    >
+                  <div key={card.id}
+                    className="glass-card rounded-xl overflow-hidden cursor-pointer active:scale-[0.96] transition-all"
+                    onPointerDown={() => handleCardPress(card)}
+                    onPointerUp={() => handleCardRelease(card)}
+                    onPointerLeave={() => clearTimeout(longPressRef.current)}
+                    data-testid={`profile-compact-card-${card.id}`}
+                  >
+                    <div className="h-16 relative" style={{ background: card.banner_url ? undefined : `linear-gradient(135deg, ${card.background_color || '#f97316'}, ${card.background_color || '#ea580c'}dd)` }}>
+                      {card.banner_url && <img src={card.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                    </div>
+                    <div className="p-2">
+                      <h4 className="text-[10px] font-bold truncate">{card.title}</h4>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-[8px] text-muted-foreground flex items-center gap-0.5"><Eye className="w-2 h-2" />{card.views || 0}</span>
+                        <div className="flex gap-0.5">
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/cards/${card.id}/edit`); }} className="p-0.5 rounded hover:bg-muted">
+                            <Edit3 className="w-2.5 h-2.5" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }} className="p-0.5 rounded hover:bg-red-50 text-destructive">
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : cardViewMode === "grid" ? (
+              /* Grid: 2 cols, medium */
+              <div className="grid grid-cols-2 gap-3">
+                {cards.map(card => (
+                  <div key={card.id}
+                    className="glass-card rounded-xl overflow-hidden cursor-pointer active:scale-[0.97] transition-all hover:shadow-lg"
+                    onPointerDown={() => handleCardPress(card)}
+                    onPointerUp={() => handleCardRelease(card)}
+                    onPointerLeave={() => clearTimeout(longPressRef.current)}
+                    data-testid={`profile-grid-card-${card.id}`}
+                  >
+                    <div className="h-24 relative overflow-hidden rounded-t-xl" style={{ backgroundColor: card.background_color || '#f97316' }}>
                       {card.banner_url ? (
                         <img src={card.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
                       ) : (
-                        <div className="absolute inset-0" style={{
-                          background: `linear-gradient(135deg, ${card.background_color || '#f97316'}, ${card.background_color || '#ea580c'}dd)`,
-                        }} />
+                        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${card.background_color || '#f97316'}, ${card.background_color || '#ea580c'}dd)` }} />
                       )}
                       <div className="absolute top-2 left-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium text-white bg-black/40 backdrop-blur-sm capitalize">
-                          {card.card_type || card.type}
-                        </span>
-                      </div>
-                      <div className="absolute top-2 right-2 flex gap-1">
-                        <button onClick={() => window.open(`/c/${card.id}`, "_blank")} className="p-1.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white">
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => navigate(`/cards/${card.id}/qr`)} className="p-1.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white">
-                          <QrCode className="w-3.5 h-3.5" />
-                        </button>
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium text-white bg-black/40 capitalize">{card.card_type}</span>
                       </div>
                     </div>
-                    <div className="p-3">
-                      <h3 className="font-bold text-sm truncate">{card.title}</h3>
-                      {card.subtitle && <p className="text-xs text-muted-foreground truncate">{card.subtitle}</p>}
+                    <div className="p-2.5">
+                      <h3 className="font-bold text-xs truncate">{card.title}</h3>
+                      {card.subtitle && <p className="text-[10px] text-muted-foreground truncate">{card.subtitle}</p>}
                       <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" />{card.views || 0}</span>
-                          <span className={card.is_public ? "text-green-500" : "text-yellow-500"}>{card.is_public ? "Publica" : "Privada"}</span>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" />{card.views || 0}</span>
+                          <span className={card.is_public ? "text-green-500" : "text-yellow-500"}>{card.is_public ? "Pub" : "Priv"}</span>
                         </div>
                         <div className="flex gap-1">
-                          <button onClick={() => navigate(`/cards/${card.id}/edit`)} className="p-1.5 rounded-lg hover:bg-muted" data-testid={`edit-card-${card.id}`}>
-                            <Edit3 className="w-3.5 h-3.5" />
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/cards/${card.id}/edit`); }} className="p-1 rounded hover:bg-muted" data-testid={`edit-card-${card.id}`}>
+                            <Edit3 className="w-3 h-3" />
                           </button>
-                          <button onClick={() => handleShareCard(card)} className="p-1.5 rounded-lg hover:bg-muted">
-                            <Share2 className="w-3.5 h-3.5" />
+                          <button onClick={(e) => { e.stopPropagation(); handleShareCard(card); }} className="p-1 rounded hover:bg-muted">
+                            <Share2 className="w-3 h-3" />
                           </button>
-                          <button onClick={() => handleDeleteCard(card.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 text-destructive">
-                            <Trash2 className="w-3.5 h-3.5" />
+                          <button onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }} className="p-1 rounded hover:bg-red-50 text-destructive">
+                            <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
                       </div>
@@ -692,42 +730,49 @@ const MyProfilePage = () => {
                 ))}
               </div>
             ) : (
+              /* List: compact rows */
               <div className="space-y-2">
                 {cards.map(card => (
-                  <div key={card.id} className="glass-card rounded-xl p-3 flex items-center gap-3 hover:shadow-md transition-all">
+                  <div key={card.id}
+                    className="glass-card rounded-xl p-2.5 flex items-center gap-2.5 cursor-pointer active:bg-muted/50 transition-all"
+                    onPointerDown={() => handleCardPress(card)}
+                    onPointerUp={() => handleCardRelease(card)}
+                    onPointerLeave={() => clearTimeout(longPressRef.current)}
+                    data-testid={`profile-list-card-${card.id}`}
+                  >
                     {card.avatar_url ? (
-                      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
                         <img src={card.avatar_url} alt="" className="w-full h-full object-cover" />
                       </div>
                     ) : (
-                      <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center text-white font-bold flex-shrink-0"
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
                         style={{ backgroundColor: card.background_color || '#f97316' }}>
                         {card.title?.charAt(0) || "?"}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-sm truncate">{card.title}</h3>
+                      <h3 className="font-bold text-xs truncate">{card.title}</h3>
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                        <span className="capitalize">{card.card_type || card.type}</span>
+                        <span className="capitalize">{card.card_type}</span>
                         <span><Eye className="w-2.5 h-2.5 inline" /> {card.views || 0}</span>
-                        <span className={card.is_public ? "text-green-500" : "text-yellow-500"}>{card.is_public ? "Publica" : "Privada"}</span>
+                        <span className={card.is_public ? "text-green-500" : "text-yellow-500"}>{card.is_public ? "Pub" : "Priv"}</span>
                       </div>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
-                      <button onClick={() => navigate(`/cards/${card.id}/edit`)} className="p-1.5 rounded-lg hover:bg-muted">
-                        <Edit3 className="w-3.5 h-3.5" />
+                      <button onClick={(e) => { e.stopPropagation(); navigate(`/cards/${card.id}/edit`); }} className="p-1.5 rounded-lg hover:bg-muted">
+                        <Edit3 className="w-3 h-3" />
                       </button>
-                      <button onClick={() => window.open(`/c/${card.id}`, "_blank")} className="p-1.5 rounded-lg hover:bg-muted">
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => handleDeleteCard(card.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 text-destructive">
-                        <Trash2 className="w-3.5 h-3.5" />
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }} className="p-1.5 rounded-lg hover:bg-red-50 text-destructive">
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
+
+            {/* Card Preview Modal */}
+            <CardPreviewModal card={previewCard} isOpen={!!previewCard} onClose={() => setPreviewCard(null)} />
           </div>
         )}
 

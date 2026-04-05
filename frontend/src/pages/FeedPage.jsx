@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import CardPreviewModal from "@/components/CardPreviewModal";
 import SocialLinkButton from "@/components/SocialLinkButton";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import PostCard from "@/components/PostCard";
@@ -16,7 +17,7 @@ import NotificationBell from "@/components/NotificationBell";
 import BeaconsStyleCard from "@/components/BeaconsStyleCard";
 import { FeedSidebar } from "@/components/FeedSidebar";
 import axios from "axios";
-import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag, Home, CreditCard, RefreshCw, MessageCircle, Globe, User, Film, Store, Map, Briefcase, Users, HandHelping, Hash, UserPlus, Sparkles } from "lucide-react";
+import { Search, Eye, Share2, TrendingUp, LogOut, Grid3X3, List, MapPin, ShoppingBag, Home, CreditCard, RefreshCw, MessageCircle, Globe, User, Film, Store, Map, Briefcase, Users, HandHelping, Hash, UserPlus, Sparkles, LayoutGrid } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -41,7 +42,8 @@ const FeedPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [viewMode, setViewMode] = useState("grid"); // grid or list
+  const [viewMode, setViewMode] = useState("compact"); // compact, grid, list
+  const [previewCard, setPreviewCard] = useState(null);
   const [showCreateStory, setShowCreateStory] = useState(false);
   const [trending, setTrending] = useState([]);
   const [suggested, setSuggested] = useState([]);
@@ -206,187 +208,134 @@ const FeedPage = () => {
     return ["oferta_trabajo", "busqueda_personal", "solicitud_servicio"].includes(cardType);
   };
 
-  // Grid Card Component
-  const GridCard = ({ card }) => {
-    // Use BeaconsStyleCard for job-type cards
-    if (isJobCard(card.card_type)) {
-      return <BeaconsStyleCard card={card} />;
+  // Long press handler
+  const longPressRef = useRef(null);
+  const pressStartTime = useRef(0);
+  const handleCardPress = (card) => {
+    pressStartTime.current = Date.now();
+    longPressRef.current = setTimeout(() => {
+      setPreviewCard(card);
+    }, 500);
+  };
+  const handleCardRelease = (card) => {
+    clearTimeout(longPressRef.current);
+    // Only navigate if it was a short tap (< 500ms) and no preview was opened
+    if (Date.now() - pressStartTime.current < 500 && !previewCard) {
+      navigate(`/c/${card.id}`);
     }
+  };
 
+  // Compact Card Component (small, 3 cols)
+  const CompactCard = ({ card }) => {
+    if (isJobCard(card.card_type)) return <BeaconsStyleCard card={card} />;
+    return (
+      <div
+        className="rounded-xl overflow-hidden bg-card ring-1 ring-border/40 shadow-sm cursor-pointer active:scale-[0.97] transition-all"
+        onPointerDown={() => handleCardPress(card)}
+        onPointerUp={() => handleCardRelease(card)}
+        onPointerLeave={() => clearTimeout(longPressRef.current)}
+        data-testid={`compact-card-${card.id}`}
+      >
+        <div className="h-20 relative" style={{ background: card.banner_url ? undefined : `linear-gradient(135deg, ${card.background_color}, ${card.background_color}dd)` }}>
+          {card.banner_url && <img src={card.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+          {card.avatar_url && (
+            <div className="absolute -bottom-5 left-2.5">
+              <img src={card.avatar_url} alt="" className="w-10 h-10 rounded-full border-2 border-card object-cover shadow" />
+            </div>
+          )}
+        </div>
+        <div className="pt-6 pb-2.5 px-2.5">
+          <h4 className="text-xs font-bold truncate">{card.title}</h4>
+          {card.subtitle && <p className="text-[10px] text-muted-foreground truncate">{card.subtitle}</p>}
+          <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground">
+            <Eye className="w-2.5 h-2.5" /> {card.views || 0}
+            <span className="ml-auto px-1.5 py-0.5 rounded-full bg-primary/10 text-[8px] font-medium capitalize">{card.card_type}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Grid Card Component (medium, 2 cols)
+  const GridCard = ({ card }) => {
+    if (isJobCard(card.card_type)) return <BeaconsStyleCard card={card} />;
     return (
       <Card
-        className={`overflow-hidden transition-all group backdrop-blur-xl bg-card/80 ring-1 ring-white/40 shadow-[0_18px_45px_rgba(0,0,0,0.08)] card-hover-lift isolate rounded-2xl ${
+        className={`overflow-hidden transition-all group backdrop-blur-xl bg-card/80 ring-1 ring-white/40 shadow-[0_18px_45px_rgba(0,0,0,0.08)] card-hover-lift isolate rounded-2xl cursor-pointer active:scale-[0.97] ${
           card.is_animated ? "card-bubble-animated" : "card-bubble-static"
         }`}
+        onPointerDown={() => handleCardPress(card)}
+        onPointerUp={() => handleCardRelease(card)}
+        onPointerLeave={() => clearTimeout(longPressRef.current)}
+        data-testid={`grid-card-${card.id}`}
       >
-        {/* Banner or Colored Header */}
-        <div
-          className="h-32 relative overflow-hidden rounded-t-lg"
-          style={{
-            background: card.banner_url
-              ? undefined
-              : `linear-gradient(135deg, ${card.background_color}, ${card.background_color}dd)`,
-          }}
-        >
-          {card.banner_url && (
-            <img src={card.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
-          )}
-          <div className="absolute top-3 right-3">
-            <div className="px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm text-xs font-medium">
-              {getCardTypeLabel(card.card_type)}
-            </div>
+        <div className="h-28 relative overflow-hidden rounded-t-lg" style={{ background: card.banner_url ? undefined : `linear-gradient(135deg, ${card.background_color}, ${card.background_color}dd)` }}>
+          {card.banner_url && <img src={card.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+          <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-white/90 backdrop-blur-sm text-[10px] font-medium">
+            {getCardTypeLabel(card.card_type)}
           </div>
         </div>
-
-      <CardContent className="pt-6 pb-4 relative">
-        {/* Avatar */}
-        <div className="absolute -top-10 left-6">
-          {card.avatar_url ? (
-            <img
-              src={card.avatar_url}
-              alt={card.title}
-              className="w-20 h-20 rounded-full border-4 border-background object-cover shadow-lg"
-            />
-          ) : (
-            <div
-              className="w-20 h-20 rounded-full border-4 border-background flex items-center justify-center text-2xl font-bold shadow-lg"
-              style={{
-                backgroundColor: card.background_color,
-                color: card.text_color,
-              }}
-            >
-              {card.title.charAt(0)}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-12 space-y-3">
-          <div>
-            <Link to={`/c/${card.id}`} className="hover:opacity-80 transition-opacity">
-              <h3 className="text-lg font-bold truncate">{card.title}</h3>
-            </Link>
-            {card.subtitle && (
-              <p className="text-sm text-muted-foreground truncate">{card.subtitle}</p>
-            )}
-            {card.user_id && (
-              <Link to={`/profile/${card.user_id}`} className="text-xs text-primary hover:underline cursor-pointer" data-testid="card-user-profile-link">
-                Ver perfil del autor
-              </Link>
+        <CardContent className="pt-5 pb-3 relative">
+          <div className="absolute -top-8 left-4">
+            {card.avatar_url ? (
+              <img src={card.avatar_url} alt="" className="w-16 h-16 rounded-full border-3 border-background object-cover shadow-lg" />
+            ) : (
+              <div className="w-16 h-16 rounded-full border-3 border-background flex items-center justify-center text-xl font-bold shadow-lg" style={{ backgroundColor: card.background_color, color: card.text_color }}>
+                {card.title.charAt(0)}
+              </div>
             )}
           </div>
-
-          {card.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">{card.description}</p>
-          )}
-
-          {/* Social Links */}
-          {card.social_links && card.social_links.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {card.social_links.slice(0, 5).map((link, index) => (
-                <SocialLinkButton
-                  key={index}
-                  link={link}
-                  size="sm"
-                  onlyIcon={true}
-                />
-              ))}
-              {card.social_links.length > 5 && (
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                  +{card.social_links.length - 5}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Stats */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border/60">
-            <div className="flex items-center gap-1">
-              <Eye className="w-3 h-3" />
-              <span>{card.views || 0} {t("feed.views")}</span>
+          <div className="mt-9 space-y-1.5">
+            <h3 className="text-sm font-bold truncate">{card.title}</h3>
+            {card.subtitle && <p className="text-xs text-muted-foreground truncate">{card.subtitle}</p>}
+            {card.description && <p className="text-xs text-muted-foreground line-clamp-2">{card.description}</p>}
+            {card.social_links?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {card.social_links.slice(0, 4).map((link, i) => (
+                  <SocialLinkButton key={i} link={link} size="sm" onlyIcon={true} />
+                ))}
+                {card.social_links.length > 4 && <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium">+{card.social_links.length - 4}</div>}
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground pt-2 border-t border-border/60">
+              <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {card.views || 0}</span>
+              {card.user_id && <Link to={`/profile/${card.user_id}`} className="ml-auto text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Perfil</Link>}
             </div>
           </div>
-
-          {/* Actions */}
-          <div className="flex gap-2 pt-2">
-            <Link to={`/c/${card.id}`} className="flex-1">
-              <Button variant="outline" size="sm" className="w-full">
-                {t("dashboard.view")}
-              </Button>
-            </Link>
-            <Button variant="ghost" size="sm">
-              <Share2 className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
     );
   };
 
   // List Card Component
   const ListCard = ({ card }) => (
-    <div className="list-view-card">
-      {/* Avatar */}
+    <div
+      className="list-view-card cursor-pointer active:bg-muted/50 transition-colors"
+      onPointerDown={() => handleCardPress(card)}
+      onPointerUp={() => handleCardRelease(card)}
+      onPointerLeave={() => clearTimeout(longPressRef.current)}
+      data-testid={`list-card-${card.id}`}
+    >
       {card.avatar_url ? (
-        <img
-          src={card.avatar_url}
-          alt={card.title}
-          className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-        />
+        <img src={card.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
       ) : (
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0"
-          style={{
-            backgroundColor: card.background_color,
-            color: card.text_color,
-          }}
-        >
+        <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0" style={{ backgroundColor: card.background_color, color: card.text_color }}>
           {card.title.charAt(0)}
         </div>
       )}
-
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="font-bold truncate">{card.title}</h3>
-            {card.subtitle && (
-              <p className="text-sm text-muted-foreground truncate">{card.subtitle}</p>
-            )}
+            <h3 className="text-sm font-bold truncate">{card.title}</h3>
+            {card.subtitle && <p className="text-xs text-muted-foreground truncate">{card.subtitle}</p>}
           </div>
-          <span className="px-2 py-1 rounded-full bg-primary/10 text-xs font-medium flex-shrink-0">
-            {getCardTypeLabel(card.card_type)}
-          </span>
+          <span className="px-1.5 py-0.5 rounded-full bg-primary/10 text-[10px] font-medium flex-shrink-0 capitalize">{card.card_type}</span>
         </div>
-        
-        {card.description && (
-          <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{card.description}</p>
-        )}
-
-        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Eye className="w-3 h-3" />
-            {card.views || 0}
-          </span>
-          {card.location && (
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
-              {card.location.city || card.location.address}
-            </span>
-          )}
+        {card.description && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{card.description}</p>}
+        <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {card.views || 0}</span>
+          {card.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {card.location.city || card.location.address}</span>}
         </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-2 flex-shrink-0">
-        <Link to={`/c/${card.id}`}>
-          <Button variant="outline" size="sm">
-            {t("dashboard.view")}
-          </Button>
-        </Link>
-        <Button variant="ghost" size="icon" className="h-9 w-9">
-          <Share2 className="w-4 h-4" />
-        </Button>
       </div>
     </div>
   );
@@ -837,8 +786,17 @@ const FeedPage = () => {
             <div className="flex justify-end mb-4 sm:mb-6">
               <div className="view-toggle">
                 <button
+                  className={viewMode === "compact" ? "active" : ""}
+                  onClick={() => setViewMode("compact")}
+                  data-testid="view-compact"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  Compacto
+                </button>
+                <button
                   className={viewMode === "grid" ? "active" : ""}
                   onClick={() => setViewMode("grid")}
+                  data-testid="view-grid"
                 >
                   <Grid3X3 className="w-4 h-4" />
                   {t("feed.gridView")}
@@ -846,6 +804,7 @@ const FeedPage = () => {
                 <button
                   className={viewMode === "list" ? "active" : ""}
                   onClick={() => setViewMode("list")}
+                  data-testid="view-list"
                 >
                   <List className="w-4 h-4" />
                   {t("feed.listView")}
@@ -881,14 +840,20 @@ const FeedPage = () => {
 
             {/* Cards Grid/List */}
             {!loading && filteredCards.length > 0 && (
-              viewMode === "grid" ? (
+              viewMode === "compact" ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 mb-10 bubble-stagger">
+                  {filteredCards.map((card) => (
+                    <CompactCard key={card.id} card={card} />
+                  ))}
+                </div>
+              ) : viewMode === "grid" ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-10 bubble-stagger">
                   {filteredCards.map((card) => (
                     <GridCard key={card.id} card={card} />
                   ))}
                 </div>
               ) : (
-                <div className="space-y-4 mb-10">
+                <div className="space-y-3 mb-10">
                   {filteredCards.map((card) => (
                     <ListCard key={card.id} card={card} />
                   ))}
@@ -898,6 +863,9 @@ const FeedPage = () => {
           </>
         )}
       </main>
+      
+      {/* Card Preview Modal (long-press) */}
+      <CardPreviewModal card={previewCard} isOpen={!!previewCard} onClose={() => setPreviewCard(null)} />
       
       {/* Story Editor (Instagram/TikTok style) */}
       <StoryEditor

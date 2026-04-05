@@ -115,11 +115,12 @@ const ReelItem = ({ reel, isActive }) => {
             itemType: 'reel',
             title: (reel.content || reel.description || '').slice(0, 30) || 'Reel',
             thumbnail: reel.thumbnail_url || reel.media?.[0]?.url || null,
+            videoUrl: reel.media?.[0]?.url || reel.video_url || null,
           });
           navigate(-1);
         }} className="flex flex-col items-center" data-testid="reel-minimize-btn">
           <Minimize2 className="w-6 h-6 text-white" />
-          <span className="text-[10px] text-white mt-0.5">Min</span>
+          <span className="text-[10px] text-white mt-0.5">PiP</span>
         </button>
       </div>
 

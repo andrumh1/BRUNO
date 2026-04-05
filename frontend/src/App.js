@@ -10,6 +10,7 @@ import { NavScrollProvider } from "@/contexts/NavScrollContext";
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
 import FloatingChatBubble from "@/components/FloatingChatBubble";
+import PictureInPicture from "@/components/PictureInPicture";
 import CameraFloatingButton from "@/components/CameraFloatingButton";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -155,6 +156,7 @@ function App() {
                 <AppRouter />
                 <FloatingBubbles />
                 <FloatingChatBubble />
+                <PictureInPicture />
                 <CameraFloatingButton />
                 <MobileBottomNav />
                 <TourOverlay />
