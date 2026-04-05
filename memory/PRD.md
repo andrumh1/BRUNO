@@ -14,90 +14,74 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 
 ## What's Been Implemented
 
-### Phase 17-21: Foundation (Previous Sessions)
+### Phase 17-21: Foundation
 - TikTok camera, Safari cache fix, responsive nav, follow/block system
 - Trending hashtags, suggested users, bookmarks, multi-emoji reactions, reposts, polls
 - "For You" algorithmic feed, centralized settings
-- Card overflow fixes, legacy route cleanup
 
 ### Phase 22: Advanced Social Features
-- Polls in Stories (UI create/vote), Animated reactions (framer-motion)
-- @User mentions (clickable links, autocomplete, notifications)
-- Push notification VAPID key fix
+- Polls in Stories, animated reactions, @User mentions, push notifications
 
 ### Phase 23: Card Analytics + Chat Modernization
-- Card Analytics: track views, devices, sources, viewers
-- Chat UI modernized, all usernames as clickable profile links
+- Card Analytics (views, devices, sources), Chat UI modernized
 
 ### Phase 24: Stripe + Bug Fixes
-- Stripe: 3 packages ($4.99 analytics monthly, $39.99 yearly, $9.99 premium)
-- Full checkout flow with Stripe sessions
-- Card edit button, image overflow, responsiveness fixes
-- FloatingChatBubble profile links
+- Stripe: 3 packages, full checkout flow, card fixes
 
 ### Phase 25: Upsell + Refactoring
-- Premium Upsell Banner in Card Analytics
-- Frontend Refactoring: Extracted FeedSidebar.jsx
-- Premium Page at /premium: 3 pricing cards, Stripe checkout
+- Premium Upsell Banner, FeedSidebar.jsx extraction, Premium Page
 
 ### Phase 26: P0 Bug Fixes + Backend Refactoring (2026-03-30)
-- Stripe Checkout Redirect fixed
-- Card View Full Width for 1920px+ screens
-- BeaconsStyleCard Bubble Layout redesigned
-- Backend Refactoring: 17 social endpoints moved to routers/social.py
-- NFC Instant Redirect (HTTP 302) + 3-Mode Activation Page
+- Stripe Checkout fix, Card View Full Width, BeaconsStyleCard redesign
+- Backend: 17 social endpoints → routers/social.py
+- NFC Instant Redirect (HTTP 302) + 3-Mode Activation
 
-### Phase 27: Block 1 Bug Fixes (2026-04-05)
-- Changed "Titulo" to "Nombre" in card editor
-- Fixed explorer card banner overflow
-- Repositioned chat bubble above navigation bar
-- Card edit/create navigation fixes
+### Phase 27-28: Blocks 1-2 (2026-04-05)
+- UI fixes, floating bubble nav bar, scroll-hide, bubble animations, story rings
 
-### Phase 28: Block 2 - UX & Navigation (2026-04-05)
-- Floating bubble navigation bar with scroll-hide
-- Chat scroll-hide on scroll
-- Bubble animations system (CSS classes)
-- Post avatar story ring
+### Phase 29: Block 4 - AI Chat + Messenger Attachments (2026-04-05)
+- Bruno AI: action buttons, card previews, file attachments
+- Backend: `/api/upload/chat-file` endpoint
+- ChatAttachmentMenu: Messenger-style bottom drawer (6 options)
+- ChatPage upgraded to bottom drawer attachments
+- FloatingChatBubble: full attachment support (images, files, audio recording)
 
-### Phase 29: Block 4 - AI Chat + Messenger-style Attachments (2026-04-05)
-- **Bruno AI Chat Enhanced**: Action buttons [ACTION:route/search:...], card previews [CARD:...], file attachments
-- **Backend**: New `/api/upload/chat-file` endpoint for chat file uploads (auto-detects image/video/raw)
-- **Backend**: AI chat context enrichment with public card search results
-- **ChatAttachmentMenu.jsx**: Reusable Messenger-style bottom drawer with 6 options (Camera, Gallery, Video, Document, Card, Sticker)
-- **ChatPage.jsx**: Upgraded from absolute popup to full-screen bottom drawer for attachments
-- **FloatingChatBubble.jsx**: Complete rewrite with attachment support (images, files, audio recording, camera capture)
-- **FloatingBubbles.jsx**: AI chat with attachment upload, action buttons, card previews
-- **Bug Fix**: AI chat session continuity null pointer when cards_context is None
-- **Bug Fix**: Floating chat popup list items now correctly open chats (removed profile Links that intercepted clicks)
+### Phase 30: Satellite Bubble Design + Touch Fixes (2026-04-05)
+- **NavScrollContext**: Shared context for synchronized minimize/expand across nav bar and chat bubbles
+- **Satellite Bubble Layout**: AI bubble (violet) docks to LEFT of nav bar, Chat bubble (orange) docks to RIGHT
+- **Synchronized Minimization**: All 3 elements (AI bubble, nav bar, Chat bubble) minimize/expand together on scroll
+- **Circular Design**: Bubbles are perfectly circular with glow effects and ring indicators when active
+- **Dynamic Notification Badges**: AI bubble shows "IA" badge, Chat bubble shows unread message count
+- **Camera-only Hide**: Bubbles only hidden on /camera page, visible everywhere else
+- **BubbleSelect Touch Fix**: Changed from onTouchStart to onTouchEnd for option selection (prevents premature selection during scroll)
+- **Touch-Manipulation CSS**: Added global touch-manipulation and -webkit-tap-highlight-color styles for all interactive elements
+- **iOS Zoom Prevention**: Native `<select>` elements now have min-height 44px and font-size 16px
+- **Smart Dropdown Positioning**: BubbleSelect now detects available space and drops up when near bottom of viewport
 
 ## Key API Endpoints
 
 ### Payments
 - GET /api/payments/packages, POST /api/payments/checkout
-- GET /api/payments/subscription, GET /api/payments/status/{session_id}
+- GET /api/payments/subscription
 
 ### Card Analytics
-- POST /api/analytics/cards/{id}/view, GET /api/analytics/cards/{id}, GET /api/analytics/overview
+- POST /api/analytics/cards/{id}/view, GET /api/analytics/cards/{id}
 
 ### Social (routers/social.py)
 - POST /api/users/{user_id}/follow, POST /api/users/{user_id}/block
-- GET /api/users/{user_id}/followers, GET /api/users/{user_id}/following
-- POST /api/posts/{post_id}/bookmark, GET /api/posts/saved/list
-- POST /api/posts/{post_id}/react, GET /api/posts/{post_id}/reactions
+- POST /api/posts/{post_id}/bookmark, POST /api/posts/{post_id}/react
 - POST /api/social/polls, POST /api/social/polls/{id}/vote
 
 ### AI Chat
-- POST /api/ai/chat (with card context, attachments, action buttons)
-- GET /api/ai/history, DELETE /api/ai/history
+- POST /api/ai/chat, GET /api/ai/history, DELETE /api/ai/history
 
 ### Uploads
 - POST /api/upload/image, /api/upload/audio, /api/upload/file, /api/upload/avatar
-- POST /api/upload/chat-file (NEW - auto-detects content type)
+- POST /api/upload/chat-file
 
 ## Prioritized Backlog
 
 ### P1: User Feedback Items (from 20-point list)
-- Point #19: Mobile touch issue in editor dropdowns
 - Point #2: Multiple addresses/locations for business cards (map pins)
 - Point #15: Instagram/TikTok-style Story Editor (stickers, text overlay)
 - Point #6: New premium card templates (Formal, Minimalist, Full Image, Animated)
@@ -109,18 +93,14 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Add pagination to cards and albums endpoints
 - Push notification improvements (#18)
 
-### P2: Frontend Refactoring
-- MyProfilePage.jsx (~779 lines) - extract tabs, follower modal
-- CreateCardPage.jsx / EditCardPage.jsx (~1078 lines each) - extract shared form components
+### P2: Refactoring
+- server.py still ~5200 lines (extract auth, cards, AI chat routers)
+- MyProfilePage.jsx (~779 lines)
 
 ### P3: Advanced Features
 - ML collaborative filtering for "For You" feed
 - WebSocket real-time notifications
 - Export analytics data
-
-## Test Credentials
-- Email: newtest@bruno.com
-- Password: Test1234!
 
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 (Emergent LLM Key)
