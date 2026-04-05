@@ -67,11 +67,19 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 
 ### Phase 27: Block 1 Bug Fixes (2026-04-05)
 - Changed "Título" to "Nombre" (ES) / "Name" (EN) in card editor
-- Fixed explorer card banner overflow (isolate + overflow-hidden + rounded-t-lg)
+- Fixed explorer card banner overflow (isolate + overflow-hidden + rounded-t-lg + ring instead of border)
 - Repositioned chat bubble above navigation bar (bottom-20 z-[9990])
 - Removed camera floating button (was hidden behind nav)
 - Card edit now navigates to /c/{cardId} instead of /my-profile
 - Card create now navigates to /c/{newCardId} instead of /my-profile
+
+### Phase 28: Block 2 - UX & Navigation (2026-04-05)
+- **Floating bubble navigation bar**: Pill-shaped floating nav with backdrop blur, auto-minimizes on scroll down, expands on scroll up, manual minimize/expand buttons
+- **Chat scroll-hide**: FloatingChatBubble hides on scroll down, shows on scroll up, hidden on /camera page
+- **Bubble animations system**: CSS animation classes (bubble-stagger, bubble-press, bubble-card, bubble-from-left/right, bubble-float) for smooth app transitions
+- **Post avatar story ring**: Gradient ring (orange-pink-purple) on post avatars indicating story capability, separate click handler for avatar vs profile name
+- **Explorer card overflow fixed permanently**: Changed from `border border-white/40` to `ring-1 ring-white/40` preventing transparent border image bleedthrough
+- **Fixed global overflow CSS**: Scoped `overflow: visible !important` to form containers only instead of all cards
 
 ## Key API Endpoints
 
