@@ -214,7 +214,7 @@ const FeedPage = () => {
 
     return (
       <Card
-        className={`overflow-hidden transition-all group backdrop-blur-xl bg-card/80 border border-white/40 shadow-[0_18px_45px_rgba(0,0,0,0.08)] card-hover-lift isolate ${
+        className={`overflow-hidden transition-all group backdrop-blur-xl bg-card/80 ring-1 ring-white/40 shadow-[0_18px_45px_rgba(0,0,0,0.08)] card-hover-lift isolate rounded-2xl ${
           card.is_animated ? "card-bubble-animated" : "card-bubble-static"
         }`}
       >
@@ -787,7 +787,7 @@ const FeedPage = () => {
               
               {/* Posts List */}
               {posts.length > 0 && (
-                <div className="space-y-4" data-testid="posts-feed">
+                <div className="space-y-4 bubble-stagger" data-testid="posts-feed">
                   {posts.map((post) => (
                     <PostCard
                       key={post.id}
@@ -881,7 +881,7 @@ const FeedPage = () => {
             {/* Cards Grid/List */}
             {!loading && filteredCards.length > 0 && (
               viewMode === "grid" ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-10 bubble-stagger">
                   {filteredCards.map((card) => (
                     <GridCard key={card.id} card={card} />
                   ))}

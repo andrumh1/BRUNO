@@ -663,10 +663,12 @@ button[class*="bg-primary"]:hover {
   width: 100%;
 }
 
-/* Ensure parent containers don't clip dropdowns */
-.glass-card,
-[class*="CardContent"],
-[class*="card"] {
+/* Ensure parent containers don't clip dropdowns - only for form containers */
+.bubble-select-container .glass-card,
+.bubble-select-container [class*="CardContent"],
+.bubble-select-container [class*="card"],
+form .glass-card,
+form [class*="CardContent"] {
   overflow: visible !important;
 }
 
@@ -1291,4 +1293,86 @@ select.bubble-native-select:focus {
     padding: 0.5rem 0.75rem;
     font-size: 13px;
   }
+}
+
+
+/* ============================================
+   Bubble Motion System - Smooth app transitions
+   ============================================ */
+
+/* Page entrance animation */
+.page-enter {
+  animation: bubblePageIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes bubblePageIn {
+  0% { opacity: 0; transform: scale(0.96) translateY(12px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Staggered item entrance for lists */
+.bubble-stagger > * {
+  opacity: 0;
+  animation: bubbleItemIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.bubble-stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.bubble-stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.bubble-stagger > *:nth-child(3) { animation-delay: 0.09s; }
+.bubble-stagger > *:nth-child(4) { animation-delay: 0.12s; }
+.bubble-stagger > *:nth-child(5) { animation-delay: 0.15s; }
+.bubble-stagger > *:nth-child(6) { animation-delay: 0.18s; }
+.bubble-stagger > *:nth-child(7) { animation-delay: 0.21s; }
+.bubble-stagger > *:nth-child(8) { animation-delay: 0.24s; }
+.bubble-stagger > *:nth-child(n+9) { animation-delay: 0.27s; }
+
+@keyframes bubbleItemIn {
+  0% { opacity: 0; transform: scale(0.92) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Bubble press effect for interactive elements */
+.bubble-press {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.bubble-press:active {
+  transform: scale(0.95);
+}
+
+/* Smooth card hover with bubble bounce */
+.bubble-card {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              box-shadow 0.25s ease;
+}
+.bubble-card:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.08);
+}
+.bubble-card:active {
+  transform: scale(0.98);
+}
+
+/* Section entrance from different directions */
+.bubble-from-left {
+  animation: fromLeft 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes fromLeft {
+  0% { opacity: 0; transform: translateX(-16px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+.bubble-from-right {
+  animation: fromRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes fromRight {
+  0% { opacity: 0; transform: translateX(16px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+/* Floating elements gentle bob */
+.bubble-float {
+  animation: gentleBob 3s ease-in-out infinite;
+}
+@keyframes gentleBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }

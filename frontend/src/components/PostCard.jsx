@@ -83,7 +83,7 @@ const ReactionParticle = ({ icon: Icon, color, fill }) => (
   </motion.div>
 );
 
-const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete }) => {
+const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarClick }) => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(post.is_liked || false);
@@ -239,22 +239,36 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete }) => {
 
         {/* Header */}
         <div className="flex items-center justify-between p-4 pb-3">
-          <Link to={`/profile/${post.user?.id}`} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" data-testid="post-user-profile-link">
-            {post.user?.avatar_url ? (
-              <img src={post.user.avatar_url} alt={post.user.username} className="w-10 h-10 rounded-full object-cover" />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                {(post.user?.display_name || post.user?.username || "U")[0].toUpperCase()}
+          <div className="flex items-center gap-3">
+            {/* Avatar - opens stories if available */}
+            <button 
+              onClick={() => onAvatarClick ? onAvatarClick(post.user) : navigate(`/profile/${post.user?.id}`)}
+              className="relative shrink-0 group"
+              data-testid="post-user-avatar-btn"
+            >
+              <div className="w-10 h-10 rounded-full p-0.5 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-500 group-hover:scale-105 transition-transform">
+                <div className="w-full h-full rounded-full bg-background p-[1px]">
+                  <div className="w-full h-full rounded-full overflow-hidden">
+                    {post.user?.avatar_url ? (
+                      <img src={post.user.avatar_url} alt={post.user.username} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                        {(post.user?.display_name || post.user?.username || "U")[0].toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
-            <div>
+            </button>
+            {/* Name - navigates to profile */}
+            <Link to={`/profile/${post.user?.id}`} className="hover:opacity-80 transition-opacity" data-testid="post-user-profile-link">
               <div className="flex items-center gap-1">
                 <span className="font-semibold text-sm">{post.user?.display_name || post.user?.username}</span>
                 <InlineVerifiedBadge tier={post.user?.subscription_tier} />
               </div>
               <span className="text-xs text-muted-foreground">{formatDate(post.created_at)}</span>
-            </div>
-          </Link>
+            </Link>
+          </div>
           
           <div className="relative">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowMenu(!showMenu)} data-testid="post-menu-btn">

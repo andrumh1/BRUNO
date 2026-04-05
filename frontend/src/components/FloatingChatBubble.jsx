@@ -392,7 +392,24 @@ const FloatingChatBubble = () => {
   const [showNewChat, setShowNewChat] = useState(false);
   const [ws, setWs] = useState(null);
   const [unreadTotal, setUnreadTotal] = useState(0);
+  const [hiddenByScroll, setHiddenByScroll] = useState(false);
   const wsRef = useRef(null);
+  const lastScrollRef = useRef(0);
+
+  // Hide on scroll down, show on scroll up (#14)
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y > lastScrollRef.current + 40 && y > 100) {
+        setHiddenByScroll(true);
+      } else if (y < lastScrollRef.current - 20) {
+        setHiddenByScroll(false);
+      }
+      lastScrollRef.current = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Fetch chats
   useEffect(() => {
@@ -546,10 +563,19 @@ const FloatingChatBubble = () => {
 
   if (!user) return null;
 
+  // Hide on camera page
+  const pathname = window.location.pathname;
+  if (pathname === '/camera') return null;
+
+  // Visibility class for scroll hide
+  const bubbleHidden = hiddenByScroll && !isOpen && openChats.length === 0;
+
   return (
     <>
-      {/* Compact Chat Bubble - Unified smaller design */}
-      <div className="fixed bottom-20 right-3 z-[9990] md:bottom-6 md:right-4">
+      {/* Compact Chat Bubble */}
+      <div className={`fixed bottom-20 right-3 z-[9990] md:bottom-6 md:right-4 transition-all duration-300 ${
+        bubbleHidden ? 'translate-y-20 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
+      }`}>
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="w-11 h-11 bg-gradient-to-br from-primary to-orange-600 rounded-full shadow-lg shadow-primary/25 flex items-center justify-center hover:shadow-primary/40 transition-all duration-200 hover:scale-105 active:scale-95"

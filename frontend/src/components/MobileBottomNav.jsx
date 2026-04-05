@@ -1,37 +1,50 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
-  Home, 
-  Film,
-  Map,
-  ShoppingBag,
-  User,
-  Plus,
-  Bell
+  Home, Film, Map, ShoppingBag, User, Plus, Bell,
+  ChevronUp, ChevronDown
 } from "lucide-react";
 
 /**
- * MobileBottomNav - Responsive bottom navigation visible on ALL screen sizes
+ * MobileBottomNav - Floating bubble navigation bar
+ * Can be minimized to a compact pill
  */
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const [activeLight, setActiveLight] = useState(0);
+  const [minimized, setMinimized] = useState(false);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [visible, setVisible] = useState(true);
   
   const hiddenPaths = ['/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || 
                      location.pathname.match(/^\/lives\/[^/]+$/) ||
                      location.pathname.startsWith('/chat/');
 
+  // Auto-minimize on fast scroll down, show on scroll up
+  const handleScroll = useCallback(() => {
+    const currentY = window.scrollY;
+    if (currentY > lastScrollY + 30 && currentY > 100) {
+      // Scrolling down fast
+      if (!minimized) setMinimized(true);
+    } else if (currentY < lastScrollY - 20) {
+      // Scrolling up
+      if (minimized) setMinimized(false);
+    }
+    setLastScrollY(currentY);
+  }, [lastScrollY, minimized]);
+
   useEffect(() => {
-    if (shouldHide) return;
-    const interval = setInterval(() => {
-      setActiveLight(prev => (prev + 1) % 8);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [shouldHide]);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  // Reset minimized state on route change
+  useEffect(() => {
+    setMinimized(false);
+  }, [location.pathname]);
   
   if (shouldHide) return null;
 
@@ -52,110 +65,122 @@ const MobileBottomNav = () => {
     return location.pathname === item.path;
   };
 
+  // MINIMIZED STATE - compact pill
+  if (minimized) {
+    return (
+      <>
+        <div className="h-10" />
+        <div
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999]"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          data-testid="mobile-bottom-nav"
+        >
+          <button
+            onClick={() => setMinimized(false)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-xl shadow-black/10 hover:shadow-black/20 transition-all duration-300 active:scale-95"
+            data-testid="nav-expand-btn"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+            <span className="text-[10px] font-medium text-muted-foreground">BRUNO</span>
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  // FULL STATE - floating bubble bar
   return (
     <>
-      {/* Spacer to prevent content from hiding behind nav */}
-      <div className="h-16" />
-      
-      {/* Navigation Container - visible on ALL screen sizes */}
+      <div className="h-20" />
       <nav 
-        className="fixed bottom-0 left-0 right-0 z-[9999]"
+        className="fixed bottom-3 left-3 right-3 z-[9999] animate-in slide-in-from-bottom-4 duration-300"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         data-testid="mobile-bottom-nav"
       >
-        {/* Background with blur */}
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-2xl border-t border-border/50">
-          {/* Animated light orbs */}
-          <div 
-            className="absolute w-20 h-20 rounded-full opacity-20 transition-all duration-[2000ms]"
-            style={{
-              background: 'radial-gradient(circle, rgba(255,107,53,0.5) 0%, transparent 70%)',
-              left: `${5 + (activeLight % 4) * 20}%`,
-              top: '-10px',
-              filter: 'blur(15px)',
-            }}
-          />
-          <div 
-            className="absolute w-16 h-16 rounded-full opacity-15 transition-all duration-[2500ms]"
-            style={{
-              background: 'radial-gradient(circle, rgba(236,72,153,0.5) 0%, transparent 70%)',
-              right: `${10 + ((activeLight + 2) % 4) * 15}%`,
-              top: '-5px',
-              filter: 'blur(12px)',
-            }}
-          />
+        <div className="relative max-w-md mx-auto">
+          {/* Floating bubble background */}
+          <div className="absolute inset-0 bg-background/85 backdrop-blur-2xl rounded-2xl border border-border/40 shadow-xl shadow-black/10" />
           
-          {/* Top glow line */}
+          {/* Subtle top glow */}
           <div 
-            className="absolute top-0 left-0 right-0 h-[1px]"
+            className="absolute top-0 left-4 right-4 h-[1px] rounded-full"
             style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,107,53,0.3) 30%, rgba(236,72,153,0.3) 70%, transparent 100%)'
+              background: 'linear-gradient(90deg, transparent, rgba(255,107,53,0.25), rgba(236,72,153,0.2), transparent)'
             }}
           />
-        </div>
 
-        {/* Navigation Items */}
-        <div className="relative flex items-center justify-around max-w-xl mx-auto px-2 py-1.5 h-14">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item);
-            
-            if (item.isCreate) {
+          {/* Navigation Items */}
+          <div className="relative flex items-center justify-around px-1 py-1.5 h-14">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item);
+              
+              if (item.isCreate) {
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => navigate(item.path)}
+                    className="relative flex items-center justify-center w-11 h-11 -mt-4"
+                    data-testid={`nav-${item.id}`}
+                  >
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-primary to-orange-500 shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-all hover:scale-110 active:scale-95">
+                      <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
+                    </div>
+                  </button>
+                );
+              }
+              
               return (
                 <button
                   key={item.id}
                   onClick={() => navigate(item.path)}
-                  className="relative flex flex-col items-center justify-center w-11 h-11"
+                  className={`relative flex flex-col items-center justify-center w-10 h-11 rounded-xl transition-all duration-200 ${
+                    active ? 'scale-105' : 'hover:scale-105 active:scale-95'
+                  }`}
                   data-testid={`nav-${item.id}`}
                 >
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary to-orange-500 shadow-lg shadow-primary/30">
-                    <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
+                  {active && (
+                    <div className="absolute -top-0.5 w-4 h-1 rounded-full bg-primary" />
+                  )}
+                  
+                  <div className="relative flex flex-col items-center">
+                    {item.showAvatar && user?.avatar_url ? (
+                      <div className={`w-5.5 h-5.5 rounded-full overflow-hidden ${active ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''}`}>
+                        <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <Icon 
+                          className={`w-5 h-5 transition-all duration-200 ${active ? 'text-primary' : 'text-muted-foreground'}`}
+                          strokeWidth={active ? 2.5 : 1.5}
+                        />
+                        {item.hasIndicator && (
+                          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                        )}
+                        {item.hasBadge && (
+                          <span className="absolute -top-1 -right-1.5 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center text-[6px] text-white font-bold">!</span>
+                        )}
+                      </div>
+                    )}
+                    
+                    <span className={`text-[8px] mt-0.5 font-medium transition-colors ${active ? 'text-primary' : 'text-muted-foreground/70'}`}>
+                      {item.label}
+                    </span>
                   </div>
                 </button>
               );
-            }
-            
-            return (
-              <button
-                key={item.id}
-                onClick={() => navigate(item.path)}
-                className="relative flex flex-col items-center justify-center w-11 h-11 rounded-xl transition-all duration-200"
-                data-testid={`nav-${item.id}`}
-              >
-                {active && (
-                  <div 
-                    className="absolute inset-0.5 rounded-xl bg-primary/10"
-                    style={{ boxShadow: 'inset 0 0 8px rgba(255,107,53,0.2)' }}
-                  />
-                )}
-                
-                <div className="relative z-10 flex flex-col items-center">
-                  {item.showAvatar && user?.avatar_url ? (
-                    <div className={`w-5 h-5 rounded-full overflow-hidden ${active ? 'ring-1 ring-primary' : ''}`}>
-                      <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <Icon 
-                        className={`w-5 h-5 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}
-                        strokeWidth={active ? 2.5 : 1.5}
-                      />
-                      {item.hasIndicator && (
-                        <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                      )}
-                      {item.hasBadge && (
-                        <span className="absolute -top-1 -right-1.5 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center text-[6px] text-white font-bold">!</span>
-                      )}
-                    </div>
-                  )}
-                  
-                  <span className={`text-[9px] mt-0.5 font-medium ${active ? 'text-primary' : 'text-muted-foreground'}`}>
-                    {item.label}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
+            })}
+          </div>
+
+          {/* Minimize handle */}
+          <button 
+            onClick={() => setMinimized(true)}
+            className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-3 flex items-center justify-center rounded-t-lg bg-border/40 backdrop-blur-sm hover:bg-border/60 transition-colors"
+            data-testid="nav-minimize-btn"
+          >
+            <ChevronDown className="w-3 h-3 text-muted-foreground" />
+          </button>
         </div>
       </nav>
     </>
