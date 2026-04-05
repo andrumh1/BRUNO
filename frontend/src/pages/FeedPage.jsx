@@ -10,7 +10,8 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import PostCard from "@/components/PostCard";
 import CreatePost from "@/components/CreatePost";
 import ReelsFeed from "@/components/ReelsFeed";
-import { StoriesRow, CreateStoryModal } from "@/components/Stories";
+import { StoriesRow } from "@/components/Stories";
+import StoryEditor from "@/components/StoryEditor";
 import NotificationBell from "@/components/NotificationBell";
 import BeaconsStyleCard from "@/components/BeaconsStyleCard";
 import { FeedSidebar } from "@/components/FeedSidebar";
@@ -898,13 +899,12 @@ const FeedPage = () => {
         )}
       </main>
       
-      {/* Create Story Modal */}
-      <CreateStoryModal 
+      {/* Story Editor (Instagram/TikTok style) */}
+      <StoryEditor
         isOpen={showCreateStory}
         onClose={() => setShowCreateStory(false)}
         onCreated={() => {
           setShowCreateStory(false);
-          // Optionally refresh stories
         }}
       />
     </div>

@@ -58,7 +58,7 @@ const MyProfilePage = () => {
   const [cards, setCards] = useState([]);
   const [savedPosts, setSavedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("posts");
+  const [activeTab, setActiveTab] = useState("reels");
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
@@ -68,6 +68,7 @@ const MyProfilePage = () => {
   const [showFollowers, setShowFollowers] = useState(null);
   const [followersList, setFollowersList] = useState([]);
   const [followingList, setFollowingList] = useState([]);
+  const [albums, setAlbums] = useState([]);
   const [listLoading, setListLoading] = useState(false);
 
   // Fetch profile data
@@ -133,6 +134,16 @@ const MyProfilePage = () => {
     }
   }, []);
 
+  const fetchAlbums = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await axios.get(`${API}/albums`, { headers: { Authorization: `Bearer ${token}` } });
+      setAlbums(response.data || []);
+    } catch (error) {
+      console.error("Error fetching albums:", error);
+    }
+  }, [token]);
+
   const handleDeleteCard = async (cardId) => {
     if (!window.confirm("Eliminar esta tarjeta?")) return;
     try {
@@ -155,14 +166,14 @@ const MyProfilePage = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchProfile(), fetchPosts(), fetchCards(), fetchExploreCards()]);
+      await Promise.all([fetchProfile(), fetchPosts(), fetchCards(), fetchExploreCards(), fetchAlbums()]);
       setLoading(false);
     };
     
     if (user && token) {
       loadData();
     }
-  }, [fetchProfile, fetchPosts, fetchCards, fetchExploreCards, user, token]);
+  }, [fetchProfile, fetchPosts, fetchCards, fetchExploreCards, fetchAlbums, user, token]);
 
   // Handle profile update
   const handleSaveProfile = async () => {
@@ -501,11 +512,13 @@ const MyProfilePage = () => {
             <span className="text-sm font-medium hidden sm:inline">Guardados</span>
           </button>
           <button
-            onClick={() => navigate("/albums")}
-            className="flex-1 py-3 flex items-center justify-center gap-2 border-b-2 border-transparent text-muted-foreground hover:text-primary transition-colors"
+            onClick={() => setActiveTab("albums")}
+            className={`flex-1 py-3 flex items-center justify-center gap-2 border-b-2 transition-colors ${
+              activeTab === "albums" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
+            }`}
           >
             <FolderOpen className="w-5 h-5" />
-            <span className="text-sm font-medium hidden sm:inline">Álbumes</span>
+            <span className="text-sm font-medium hidden sm:inline">Albums</span>
           </button>
         </div>
       </div>
@@ -723,6 +736,58 @@ const MyProfilePage = () => {
           <div className="text-center py-12">
             <Bookmark className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">No hay posts guardados</p>
+          </div>
+        )}
+
+        {/* Albums */}
+        {activeTab === "albums" && (
+          <div data-testid="albums-tab-content">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-sm">{albums.length} album{albums.length !== 1 ? 'es' : ''}</h3>
+              <Button size="sm" variant="outline" onClick={() => navigate("/albums")} data-testid="manage-albums-btn">
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Gestionar
+              </Button>
+            </div>
+            {albums.length === 0 ? (
+              <div className="text-center py-12">
+                <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground mb-3">No hay albums aun</p>
+                <Button onClick={() => navigate("/albums")} variant="outline" size="sm">
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Crear album
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {albums.map((album) => (
+                  <button
+                    key={album.id}
+                    onClick={() => navigate(`/albums?open=${album.id}`)}
+                    className="group relative aspect-square rounded-xl overflow-hidden bg-muted border hover:shadow-lg transition-all"
+                    data-testid={`album-card-${album.id}`}
+                  >
+                    {album.photos?.length > 0 ? (
+                      <img src={album.photos[0].url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <FolderOpen className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8">
+                      <div className="flex items-center gap-1.5">
+                        {album.is_public ? (
+                          <Globe className="w-3 h-3 text-white/70" />
+                        ) : (
+                          <Shield className="w-3 h-3 text-white/70" />
+                        )}
+                        <span className="text-white text-sm font-semibold truncate">{album.name}</span>
+                      </div>
+                      <span className="text-white/60 text-[10px]">{album.photos?.length || 0} fotos</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
