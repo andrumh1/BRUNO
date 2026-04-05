@@ -441,35 +441,37 @@ const FloatingChatBubble = () => {
 
   return (
     <>
-      {/* Satellite bubble - right side of nav bar */}
+      {/* Satellite bubble - RIGHT side, ABOVE nav bar */}
       <div className={`fixed z-[10000] transition-all duration-300 ease-out ${
         minimized
-          ? 'bottom-3 right-[calc(50%-68px)]'
-          : 'bottom-5 right-1 sm:right-[calc(50%-240px)]'
+          ? 'bottom-[18px] right-[calc(50%-88px)]'
+          : 'bottom-[74px] right-3'
       }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`relative group transition-all duration-300 ${minimized ? 'scale-90' : 'scale-100'}`}
+          className={`relative group transition-all duration-300 ${minimized ? 'scale-100' : 'scale-100'}`}
           data-testid="chat-bubble-btn"
         >
-          {/* Glow */}
-          <div className={`absolute inset-0 bg-gradient-to-r from-primary/40 to-orange-500/40 rounded-full blur-lg transition-all duration-300 ${
-            isOpen ? 'opacity-80' : 'opacity-40 group-hover:opacity-70'
+          {/* Glow - subtle */}
+          <div className={`absolute inset-[-3px] bg-gradient-to-r from-primary/30 to-orange-500/30 rounded-full blur-md transition-all duration-300 ${
+            isOpen ? 'opacity-90' : 'opacity-0 group-hover:opacity-60'
           }`} />
           
-          {/* Circle */}
-          <div className={`relative rounded-full shadow-lg flex items-center justify-center bg-gradient-to-br from-primary to-orange-600 transition-all duration-300 ${
-            minimized ? 'w-9 h-9 shadow-primary/20' : 'w-12 h-12 shadow-primary/30 hover:shadow-primary/50 hover:scale-110 active:scale-95'
-          } ${isOpen ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`}>
-            <MessageCircle className={`text-white transition-all ${minimized ? 'w-4 h-4' : 'w-5 h-5'}`} strokeWidth={2} />
+          {/* Circle - smaller than nav */}
+          <div className={`relative rounded-full shadow-md flex items-center justify-center bg-gradient-to-br from-primary to-orange-600 transition-all duration-300 ${
+            minimized
+              ? 'w-8 h-8 shadow-primary/15'
+              : 'w-10 h-10 shadow-primary/25 hover:shadow-primary/40 hover:scale-110 active:scale-90'
+          } ${isOpen ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''}`}>
+            <MessageCircle className={`text-white transition-all ${minimized ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} strokeWidth={2} />
           </div>
           
           {/* Unread badge */}
           {unreadTotal > 0 && (
-            <div className={`absolute -top-0.5 -right-0.5 bg-red-500 rounded-full text-white font-bold shadow-md flex items-center justify-center transition-all ${
-              minimized ? 'min-w-[14px] h-[14px] text-[7px] px-0.5' : 'min-w-[18px] h-[18px] text-[9px] px-1'
+            <div className={`absolute -top-0.5 -right-0.5 bg-red-500 rounded-full text-white font-bold shadow flex items-center justify-center transition-all ${
+              minimized ? 'min-w-[13px] h-[13px] text-[6px] px-0.5' : 'min-w-[16px] h-[16px] text-[8px] px-0.5'
             }`}>
               {unreadTotal > 9 ? "9+" : unreadTotal}
             </div>
@@ -479,16 +481,14 @@ const FloatingChatBubble = () => {
 
       {/* Chat List Popup */}
       {isOpen && !showNewChat && (
-        <div className="fixed bottom-20 right-2 z-[10001] animate-in slide-in-from-bottom-2 sm:right-auto"
-          style={{ right: 'max(8px, calc(50% - 240px))' }}>
+        <div className="fixed bottom-24 right-2 z-[10001] animate-in slide-in-from-bottom-2">
           <ChatListPopup chats={chats} onSelectChat={handleSelectChat} onNewChat={() => setShowNewChat(true)} onClose={() => setIsOpen(false)} />
         </div>
       )}
 
       {/* New Chat Search */}
       {showNewChat && (
-        <div className="fixed bottom-20 right-2 z-[10001] animate-in slide-in-from-bottom-2 sm:right-auto"
-          style={{ right: 'max(8px, calc(50% - 240px))' }}>
+        <div className="fixed bottom-24 right-2 z-[10001] animate-in slide-in-from-bottom-2">
           <NewChatModal isOpen={showNewChat} onClose={() => setShowNewChat(false)} onSelectUser={handleNewChatUser} token={token} />
         </div>
       )}

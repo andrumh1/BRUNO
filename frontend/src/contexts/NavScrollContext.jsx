@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
 const NavScrollContext = createContext({
@@ -8,10 +8,23 @@ const NavScrollContext = createContext({
 
 export const useNavScroll = () => useContext(NavScrollContext);
 
+const triggerHaptic = (ms = 8) => {
+  try { if ('vibrate' in navigator) navigator.vibrate(ms); } catch {}
+};
+
 export const NavScrollProvider = ({ children }) => {
   const [minimized, setMinimized] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
   const location = useLocation();
+  const prevMinimized = useRef(false);
+
+  // Haptic feedback on minimize/expand
+  useEffect(() => {
+    if (prevMinimized.current !== minimized) {
+      triggerHaptic(minimized ? 6 : 12);
+      prevMinimized.current = minimized;
+    }
+  }, [minimized]);
 
   const handleScroll = useCallback(() => {
     const currentY = window.scrollY;
@@ -28,7 +41,6 @@ export const NavScrollProvider = ({ children }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
-  // Reset on route change
   useEffect(() => {
     setMinimized(false);
   }, [location.pathname]);
