@@ -9,52 +9,40 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - **Auth:** JWT + Google OAuth (Emergent-managed)
 - **Storage:** Cloudinary (images)
 - **AI:** OpenAI GPT-5.2 (Emergent LLM Key)
-- **Maps:** Leaflet
-- **Payments:** Stripe (emergentintegrations)
+- **Maps:** Leaflet, **Payments:** Stripe
 
 ## What's Been Implemented
 
-### Phase 17-25: Foundation → Stripe (Previous Sessions)
-- Social features, card analytics, Stripe checkout, premium page
-
-### Phase 26: P0 Bug Fixes + Backend Refactoring (2026-03-30)
-- Stripe, card view, NFC redirect, social.py router
-
-### Phase 27-28: Blocks 1-2 UI + Navigation (2026-04-05)
-- UI fixes, floating bubble nav, scroll-hide, animations
+### Phase 17-28: Foundation → Blocks 1-2 (Previous Sessions)
+- Social features, card analytics, Stripe, NFC redirect, floating nav bar
 
 ### Phase 29: AI Chat + Messenger Attachments (2026-04-05)
-- Bruno AI enhancements, ChatAttachmentMenu drawer, upload/chat-file endpoint
+- Bruno AI action buttons, card previews, ChatAttachmentMenu drawer, upload/chat-file
 
 ### Phase 30: Satellite Bubble Design (2026-04-05)
-- **NavScrollContext**: Shared minimize/expand state with haptic feedback
-- **Satellite Layout**: AI (violet) LEFT, Chat (orange) RIGHT, floating ABOVE nav bar (12px gap)
-- **Unified Minimized Style**: All 3 pills share identical `bg-background/90 backdrop-blur-2xl border border-border/50 shadow-xl rounded-full` design, each with its own colored icon (Sparkles violet, MessageCircle orange, ChevronUp muted)
-- **8px gaps** between all minimized pills: `[✨ AI] 8px [BRUNO] 8px [💬 Chat] [user avatars...]`
-- **Minimized open chats**: Active conversations collapse into small avatar circles (w-7) that dock to the right of the Chat pill, with close-on-hover
-- **Chat windows hidden on minimize**: Windows disappear when nav minimizes, reappear when expanded
-- **Haptic Feedback**: 6ms vibrate on minimize, 12ms on expand
-- **BubbleSelect Touch Fix**: onTouchEnd + touch-manipulation + smart positioning
-
-## Key API Endpoints
-- POST /api/ai/chat, GET /api/ai/history, DELETE /api/ai/history
-- POST /api/upload/chat-file
-- GET/POST /api/payments/*, /api/analytics/*, /api/social/*
+- **NavScrollContext**: Shared minimize/expand state + haptic feedback (6ms/12ms vibrate)
+- **Expanded state**: AI (violet circle, left) + Chat (orange circle, right) floating 12px ABOVE nav bar
+- **Minimized state**: All pills share identical `bg-background/90 backdrop-blur-2xl border shadow-xl rounded-full` style
+- **Fixed positioning from center** — prevents overlap:
+  - AI pill: `right: calc(50% + 60px)` (to the LEFT of BRUNO)
+  - BRUNO pill: `left: 50%, -translate-x-1/2` (center)
+  - Chat pill: `left: calc(50% + 60px)` (to the RIGHT of BRUNO)
+  - Avatar tray: `left: calc(50% + 104px)` (starts after Chat pill)
+- **8px gap** between AI↔BRUNO and BRUNO↔Chat, 4px gap Chat↔avatars
+- **Scrollable avatar tray**: Open chats collapse to w-7 avatar circles in horizontal scrollable container (`overflow-x-auto scrollbar-hide`), sorted by last activity
+- **No overlap guaranteed**: Each element has independent fixed positioning from page center
+- **BubbleSelect touch fix**: onTouchEnd, touch-manipulation, smart dropdown positioning
 
 ## Prioritized Backlog
 
 ### P1: User Feedback (20-point list)
 - Point #2: Multiple addresses/locations for business cards
 - Point #15: Instagram/TikTok-style Story Editor
-- Point #6: Premium card templates (Formal, Minimalist, Full Image, Animated)
-- Point #13: Reels as first screen on profiles
-- Point #17: Advanced profile editor with albums
+- Point #6: Premium card templates
+- Point #13: Reels first screen, Point #17: Profile editor with albums
 
 ### P2: Performance & Refactoring
-- N+1 query patterns + pagination
-- server.py (~5200 lines) - extract more routers
-- MyProfilePage.jsx (~779 lines)
-- Push notification improvements (#18)
+- N+1 queries + pagination, server.py extract routers, MyProfilePage.jsx
 
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 (Emergent LLM Key), Stripe, Daily.co, Cloudinary, Leaflet, Emergent Google Auth
