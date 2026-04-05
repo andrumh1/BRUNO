@@ -43,7 +43,7 @@ db = client[os.environ['DB_NAME']]
 # Security
 SECRET_KEY = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production-123456789')
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30  # 30 days
 
 # Payments / Stripe
 STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
@@ -896,9 +896,28 @@ async def login(user_input: UserLogin):
     
     return Token(access_token=access_token, token_type="bearer", user=user_obj)
 
-@api_router.get("/auth/me", response_model=User)
-async def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+@api_router.get("/auth/me")
+async def get_me(current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
+    user_dict = current_user.dict()
+    # Auto-refresh token if it will expire within 7 days
+    if credentials and credentials.credentials:
+        try:
+            payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+            exp = payload.get("exp")
+            if exp:
+                remaining = datetime.fromtimestamp(exp, tz=timezone.utc) - datetime.now(timezone.utc)
+                if remaining.days < 7:
+                    new_token = create_access_token(data={"sub": payload.get("sub")})
+                    user_dict["refreshed_token"] = new_token
+        except Exception:
+            pass
+    return user_dict
+
+@api_router.post("/auth/refresh")
+async def refresh_token(current_user: User = Depends(get_current_user)):
+    """Issue a fresh long-lived token for the authenticated user"""
+    new_token = create_access_token(data={"sub": current_user.email})
+    return {"access_token": new_token, "token_type": "bearer"}
 
 @api_router.put("/auth/me")
 async def update_me(

@@ -98,6 +98,17 @@ const MessageBubble = ({ msg, navigate }) => {
   );
 };
 
+// Card type badge colors
+const CARD_TYPE_COLORS = {
+  personal: '#3B82F6',
+  business: '#10B981',
+  freelance: '#F97316',
+  curriculum: '#8B5CF6',
+  oferta_trabajo: '#EAB308',
+  busqueda_personal: '#EC4899',
+  solicitud_servicio: '#06B6D4',
+};
+
 const FloatingBubbles = () => {
   const { user, token } = useAuth();
   const location = useLocation();
@@ -213,40 +224,49 @@ const FloatingBubbles = () => {
       {/* === MINIMIZED STATE: Card tray + AI pill === */}
       {minimized && (
         <>
-          {/* Minimized card pills — scrollable, to the LEFT of AI pill */}
+          {/* Minimized card pills — scrollable, adjacent left of AI pill */}
           {minimizedCards.length > 0 && (
             <div
-              className="fixed z-[10000] bottom-[19px] overflow-x-auto scrollbar-hide transition-all duration-300"
+              className="fixed z-[10000] bottom-[19px] overflow-x-auto scrollbar-hide transition-all duration-300 flex justify-end"
               style={{
-                left: '8px',
-                right: 'calc(50% + 104px)',
+                right: 'calc(50% + 96px)',
+                maxWidth: 'calc(50% - 96px)',
                 paddingBottom: 'env(safe-area-inset-bottom, 0px)',
               }}
               data-testid="minimized-cards-tray"
             >
               <div className="flex items-center gap-1.5 w-max">
-                {minimizedCards.map((card) => (
-                  <button
-                    key={card.id}
-                    onClick={() => { setMinimized(false); navigate(`/c/${card.id}`); removeMinimizedCard(card.id); }}
-                    className="relative group/card shrink-0"
-                    data-testid={`minimized-card-${card.id}`}
-                  >
-                    <div className="w-7 h-7 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-lg overflow-hidden transition-all hover:scale-110 active:scale-90 flex items-center justify-center">
-                      {card.thumbnail ? (
-                        <img src={card.thumbnail} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-[9px] font-bold text-primary">
-                          {(card.title || "?")[0].toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full items-center justify-center text-white hidden group-hover/card:flex transition-all cursor-pointer"
-                      onClick={(e) => { e.stopPropagation(); removeMinimizedCard(card.id); }}>
-                      <X className="w-2 h-2" />
-                    </div>
-                  </button>
-                ))}
+                {minimizedCards.map((card) => {
+                  const badgeColor = CARD_TYPE_COLORS[card.card_type] || '#6B7280';
+                  return (
+                    <button
+                      key={card.id}
+                      onClick={() => { setMinimized(false); navigate(`/c/${card.id}`); removeMinimizedCard(card.id); }}
+                      className="relative group/card shrink-0"
+                      data-testid={`minimized-card-${card.id}`}
+                    >
+                      <div className="w-7 h-7 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-lg overflow-hidden transition-all hover:scale-110 active:scale-90 flex items-center justify-center">
+                        {card.thumbnail ? (
+                          <img src={card.thumbnail} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-[9px] font-bold text-primary">
+                            {(card.title || "?")[0].toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      {/* Card type badge */}
+                      <div
+                        className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-[1.5px] border-background shadow-sm"
+                        style={{ backgroundColor: badgeColor }}
+                        data-testid={`card-badge-${card.card_type || 'unknown'}`}
+                      />
+                      <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full items-center justify-center text-white hidden group-hover/card:flex transition-all cursor-pointer"
+                        onClick={(e) => { e.stopPropagation(); removeMinimizedCard(card.id); }}>
+                        <X className="w-2 h-2" />
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

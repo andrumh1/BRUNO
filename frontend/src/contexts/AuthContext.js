@@ -92,8 +92,17 @@ export function AuthProvider({ children }) {
       });
       
       const userData = response.data;
+      
+      // Auto-refresh token if backend sent a new one
+      let activeToken = currentToken;
+      if (userData.refreshed_token) {
+        activeToken = userData.refreshed_token;
+        localStorage.setItem(TOKEN_KEY, activeToken);
+        delete userData.refreshed_token;
+      }
+      
       setUser(userData);
-      setToken(currentToken);
+      setToken(activeToken);
       
       // Cache user data for faster loads
       localStorage.setItem(USER_KEY, JSON.stringify(userData));
