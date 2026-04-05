@@ -65,6 +65,14 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
   - Backend: /api/nfc/my-cards returns redirect_url + card_title
   - Backend: /api/nfc/update-card endpoint for changing linked card
 
+### Phase 27: Block 1 Bug Fixes (2026-04-05)
+- Changed "Título" to "Nombre" (ES) / "Name" (EN) in card editor
+- Fixed explorer card banner overflow (isolate + overflow-hidden + rounded-t-lg)
+- Repositioned chat bubble above navigation bar (bottom-20 z-[9990])
+- Removed camera floating button (was hidden behind nav)
+- Card edit now navigates to /c/{cardId} instead of /my-profile
+- Card create now navigates to /c/{newCardId} instead of /my-profile
+
 ## Key API Endpoints
 
 ### Payments
