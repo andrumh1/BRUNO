@@ -47,23 +47,32 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - **N+1 Query Optimization**: Posts feed and For-You feed now batch-fetch users, profiles, likes, bookmarks using `$in` operator instead of individual queries per post. NFC cards endpoint also batch-fetches card titles.
 - **Pagination**: GET /cards and GET /public/cards now accept `skip` and `limit` params (default limit=50).
 
+### Phase 33: Story Editor + Reels Default + Albums Integration (2026-04-05)
+- **Instagram/TikTok-style Story Editor** (`StoryEditor.jsx`): Full-screen editor with:
+  - Draggable text overlays (customizable font, size 12-64, color, bold, italic, alignment)
+  - SVG stickers (fire, heart, star, crown, rocket, sparkles) — draggable
+  - 10 gradient background presets
+  - Poll integration (question + 2-4 options)
+  - Media upload (photo/video)
+  - Publish flow with caption + visibility (public/followers/private)
+- **Reels First Screen**: Profile page default tab changed from "Posts" to "Reels"
+- **Albums Tab in Profile**: Album grid cards with public/private badges (Globe/Shield), photo count, and "Gestionar" button linking to /albums page
+
 ## Key API Endpoints
 - POST /api/ai/chat, GET /api/ai/history, POST /api/upload/chat-file
 - POST /api/auth/login (accepts optional `platform` field), POST /api/auth/refresh
 - GET /api/cards?skip=0&limit=50, GET /api/public/cards?skip=0&limit=50
+- POST /api/stories, GET /api/stories/feed, GET /api/albums, POST /api/albums
 - All social, payment, analytics endpoints operational
 
 ## Prioritized Backlog
 
 ### P1: User Feedback (Remaining)
-- Point #15: Instagram/TikTok-style Story Editor (stickers, text overlay)
-- Point #13: Reels as first screen when entering a profile
-- Point #17: Advanced profile editor with public/private album folders
+- Point #18: Improved push notification presentations for mobile
 
 ### P2: Performance & Refactoring
 - server.py monolith (~5300 lines) needs router extraction (auth, cards, AI chat)
 - MyProfilePage.jsx (~800 lines) needs component breakdown
-- Push notification improvements for mobile (Point #18)
 
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 (Emergent LLM Key), Stripe, Daily.co, Cloudinary, Leaflet, Emergent Google Auth
