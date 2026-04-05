@@ -58,6 +58,15 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - **Reels First Screen**: Profile page default tab changed from "Posts" to "Reels"
 - **Albums Tab in Profile**: Album grid cards with public/private badges (Globe/Shield), photo count, and "Gestionar" button linking to /albums page
 
+### Phase 34: Universal Minimization System (2026-04-05)
+- **Multitask Minimization**: Users can now minimize cards, profiles, posts, reels, and live streams into the same tray
+- **NavScrollContext**: Rewritten with universal `minimizedItems` array (backward compat aliases for cards)
+- **Type-specific badges**: card=by card_type color, profile=#8B5CF6, post=#3B82F6, reel=#EF4444, live=#EF4444+pulse animation
+- **Type-specific routing**: Clicking minimized item navigates to correct page (card→/c/id, profile→/profile/id, post→/feed, reel→/reels?id=id, live→/lives/id)
+- **12 item max limit**: Oldest items auto-removed when limit reached
+- **Minimize buttons added to**: PostCard (dropdown menu), UserProfilePage (header), ReelsPage (action sidebar)
+- **Session persistence**: Items stored in sessionStorage ('bruno_min_items') with automatic migration from old key
+
 ## Key API Endpoints
 - POST /api/ai/chat, GET /api/ai/history, POST /api/upload/chat-file
 - POST /api/auth/login (accepts optional `platform` field), POST /api/auth/refresh
