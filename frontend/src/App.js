@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { TourProvider, TourOverlay } from "@/components/WelcomeTour";
+import { NavScrollProvider } from "@/contexts/NavScrollContext";
 
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
@@ -149,6 +150,7 @@ function App() {
         <AuthProvider>
           <NotificationProvider>
             <BrowserRouter>
+              <NavScrollProvider>
               <TourProvider>
                 <AppRouter />
                 <FloatingBubbles />
@@ -157,6 +159,7 @@ function App() {
                 <MobileBottomNav />
                 <TourOverlay />
               </TourProvider>
+              </NavScrollProvider>
             </BrowserRouter>
           </NotificationProvider>
         </AuthProvider>

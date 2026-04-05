@@ -113,13 +113,12 @@ const BubbleSelect = ({
           <div 
             className="fixed inset-0"
             style={{ zIndex: 99998 }}
-            onMouseDown={(e) => {
+            onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               setIsOpen(false);
             }}
-            onTouchStart={(e) => {
-              e.preventDefault();
+            onTouchEnd={(e) => {
               e.stopPropagation();
               setIsOpen(false);
             }}
@@ -131,15 +130,23 @@ const BubbleSelect = ({
             role="listbox"
             className="bubble-select-options fixed left-4 right-4 sm:left-auto sm:right-auto"
             style={{
-              top: containerRef.current ? 
-                containerRef.current.getBoundingClientRect().bottom + 8 : "50%",
-              left: window.innerWidth >= 640 && containerRef.current ? containerRef.current.getBoundingClientRect().left : undefined,
-              width: window.innerWidth >= 640 && containerRef.current ? containerRef.current.getBoundingClientRect().width : undefined,
+              ...(containerRef.current ? (() => {
+                const rect = containerRef.current.getBoundingClientRect();
+                const spaceBelow = window.innerHeight - rect.bottom - 16;
+                const dropUp = spaceBelow < 200 && rect.top > 200;
+                return {
+                  ...(dropUp 
+                    ? { bottom: window.innerHeight - rect.top + 8 }
+                    : { top: rect.bottom + 8 }),
+                  left: window.innerWidth >= 640 ? rect.left : undefined,
+                  width: window.innerWidth >= 640 ? rect.width : undefined,
+                };
+              })() : { top: "50%" }),
               zIndex: 99999,
-              maxHeight: "250px",
+              maxHeight: "280px",
             }}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
           >
             <div className="bubble-select-options-inner overflow-y-auto" style={{ maxHeight: "250px" }}>
               {options.map((option) => (
@@ -150,21 +157,21 @@ const BubbleSelect = ({
                   data-value={option.value}
                   data-testid={`bubble-option-${option.value}`}
                   aria-selected={option.value === value}
-                  onMouseDown={(e) => {
+                  onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     handleSelect(option.value);
                   }}
-                  onTouchStart={(e) => {
-                    e.preventDefault();
+                  onTouchEnd={(e) => {
                     e.stopPropagation();
                     handleSelect(option.value);
                   }}
                   className={`
                     bubble-select-option
-                    w-full flex items-center gap-3 px-4 py-2.5
+                    w-full flex items-center gap-3 px-4 py-3.5
                     text-left text-sm
                     transition-all duration-150
+                    touch-manipulation
                     ${option.value === value ? "bubble-select-option-selected" : ""}
                   `}
                 >

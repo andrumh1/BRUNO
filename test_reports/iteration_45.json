@@ -1,0 +1,94 @@
+{
+  "summary": "Iteration 45: Satellite Chat Bubbles & Attachment Features - All 10 tests PASSED. AI bubble (violet with IA badge) and Chat bubble (orange) dock as satellites on sides of nav bar, minimize/expand with scroll, hide on camera page. Messenger-style attachment drawer with 6 options working. BubbleSelect has touch-manipulation CSS. Backend AI chat returns action buttons and cards_context.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration45.py",
+    "/app/test_reports/pytest/pytest_iteration45.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "FloatingBubbles.jsx: AI bubble (violet) positioned at left side of nav bar with 'IA' badge, syncs minimize/expand with NavScrollContext",
+    "FloatingChatBubble.jsx: Chat bubble (orange) positioned at right side of nav bar with unread count badge, syncs minimize/expand with NavScrollContext",
+    "MobileBottomNav.jsx: Nav bar minimizes to 'BRUNO' pill on scroll down, expands on scroll up",
+    "Both bubbles hidden on /camera page via hiddenPaths check",
+    "ChatAttachmentMenu.jsx: Messenger-style bottom drawer with 6 options - Camara, Galeria, Video, Documento, Tarjeta, Sticker",
+    "BubbleSelect.jsx: Options have touch-manipulation CSS class for mobile touch support",
+    "Backend /api/ai/chat: Returns response, session_id, and cards_context for search queries"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration45.py"
+  ],
+  "success_rate": {
+    "backend": "100% (6/6 tests passed)",
+    "frontend": "100% (10/10 features verified)"
+  },
+  "test_credentials": {
+    "email": "newtest@bruno.com",
+    "password": "Test1234!"
+  },
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 45 verified satellite bubble design and attachment features. Key findings: 1) AI bubble (violet with sparkles and 'IA' badge) docks to LEFT of nav bar. 2) Chat bubble (orange with message icon and unread count) docks to RIGHT of nav bar. 3) Both bubbles sync minimize/expand with nav bar via NavScrollContext. 4) Scroll down 5x triggers minimize - nav becomes 'BRUNO' pill, bubbles shrink. 5) Scroll up 3x triggers expand - all elements return to full size. 6) Both bubbles hidden on /camera page. 7) AI chat window shows 'BRUNO IA' header with action buttons. 8) Chat popup shows 'Mensajes' header with chat list. 9) Chat window has paperclip attach button, input, and mic button. 10) ChatAttachmentMenu drawer has 6 options: Camara, Galeria, Video, Documento, Tarjeta, Sticker. 11) BubbleSelect options have touch-manipulation CSS class. 12) Backend AI chat returns action buttons and cards_context.",
+  "features_verified": {
+    "test_1_expanded_state": {
+      "status": "PASS",
+      "details": "AI bubble (violet, left), nav bar (center), Chat bubble (orange, right) all visible at bottom of /feed"
+    },
+    "test_2_minimized_state": {
+      "status": "PASS",
+      "details": "After scrolling down 5x, nav minimizes to 'BRUNO' pill, both bubbles shrink and align horizontally"
+    },
+    "test_3_expand_from_minimized": {
+      "status": "PASS",
+      "details": "After scrolling up 3x, all elements expand back to full size"
+    },
+    "test_4_camera_page_hide": {
+      "status": "PASS",
+      "details": "Both AI and Chat bubbles hidden on /camera page"
+    },
+    "test_5_ai_chat_window": {
+      "status": "PASS",
+      "details": "AI chat window opens with 'BRUNO IA' header, input field, and send button"
+    },
+    "test_6_chat_list": {
+      "status": "PASS",
+      "details": "Chat popup shows 'Mensajes' header and chat list with items"
+    },
+    "test_7_chat_window_attachments": {
+      "status": "PASS",
+      "details": "Chat window has paperclip attach button, input field, and mic button"
+    },
+    "test_8_attachment_drawer": {
+      "status": "PASS",
+      "details": "Attachment drawer shows 6 options: Camara, Galeria, Video, Documento, Tarjeta, Sticker"
+    },
+    "test_9_bubble_select_touch": {
+      "status": "PASS",
+      "details": "BubbleSelect dropdown opens, 11 options found, options have touch-manipulation CSS class"
+    },
+    "test_10_backend_ai_chat": {
+      "status": "PASS",
+      "details": "POST /api/ai/chat with 'Busca restaurantes' returns response with action buttons and cards_context"
+    }
+  },
+  "screenshots_taken": [
+    ".screenshots/test1_expanded_logged_in.png",
+    ".screenshots/test2_minimized_logged_in.png",
+    ".screenshots/test3_expanded_after_scroll_logged_in.png",
+    ".screenshots/test4_camera.png",
+    ".screenshots/test5_ai_chat.png",
+    ".screenshots/test6_chat_list.png",
+    ".screenshots/test7_chat_window.png",
+    ".screenshots/test8_drawer_open.png",
+    ".screenshots/test9_bubble_select.png"
+  ]
+}

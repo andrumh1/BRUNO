@@ -1,51 +1,23 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavScroll } from "@/contexts/NavScrollContext";
 import { 
   Home, Film, Map, ShoppingBag, User, Plus, Bell,
   ChevronUp, ChevronDown
 } from "lucide-react";
 
-/**
- * MobileBottomNav - Floating bubble navigation bar
- * Can be minimized to a compact pill
- */
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const [minimized, setMinimized] = useState(false);
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const [visible, setVisible] = useState(true);
+  const { minimized, setMinimized } = useNavScroll();
   
   const hiddenPaths = ['/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || 
                      location.pathname.match(/^\/lives\/[^/]+$/) ||
                      location.pathname.startsWith('/chat/');
 
-  // Auto-minimize on fast scroll down, show on scroll up
-  const handleScroll = useCallback(() => {
-    const currentY = window.scrollY;
-    if (currentY > lastScrollY + 30 && currentY > 100) {
-      // Scrolling down fast
-      if (!minimized) setMinimized(true);
-    } else if (currentY < lastScrollY - 20) {
-      // Scrolling up
-      if (minimized) setMinimized(false);
-    }
-    setLastScrollY(currentY);
-  }, [lastScrollY, minimized]);
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
-
-  // Reset minimized state on route change
-  useEffect(() => {
-    setMinimized(false);
-  }, [location.pathname]);
-  
   if (shouldHide) return null;
 
   const navItems = [

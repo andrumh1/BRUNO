@@ -22,6 +22,17 @@ body {
   line-height: 1.5;
 }
 
+/* Touch-friendly interactive elements */
+button, a, input, select, textarea, [role="button"], [role="option"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+select {
+  min-height: 44px;
+  font-size: 16px; /* Prevents iOS zoom on focus */
+}
+
 /* Compact text sizing for mobile */
 @media (max-width: 640px) {
   body {
