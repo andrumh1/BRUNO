@@ -67,13 +67,13 @@ const BeaconsStyleCard = ({
 
   return (
     <div 
-      className="relative rounded-3xl overflow-hidden shadow-xl"
+      className="relative rounded-3xl overflow-hidden shadow-xl isolate"
       style={{ backgroundColor: bg }}
       data-testid={`beacons-card-${card.id}`}
     >
       {/* Background */}
       {card.banner_url ? (
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden rounded-3xl">
           <img src={card.banner_url} alt="" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/80" />
         </div>

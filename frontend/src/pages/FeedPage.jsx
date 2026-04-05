@@ -214,19 +214,22 @@ const FeedPage = () => {
 
     return (
       <Card
-        className={`overflow-hidden transition-all group backdrop-blur-xl bg-card/80 border border-white/40 shadow-[0_18px_45px_rgba(0,0,0,0.08)] card-hover-lift ${
+        className={`overflow-hidden transition-all group backdrop-blur-xl bg-card/80 border border-white/40 shadow-[0_18px_45px_rgba(0,0,0,0.08)] card-hover-lift isolate ${
           card.is_animated ? "card-bubble-animated" : "card-bubble-static"
         }`}
       >
         {/* Banner or Colored Header */}
         <div
-          className="h-32 relative"
+          className="h-32 relative overflow-hidden rounded-t-lg"
           style={{
             background: card.banner_url
-              ? `url(${card.banner_url}) center/cover`
+              ? undefined
               : `linear-gradient(135deg, ${card.background_color}, ${card.background_color}dd)`,
           }}
         >
+          {card.banner_url && (
+            <img src={card.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          )}
           <div className="absolute top-3 right-3">
             <div className="px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm text-xs font-medium">
               {getCardTypeLabel(card.card_type)}

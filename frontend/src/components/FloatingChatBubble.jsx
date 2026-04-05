@@ -549,7 +549,7 @@ const FloatingChatBubble = () => {
   return (
     <>
       {/* Compact Chat Bubble - Unified smaller design */}
-      <div className="fixed bottom-[72px] right-3 z-50 md:bottom-6 md:right-4">
+      <div className="fixed bottom-20 right-3 z-[9990] md:bottom-6 md:right-4">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="w-11 h-11 bg-gradient-to-br from-primary to-orange-600 rounded-full shadow-lg shadow-primary/25 flex items-center justify-center hover:shadow-primary/40 transition-all duration-200 hover:scale-105 active:scale-95"
@@ -566,7 +566,7 @@ const FloatingChatBubble = () => {
 
       {/* Chat List Popup - Compact design */}
       {isOpen && !showNewChat && (
-        <div className="fixed bottom-[120px] right-3 z-50 animate-in slide-in-from-bottom-2 md:bottom-20 md:right-4">
+        <div className="fixed bottom-32 right-3 z-[9990] animate-in slide-in-from-bottom-2 md:bottom-20 md:right-4">
           <ChatListPopup
             chats={chats}
             onSelectChat={handleSelectChat}
@@ -578,7 +578,7 @@ const FloatingChatBubble = () => {
 
       {/* New Chat Modal */}
       {showNewChat && (
-        <div className="fixed bottom-[120px] right-3 z-50 animate-in slide-in-from-bottom-2 md:bottom-20 md:right-4">
+        <div className="fixed bottom-32 right-3 z-[9990] animate-in slide-in-from-bottom-2 md:bottom-20 md:right-4">
           <NewChatModal
             isOpen={showNewChat}
             onClose={() => setShowNewChat(false)}
@@ -589,7 +589,7 @@ const FloatingChatBubble = () => {
       )}
 
       {/* Open Chat Windows - More compact positioning */}
-      <div className="fixed bottom-[72px] right-16 z-50 flex items-end gap-2 md:bottom-6 md:right-20">
+      <div className="fixed bottom-20 right-16 z-[9990] flex items-end gap-2 md:bottom-6 md:right-20">
         {openChats.map((chat, index) => (
           <div
             key={chat.id}

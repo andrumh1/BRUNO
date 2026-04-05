@@ -275,7 +275,13 @@ const CreateCardPage = () => {
       const response = await axios.post(`${API}/cards`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      navigate(`/my-profile`);
+      // Navigate to the newly created card
+      const newCardId = response.data?.id;
+      if (newCardId) {
+        navigate(`/c/${newCardId}`);
+      } else {
+        navigate(`/my-profile`);
+      }
     } catch (error) {
       console.error("Error creating card:", error);
       alert(t("common.error"));

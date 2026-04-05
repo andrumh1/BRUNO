@@ -260,9 +260,9 @@ const EditCardPage = () => {
         });
       }
       
-      // Show success and navigate
+      // Show success and navigate to the card view
       alert(t("cardForm.savedSuccess") || "Tarjeta actualizada!");
-      navigate("/my-profile");
+      navigate(`/c/${cardId}`);
     } catch (error) {
       console.error("Error updating card:", error);
       const errorMsg = error.response?.data?.detail || t("common.error");
