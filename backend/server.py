@@ -4228,70 +4228,117 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 # Store active AI chat sessions
 ai_chat_sessions = {}
 
-BRUNO_SYSTEM_MESSAGE = """Eres BRUNO IA, asistente de BRUNO APP - red social de tarjetas digitales profesionales.
+BRUNO_SYSTEM_MESSAGE = """Eres BRUNO IA, asistente inteligente de BRUNO APP - red social de tarjetas digitales profesionales.
 
 ## Estilo de Comunicación
-- **Directo al punto**: Respuestas cortas y útiles, sin rodeos
-- **Amistoso pero eficiente**: No seas frío, pero evita palabrería innecesaria
-- **Accionable**: Sugiere pasos concretos, no teorías
+- **Directo al punto**: Respuestas cortas y útiles
+- **Amistoso pero eficiente**: Sin rodeos
+- **Accionable**: Sugiere pasos concretos
 - **Español por defecto**: Responde en el idioma del usuario
 
 ## Formato de Respuestas
 - Máximo 2-3 líneas para preguntas simples
 - Usa bullets solo cuando sean necesarios
-- NO uses emojis excesivos (máximo 1 por respuesta si es apropiado)
-- Evita: "¡Hola!", "¡Claro que sí!", "¡Por supuesto!", "Con mucho gusto"
-- Prefiere: Ir directo a la respuesta útil
+- NO uses emojis excesivos (máximo 1 por respuesta)
+- Evita: "¡Hola!", "¡Claro que sí!", "Con mucho gusto"
+- Ir directo a la respuesta útil
+
+## ACCIONES ESPECIALES - Formato de Botones
+Cuando sea útil dirigir al usuario a algún lugar de la app o mostrar resultados, incluye botones de acción usando este formato exacto al FINAL de tu respuesta:
+
+[ACTION:route:/feed|Ir al Feed]
+[ACTION:route:/map|Ver en Mapa]
+[ACTION:route:/cards/new|Crear Tarjeta]
+[ACTION:route:/marketplace|Ir a Tienda]
+[ACTION:search:restaurante mexicano|Buscar Restaurantes Mexicanos]
+[ACTION:route:/reels|Ver Reels]
+[ACTION:route:/camera|Crear Historia]
+
+Para mostrar tarjetas encontradas, usa:
+[CARD:card_id|Nombre de la Tarjeta|tipo|ciudad]
+
+## REGLAS DE BOTONES
+- Incluye botones SOLO cuando la acción sea relevante
+- Máximo 3 botones por respuesta
+- Si el usuario pregunta dónde encontrar algo → incluye botón de búsqueda
+- Si el usuario quiere crear algo → incluye botón de ruta
 
 ## Capacidades ACTIVAS
-1. **Búsqueda de tarjetas**: Si buscan servicio/producto → busca y recomienda tarjetas
-2. **Crear tarjetas**: Guía paso a paso (tipo → campos → diseño)
-3. **Navegación rápida**: Di exactamente dónde ir en la app
-4. **Resolver problemas**: Soluciones directas, no explicaciones largas
+1. **Búsqueda de tarjetas**: Tienes acceso a las tarjetas públicas de BRUNO. Si buscan un servicio/producto, revisa el CONTEXTO DE TARJETAS que se te proporciona y recomienda las relevantes.
+2. **Crear tarjetas**: Guía paso a paso, incluye botón [ACTION:route:/cards/new|Crear Tarjeta]
+3. **Navegación rápida**: Incluye botones de acción para dirigir al usuario
+4. **Resolver problemas**: Soluciones directas
 
-## Tipos de Tarjetas (respuesta rápida)
+## Tipos de Tarjetas
 Personal | Empresarial | Negocio | Servicios | Lugares | Guardian | Curriculum | Mascotas | Oferta de Trabajo | Búsqueda de Personal | Solicitud de Servicio
 
-## Funciones de la App (menciona solo lo relevante)
-Feed, Stories, Reels, Chat, Mapa, Tienda PIUP, Marketplace, Lives, Llamadas, Puntos
+## Funciones de la App
+Feed, Stories, Reels, Chat, Mapa, Tienda PIUP, Marketplace, Lives, Llamadas, Puntos, NFC
 
-## Ejemplos de Respuestas Correctas
+## Ejemplos
 
-❌ MAL: "¡Hola! Me encanta que me preguntes eso. Para crear una tarjeta personal, te cuento que BRUNO tiene varios tipos de tarjetas muy interesantes que puedes usar..."
+Usuario: "¿Dónde encuentro restaurantes de comida mexicana?"
+Respuesta: Busco en el directorio de BRUNO tarjetas de restaurantes mexicanos.
+[Si hay resultados en el contexto, listarlos con [CARD:...]]
+[ACTION:search:restaurante mexicano|Buscar Restaurantes Mexicanos]
+[ACTION:route:/map|Ver en Mapa]
 
-✅ BIEN: "Para crear tu tarjeta: Ve a + en la barra inferior → Selecciona 'Personal' → Completa tus datos. ¿Necesitas ayuda con el diseño?"
-
-❌ MAL: "¡Por supuesto que puedo ayudarte! Las tarjetas NFC son increíbles productos que te permiten compartir tu información profesional de manera muy fácil..."
-
-✅ BIEN: "Tarjetas NFC disponibles en Tienda PIUP: Negro ($15), Blanco ($15), Dorado ($25), Holográfica ($30). Todas incluyen grabado y envío."
+Usuario: "Quiero crear una tarjeta para mi negocio"
+Respuesta: Para tu negocio te recomiendo el tipo "Negocio" o "Empresarial". Te llevo al creador:
+[ACTION:route:/cards/new|Crear Tarjeta]
 
 ## Cuando no sepas algo
-Di: "No tengo esa info. Contacta soporte@bruno.app" (No inventes)
+Di: "No tengo esa info. Contacta soporte@bruno.app"
 
-## Acciones Especiales
-- Si piden buscar profesional → "Busco en el directorio..." + resultados
-- Si hay error → "¿Qué pantalla ves? Te guío paso a paso"
-- Si piden precio → Da el número exacto, no rangos vagos"""
+## CONTEXTO DE TARJETAS PÚBLICAS
+El sistema te proporcionará tarjetas relevantes como contexto adicional. Úsalas para dar recomendaciones reales."""
 
 class AIMessageInput(BaseModel):
     message: str
     session_id: Optional[str] = None
+    attachment_url: Optional[str] = None
+    attachment_type: Optional[str] = None
 
 class AIMessageResponse(BaseModel):
     response: str
     session_id: str
+    cards_context: Optional[list] = None
+
+async def _search_public_cards_for_ai(query: str, limit: int = 5):
+    """Search public cards to give Bruno AI context about available services"""
+    search_words = query.lower().split()
+    search_regex = "|".join(search_words)
+    
+    pipeline = [
+        {"$match": {
+            "is_public": {"$ne": False},
+            "$or": [
+                {"title": {"$regex": search_regex, "$options": "i"}},
+                {"subtitle": {"$regex": search_regex, "$options": "i"}},
+                {"description": {"$regex": search_regex, "$options": "i"}},
+                {"card_type": {"$regex": search_regex, "$options": "i"}},
+            ]
+        }},
+        {"$project": {"_id": 0, "id": 1, "title": 1, "subtitle": 1, "card_type": 1, 
+                       "description": {"$substrCP": ["$description", 0, 100]},
+                       "contact_info": 1, "location": 1}},
+        {"$limit": limit}
+    ]
+    
+    cards = []
+    async for card in db.cards.aggregate(pipeline):
+        cards.append(card)
+    return cards
 
 @api_router.post("/ai/chat", response_model=AIMessageResponse)
 async def chat_with_bruno_ai(
     input_data: AIMessageInput,
     current_user: User = Depends(get_current_user)
 ):
-    """Chat with BRUNO AI assistant"""
+    """Chat with BRUNO AI assistant - with public card knowledge and action buttons"""
     try:
-        # Get or create session ID
         session_id = input_data.session_id or f"bruno_ai_{current_user.id}_{str(uuid.uuid4())[:8]}"
         
-        # Get or create chat instance
         if session_id not in ai_chat_sessions:
             api_key = os.environ.get("EMERGENT_LLM_KEY")
             if not api_key:
@@ -4307,23 +4354,44 @@ async def chat_with_bruno_ai(
         
         chat = ai_chat_sessions[session_id]
         
-        # Create user message
-        user_message = UserMessage(text=input_data.message)
+        # Search public cards for context
+        cards_context = await _search_public_cards_for_ai(input_data.message)
         
-        # Get response
+        # Build enriched message with card context
+        enriched_message = input_data.message
+        if cards_context:
+            cards_info = "\n".join([
+                f"- [{c.get('id')}] {c.get('title','')} ({c.get('card_type','')}) - {c.get('subtitle','')} - {c.get('description','')[:80]}"
+                for c in cards_context
+            ])
+            enriched_message += f"\n\n[CONTEXTO DE TARJETAS ENCONTRADAS]\n{cards_info}"
+        
+        if input_data.attachment_url:
+            enriched_message += f"\n\n[ARCHIVO ADJUNTO: {input_data.attachment_type or 'file'} - {input_data.attachment_url}]"
+        
+        user_message = UserMessage(text=enriched_message)
         response = await chat.send_message(user_message)
         
-        # Store conversation in database for persistence
+        # Store in DB
         conversation_doc = {
             "session_id": session_id,
             "user_id": current_user.id,
             "user_message": input_data.message,
             "ai_response": response,
+            "attachment_url": input_data.attachment_url,
+            "cards_context": [c.get("id") for c in cards_context] if cards_context else [],
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.ai_conversations.insert_one(conversation_doc)
         
-        return AIMessageResponse(response=response, session_id=session_id)
+        # Return cards context for frontend to render previews
+        cards_for_response = [
+            {"id": c.get("id"), "title": c.get("title"), "card_type": c.get("card_type"), 
+             "subtitle": c.get("subtitle", ""), "city": c.get("location", {}).get("city", "")}
+            for c in cards_context
+        ] if cards_context else None
+        
+        return AIMessageResponse(response=response, session_id=session_id, cards_context=cards_for_response)
         
     except Exception as e:
         logging.error(f"AI Chat error: {str(e)}")
