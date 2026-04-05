@@ -67,6 +67,13 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - **Minimize buttons added to**: PostCard (dropdown menu), UserProfilePage (header), ReelsPage (action sidebar)
 - **Session persistence**: Items stored in sessionStorage ('bruno_min_items') with automatic migration from old key
 
+### Phase 35: Card UX Overhaul + PiP + View Modes (2026-04-05)
+- **Click-to-Open**: Removed Eye/View button entirely. Short tap (< 500ms) opens card directly
+- **Long-Press Preview**: 500ms+ press shows `CardPreviewModal` — medium-sized preview with card info, Abrir/Share buttons, backdrop overlay
+- **3 View Modes** (Profile + Feed): Compact (3 cols), Grid (2 cols), List (rows) — user-selectable with toggle icons
+- **Smaller Cards**: Compact mode shows 3 cards per row on mobile, 4-5 on larger screens
+- **Picture-in-Picture**: `PictureInPicture.jsx` — floating draggable mini video player for minimized reels/lives. Features: play/pause, mute/unmute, expand, close, live badge, drag to reposition
+
 ## Key API Endpoints
 - POST /api/ai/chat, GET /api/ai/history, POST /api/upload/chat-file
 - POST /api/auth/login (accepts optional `platform` field), POST /api/auth/refresh
