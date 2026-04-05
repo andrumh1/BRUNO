@@ -213,40 +213,41 @@ const FloatingBubbles = () => {
       {/* Satellite bubble - LEFT side, ABOVE nav bar */}
       <div className={`fixed z-[10000] transition-all duration-300 ease-out ${
         minimized
-          ? 'bottom-[18px] left-[calc(50%-88px)]'
+          ? 'bottom-[18px] left-[calc(50%-100px)]'
           : 'bottom-[74px] left-3'
       }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <button
           onClick={() => setShowAIChat(!showAIChat)}
-          className={`relative group transition-all duration-300 ${
-            minimized ? 'scale-100' : 'scale-100'
-          }`}
+          className="relative group transition-all duration-300"
           data-testid="floating-ai-btn"
         >
-          {/* Glow - subtle */}
-          <div className={`absolute inset-[-3px] bg-gradient-to-r from-violet-500/30 to-fuchsia-500/30 rounded-full blur-md transition-all duration-300 ${
-            showAIChat ? 'opacity-90' : 'opacity-0 group-hover:opacity-60'
-          }`} />
-          
-          {/* Circle - smaller than nav */}
-          <div className={`relative rounded-full overflow-hidden shadow-md transition-all duration-300 ${
-            minimized
-              ? 'w-8 h-8 shadow-violet-500/15'
-              : 'w-10 h-10 shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-110 active:scale-90'
-          } ${showAIChat ? 'ring-2 ring-violet-400 ring-offset-1 ring-offset-background' : ''}`}>
-            <div className="w-full h-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
-              <Sparkles className={`text-white transition-all ${minimized ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
+          {minimized ? (
+            /* Minimized — pill style matching BRUNO nav */
+            <div className={`flex items-center gap-1 px-3 py-2 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-xl shadow-black/10 hover:shadow-black/20 transition-all duration-300 active:scale-95 ${
+              showAIChat ? 'ring-2 ring-violet-400 ring-offset-1 ring-offset-background' : ''
+            }`}>
+              <Sparkles className="w-3.5 h-3.5 text-violet-500" />
             </div>
-          </div>
-          
-          {/* IA badge */}
-          <div className={`absolute bg-gradient-to-r from-amber-400 to-orange-500 rounded-full text-white font-bold shadow transition-all ${
-            minimized ? '-top-0.5 -right-1 px-1 py-0 text-[6px]' : '-top-0.5 -right-0.5 px-1 py-0 text-[7px]'
-          }`}>
-            IA
-          </div>
+          ) : (
+            /* Expanded — colored circle */
+            <>
+              <div className={`absolute inset-[-3px] bg-gradient-to-r from-violet-500/30 to-fuchsia-500/30 rounded-full blur-md transition-all duration-300 ${
+                showAIChat ? 'opacity-90' : 'opacity-0 group-hover:opacity-60'
+              }`} />
+              <div className={`relative w-10 h-10 rounded-full overflow-hidden shadow-md transition-all duration-300 shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-110 active:scale-90 ${
+                showAIChat ? 'ring-2 ring-violet-400 ring-offset-1 ring-offset-background' : ''
+              }`}>
+                <div className="w-full h-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="absolute -top-0.5 -right-0.5 px-1 py-0 text-[7px] bg-gradient-to-r from-amber-400 to-orange-500 rounded-full text-white font-bold shadow">
+                IA
+              </div>
+            </>
+          )}
         </button>
       </div>
 

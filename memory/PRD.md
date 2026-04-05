@@ -14,40 +14,31 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 
 ## What's Been Implemented
 
-### Phase 17-21: Foundation
-- TikTok camera, Safari cache fix, responsive nav, follow/block system
-- Trending hashtags, suggested users, bookmarks, multi-emoji reactions, reposts, polls
-- "For You" algorithmic feed, centralized settings
-
-### Phase 22-25: Social + Analytics + Stripe
-- Polls, animated reactions, @mentions, push notifications
-- Card Analytics, modernized Chat UI, Stripe checkout, Premium page
+### Phase 17-25: Foundation → Stripe (Previous Sessions)
+- Social features, card analytics, Stripe checkout, premium page
 
 ### Phase 26: P0 Bug Fixes + Backend Refactoring (2026-03-30)
-- Stripe fix, Card View Full Width, BeaconsStyleCard redesign
-- Backend: 17 social endpoints → routers/social.py
-- NFC Instant Redirect (HTTP 302) + 3-Mode Activation
+- Stripe, card view, NFC redirect, social.py router
 
-### Phase 27-28: Blocks 1-2 (2026-04-05)
-- UI fixes, floating bubble nav bar, scroll-hide, bubble animations, story rings
+### Phase 27-28: Blocks 1-2 UI + Navigation (2026-04-05)
+- UI fixes, floating bubble nav, scroll-hide, animations
 
 ### Phase 29: AI Chat + Messenger Attachments (2026-04-05)
-- Bruno AI: action buttons, card previews, file attachments
-- Backend: `/api/upload/chat-file`, ChatAttachmentMenu drawer
-- FloatingChatBubble: full attachment support
+- Bruno AI enhancements, ChatAttachmentMenu drawer, upload/chat-file endpoint
 
-### Phase 30: Satellite Bubble Design + Touch Fixes (2026-04-05)
-- **NavScrollContext**: Shared context for synchronized minimize/expand
-- **Satellite Layout**: AI (violet, LEFT) + Chat (orange, RIGHT) floating ABOVE nav bar
-- **Separated**: 12px gap between bubbles and nav bar, bubbles are 40px vs nav 56px
-- **Minimized State**: `[AI 32px] [BRUNO pill] [Chat 32px]` flanking the pill
-- **Haptic Feedback**: Vibration API (6ms minimize, 12ms expand) on state change
+### Phase 30: Satellite Bubble Design (2026-04-05)
+- **NavScrollContext**: Shared minimize/expand state with haptic feedback
+- **Satellite Layout**: AI (violet) LEFT, Chat (orange) RIGHT, floating ABOVE nav bar (12px gap)
+- **Unified Minimized Style**: All 3 pills share identical `bg-background/90 backdrop-blur-2xl border border-border/50 shadow-xl rounded-full` design, each with its own colored icon (Sparkles violet, MessageCircle orange, ChevronUp muted)
+- **8px gaps** between all minimized pills: `[✨ AI] 8px [BRUNO] 8px [💬 Chat] [user avatars...]`
+- **Minimized open chats**: Active conversations collapse into small avatar circles (w-7) that dock to the right of the Chat pill, with close-on-hover
+- **Chat windows hidden on minimize**: Windows disappear when nav minimizes, reappear when expanded
+- **Haptic Feedback**: 6ms vibrate on minimize, 12ms on expand
 - **BubbleSelect Touch Fix**: onTouchEnd + touch-manipulation + smart positioning
-- **iOS Zoom Prevention**: select elements min-height 44px, font-size 16px
 
 ## Key API Endpoints
 - POST /api/ai/chat, GET /api/ai/history, DELETE /api/ai/history
-- POST /api/upload/chat-file (auto-detects content type)
+- POST /api/upload/chat-file
 - GET/POST /api/payments/*, /api/analytics/*, /api/social/*
 
 ## Prioritized Backlog
@@ -65,10 +56,5 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - MyProfilePage.jsx (~779 lines)
 - Push notification improvements (#18)
 
-### P3: Advanced
-- ML collaborative filtering, WebSocket notifications, analytics export
-
 ## 3rd Party Integrations
-- OpenAI GPT-5.2 (Emergent LLM Key)
-- Stripe (emergentintegrations)
-- Daily.co, Cloudinary, Leaflet, Emergent Google Auth
+- OpenAI GPT-5.2 (Emergent LLM Key), Stripe, Daily.co, Cloudinary, Leaflet, Emergent Google Auth

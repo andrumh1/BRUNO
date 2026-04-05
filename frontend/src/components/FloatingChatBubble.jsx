@@ -442,41 +442,82 @@ const FloatingChatBubble = () => {
   return (
     <>
       {/* Satellite bubble - RIGHT side, ABOVE nav bar */}
-      <div className={`fixed z-[10000] transition-all duration-300 ease-out ${
+      <div className={`fixed z-[10000] transition-all duration-300 ease-out flex items-center gap-1.5 ${
         minimized
-          ? 'bottom-[18px] right-[calc(50%-88px)]'
+          ? 'bottom-[18px] right-[calc(50%-100px)]'
           : 'bottom-[74px] right-3'
       }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
+        {/* Main chat button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`relative group transition-all duration-300 ${minimized ? 'scale-100' : 'scale-100'}`}
+          className="relative group transition-all duration-300"
           data-testid="chat-bubble-btn"
         >
-          {/* Glow - subtle */}
-          <div className={`absolute inset-[-3px] bg-gradient-to-r from-primary/30 to-orange-500/30 rounded-full blur-md transition-all duration-300 ${
-            isOpen ? 'opacity-90' : 'opacity-0 group-hover:opacity-60'
-          }`} />
-          
-          {/* Circle - smaller than nav */}
-          <div className={`relative rounded-full shadow-md flex items-center justify-center bg-gradient-to-br from-primary to-orange-600 transition-all duration-300 ${
-            minimized
-              ? 'w-8 h-8 shadow-primary/15'
-              : 'w-10 h-10 shadow-primary/25 hover:shadow-primary/40 hover:scale-110 active:scale-90'
-          } ${isOpen ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''}`}>
-            <MessageCircle className={`text-white transition-all ${minimized ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} strokeWidth={2} />
-          </div>
-          
-          {/* Unread badge */}
-          {unreadTotal > 0 && (
-            <div className={`absolute -top-0.5 -right-0.5 bg-red-500 rounded-full text-white font-bold shadow flex items-center justify-center transition-all ${
-              minimized ? 'min-w-[13px] h-[13px] text-[6px] px-0.5' : 'min-w-[16px] h-[16px] text-[8px] px-0.5'
+          {minimized ? (
+            /* Minimized — pill style matching BRUNO nav */
+            <div className={`flex items-center gap-1 px-3 py-2 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-xl shadow-black/10 hover:shadow-black/20 transition-all duration-300 active:scale-95 ${
+              isOpen ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
             }`}>
-              {unreadTotal > 9 ? "9+" : unreadTotal}
+              <MessageCircle className="w-3.5 h-3.5 text-primary" strokeWidth={2} />
+              {unreadTotal > 0 && (
+                <span className="min-w-[13px] h-[13px] bg-red-500 rounded-full text-white text-[7px] font-bold flex items-center justify-center px-0.5">
+                  {unreadTotal > 9 ? "9+" : unreadTotal}
+                </span>
+              )}
             </div>
+          ) : (
+            /* Expanded — colored circle */
+            <>
+              <div className={`absolute inset-[-3px] bg-gradient-to-r from-primary/30 to-orange-500/30 rounded-full blur-md transition-all duration-300 ${
+                isOpen ? 'opacity-90' : 'opacity-0 group-hover:opacity-60'
+              }`} />
+              <div className={`relative w-10 h-10 rounded-full shadow-md flex items-center justify-center bg-gradient-to-br from-primary to-orange-600 transition-all duration-300 shadow-primary/25 hover:shadow-primary/40 hover:scale-110 active:scale-90 ${
+                isOpen ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
+              }`}>
+                <MessageCircle className="w-4 h-4 text-white" strokeWidth={2} />
+              </div>
+              {unreadTotal > 0 && (
+                <div className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-red-500 rounded-full text-white text-[8px] font-bold shadow flex items-center justify-center px-0.5">
+                  {unreadTotal > 9 ? "9+" : unreadTotal}
+                </div>
+              )}
+            </>
           )}
         </button>
+
+        {/* Minimized open chats — avatar circles to the right */}
+        {minimized && openChats.length > 0 && (
+          <div className="flex items-center gap-1 animate-in fade-in duration-200">
+            {openChats.map((chat) => {
+              const p = chat.other_participants?.[0] || {};
+              return (
+                <button
+                  key={chat.id}
+                  onClick={() => setOpenChats(prev => prev.map(c => c.id === chat.id ? { ...c, minimized: false } : c))}
+                  className="relative group/avatar"
+                  data-testid={`minimized-chat-avatar-${chat.id}`}
+                >
+                  <div className="w-7 h-7 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-lg overflow-hidden transition-all hover:scale-110 active:scale-90">
+                    {p.avatar_url ? (
+                      <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/80 to-orange-500/80 flex items-center justify-center text-white text-[9px] font-bold">
+                        {(p.display_name || "?")[0].toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  {/* Close button on hover */}
+                  <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full items-center justify-center text-white hidden group-hover/avatar:flex transition-all"
+                    onClick={(e) => { e.stopPropagation(); setOpenChats(prev => prev.filter(c => c.id !== chat.id)); }}>
+                    <X className="w-2 h-2" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Chat List Popup */}
@@ -493,17 +534,19 @@ const FloatingChatBubble = () => {
         </div>
       )}
 
-      {/* Open Chat Windows */}
-      <div className="fixed bottom-20 right-16 z-[10000] flex items-end gap-2 md:bottom-6 md:right-20">
-        {openChats.map((chat, index) => (
-          <div key={chat.id} className="animate-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms` }}>
-            <ChatWindow chat={chat}
-              onClose={() => setOpenChats(prev => prev.filter(c => c.id !== chat.id))}
-              onMinimize={() => setOpenChats(prev => prev.map(c => c.id === chat.id ? { ...c, minimized: !c.minimized } : c))}
-              isMinimized={chat.minimized} currentUserId={user.id} ws={ws} token={token} />
-          </div>
-        ))}
-      </div>
+      {/* Open Chat Windows — only when nav is expanded */}
+      {!minimized && (
+        <div className="fixed bottom-24 right-14 z-[10000] flex items-end gap-2">
+          {openChats.map((chat, index) => (
+            <div key={chat.id} className="animate-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms` }}>
+              <ChatWindow chat={chat}
+                onClose={() => setOpenChats(prev => prev.filter(c => c.id !== chat.id))}
+                onMinimize={() => setOpenChats(prev => prev.map(c => c.id === chat.id ? { ...c, minimized: !c.minimized } : c))}
+                isMinimized={chat.minimized} currentUserId={user.id} ws={ws} token={token} />
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 };
