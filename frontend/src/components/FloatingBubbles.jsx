@@ -102,7 +102,7 @@ const FloatingBubbles = () => {
   const { user, token } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { minimized } = useNavScroll();
+  const { minimized, setMinimized, minimizedCards, removeMinimizedCard, touchHandlers } = useNavScroll();
   const [showAIChat, setShowAIChat] = useState(false);
   const [aiMessages, setAiMessages] = useState([]);
   const [aiInput, setAiInput] = useState("");
@@ -210,22 +210,64 @@ const FloatingBubbles = () => {
 
   return (
     <>
-      {/* === MINIMIZED STATE: AI pill === */}
+      {/* === MINIMIZED STATE: Card tray + AI pill === */}
       {minimized && (
-        <div className="fixed z-[10000] bottom-[18px] transition-all duration-300 ease-out"
-          style={{ right: 'calc(50% + 60px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-          <button
-            onClick={() => setShowAIChat(!showAIChat)}
-            className="relative group transition-all duration-300"
-            data-testid="floating-ai-btn"
-          >
-            <div className={`flex items-center gap-1 px-3 py-2 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-xl shadow-black/10 hover:shadow-black/20 transition-all duration-300 active:scale-95 ${
-              showAIChat ? 'ring-2 ring-violet-400 ring-offset-1 ring-offset-background' : ''
-            }`}>
-              <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+        <>
+          {/* Minimized card pills — scrollable, to the LEFT of AI pill */}
+          {minimizedCards.length > 0 && (
+            <div
+              className="fixed z-[10000] bottom-[19px] overflow-x-auto scrollbar-hide transition-all duration-300"
+              style={{
+                left: '8px',
+                right: 'calc(50% + 104px)',
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+              }}
+              data-testid="minimized-cards-tray"
+            >
+              <div className="flex items-center gap-1.5 w-max">
+                {minimizedCards.map((card) => (
+                  <button
+                    key={card.id}
+                    onClick={() => { setMinimized(false); navigate(`/c/${card.id}`); removeMinimizedCard(card.id); }}
+                    className="relative group/card shrink-0"
+                    data-testid={`minimized-card-${card.id}`}
+                  >
+                    <div className="w-7 h-7 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-lg overflow-hidden transition-all hover:scale-110 active:scale-90 flex items-center justify-center">
+                      {card.thumbnail ? (
+                        <img src={card.thumbnail} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[9px] font-bold text-primary">
+                          {(card.title || "?")[0].toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full items-center justify-center text-white hidden group-hover/card:flex transition-all cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); removeMinimizedCard(card.id); }}>
+                      <X className="w-2 h-2" />
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </button>
-        </div>
+          )}
+
+          {/* AI pill */}
+          <div className="fixed z-[10000] bottom-[18px] transition-all duration-300 ease-out"
+            style={{ right: 'calc(50% + 60px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            <button
+              onClick={() => setShowAIChat(!showAIChat)}
+              {...touchHandlers}
+              className="relative group transition-all duration-300"
+              data-testid="floating-ai-btn"
+            >
+              <div className={`flex items-center gap-1 px-3 py-2 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-xl shadow-black/10 hover:shadow-black/20 transition-all duration-300 active:scale-95 ${
+                showAIChat ? 'ring-2 ring-violet-400 ring-offset-1 ring-offset-background' : ''
+              }`}>
+                <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+              </div>
+            </button>
+          </div>
+        </>
       )}
 
       {/* === EXPANDED STATE: Colored circle above nav bar === */}

@@ -365,7 +365,7 @@ const NewChatModal = ({ isOpen, onClose, onSelectUser, token }) => {
 const FloatingChatBubble = () => {
   const { user, token } = useAuth();
   const location = useLocation();
-  const { minimized } = useNavScroll();
+  const { minimized, setMinimized, touchHandlers } = useNavScroll();
   const [isOpen, setIsOpen] = useState(false);
   const [chats, setChats] = useState([]);
   const [openChats, setOpenChats] = useState([]);
@@ -449,6 +449,7 @@ const FloatingChatBubble = () => {
             style={{ left: 'calc(50% + 60px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <button
               onClick={() => setIsOpen(!isOpen)}
+              {...touchHandlers}
               className="relative group transition-all duration-300"
               data-testid="chat-bubble-btn"
             >
@@ -484,7 +485,10 @@ const FloatingChatBubble = () => {
                     return (
                       <button
                         key={chat.id}
-                        onClick={() => setOpenChats(prev => prev.map(c => c.id === chat.id ? { ...c, minimized: false } : c))}
+                        onClick={() => {
+                          setMinimized(false);
+                          setOpenChats(prev => prev.map(c => c.id === chat.id ? { ...c, minimized: false } : c));
+                        }}
                         className="relative group/avatar shrink-0"
                         data-testid={`minimized-chat-avatar-${chat.id}`}
                       >

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import SocialLinkButton from "@/components/SocialLinkButton";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
-import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink } from "lucide-react";
+import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2 } from "lucide-react";
+import { useNavScroll } from "@/contexts/NavScrollContext";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -14,6 +15,7 @@ const ViewCardPage = () => {
   const { cardId } = useParams();
   const navigate = useNavigate();
   const { user, token } = useAuth();
+  const { addMinimizedCard } = useNavScroll();
   const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -127,6 +129,17 @@ const ViewCardPage = () => {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex items-center gap-1 sm:gap-2">
+          <Button variant="ghost" size="icon" onClick={() => {
+            addMinimizedCard({
+              id: cardId,
+              title: card?.title || card?.name || '',
+              card_type: card?.card_type || '',
+              thumbnail: card?.avatar_url || card?.banner_url || null,
+            });
+            navigate(-1);
+          }} data-testid="card-minimize-btn" title="Minimizar">
+            <Minimize2 className="w-4 h-4" />
+          </Button>
           {isOwner && (
             <Button variant="ghost" size="sm" onClick={() => navigate(`/cards/${cardId}/edit`)} data-testid="card-edit-btn">
               <Pencil className="w-4 h-4 mr-1.5" /> Editar

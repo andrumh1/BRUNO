@@ -11,7 +11,7 @@ const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { minimized, setMinimized } = useNavScroll();
+  const { minimized, setMinimized, touchHandlers } = useNavScroll();
   
   const hiddenPaths = ['/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || 
@@ -49,6 +49,7 @@ const MobileBottomNav = () => {
         >
           <button
             onClick={() => setMinimized(false)}
+            {...touchHandlers}
             className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-xl shadow-black/10 hover:shadow-black/20 transition-all duration-300 active:scale-95"
             data-testid="nav-expand-btn"
           >
@@ -69,6 +70,7 @@ const MobileBottomNav = () => {
         className="fixed bottom-3 left-3 right-3 z-[9999] animate-in slide-in-from-bottom-4 duration-300"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         data-testid="mobile-bottom-nav"
+        {...touchHandlers}
       >
         <div className="relative max-w-md mx-auto">
           {/* Floating bubble background */}
