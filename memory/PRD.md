@@ -39,20 +39,31 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Frontend AuthContext silently updates stored token when receiving refreshed_token
 - All login paths (email, Google OAuth) store token in localStorage by default for cross-session persistence
 
+### Phase 32: Mobile Infinite Sessions + Premium Templates + Multi-Locations + N+1 Fixes (2026-04-05)
+- **Mobile Indefinite Sessions**: Login sends `platform` param (mobile/web). Mobile gets 365-day JWT, web gets 30-day. JWT contains `plt` claim.
+- **Long-Press Tooltip**: 400ms long-press on minimized card pill shows tooltip with card name + type label (Personal/Negocio/Freelance etc.)
+- **Multiple Locations**: Card model has `locations: List[dict]` array. CreateCardPage has "Agregar otra ubicacion" button. ViewCardPage renders all locations as clickable items linking to Google Maps.
+- **4 Premium Templates**: premium_formal (serif + golden accents), premium_glass (glassmorphism), premium_fullimg (full background image with dark overlay), premium_animated (animated gradient + particles). All templates show PRO badge in TemplateSelector.
+- **N+1 Query Optimization**: Posts feed and For-You feed now batch-fetch users, profiles, likes, bookmarks using `$in` operator instead of individual queries per post. NFC cards endpoint also batch-fetches card titles.
+- **Pagination**: GET /cards and GET /public/cards now accept `skip` and `limit` params (default limit=50).
+
 ## Key API Endpoints
 - POST /api/ai/chat, GET /api/ai/history, POST /api/upload/chat-file
+- POST /api/auth/login (accepts optional `platform` field), POST /api/auth/refresh
+- GET /api/cards?skip=0&limit=50, GET /api/public/cards?skip=0&limit=50
 - All social, payment, analytics endpoints operational
 
 ## Prioritized Backlog
 
-### P1: User Feedback
-- Point #2: Multiple addresses/locations for business cards
-- Point #15: Instagram/TikTok-style Story Editor
-- Point #6: Premium card templates (Formal, Minimalist, Full Image, Animated)
-- Point #13: Reels first screen, Point #17: Profile editor with albums
+### P1: User Feedback (Remaining)
+- Point #15: Instagram/TikTok-style Story Editor (stickers, text overlay)
+- Point #13: Reels as first screen when entering a profile
+- Point #17: Advanced profile editor with public/private album folders
 
 ### P2: Performance & Refactoring
-- N+1 queries + pagination, server.py (~5200 lines), MyProfilePage.jsx
+- server.py monolith (~5300 lines) needs router extraction (auth, cards, AI chat)
+- MyProfilePage.jsx (~800 lines) needs component breakdown
+- Push notification improvements for mobile (Point #18)
 
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 (Emergent LLM Key), Stripe, Daily.co, Cloudinary, Leaflet, Emergent Google Auth
