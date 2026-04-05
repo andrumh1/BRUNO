@@ -108,6 +108,10 @@ const ViewCardPage = () => {
   const fg = card.text_color || "#FFFFFF";
   const isFullBanner = card.template_id === "full_banner_bubble";
   const isEdge = card.template_id === "edge_actions";
+  const isPremiumGlass = card.template_id === "premium_glass";
+  const isPremiumFormal = card.template_id === "premium_formal";
+  const isPremiumFullImg = card.template_id === "premium_fullimg";
+  const isPremiumAnimated = card.template_id === "premium_animated";
 
   const cardTypeLabel = card.card_type === "personal" ? "Personal" : card.card_type === "empresarial" ? "Empresarial" : card.card_type === "negocio" ? "Negocio" : card.card_type === "servicios" ? "Servicios" : card.card_type === "lugares" ? "Lugar" : card.card_type === "guardian" ? "Guardian" : card.card_type === "curriculum" ? "CV" : card.card_type === "mascotas" ? "Mascota" : card.card_type;
 
@@ -158,12 +162,23 @@ const ViewCardPage = () => {
       <div className="relative z-10 w-full px-3 sm:px-6 lg:px-10 xl:px-16">
         {/* ===== MAIN CARD - full width ===== */}
         <div
-          className="rounded-2xl lg:rounded-3xl shadow-2xl overflow-hidden border"
-          style={{ borderColor: `${bg}30` }}
+          className={`rounded-2xl lg:rounded-3xl shadow-2xl overflow-hidden border ${isPremiumGlass ? 'backdrop-blur-xl bg-white/10' : ''} ${isPremiumFormal ? 'border-amber-400/40' : ''}`}
+          style={{
+            borderColor: isPremiumFormal ? undefined : `${bg}30`,
+            ...(isPremiumAnimated ? { background: `linear-gradient(135deg, ${bg}, ${bg}CC, ${bg}88, ${bg})`, backgroundSize: '400% 400%', animation: 'gradientShift 8s ease infinite' } : {}),
+            ...(isPremiumFullImg && card.banner_url ? { backgroundImage: `url(${card.banner_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
+          }}
           data-testid="card-container"
         >
+          {/* Premium animated gradient keyframes */}
+          {isPremiumAnimated && (
+            <style>{`@keyframes gradientShift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }`}</style>
+          )}
           {/* Banner / Header */}
-          {card.banner_url ? (
+          {isPremiumFullImg ? (
+            /* premium_fullimg: dark overlay on the background image for readability */
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/70 pointer-events-none" />
+          ) : card.banner_url ? (
             <div className="relative w-full overflow-hidden" style={{ aspectRatio: isFullBanner ? "21/9" : "4/1" }}>
               <img
                 src={card.banner_url}
@@ -188,8 +203,11 @@ const ViewCardPage = () => {
 
           {/* Card body */}
           <div
-            className="relative"
-            style={{ background: `linear-gradient(180deg, ${bg}, ${bg}ee)`, color: fg }}
+            className={`relative ${isPremiumGlass ? 'backdrop-blur-xl' : ''}`}
+            style={{
+              background: isPremiumFullImg ? 'transparent' : isPremiumGlass ? `${bg}40` : `linear-gradient(180deg, ${bg}, ${bg}ee)`,
+              color: fg
+            }}
           >
             {/* Avatar row */}
             <div className="px-5 sm:px-8 lg:px-12 -mt-12 sm:-mt-14 lg:-mt-16 flex items-end justify-between">
@@ -233,7 +251,7 @@ const ViewCardPage = () => {
             <div className="px-5 sm:px-8 lg:px-12 pt-5 sm:pt-6 lg:pt-8 pb-6 sm:pb-8 lg:pb-10">
               {!isFullBanner && (
                 <div className="mb-6">
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1" data-testid="card-title">{card.title}</h1>
+                  <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 ${isPremiumFormal ? 'font-serif tracking-tight' : ''}`} data-testid="card-title">{card.title}</h1>
                   {card.subtitle && <p className="text-sm sm:text-base lg:text-lg opacity-85 font-medium mb-1.5">{card.subtitle}</p>}
                   {card.description && <p className="text-sm sm:text-base opacity-75 leading-relaxed max-w-4xl">{card.description}</p>}
                 </div>
@@ -306,11 +324,33 @@ const ViewCardPage = () => {
                 {card.location && (card.location.city || card.location.address) && (
                   <div className="rounded-2xl p-4 lg:p-5" style={{ backgroundColor: `${fg}10` }} data-testid="card-location-bubble">
                     <h3 className="text-xs font-bold uppercase tracking-wider opacity-60 mb-3">Ubicacion</h3>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${fg}15` }}>
-                        <MapPin className="w-5 h-5" />
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${card.location.lat},${card.location.lng}`, '_blank')}>
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${fg}15` }}>
+                          <MapPin className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {card.location.place_name && <span className="text-xs font-semibold block">{card.location.place_name}</span>}
+                          <span className="text-sm opacity-80">{card.location.city || card.location.address}</span>
+                        </div>
                       </div>
-                      <span className="text-sm">{card.location.city || card.location.address}</span>
+                      {/* Additional locations */}
+                      {card.locations?.length > 0 && card.locations.map((loc, idx) => (
+                        loc.address && (
+                          <div key={idx} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => loc.lat && loc.lng && window.open(`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`, '_blank')}
+                            data-testid={`card-location-${idx}`}>
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${fg}10` }}>
+                              <MapPin className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              {loc.label && <span className="text-xs font-semibold block">{loc.label}</span>}
+                              <span className="text-xs opacity-70">{loc.address}</span>
+                            </div>
+                          </div>
+                        )
+                      ))}
                     </div>
                   </div>
                 )}

@@ -5,6 +5,14 @@ import { Check } from "lucide-react";
 // Se añaden dos diseños comunes extra para todos los tipos:
 // - edge_actions: compartir y QR en el borde del avatar
 // - full_banner_bubble: banner dominante + info en burbuja semitransparente
+// Premium templates available to all card types
+const premiumTemplates = [
+  { id: "premium_formal", name: "Formal", preview: "Elegante con tipografia serif y bordes dorados", premium: true },
+  { id: "premium_glass", name: "Cristal", preview: "Efecto glassmorphism translucido moderno", premium: true },
+  { id: "premium_fullimg", name: "Imagen Completa", preview: "Foto de fondo a pantalla completa", premium: true },
+  { id: "premium_animated", name: "Animado", preview: "Fondo con gradiente animado + particulas", premium: true },
+];
+
 const templates = {
   personal: [
     { id: "personal_classic", name: "Clasico", preview: "Avatar grande con info centrada" },
@@ -12,6 +20,7 @@ const templates = {
     { id: "personal_minimal", name: "Minimalista", preview: "Solo avatar + texto" },
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+    ...premiumTemplates,
   ],
   empresarial: [
     { id: "empresarial_pro", name: "Profesional", preview: "Banner corporativo + logo" },
@@ -19,6 +28,7 @@ const templates = {
     { id: "empresarial_bold", name: "Impactante", preview: "Full banner + info destacada" },
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+    ...premiumTemplates,
   ],
   negocio: [
     { id: "negocio_showcase", name: "Escaparate", preview: "Galeria de productos" },
@@ -26,12 +36,14 @@ const templates = {
     { id: "negocio_promo", name: "Promocional", preview: "Call-to-action destacado" },
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+    ...premiumTemplates,
   ],
   servicios: [
     { id: "servicios_portfolio", name: "Portfolio", preview: "Muestra tus servicios con estilo" },
     { id: "servicios_catalog", name: "Catalogo", preview: "Lista de servicios con precios" },
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+    ...premiumTemplates,
   ],
   lugares: [
     { id: "lugares_tour", name: "Turistico", preview: "Banner panoramico" },
@@ -39,6 +51,7 @@ const templates = {
     { id: "lugares_gallery", name: "Galeria", preview: "Grid de fotos" },
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+    ...premiumTemplates,
   ],
   guardian: [
     { id: "guardian_safe", name: "Seguridad", preview: "Info de contacto destacada" },
@@ -46,6 +59,7 @@ const templates = {
     { id: "guardian_emergency", name: "Emergencia", preview: "Contactos de emergencia" },
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+    ...premiumTemplates,
   ],
   curriculum: [
     { id: "curriculum_clean", name: "Curriculum limpio", preview: "Layout tipo hoja de vida minimalista" },
@@ -53,30 +67,35 @@ const templates = {
     { id: "curriculum_card", name: "Curriculum tarjeta", preview: "Perfil compacto con detalles expandibles" },
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+    ...premiumTemplates,
   ],
   mascotas: [
     { id: "mascotas_friend", name: "Amigo", preview: "Tarjeta tierna para tu mascota" },
     { id: "mascotas_gallery", name: "Galeria", preview: "Fotos destacadas de tu mascota" },
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+    ...premiumTemplates,
   ],
   oferta_trabajo: [
     { id: "job_offer_pro", name: "Profesional", preview: "Oferta clara con detalles del puesto" },
     { id: "job_offer_modern", name: "Moderno", preview: "Diseno llamativo para atraer talento" },
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+    ...premiumTemplates,
   ],
   busqueda_personal: [
     { id: "staff_search_modern", name: "Moderno", preview: "Busqueda de personal con estilo" },
     { id: "staff_search_classic", name: "Clasico", preview: "Formato tradicional de reclutamiento" },
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+    ...premiumTemplates,
   ],
   solicitud_servicio: [
     { id: "service_request_clean", name: "Limpio", preview: "Solicitud de servicio ordenada" },
     { id: "service_request_urgent", name: "Urgente", preview: "Destaca la urgencia del servicio" },
     { id: "edge_actions", name: "Avatar Acciones", preview: "Compartir y QR en el borde del avatar" },
     { id: "full_banner_bubble", name: "Banner burbuja", preview: "Banner dominante + info en burbuja" },
+    ...premiumTemplates,
   ],
 };
 
@@ -86,12 +105,20 @@ const TemplateSelector = ({ cardType, selectedTemplate, onChange }) => {
   const getTemplateIcon = (templateId) => {
     if (templateId === "edge_actions") return "QR";
     if (templateId === "full_banner_bubble") return "BB";
+    if (templateId === "premium_formal") return "F";
+    if (templateId === "premium_glass") return "G";
+    if (templateId === "premium_fullimg") return "FI";
+    if (templateId === "premium_animated") return "AN";
     return templateId.charAt(0).toUpperCase();
   };
 
   const getTemplateGradient = (templateId) => {
     if (templateId === "edge_actions") return "from-violet-500/20 to-blue-500/20";
     if (templateId === "full_banner_bubble") return "from-amber-500/20 to-rose-500/20";
+    if (templateId === "premium_formal") return "from-yellow-600/25 to-amber-800/20";
+    if (templateId === "premium_glass") return "from-sky-400/20 to-indigo-400/20";
+    if (templateId === "premium_fullimg") return "from-rose-500/20 to-purple-600/20";
+    if (templateId === "premium_animated") return "from-fuchsia-500/25 to-cyan-500/20";
     if (templateId.includes("classic") || templateId.includes("clean")) return "from-slate-500/20 to-zinc-500/20";
     if (templateId.includes("modern") || templateId.includes("pro")) return "from-blue-500/20 to-cyan-500/20";
     if (templateId.includes("minimal") || templateId.includes("friend")) return "from-green-500/20 to-emerald-500/20";
@@ -119,7 +146,12 @@ const TemplateSelector = ({ cardType, selectedTemplate, onChange }) => {
                   <Check className="w-3 h-3 text-white" />
                 </div>
               )}
-              <div className={`aspect-[4/3] bg-gradient-to-br ${getTemplateGradient(template.id)} rounded-lg mb-2 flex items-center justify-center text-lg font-bold text-muted-foreground`}>
+              {template.premium && (
+                <div className="absolute -top-1 -left-1 px-1.5 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full text-[8px] font-bold text-white z-10 shadow-sm">
+                  PRO
+                </div>
+              )}
+              <div className={`aspect-[4/3] bg-gradient-to-br ${getTemplateGradient(template.id)} rounded-lg mb-2 flex items-center justify-center text-lg font-bold text-muted-foreground ${template.premium ? 'ring-1 ring-amber-400/30' : ''}`}>
                 {getTemplateIcon(template.id)}
               </div>
               <h4 className="font-medium text-xs text-center">{template.name}</h4>

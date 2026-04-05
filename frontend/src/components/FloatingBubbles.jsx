@@ -120,8 +120,10 @@ const FloatingBubbles = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
   const [attachment, setAttachment] = useState(null);
+  const [tooltipCard, setTooltipCard] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const longPressTimer = useRef(null);
 
   const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(p => location.pathname.startsWith(p));
@@ -238,13 +240,27 @@ const FloatingBubbles = () => {
               <div className="flex items-center gap-1.5 w-max">
                 {minimizedCards.map((card) => {
                   const badgeColor = CARD_TYPE_COLORS[card.card_type] || '#6B7280';
+                  const typeLabel = {personal:'Personal',business:'Negocio',freelance:'Freelance',curriculum:'CV',empresarial:'Empresa',oferta_trabajo:'Oferta',busqueda_personal:'Busqueda',solicitud_servicio:'Servicio'}[card.card_type] || card.card_type;
                   return (
                     <button
                       key={card.id}
-                      onClick={() => { setMinimized(false); navigate(`/c/${card.id}`); removeMinimizedCard(card.id); }}
+                      onClick={() => { setTooltipCard(null); setMinimized(false); navigate(`/c/${card.id}`); removeMinimizedCard(card.id); }}
+                      onTouchStart={() => { longPressTimer.current = setTimeout(() => setTooltipCard(card.id), 400); }}
+                      onTouchEnd={() => { clearTimeout(longPressTimer.current); }}
+                      onMouseDown={() => { longPressTimer.current = setTimeout(() => setTooltipCard(card.id), 400); }}
+                      onMouseUp={() => { clearTimeout(longPressTimer.current); }}
+                      onMouseLeave={() => { clearTimeout(longPressTimer.current); setTooltipCard(null); }}
                       className="relative group/card shrink-0"
                       data-testid={`minimized-card-${card.id}`}
                     >
+                      {/* Long-press tooltip */}
+                      {tooltipCard === card.id && (
+                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg bg-foreground text-background text-[9px] font-medium whitespace-nowrap shadow-lg z-10 animate-in fade-in zoom-in-95 duration-150" data-testid="card-tooltip">
+                          <span>{card.title}</span>
+                          <span className="ml-1 opacity-60">· {typeLabel}</span>
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-0 h-0 border-l-[4px] border-r-[4px] border-t-[4px] border-l-transparent border-r-transparent border-t-foreground" />
+                        </div>
+                      )}
                       <div className="w-7 h-7 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-lg overflow-hidden transition-all hover:scale-110 active:scale-90 flex items-center justify-center">
                         {card.thumbnail ? (
                           <img src={card.thumbnail} alt="" className="w-full h-full object-cover" />

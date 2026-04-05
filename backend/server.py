@@ -133,6 +133,7 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    platform: Optional[str] = "web"  # "web" | "mobile" | "native"
 
 class Token(BaseModel):
     access_token: str
@@ -229,6 +230,7 @@ class Card(BaseModel):
     social_links: Optional[List[SocialLink]] = []
     contact_info: Optional[ContactInfo] = None
     location: Optional[dict] = None  # { "lat": float, "lng": float, "address": str, "place_name": str }
+    locations: List[dict] = []  # Multiple locations: [{ "lat": float, "lng": float, "address": str, "label": str }]
     template_id: str = "default"  # Para las 12 plantillas diferentes
     custom_fields: Optional[dict] = None
     is_public: bool = True
@@ -251,6 +253,7 @@ class CardCreate(BaseModel):
     social_links: Optional[List[SocialLink]] = []
     contact_info: Optional[ContactInfo] = None
     location: Optional[dict] = None
+    locations: List[dict] = []
     template_id: str = "default"
     custom_fields: Optional[dict] = None
     is_public: bool = True
@@ -269,6 +272,7 @@ class CardUpdate(BaseModel):
     social_links: Optional[List[SocialLink]] = None
     contact_info: Optional[ContactInfo] = None
     location: Optional[dict] = None
+    locations: Optional[List[dict]] = None
     template_id: Optional[str] = None
     custom_fields: Optional[dict] = None
     is_public: Optional[bool] = None
@@ -891,8 +895,9 @@ async def login(user_input: UserLogin):
     
     user_obj = User(**user_dict)
     
-    # Create token
-    access_token = create_access_token(data={"sub": user_obj.email})
+    # Create token — mobile gets 1-year expiry for persistent notifications
+    expire_delta = timedelta(days=365) if user_input.platform in ("mobile", "native") else None
+    access_token = create_access_token(data={"sub": user_obj.email, "plt": user_input.platform or "web"}, expires_delta=expire_delta)
     
     return Token(access_token=access_token, token_type="bearer", user=user_obj)
 
@@ -1188,10 +1193,10 @@ async def create_card(card_input: CardCreate, current_user: User = Depends(get_c
     await db.cards.insert_one(card_doc)
     return card_obj
 
-@api_router.get("/cards", response_model=List[Card])
-async def get_my_cards(current_user: User = Depends(get_current_user)):
-    """Obtener las tarjetas del usuario autenticado (panel y gestión)."""
-    cards = await db.cards.find({"user_id": current_user.id}, {"_id": 0}).to_list(1000)
+@api_router.get("/cards")
+async def get_my_cards(current_user: User = Depends(get_current_user), skip: int = 0, limit: int = 50):
+    """Obtener las tarjetas del usuario autenticado (panel y gestion)."""
+    cards = await db.cards.find({"user_id": current_user.id}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     for card in cards:
         if isinstance(card.get('created_at'), str):
@@ -1199,15 +1204,11 @@ async def get_my_cards(current_user: User = Depends(get_current_user)):
         if isinstance(card.get('updated_at'), str):
             card['updated_at'] = datetime.fromisoformat(card['updated_at'])
     
-    return cards
+    return [Card(**c) for c in cards]
 
-@api_router.get("/public/cards", response_model=List[Card])
-async def get_public_cards():
-    """Obtener tarjetas pblicas para el Feed (sin autenticacin).
-
-    Solo devuelve tarjetas marcadas como pblicas y visibles en el Feed.
-    Las tarjetas antiguas sin el campo show_in_feed tambin se consideran visibles.
-    """
+@api_router.get("/public/cards")
+async def get_public_cards(skip: int = 0, limit: int = 50):
+    """Obtener tarjetas publicas para el Feed."""
     query = {
         "is_public": True,
         "$or": [
@@ -1215,7 +1216,7 @@ async def get_public_cards():
             {"show_in_feed": {"$exists": False}},
         ],
     }
-    cards = await db.cards.find(query, {"_id": 0}).to_list(1000)
+    cards = await db.cards.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
 
     for card in cards:
         if isinstance(card.get("created_at"), str):
@@ -1870,15 +1871,21 @@ async def get_my_nfc_cards(current_user: User = Depends(get_current_user)):
     nfc_cards = await db.nfc_cards.find({"user_id": current_user.id}, {"_id": 0}).to_list(1000)
     frontend_url = os.environ.get('FRONTEND_URL', '')
     
+    # Batch fetch card titles to avoid N+1
+    card_ids = list({nfc.get("card_id", "") for nfc in nfc_cards if nfc.get("card_id")})
+    cards_map = {}
+    if card_ids:
+        cards_cursor = db.cards.find({"id": {"$in": card_ids}}, {"_id": 0, "id": 1, "title": 1})
+        async for c in cards_cursor:
+            cards_map[c["id"]] = c.get("title", "")
+    
     for nfc in nfc_cards:
         if isinstance(nfc.get('created_at'), str):
             nfc['created_at'] = datetime.fromisoformat(nfc['created_at'])
         if nfc.get('activated_at') and isinstance(nfc['activated_at'], str):
             nfc['activated_at'] = datetime.fromisoformat(nfc['activated_at'])
-        # Include the current redirect URL for re-encoding
         nfc['redirect_url'] = f"{frontend_url}/api/nfc/go/{nfc['nfc_id']}"
-        card = await db.cards.find_one({"id": nfc.get("card_id", "")}, {"_id": 0, "title": 1})
-        nfc['card_title'] = card.get('title', '') if card else ''
+        nfc['card_title'] = cards_map.get(nfc.get("card_id", ""), "")
     
     return nfc_cards
 
@@ -2258,12 +2265,18 @@ async def create_store_order(
     shipping_address_id: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
-    # Validate items and calculate totals
+    # Validate items and calculate totals — batch fetch products
+    product_ids = [item["product_id"] for item in items]
+    products_cursor = db.store_products.find({"id": {"$in": product_ids}, "is_active": True}, {"_id": 0})
+    products_map = {}
+    async for p in products_cursor:
+        products_map[p["id"]] = p
+    
     order_items = []
     subtotal = 0
     
     for item in items:
-        product = await db.store_products.find_one({"id": item["product_id"], "is_active": True}, {"_id": 0})
+        product = products_map.get(item["product_id"])
         if not product:
             raise HTTPException(status_code=404, detail=f"Product {item['product_id']} not found")
         
@@ -3265,12 +3278,30 @@ async def get_posts(
     
     posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
-    # Enrich posts with user info and like status
+    # Batch-enrich posts with user info and like/bookmark status
+    user_ids = list({post["user_id"] for post in posts})
+    post_ids = [post["id"] for post in posts]
+    
+    users_map = {}
+    profiles_map = {}
+    if user_ids:
+        async for u in db.users.find({"id": {"$in": user_ids}}, {"_id": 0, "hashed_password": 0}):
+            users_map[u["id"]] = u
+        async for p in db.user_profiles.find({"user_id": {"$in": user_ids}}, {"_id": 0}):
+            profiles_map[p["user_id"]] = p
+    
+    liked_set = set()
+    bookmarked_set = set()
+    if current_user and post_ids:
+        async for like in db.likes.find({"user_id": current_user.id, "target_id": {"$in": post_ids}, "target_type": "post"}, {"_id": 0, "target_id": 1}):
+            liked_set.add(like["target_id"])
+        async for bm in db.bookmarks.find({"user_id": current_user.id, "post_id": {"$in": post_ids}}, {"_id": 0, "post_id": 1}):
+            bookmarked_set.add(bm["post_id"])
+    
     for post in posts:
-        user = await db.users.find_one({"id": post["user_id"]}, {"_id": 0, "hashed_password": 0})
-        profile = await db.user_profiles.find_one({"user_id": post["user_id"]}, {"_id": 0})
+        user = users_map.get(post["user_id"])
+        profile = profiles_map.get(post["user_id"])
         
-        # Determine display name - User model has 'name' not 'username'
         username = "Unknown"
         display_name = None
         if user:
@@ -3287,19 +3318,8 @@ async def get_posts(
             "subscription_tier": user.get("subscription_tier", "free") if user else "free"
         }
         
-        # Check if current user liked this post
-        if current_user:
-            like = await db.likes.find_one({
-                "user_id": current_user.id,
-                "target_id": post["id"],
-                "target_type": "post"
-            })
-            post["is_liked"] = like is not None
-            bm = await db.bookmarks.find_one({"user_id": current_user.id, "post_id": post["id"]})
-            post["is_bookmarked"] = bm is not None
-        else:
-            post["is_liked"] = False
-            post["is_bookmarked"] = False
+        post["is_liked"] = post["id"] in liked_set if current_user else False
+        post["is_bookmarked"] = post["id"] in bookmarked_set if current_user else False
     
     return posts
 
@@ -3917,10 +3937,29 @@ async def get_for_you_feed(
     scored_posts.sort(key=lambda x: x[0], reverse=True)
     paginated = [p for _, p in scored_posts[skip:skip + limit]]
     
-    # 6. Enrich with user info
+    # 6. Batch-enrich with user info
+    user_ids_foru = list({post["user_id"] for post in paginated})
+    post_ids_foru = [post["id"] for post in paginated]
+    
+    users_map_foru = {}
+    profiles_map_foru = {}
+    if user_ids_foru:
+        async for u in db.users.find({"id": {"$in": user_ids_foru}}, {"_id": 0, "hashed_password": 0}):
+            users_map_foru[u["id"]] = u
+        async for p in db.user_profiles.find({"user_id": {"$in": user_ids_foru}}, {"_id": 0}):
+            profiles_map_foru[p["user_id"]] = p
+    
+    liked_set_foru = set()
+    bookmarked_set_foru = set()
+    if post_ids_foru:
+        async for like in db.reactions.find({"user_id": current_user.id, "target_id": {"$in": post_ids_foru}, "target_type": "post"}, {"_id": 0, "target_id": 1}):
+            liked_set_foru.add(like["target_id"])
+        async for bm in db.bookmarks.find({"user_id": current_user.id, "post_id": {"$in": post_ids_foru}}, {"_id": 0, "post_id": 1}):
+            bookmarked_set_foru.add(bm["post_id"])
+    
     for post in paginated:
-        user_doc = await db.users.find_one({"id": post["user_id"]}, {"_id": 0, "hashed_password": 0})
-        profile = await db.user_profiles.find_one({"user_id": post["user_id"]}, {"_id": 0})
+        user_doc = users_map_foru.get(post["user_id"])
+        profile = profiles_map_foru.get(post["user_id"])
         username = "Unknown"
         display_name = None
         if user_doc:
@@ -3935,10 +3974,8 @@ async def get_for_you_feed(
             "is_verified": user_doc.get("is_verified", False) if user_doc else False,
             "subscription_tier": user_doc.get("subscription_tier", "free") if user_doc else "free"
         }
-        like = await db.reactions.find_one({"user_id": current_user.id, "target_id": post["id"], "target_type": "post"})
-        post["is_liked"] = like is not None
-        bm = await db.bookmarks.find_one({"user_id": current_user.id, "post_id": post["id"]})
-        post["is_bookmarked"] = bm is not None
+        post["is_liked"] = post["id"] in liked_set_foru
+        post["is_bookmarked"] = post["id"] in bookmarked_set_foru
         post["_for_you_reason"] = (
             "following" if post["user_id"] in followed_ids else
             "hashtag_match" if any(h.lower() in top_hashtags for h in post.get("hashtags", [])) else

@@ -28,11 +28,13 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API}/auth/login`, formData);
+      const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|Opera Mini|IEMobile/i.test(navigator.userAgent);
+      const payload = { ...formData, platform: isMobile ? "mobile" : "web" };
+      const response = await axios.post(`${API}/auth/login`, payload);
       login(response.data.user, response.data.access_token);
       navigate("/my-profile");
     } catch (err) {
-      setError(err.response?.data?.detail || "Error al iniciar sesión");
+      setError(err.response?.data?.detail || "Error al iniciar sesion");
     } finally {
       setLoading(false);
     }

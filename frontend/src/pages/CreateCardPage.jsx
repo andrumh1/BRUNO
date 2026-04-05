@@ -59,6 +59,7 @@ const CreateCardPage = () => {
     text_color: "#FFFFFF",
     social_links: [],
     location: null,
+    locations: [],
     template_id: "personal_classic",
     is_public: true,
     show_in_feed: true,
@@ -1283,17 +1284,58 @@ const CreateCardPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Ubicación */}
+              {/* Ubicacion — multiple locations */}
               <Card className="glass-card">
                 <CardHeader>
                   <CardTitle>{t("cardForm.location")}</CardTitle>
-                  <CardDescription>{t("cardForm.locationDesc")}</CardDescription>
+                  <CardDescription>Agrega una o multiples ubicaciones</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
+                  {/* Primary location */}
                   <LocationSelector
                     location={formData.location}
                     onChange={(location) => setFormData({ ...formData, location })}
                   />
+                  {/* Additional locations */}
+                  {formData.locations.map((loc, idx) => (
+                    <div key={idx} className="flex items-start gap-2 p-3 rounded-xl border bg-muted/30">
+                      <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <Input
+                          value={loc.label || ''}
+                          onChange={(e) => {
+                            const updated = [...formData.locations];
+                            updated[idx] = { ...updated[idx], label: e.target.value };
+                            setFormData({ ...formData, locations: updated });
+                          }}
+                          placeholder="Etiqueta (ej: Oficina Central)"
+                          className="h-7 text-xs mb-1"
+                        />
+                        <p className="text-[10px] text-muted-foreground truncate">{loc.address || `${loc.lat}, ${loc.lng}`}</p>
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0"
+                        onClick={() => setFormData({ ...formData, locations: formData.locations.filter((_, i) => i !== idx) })}>
+                        <Trash2 className="w-3 h-3 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  {formData.location && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          locations: [...formData.locations, { lat: 0, lng: 0, address: '', label: '' }]
+                        });
+                      }}
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1.5" />
+                      Agregar otra ubicacion
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
 
