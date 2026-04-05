@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import VideoCallModal from "@/components/VideoCallModal";
 import { StickerPicker, StickerMessage } from "@/components/StickerPicker";
 import { CardPicker, CardMessagePreview } from "@/components/CardPicker";
+import { ChatAttachmentMenu } from "@/components/ChatAttachmentMenu";
 import axios from "axios";
 import { 
   ArrowLeft, 
@@ -29,7 +30,8 @@ import {
   Pause,
   Download,
   Smile,
-  CreditCard
+  CreditCard,
+  Camera
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -407,9 +409,6 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   });
   const [callLoading, setCallLoading] = useState(false);
   const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const audioInputRef = useRef(null);
-  const docInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const navigate = useNavigate();
   const participant = chat?.other_participants?.[0] || {};
@@ -686,7 +685,16 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   };
 
   const handleFileSelect = async (e, type = "image") => {
-    const file = e.target.files[0];
+    // Support both event-based (from hidden input) and direct file (from ChatAttachmentMenu)
+    let file, fileType;
+    if (e?.target?.files) {
+      file = e.target.files[0];
+      fileType = type;
+    } else {
+      // Direct file object from ChatAttachmentMenu
+      file = e;
+      fileType = type;
+    }
     if (!file) return;
     
     setUploading(true);
@@ -696,7 +704,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       const formData = new FormData();
       formData.append("file", file);
       
-      const endpoint = type === "document" ? "/upload/file" : "/upload/image";
+      const endpoint = fileType === "document" ? "/upload/file" : "/upload/chat-file";
       const response = await axios.post(`${API}${endpoint}`, formData, {
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -997,49 +1005,14 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         </div>
       )}
 
-      {/* Attachment Menu */}
-      {showAttachMenu && (
-        <div className="absolute bottom-20 left-4 bg-card rounded-2xl shadow-xl border p-2 z-50 animate-in slide-in-from-bottom-2">
-          <div className="grid grid-cols-4 gap-2">
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-muted transition-colors"
-            >
-              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-                <ImageIcon className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xs">Imagen</span>
-            </button>
-            <button 
-              onClick={() => docInputRef.current?.click()}
-              className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-muted transition-colors"
-            >
-              <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
-                <File className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xs">Archivo</span>
-            </button>
-            <button 
-              onClick={() => { setShowCardPicker(true); setShowAttachMenu(false); }}
-              className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-muted transition-colors"
-            >
-              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                <CreditCard className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xs">Tarjeta</span>
-            </button>
-            <button 
-              onClick={() => { setShowStickerPicker(true); setShowAttachMenu(false); }}
-              className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-muted transition-colors"
-            >
-              <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
-                <Smile className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xs">Sticker</span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Attachment Menu - Messenger-style drawer */}
+      <ChatAttachmentMenu
+        isOpen={showAttachMenu}
+        onClose={() => setShowAttachMenu(false)}
+        onFileSelect={(file, type) => handleFileSelect(file, type)}
+        onCardPick={() => { setShowCardPicker(true); setShowAttachMenu(false); }}
+        onStickerPick={() => { setShowStickerPicker(true); setShowAttachMenu(false); }}
+      />
 
       {/* Card Picker Modal */}
       <CardPicker
@@ -1050,9 +1023,6 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       
       {/* Modern Input */}
       <form onSubmit={handleSend} className="px-3 py-2.5 border-t bg-background/80 backdrop-blur-xl flex items-center gap-2">
-        <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={(e) => handleFileSelect(e, "image")} className="hidden" />
-        <input ref={docInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" onChange={(e) => handleFileSelect(e, "document")} className="hidden" />
-        
         <Button 
           type="button" 
           variant="ghost" 
@@ -1060,6 +1030,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
           className="rounded-full h-9 w-9 shrink-0"
           onClick={() => setShowAttachMenu(!showAttachMenu)}
           disabled={uploading || isRecording}
+          data-testid="chat-attach-btn"
         >
           {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
         </Button>

@@ -1620,6 +1620,51 @@ async def upload_file(
         logging.error(f"Error uploading file: {e}")
         raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
 
+@api_router.post("/upload/chat-file")
+async def upload_chat_file(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload a chat attachment (image, video, or file) to Cloudinary"""
+    try:
+        contents = await file.read()
+        content_type = file.content_type or ""
+        
+        if content_type.startswith("image"):
+            result = cloudinary.uploader.upload(
+                contents,
+                folder=f"bruno/chat/{current_user.id}",
+                resource_type="image",
+                transformation=[
+                    {'width': 1200, 'height': 1200, 'crop': 'limit'},
+                    {'quality': 'auto:good'}
+                ]
+            )
+        elif content_type.startswith("video") or content_type.startswith("audio"):
+            result = cloudinary.uploader.upload(
+                contents,
+                folder=f"bruno/chat/{current_user.id}",
+                resource_type="video",
+            )
+        else:
+            result = cloudinary.uploader.upload(
+                contents,
+                folder=f"bruno/chat/{current_user.id}",
+                resource_type="raw",
+                public_id=f"{uuid.uuid4()}_{file.filename}"
+            )
+        
+        return {
+            "url": result['secure_url'],
+            "public_id": result['public_id'],
+            "filename": file.filename,
+            "type": content_type,
+            "size": len(contents)
+        }
+    except Exception as e:
+        logging.error(f"Error uploading chat file: {e}")
+        raise HTTPException(status_code=500, detail=f"Error uploading chat file: {str(e)}")
+
 @api_router.post("/upload/avatar")
 async def upload_avatar(
     file: UploadFile = File(...),
