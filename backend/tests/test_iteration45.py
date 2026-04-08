@@ -20,7 +20,7 @@ class TestAIChat:
         # Login to get token
         login_response = requests.post(
             f"{self.base_url}/api/auth/login",
-            json={"email": "newtest@bruno.com", "password": "Test1234!"}
+            json={"email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"), "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")}
         )
         if login_response.status_code == 200:
             self.token = login_response.json().get("access_token")
@@ -116,7 +116,7 @@ class TestChatEndpoints:
         # Login to get token
         login_response = requests.post(
             f"{self.base_url}/api/auth/login",
-            json={"email": "newtest@bruno.com", "password": "Test1234!"}
+            json={"email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"), "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")}
         )
         if login_response.status_code == 200:
             self.token = login_response.json().get("access_token")

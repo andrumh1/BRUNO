@@ -11,8 +11,8 @@ import uuid
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL')
 
 # Test credentials
-TEST_EMAIL = "newtest@bruno.com"
-TEST_PASSWORD = "Test1234!"
+TEST_EMAIL = os.getenv("TEST_USER_EMAIL", "newtest@bruno.com")
+TEST_PASSWORD = os.getenv("TEST_USER_PASSWORD", "Test1234!")
 
 # Known active live ID from context
 ACTIVE_LIVE_ID = "6ee49485-9a06-48c4-b6c7-7c6c883a77da"

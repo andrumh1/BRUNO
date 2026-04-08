@@ -51,7 +51,7 @@ const ReelItem = ({ reel, isActive }) => {
     if (token) {
       try {
         await axios.post(`${API}/posts/${reel.id}/like`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      } catch (_) {}
+      } catch (err) { console.error("Error loading reels:", err); }
     }
   };
 

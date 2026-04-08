@@ -15,8 +15,8 @@ import os
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://premium-launch-13.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
-TEST_EMAIL = "newtest@bruno.com"
-TEST_PASSWORD = "Test1234!"
+TEST_EMAIL = os.getenv("TEST_USER_EMAIL", "newtest@bruno.com")
+TEST_PASSWORD = os.getenv("TEST_USER_PASSWORD", "Test1234!")
 
 
 class TestExploreCardsAPI:

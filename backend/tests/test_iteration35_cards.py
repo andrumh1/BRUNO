@@ -16,8 +16,8 @@ BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 API = f"{BASE_URL}/api"
 
 # Test credentials
-TEST_EMAIL = "newtest@bruno.com"
-TEST_PASSWORD = "Test1234!"
+TEST_EMAIL = os.getenv("TEST_USER_EMAIL", "newtest@bruno.com")
+TEST_PASSWORD = os.getenv("TEST_USER_PASSWORD", "Test1234!")
 
 # Known test card IDs from context
 PUBLIC_CARD_ID = "de078d9e-21e5-4e18-95f9-462d8d18d2b5"

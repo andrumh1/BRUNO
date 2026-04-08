@@ -1,10 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check } from "lucide-react";
 
 /**
- * BubbleSelect - Dropdown con estilo iOS 26 / Glassmorphism
- * Funciona correctamente en móviles con touch events
+ * BubbleSelect - Dropdown con estilo iOS / Glassmorphism
+ * Corregido para funcionar correctamente en pantallas tactiles
  */
 const BubbleSelect = ({ 
   value, 
@@ -13,62 +13,50 @@ const BubbleSelect = ({
   placeholder = "Seleccionar...",
   className = "",
   disabled = false,
-  renderOption = null // Función opcional para renderizar opciones personalizadas
+  renderOption = null
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
   const optionsRef = useRef(null);
 
-  // Cerrar al hacer click fuera
+  // Close on outside click/touch — checks BOTH containerRef AND optionsRef
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
+    if (!isOpen) return;
+
+    const handleOutside = (event) => {
+      const target = event.target;
+      if (
+        containerRef.current?.contains(target) ||
+        optionsRef.current?.contains(target)
+      ) return;
+      setIsOpen(false);
     };
 
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("touchstart", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-    };
+    // Use pointerdown which works uniformly for mouse and touch
+    document.addEventListener("pointerdown", handleOutside, true);
+    return () => document.removeEventListener("pointerdown", handleOutside, true);
   }, [isOpen]);
 
-  // Scroll al elemento seleccionado cuando se abre
+  // Scroll to selected on open
   useEffect(() => {
     if (isOpen && optionsRef.current && value) {
-      const selectedElement = optionsRef.current.querySelector(`[data-value="${value}"]`);
-      if (selectedElement) {
-        selectedElement.scrollIntoView({ block: "nearest" });
-      }
+      const el = optionsRef.current.querySelector(`[data-value="${value}"]`);
+      if (el) el.scrollIntoView({ block: "nearest" });
     }
   }, [isOpen, value]);
 
-  // Cerrar con tecla Escape
+  // Escape key
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-    }
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    if (!isOpen) return;
+    const handleKey = (e) => { if (e.key === "Escape") setIsOpen(false); };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
   }, [isOpen]);
 
-  const handleSelect = (optionValue) => {
+  const handleSelect = useCallback((optionValue) => {
     onChange(optionValue);
     setIsOpen(false);
-  };
+  }, [onChange]);
 
   const selectedOption = options.find(opt => opt.value === value);
 
@@ -78,7 +66,7 @@ const BubbleSelect = ({
       className={`bubble-select-container relative ${className}`}
       style={{ zIndex: isOpen ? 9997 : "auto" }}
     >
-      {/* Trigger Button - Compact design */}
+      {/* Trigger Button */}
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
@@ -95,6 +83,7 @@ const BubbleSelect = ({
         `}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        data-testid="bubble-select-trigger"
       >
         <span className={`flex-1 truncate ${!selectedOption ? "text-muted-foreground" : ""}`}>
           {selectedOption ? (
@@ -106,25 +95,17 @@ const BubbleSelect = ({
         />
       </button>
 
-      {/* Options Dropdown - rendered via Portal to escape stacking contexts */}
+      {/* Options Dropdown via Portal */}
       {isOpen && createPortal(
         <>
-          {/* Full screen overlay */}
+          {/* Backdrop — closes on tap */}
           <div 
             className="fixed inset-0"
             style={{ zIndex: 99998 }}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsOpen(false);
-            }}
-            onTouchEnd={(e) => {
-              e.stopPropagation();
-              setIsOpen(false);
-            }}
+            onClick={() => setIsOpen(false)}
           />
           
-          {/* Options Container - Fixed position via portal */}
+          {/* Options Container */}
           <div
             ref={optionsRef}
             role="listbox"
@@ -145,8 +126,6 @@ const BubbleSelect = ({
               zIndex: 99999,
               maxHeight: "280px",
             }}
-            onClick={(e) => e.stopPropagation()}
-            onTouchEnd={(e) => e.stopPropagation()}
           >
             <div className="bubble-select-options-inner overflow-y-auto" style={{ maxHeight: "250px" }}>
               {options.map((option) => (
@@ -162,18 +141,15 @@ const BubbleSelect = ({
                     e.stopPropagation();
                     handleSelect(option.value);
                   }}
-                  onTouchEnd={(e) => {
-                    e.stopPropagation();
-                    handleSelect(option.value);
-                  }}
                   className={`
                     bubble-select-option
                     w-full flex items-center gap-3 px-4 py-3.5
                     text-left text-sm
                     transition-all duration-150
-                    touch-manipulation
+                    touch-manipulation select-none
                     ${option.value === value ? "bubble-select-option-selected" : ""}
                   `}
+                  style={{ WebkitTapHighlightColor: "transparent" }}
                 >
                   <span className="flex-1">
                     {renderOption ? renderOption(option, false) : (

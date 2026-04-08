@@ -23,8 +23,8 @@ import threading
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
 # Test credentials from iteration_8
-TEST_USER_1 = {"email": "newtest@bruno.com", "password": "Test1234!"}
-TEST_USER_2 = {"email": "chattest2@bruno.com", "password": "Test1234!"}
+TEST_USER_1 = {"email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"), "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")}
+TEST_USER_2 = {"email": "chattest2@bruno.com", "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")}
 
 
 class TestHealthCheck:

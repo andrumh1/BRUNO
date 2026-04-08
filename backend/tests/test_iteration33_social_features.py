@@ -11,12 +11,12 @@ import uuid
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
 # Test credentials
-TEST_USER_EMAIL = "newtest@bruno.com"
-TEST_USER_PASSWORD = "Test1234!"
+TEST_USER_EMAIL = os.getenv("TEST_USER_EMAIL", "newtest@bruno.com")
+TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "Test1234!")
 TEST_USER_ID = "b6a3059d-3c5c-4ffd-9fc2-b8dff4a420b9"
 
 SECOND_USER_EMAIL = "testuser2@bruno.com"
-SECOND_USER_PASSWORD = "Test1234!"
+SECOND_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "Test1234!")
 SECOND_USER_ID = "b6eb8b2a-1365-48de-9bde-9afd9677d4ba"
 
 

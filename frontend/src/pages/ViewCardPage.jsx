@@ -67,7 +67,7 @@ const ViewCardPage = () => {
   const handleShare = async () => {
     const url = window.location.href;
     if (navigator.share) {
-      try { await navigator.share({ title: card.title, text: card.subtitle || "", url }); } catch (e) {}
+      try { await navigator.share({ title: card.title, text: card.subtitle || "", url }); } catch (e) { console.warn("Share cancelled or unsupported:", e.message); }
     } else {
       navigator.clipboard.writeText(url);
       setCopied(true);

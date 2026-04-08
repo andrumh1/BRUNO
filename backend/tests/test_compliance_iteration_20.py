@@ -13,8 +13,8 @@ BASE_URL = os.environ.get('REACT_APP_BACKEND_URL').rstrip('/')
 
 # Test credentials
 TEST_USER = {
-    "email": "newtest@bruno.com",
-    "password": "Test1234!"
+    "email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"),
+    "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")
 }
 
 class TestComplianceAPIs:
@@ -192,7 +192,7 @@ class TestComplianceAPIs:
     def test_delete_account_wrong_confirmation(self):
         """Test delete account with wrong confirmation text"""
         delete_data = {
-            "password": "Test1234!",
+            "password": os.getenv("TEST_USER_PASSWORD", "Test1234!"),
             "confirm_text": "wrong text"
         }
         
@@ -233,7 +233,7 @@ class TestDeleteAccountWithoutAuth:
         session.headers.update({"Content-Type": "application/json"})
         
         delete_data = {
-            "password": "Test1234!",
+            "password": os.getenv("TEST_USER_PASSWORD", "Test1234!"),
             "confirm_text": "ELIMINAR MI CUENTA"
         }
         

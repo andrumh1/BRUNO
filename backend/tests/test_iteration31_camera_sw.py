@@ -19,15 +19,15 @@ class TestAuthLogin:
     def test_login_success(self):
         """Test successful login returns access_token"""
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "newtest@bruno.com",
-            "password": "Test1234!"
+            "email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"),
+            "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")
         })
         assert response.status_code == 200, f"Login failed: {response.text}"
         
         data = response.json()
         assert "access_token" in data, "Response should contain access_token"
         assert "user" in data, "Response should contain user object"
-        assert data["user"]["email"] == "newtest@bruno.com"
+        assert data["user"]["email"] == os.getenv("TEST_USER_EMAIL", "newtest@bruno.com")
         assert data["token_type"] == "bearer"
     
     def test_login_invalid_credentials(self):
@@ -97,8 +97,8 @@ class TestPostsEndpoint:
     def auth_token(self):
         """Get authentication token"""
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "newtest@bruno.com",
-            "password": "Test1234!"
+            "email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"),
+            "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")
         })
         if response.status_code == 200:
             return response.json().get("access_token")
@@ -126,8 +126,8 @@ class TestUploadEndpoints:
     def auth_token(self):
         """Get authentication token"""
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "newtest@bruno.com",
-            "password": "Test1234!"
+            "email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"),
+            "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")
         })
         if response.status_code == 200:
             return response.json().get("access_token")

@@ -71,8 +71,8 @@ class TestCardsAuth:
     def auth_token(self):
         """Get auth token"""
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "newtest@bruno.com",
-            "password": "Test1234!"
+            "email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"),
+            "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")
         })
         if response.status_code == 200:
             return response.json().get('access_token')

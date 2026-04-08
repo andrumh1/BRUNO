@@ -9,8 +9,8 @@ import os
 from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
-TEST_USER_EMAIL = "newtest@bruno.com"
-TEST_USER_PASSWORD = "Test1234!"
+TEST_USER_EMAIL = os.getenv("TEST_USER_EMAIL", "newtest@bruno.com")
+TEST_USER_PASSWORD = os.getenv("TEST_USER_PASSWORD", "Test1234!")
 
 class TestPointsSystem:
     """Points/Gamification system API tests"""

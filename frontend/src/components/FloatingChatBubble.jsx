@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavScroll } from "@/contexts/NavScrollContext";
@@ -373,6 +373,12 @@ const FloatingChatBubble = () => {
   const [ws, setWs] = useState(null);
   const [unreadTotal, setUnreadTotal] = useState(0);
 
+  // Memoize sorted chats to avoid re-sorting on every render
+  const sortedChats = useMemo(
+    () => [...openChats].sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0)),
+    [openChats]
+  );
+
   const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(p => location.pathname.startsWith(p));
 
@@ -478,9 +484,7 @@ const FloatingChatBubble = () => {
               data-testid="minimized-avatars-tray"
             >
               <div className="flex items-center gap-1.5 w-max">
-                {[...openChats]
-                  .sort((a, b) => new Date(b.last_message_at || 0) - new Date(a.last_message_at || 0))
-                  .map((chat) => {
+                {sortedChats.map((chat) => {
                     const p = chat.other_participants?.[0] || {};
                     return (
                       <button

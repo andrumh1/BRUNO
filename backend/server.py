@@ -1196,7 +1196,7 @@ async def create_card(card_input: CardCreate, current_user: User = Depends(get_c
 @api_router.get("/cards")
 async def get_my_cards(current_user: User = Depends(get_current_user), skip: int = 0, limit: int = 50):
     """Obtener las tarjetas del usuario autenticado (panel y gestion)."""
-    cards = await db.cards.find({"user_id": current_user.id}, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    cards = await db.cards.find({"user_id": current_user.id}, {"_id": 0}).sort([("sort_order", 1), ("created_at", -1)]).skip(skip).limit(limit).to_list(limit)
     
     for card in cards:
         if isinstance(card.get('created_at'), str):
@@ -1294,6 +1294,16 @@ async def update_card(card_id: str, card_input: CardUpdate, current_user: User =
         updated_card['updated_at'] = datetime.fromisoformat(updated_card['updated_at'])
     
     return Card(**updated_card)
+
+@api_router.put("/cards/reorder")
+async def reorder_cards(card_ids: List[str], current_user: User = Depends(get_current_user)):
+    """Reorder user's cards by setting sort_order based on array position."""
+    for i, card_id in enumerate(card_ids):
+        await db.cards.update_one(
+            {"id": card_id, "user_id": current_user.id},
+            {"$set": {"sort_order": i}}
+        )
+    return {"status": "ok", "count": len(card_ids)}
 
 @api_router.delete("/cards/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_card(card_id: str, current_user: User = Depends(get_current_user)):

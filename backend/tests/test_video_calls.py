@@ -10,8 +10,8 @@ import uuid
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://premium-launch-13.preview.emergentagent.com')
 
 # Test credentials
-TEST_USER_1 = {"email": "newtest@bruno.com", "password": "Test1234!"}
-TEST_USER_2 = {"email": "chattest2@bruno.com", "password": "Test1234!"}
+TEST_USER_1 = {"email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"), "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")}
+TEST_USER_2 = {"email": "chattest2@bruno.com", "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")}
 
 
 class TestVideoCallsSetup:

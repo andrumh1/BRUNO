@@ -25,8 +25,8 @@ class TestAuthentication:
     def test_login_success(self):
         """Test login with valid credentials"""
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "newtest@bruno.com",
-            "password": "Test1234!"
+            "email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"),
+            "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")
         })
         assert response.status_code == 200
         data = response.json()
@@ -43,8 +43,8 @@ class TestPostsAPI:
     def auth_token(self):
         """Get authentication token"""
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "newtest@bruno.com",
-            "password": "Test1234!"
+            "email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"),
+            "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")
         })
         if response.status_code == 200:
             return response.json().get("access_token")
@@ -188,8 +188,8 @@ class TestLikesAPI:
     def auth_token(self):
         """Get authentication token"""
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "newtest@bruno.com",
-            "password": "Test1234!"
+            "email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"),
+            "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")
         })
         if response.status_code == 200:
             return response.json().get("access_token")
@@ -272,8 +272,8 @@ class TestCommentsAPI:
     def auth_token(self):
         """Get authentication token"""
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "newtest@bruno.com",
-            "password": "Test1234!"
+            "email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"),
+            "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")
         })
         if response.status_code == 200:
             return response.json().get("access_token")
@@ -351,8 +351,8 @@ class TestPostsWithMedia:
     def auth_token(self):
         """Get authentication token"""
         response = requests.post(f"{BASE_URL}/api/auth/login", json={
-            "email": "newtest@bruno.com",
-            "password": "Test1234!"
+            "email": os.getenv("TEST_USER_EMAIL", "newtest@bruno.com"),
+            "password": os.getenv("TEST_USER_PASSWORD", "Test1234!")
         })
         if response.status_code == 200:
             return response.json().get("access_token")
