@@ -1,16 +1,12 @@
 import React, { useState, useRef, useCallback } from "react";
 import { GripVertical } from "lucide-react";
 
-/**
- * DraggableList - Drag-to-reorder list using pointer events
- * No external dependencies. Works on touch and mouse.
- */
 const DraggableList = ({ items, onReorder, renderItem, keyExtractor, className = "", disabled = false }) => {
   const [dragIndex, setDragIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
   const containerRef = useRef(null);
   const dragItem = useRef(null);
-  const startY = useRef(0);
+  const overItem = useRef(null);
   const itemRects = useRef([]);
 
   const captureRects = useCallback(() => {
@@ -28,7 +24,7 @@ const DraggableList = ({ items, onReorder, renderItem, keyExtractor, className =
     setDragIndex(index);
     setOverIndex(index);
     dragItem.current = index;
-    startY.current = e.clientY;
+    overItem.current = index;
     captureRects();
 
     const onMove = (moveEvent) => {
@@ -41,6 +37,7 @@ const DraggableList = ({ items, onReorder, renderItem, keyExtractor, className =
         }
         newOver = i;
       }
+      overItem.current = newOver;
       setOverIndex(newOver);
     };
 
@@ -49,7 +46,7 @@ const DraggableList = ({ items, onReorder, renderItem, keyExtractor, className =
       document.removeEventListener("pointerup", onEnd);
 
       const from = dragItem.current;
-      const to = overIndex;
+      const to = overItem.current;
       setDragIndex(null);
       setOverIndex(null);
 
@@ -63,12 +60,10 @@ const DraggableList = ({ items, onReorder, renderItem, keyExtractor, className =
 
     document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerup", onEnd);
-  }, [disabled, items, onReorder, captureRects, overIndex]);
+  }, [disabled, items, onReorder, captureRects]);
 
-  // Build display order
   const getDisplayItems = () => {
     if (dragIndex === null || overIndex === null) return items.map((item, i) => ({ item, originalIndex: i }));
-    
     const display = items.map((item, i) => ({ item, originalIndex: i }));
     const [moved] = display.splice(dragIndex, 1);
     display.splice(overIndex, 0, moved);
@@ -79,7 +74,7 @@ const DraggableList = ({ items, onReorder, renderItem, keyExtractor, className =
 
   return (
     <div ref={containerRef} className={className}>
-      {displayItems.map(({ item, originalIndex }, displayIdx) => (
+      {displayItems.map(({ item, originalIndex }) => (
         <div
           key={keyExtractor(item)}
           data-drag-item

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PostCard from "@/components/PostCard";
 import CardPreviewModal from "@/components/CardPreviewModal";
+import DraggableList from "@/components/DraggableList";
 import { PointsWidget } from "@/components/PointsSystem";
 import axios from "axios";
 import { 
@@ -46,7 +47,8 @@ import {
   List as ListIcon,
   Scale,
   TrendingUp,
-  LayoutGrid
+  LayoutGrid,
+  ArrowUpDown
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -72,6 +74,8 @@ const MyProfilePage = () => {
   const [followingList, setFollowingList] = useState([]);
   const [albums, setAlbums] = useState([]);
   const [previewCard, setPreviewCard] = useState(null);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [reorderSaving, setReorderSaving] = useState(false);
   const longPressRef = useRef(null);
   const pressStartTime = useRef(0);
 
@@ -174,6 +178,20 @@ const MyProfilePage = () => {
       try { await navigator.share({ title: card.title, text: card.subtitle || "", url }); } catch (_) {}
     } else {
       navigator.clipboard.writeText(url);
+    }
+  };
+
+  const handleReorder = async (newCards) => {
+    setCards(newCards);
+    setReorderSaving(true);
+    try {
+      await axios.put(`${API}/cards/reorder`, { card_ids: newCards.map(c => c.id) }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (err) {
+      fetchCards();
+    } finally {
+      setReorderSaving(false);
     }
   };
 
@@ -630,6 +648,16 @@ const MyProfilePage = () => {
                 <Nfc className="w-3.5 h-3.5 mr-1" />
                 NFC
               </Button>
+              <Button 
+                size="sm" 
+                variant={reorderMode ? "default" : "outline"} 
+                onClick={() => { setReorderMode(!reorderMode); if (!reorderMode) setCardViewMode("list"); }}
+                className="rounded-full"
+                data-testid="reorder-cards-btn"
+              >
+                {reorderSaving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <ArrowUpDown className="w-3.5 h-3.5 mr-1" />}
+                {reorderMode ? "Listo" : "Ordenar"}
+              </Button>
               <div className="ml-auto flex gap-1">
                 <button onClick={() => setCardViewMode("compact")} className={`p-1.5 rounded-lg ${cardViewMode === "compact" ? "bg-primary/10 text-primary" : "text-muted-foreground"}`} data-testid="profile-view-compact">
                   <LayoutGrid className="w-4 h-4" />
@@ -730,45 +758,79 @@ const MyProfilePage = () => {
                 ))}
               </div>
             ) : (
-              /* List: compact rows */
-              <div className="space-y-2">
-                {cards.map(card => (
-                  <div key={card.id}
-                    className="glass-card rounded-xl p-2.5 flex items-center gap-2.5 cursor-pointer active:bg-muted/50 transition-all"
-                    onPointerDown={() => handleCardPress(card)}
-                    onPointerUp={() => handleCardRelease(card)}
-                    onPointerLeave={() => clearTimeout(longPressRef.current)}
-                    data-testid={`profile-list-card-${card.id}`}
-                  >
-                    {card.avatar_url ? (
-                      <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
-                        <img src={card.avatar_url} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                        style={{ backgroundColor: card.background_color || '#f97316' }}>
-                        {card.title?.charAt(0) || "?"}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-xs truncate">{card.title}</h3>
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                        <span className="capitalize">{card.card_type}</span>
-                        <span><Eye className="w-2.5 h-2.5 inline" /> {card.views || 0}</span>
-                        <span className={card.is_public ? "text-green-500" : "text-yellow-500"}>{card.is_public ? "Pub" : "Priv"}</span>
+              /* List: compact rows — with drag-to-reorder support */
+              reorderMode ? (
+                <DraggableList
+                  items={cards}
+                  onReorder={handleReorder}
+                  keyExtractor={(card) => card.id}
+                  className="space-y-2"
+                  renderItem={(card) => (
+                    <div
+                      className="glass-card rounded-xl p-2.5 flex items-center gap-2.5 transition-all"
+                      data-testid={`profile-list-card-${card.id}`}
+                    >
+                      {card.avatar_url ? (
+                        <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                          <img src={card.avatar_url} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                          style={{ backgroundColor: card.background_color || '#f97316' }}>
+                          {card.title?.charAt(0) || "?"}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-xs truncate">{card.title}</h3>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <span className="capitalize">{card.card_type}</span>
+                          <span><Eye className="w-2.5 h-2.5 inline" /> {card.views || 0}</span>
+                          <span className={card.is_public ? "text-green-500" : "text-yellow-500"}>{card.is_public ? "Pub" : "Priv"}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button onClick={(e) => { e.stopPropagation(); navigate(`/cards/${card.id}/edit`); }} className="p-1.5 rounded-lg hover:bg-muted">
-                        <Edit3 className="w-3 h-3" />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }} className="p-1.5 rounded-lg hover:bg-red-50 text-destructive">
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                  )}
+                />
+              ) : (
+                <div className="space-y-2">
+                  {cards.map(card => (
+                    <div key={card.id}
+                      className="glass-card rounded-xl p-2.5 flex items-center gap-2.5 cursor-pointer active:bg-muted/50 transition-all"
+                      onPointerDown={() => handleCardPress(card)}
+                      onPointerUp={() => handleCardRelease(card)}
+                      onPointerLeave={() => clearTimeout(longPressRef.current)}
+                      data-testid={`profile-list-card-${card.id}`}
+                    >
+                      {card.avatar_url ? (
+                        <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                          <img src={card.avatar_url} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                          style={{ backgroundColor: card.background_color || '#f97316' }}>
+                          {card.title?.charAt(0) || "?"}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-xs truncate">{card.title}</h3>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <span className="capitalize">{card.card_type}</span>
+                          <span><Eye className="w-2.5 h-2.5 inline" /> {card.views || 0}</span>
+                          <span className={card.is_public ? "text-green-500" : "text-yellow-500"}>{card.is_public ? "Pub" : "Priv"}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button onClick={(e) => { e.stopPropagation(); navigate(`/cards/${card.id}/edit`); }} className="p-1.5 rounded-lg hover:bg-muted">
+                          <Edit3 className="w-3 h-3" />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteCard(card.id); }} className="p-1.5 rounded-lg hover:bg-red-50 text-destructive">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )
             )}
 
             {/* Card Preview Modal */}

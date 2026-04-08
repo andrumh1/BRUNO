@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Request, WebSocket, WebSocketDisconnect, Body
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -1244,6 +1244,19 @@ async def explore_cards(limit: int = 20, offset: int = 0):
             card["updated_at"] = datetime.fromisoformat(card["updated_at"])
     return [Card(**card) for card in cards]
 
+class ReorderRequest(BaseModel):
+    card_ids: List[str]
+
+@api_router.put("/cards/reorder")
+async def reorder_cards(req: ReorderRequest, current_user: User = Depends(get_current_user)):
+    """Reorder user's cards by setting sort_order based on array position."""
+    for i, card_id in enumerate(req.card_ids):
+        await db.cards.update_one(
+            {"id": card_id, "user_id": current_user.id},
+            {"$set": {"sort_order": i}}
+        )
+    return {"status": "ok", "count": len(req.card_ids)}
+
 @api_router.get("/cards/{card_id}", response_model=Card)
 async def get_card(card_id: str, current_user: Optional[User] = Depends(get_current_user_optional)):
     card_dict = await db.cards.find_one({"id": card_id}, {"_id": 0})
@@ -1294,16 +1307,6 @@ async def update_card(card_id: str, card_input: CardUpdate, current_user: User =
         updated_card['updated_at'] = datetime.fromisoformat(updated_card['updated_at'])
     
     return Card(**updated_card)
-
-@api_router.put("/cards/reorder")
-async def reorder_cards(card_ids: List[str], current_user: User = Depends(get_current_user)):
-    """Reorder user's cards by setting sort_order based on array position."""
-    for i, card_id in enumerate(card_ids):
-        await db.cards.update_one(
-            {"id": card_id, "user_id": current_user.id},
-            {"$set": {"sort_order": i}}
-        )
-    return {"status": "ok", "count": len(card_ids)}
 
 @api_router.delete("/cards/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_card(card_id: str, current_user: User = Depends(get_current_user)):
