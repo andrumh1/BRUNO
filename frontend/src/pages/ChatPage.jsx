@@ -1205,7 +1205,6 @@ const ChatPage = () => {
         const socket = new WebSocket(`${WS_URL}/ws/chat/${token}`);
         
         socket.onopen = () => {
-          console.log("WebSocket connected");
           setWs(socket);
         };
         
@@ -1237,7 +1236,6 @@ const ChatPage = () => {
         };
         
         socket.onclose = () => {
-          console.log("WebSocket disconnected, reconnecting...");
           setWs(null);
           wsReconnectRef.current = setTimeout(connectWebSocket, 3000);
         };

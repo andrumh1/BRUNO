@@ -92,7 +92,7 @@ const Dashboard = () => {
           url: url,
         });
       } catch (err) {
-        console.log("Error sharing:", err);
+        // share cancelled or unsupported
       }
     } else {
       navigator.clipboard.writeText(url);

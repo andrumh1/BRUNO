@@ -123,7 +123,6 @@ const LiveViewerPage = () => {
     const ws = new WebSocket(`${WS_URL}/ws/live/${liveId}?token=${token}`);
     
     ws.onopen = () => {
-      console.log("Live WS connected");
       wsRef.current = ws;
     };
     
@@ -146,7 +145,6 @@ const LiveViewerPage = () => {
     };
     
     ws.onclose = () => {
-      console.log("Live WS disconnected");
     };
     
     return () => {
@@ -160,9 +158,8 @@ const LiveViewerPage = () => {
     commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const showGiftAnimation = (gift) => {
+  const showGiftAnimation = () => {
     // TODO: Add gift animation overlay
-    console.log("Gift received:", gift);
   };
 
   const handleSendComment = async () => {

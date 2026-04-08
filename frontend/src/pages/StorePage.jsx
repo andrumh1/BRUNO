@@ -314,9 +314,9 @@ const StorePage = () => {
                 {/* Colors Preview */}
                 {product.colors?.length > 0 && (
                   <div className="absolute bottom-3 left-3 flex gap-1">
-                    {product.colors.slice(0, 5).map((color, i) => (
+                    {product.colors.slice(0, 5).map((color) => (
                       <div
-                        key={i}
+                        key={color}
                         className="w-4 h-4 rounded-full border-2 border-white shadow-md"
                         style={{ background: getColorStyle(color) }}
                       />
@@ -338,8 +338,8 @@ const StorePage = () => {
               <CardContent className="pb-2">
                 {/* Features */}
                 <div className="flex flex-wrap gap-1 mb-3">
-                  {product.features?.slice(0, 2).map((feature, i) => (
-                    <span key={i} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                  {product.features?.slice(0, 2).map((feature) => (
+                    <span key={feature} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                       {feature}
                     </span>
                   ))}

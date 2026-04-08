@@ -40,7 +40,6 @@ export const NotificationProvider = ({ children }) => {
     const registerSW = async () => {
       try {
         const registration = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
-        console.log('Service Worker registered:', registration);
         
         // Check existing subscription
         const existingSub = await registration.pushManager.getSubscription();
@@ -80,16 +79,14 @@ export const NotificationProvider = ({ children }) => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log('Push subscription sent to server');
     } catch (error) {
-      console.error('Failed to send subscription:', error);
+      // subscription send failed
     }
   };
 
   // Request permission and subscribe
   const requestPermission = useCallback(async () => {
     if (!isSupported) {
-      console.log('Push notifications not supported');
       return false;
     }
 

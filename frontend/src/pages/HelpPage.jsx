@@ -172,7 +172,7 @@ const HelpPage = () => {
           ) : (
             <div className="space-y-4">
               {filteredFaqs.map((faq, index) => (
-                <Card key={index} className="overflow-hidden">
+                <Card key={faq.question} className="overflow-hidden">
                   <button
                     onClick={() => toggleFaq(index)}
                     className="w-full text-left p-6 hover:bg-accent/50 transition-colors"

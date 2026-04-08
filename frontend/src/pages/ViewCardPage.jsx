@@ -299,8 +299,8 @@ const ViewCardPage = () => {
                   <div className="rounded-2xl p-4 lg:p-5" style={{ backgroundColor: `${fg}10` }} data-testid="card-social-bubble">
                     <h3 className="text-xs font-bold uppercase tracking-wider opacity-60 mb-3">Conecta conmigo</h3>
                     <div className="flex flex-wrap gap-2.5">
-                      {card.social_links.map((link, i) => (
-                        <SocialLinkButton key={i} link={link} size="default" theme="dark" onlyIcon={true} />
+                      {card.social_links.map((link) => (
+                        <SocialLinkButton key={`${link.platform}-${link.url}`} link={link} size="default" theme="dark" onlyIcon={true} />
                       ))}
                     </div>
                   </div>

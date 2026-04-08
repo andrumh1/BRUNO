@@ -173,7 +173,6 @@ const MapPage = () => {
         const ws = new WebSocket(`${WS_URL}/ws/map/${token}`);
         
         ws.onopen = () => {
-          console.log("Map WebSocket connected");
           wsRef.current = ws;
           
           if (userLocation) {
@@ -205,7 +204,6 @@ const MapPage = () => {
         };
         
         ws.onclose = () => {
-          console.log("Map WebSocket disconnected");
           setTimeout(connectWS, 3000);
         };
         

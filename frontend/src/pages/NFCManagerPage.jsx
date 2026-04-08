@@ -620,8 +620,8 @@ const NFCManagerPage = () => {
                       </div>
                       {product.features && (
                         <div className="flex flex-wrap gap-1 mt-2">
-                          {product.features.slice(0, 3).map((f, i) => (
-                            <span key={i} className="px-2 py-0.5 rounded-full bg-muted text-[9px]">{f}</span>
+                          {product.features.slice(0, 3).map((f) => (
+                            <span key={f} className="px-2 py-0.5 rounded-full bg-muted text-[9px]">{f}</span>
                           ))}
                         </div>
                       )}

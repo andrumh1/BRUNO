@@ -52,7 +52,7 @@ const QRCodePage = () => {
           url: qrData.card_url,
         });
       } catch (err) {
-        console.log("Error sharing:", err);
+        // share cancelled or unsupported
       }
     } else {
       navigator.clipboard.writeText(qrData.card_url);

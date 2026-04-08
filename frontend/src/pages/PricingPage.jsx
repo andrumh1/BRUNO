@@ -236,7 +236,7 @@ const PricingPage = () => {
             
             return (
               <Card
-                key={index}
+                key={plan.name}
                 className={`relative glass-card ${
                   plan.highlighted
                     ? "border-primary shadow-xl scale-105"
@@ -265,8 +265,8 @@ const PricingPage = () => {
 
                 <CardContent className="space-y-4">
                   <ul className="space-y-3">
-                    {plan.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-3">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-3">
                         <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                         <span className="text-sm">{feature}</span>
                       </li>

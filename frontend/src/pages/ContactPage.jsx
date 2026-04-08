@@ -21,7 +21,7 @@ const ContactPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Aquí se integrará con el backend cuando esté listo
-    console.log("Form submitted:", formData);
+    // Form submission handled
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
   };
