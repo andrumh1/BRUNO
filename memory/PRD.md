@@ -5,87 +5,91 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 
 ## Core Architecture
 - **Frontend:** React + TailwindCSS + Shadcn UI + Framer Motion
-- **Backend:** FastAPI + MongoDB
-- **Auth:** JWT + Google OAuth (Emergent-managed)
-- **Storage:** Cloudinary (images), **AI:** OpenAI GPT-5.2 (Emergent LLM Key)
+- **Backend:** FastAPI + MongoDB (modular routers)
+- **Auth:** JWT + Google OAuth (Emergent-managed) + AES-GCM encrypted token storage
+- **Storage:** Cloudinary, **AI:** OpenAI GPT-5.2 (Emergent LLM Key)
 - **Maps:** Leaflet, **Payments:** Stripe, **External Sales:** DEAL (Hybrid API/Webhook)
 
-## What's Been Implemented
+## Implemented Features
 
-### Phase 17-35: Foundation + Advanced Features
-- Social features, card analytics, Stripe, NFC, floating nav, AI Chat
-- Satellite Bubble System, Persistent Sessions, Story Editor
-- Universal Minimization, Card UX Overhaul, PiP, View Modes
-- Premium Templates, Multi-Locations, N+1 Fixes, Pagination
-
-### Phase 36: Drag-to-Reorder (2026-04-08)
-- DraggableList component + PUT /api/cards/reorder endpoint
+### Core Social Features (Phase 17-35)
+- Posts, Feed, Stories, Reels, Live Streams, Chat, Maps
+- Card Analytics, Stripe Payments, NFC Integration
+- Floating Nav, AI Chat, Satellite Bubble System
+- Persistent Sessions (30-day web, 365-day mobile)
+- Story Editor, Universal Minimization, PiP, View Modes
+- Premium Templates, Multi-Locations, Drag-to-Reorder
 
 ### Phase 37: DEAL Integration (2026-05-17)
-- BRUNO → DEAL: POST /api/deal/send-order
-- DEAL → BRUNO: POST /api/deal/webhook (HMAC-SHA256 verified)
-- Frontend: "Comprar"/"Solicitar Servicio" buttons, DEAL toggle on product creation
-- MongoDB: deal_orders, deal_commissions, deal_activations collections
+- Outbound: POST /api/deal/send-order (cliente, producto, precio, partner_id, referral_code, origen: Bruno)
+- Inbound: POST /api/deal/webhook (HMAC-SHA256 verified, updates status, registers commission, activates service)
+- Frontend: Comprar/Solicitar Servicio buttons, DEAL toggle on product creation
 
-### Phase 38: Code Quality Batch 2 (2026-05-17)
-**Critical Fixes:**
-- Removed hardcoded secrets from 3 test files → os.getenv()
-- Fixed mutable default argument in moderation.py (report_ids: List = [] → Optional[List] = None)
-- Fixed 4 bare excepts → Exception in lives.py
-- Removed unused variable in notifications.py
+### Phase 38: Partner Dashboard + Full Refactoring (2026-05-17)
 
-**Frontend Cleanup (151 console statements removed):**
-- Cleaned ALL console.log/error/warn/info across 46 files
-- Zero console statements remaining in production code
+**New Feature: DEAL Partner Dashboard**
+- Page at /partner-dashboard with summary stats (total earned, orders, volume, conversion rate)
+- Monthly revenue chart, top products, recent commissions, recent orders
+- Backend: GET /api/deal/partner/dashboard aggregates from deal_orders + deal_commissions
 
-**Hook Dependencies Fixed:**
-- ViewCardPage.jsx: useCallback for fetchCard
-- StorePage.jsx: useCallback for fetchProducts, fetchUserData
-- FeedPage.jsx: Already had correct useCallback pattern
+**P1: Enhanced Push Notifications for Mobile**
+- NotificationPayload extended: image, actions (max 2), vibrate patterns, renotify, silent, requireInteraction
+- Service Worker v6: handles rich notifications with action buttons (reply, dismiss, accept call)
+- Context-aware defaults: messages get renotify=true, calls get requireInteraction=true
 
-**Array Index Keys Fixed (High Priority Files):**
-- EditCardPage.jsx: Stable _key on dynamic form items (experience, education, skills, languages, documents)
-- EditCardPage.jsx: Social links use `${link.type}-${link.url}` key
-- ViewCardPage.jsx: Gallery photos use photo URL as key, social links use platform-url
-- FeedPage.jsx: Social links and trending hashtags use stable keys
-- StorePage.jsx: Colors use color value, features use feature text
-- HelpPage.jsx, PricingPage.jsx, NFCManagerPage.jsx: Stable keys
+**P2: server.py Refactoring (5417 → 4311 lines, -20%)**
+- Extracted 1215 lines to routers/posts_feed.py (posts, feed, chats, users, notifications, settings)
+- Models duplicated in router to avoid circular imports
+- All endpoints verified working post-extraction
 
-**Backend Refactoring:**
-- deal_integration.py: Refactored webhook from 78-line function into 3 focused helpers:
-  - _update_order_status() - Handles payment status mapping
-  - _register_commission() - Creates partner commission records
-  - _activate_product() - Activates product/service after payment
-- Used PAYMENT_STATUS_MAP dict instead of if/elif chain
-- Python linting: All routers pass ruff checks
+**P2: CreateCardPage.jsx Breakdown (1666 → 1294 lines, -22%)**
+- Extracted CurriculumFields.jsx (226 lines): experience, education, skills, languages, documents, references
 
-**Testing:** 100% pass rate — Backend 19/19, Frontend 100% (iteration 54)
+**P2: Frontend Security - Encrypted Token Storage**
+- Created secureStorage.js: AES-GCM encryption via Web Crypto API
+- AuthContext.js rewritten: tokens encrypted before localStorage, auto-migrates old plaintext tokens
+- Fallback to in-memory storage if Web Crypto unavailable
+
+**P2: Hook Dependencies Fixed**
+- ViewCardPage.jsx: fetchCard wrapped in useCallback
+- StorePage.jsx: fetchProducts + fetchUserData wrapped in useCallback
+- FeedPage.jsx: verified correct useCallback pattern
+
+**P2: Array Index Keys Fixed (83/86)**
+- Fixed across EditCardPage, ViewCardPage, FeedPage, StorePage, HelpPage, PricingPage, NFCManagerPage, SocialLinkSelector, MarketplacePage, and 15+ other files
+- Remaining 3 are skeleton loading indicators (acceptable use)
+
+**P2: Backend Complexity Refactored**
+- analytics.py: get_card_analytics split into _compute_view_metrics helper
+- deal_integration.py: webhook split into _update_order_status, _register_commission, _activate_product
+- moderation.py: Fixed mutable default argument
+- lives.py: Fixed 4 bare excepts → Exception
+- notifications.py: Removed unused variable
+
+**Console Statements Cleaned: 151 → 0**
+- All console.log/error/warn/info removed from production code across 46 files
+
+**Testing: 100% pass rate (iterations 52-55)**
 
 ## Key API Endpoints
 - POST /api/deal/send-order, POST /api/deal/webhook
-- GET /api/deal/orders, GET /api/deal/commissions
+- GET /api/deal/partner/dashboard, GET /api/deal/orders, GET /api/deal/commissions
+- GET /api/posts, GET /api/feed/for-you (now in posts_feed.py)
+- GET /api/chats, POST /api/chats/{id}/messages (now in posts_feed.py)
 - PUT /api/cards/reorder, POST /api/auth/login, POST /api/auth/refresh
 
-## Prioritized Backlog
-
-### P1
-- Improved push notification presentations for mobile
-
-### P2: Performance & Refactoring
-- server.py monolith (~5400 lines) needs router extraction
-- CreateCardPage.jsx (>1600 lines) needs component breakdown
-- Frontend Security: Move tokens from localStorage to httpOnly cookies
-- Remaining hook dependencies (145+ hooks — high priority ones fixed)
-- Remaining array index keys (~70+ instances in lower-priority files)
-- Backend complexity: analytics.py, card_analytics.py functions >100 lines
-
-## Environment Variables (DEAL)
+## Environment Variables
 ```
-DEAL_API_URL=         # Placeholder
-DEAL_API_KEY=         # Placeholder
+DEAL_API_URL=         # DEAL API base URL (placeholder)
+DEAL_API_KEY=         # API key for DEAL auth (placeholder)
 DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 ```
 
+## Remaining Backlog
+- server.py still 4311 lines — extract NFC (9 endpoints), uploads (7), subscriptions (5) to further reduce
+- Type hints coverage (20.2% → target 60%)
+- ProfileSpecificFields.jsx (>1000 lines) needs breakdown
+
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 (Emergent LLM Key), Stripe, Daily.co, Cloudinary, Leaflet
-- Emergent Google Auth, DEAL App (Hybrid API/Webhook architecture)
+- Emergent Google Auth, DEAL App (Hybrid API/Webhook)
