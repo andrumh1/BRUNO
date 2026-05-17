@@ -290,7 +290,7 @@ export const PointsPage = () => {
             { action: "Racha 7 días", points: 50, icon: "🔥" },
             { action: "Racha 30 días", points: 200, icon: "⚡" },
           ].map((item, i) => (
-            <div key={i} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div key={`item-${i}`} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-3">
                 <span className="text-xl">{item.icon}</span>
                 <span className="text-sm">{item.action}</span>

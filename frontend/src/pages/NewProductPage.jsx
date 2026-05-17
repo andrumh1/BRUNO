@@ -211,7 +211,7 @@ const NewProductPage = () => {
           
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
             {formData.images.map((url, idx) => (
-              <div key={idx} className="aspect-square relative rounded-xl overflow-hidden bg-muted">
+              <div key={`url-${idx}`} className="aspect-square relative rounded-xl overflow-hidden bg-muted">
                 <img src={url} alt="" className="w-full h-full object-cover" />
                 <button
                   type="button"

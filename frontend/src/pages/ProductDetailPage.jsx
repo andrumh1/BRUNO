@@ -228,7 +228,7 @@ const ProductDetailPage = () => {
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
               {images.map((_, idx) => (
                 <button
-                  key={idx}
+                  key={`_-${idx}`}
                   onClick={() => setCurrentImageIndex(idx)}
                   className={`w-2 h-2 rounded-full transition-colors ${
                     idx === currentImageIndex ? 'bg-white' : 'bg-white/50'
@@ -318,7 +318,7 @@ const ProductDetailPage = () => {
         {product.tags?.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {product.tags.map((tag, idx) => (
-              <span key={idx} className="px-3 py-1 bg-muted rounded-full text-sm">
+              <span key={`tag-${idx}`} className="px-3 py-1 bg-muted rounded-full text-sm">
                 #{tag}
               </span>
             ))}

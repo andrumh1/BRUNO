@@ -276,7 +276,7 @@ const NFCWritePage = () => {
                 <p className="text-sm text-muted-foreground mb-3">{compatibility.message}</p>
                 <ul className="text-sm text-muted-foreground space-y-1">
                   {compatibility.instructions.map((instruction, index) => (
-                    <li key={index} className="flex items-start gap-2">
+                    <li key={`instruction-${index}`} className="flex items-start gap-2">
                       <span className="text-primary">•</span>
                       {instruction}
                     </li>

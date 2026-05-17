@@ -255,7 +255,7 @@ export const TourOverlay = () => {
           <div className="flex justify-center gap-1.5 mb-6">
             {TOUR_STEPS.map((_, idx) => (
               <div
-                key={idx}
+                key={`_-${idx}`}
                 className={`h-2 rounded-full transition-all duration-300 ${
                   idx === currentStep 
                     ? "w-6 bg-primary" 
@@ -272,7 +272,7 @@ export const TourOverlay = () => {
             <div className="flex flex-col gap-2">
               {step.actions.map((action, idx) => (
                 <Button
-                  key={idx}
+                  key={`action-${idx}`}
                   variant={action.primary ? "default" : "outline"}
                   className={`w-full ${action.primary ? "bg-gradient-to-r from-primary to-orange-500 hover:opacity-90" : ""}`}
                   onClick={() => handleAction(action)}

@@ -33,7 +33,7 @@ const MiniBarChart = ({ data, maxHeight = 80 }) => {
   return (
     <div className="flex items-end gap-1 h-20" data-testid="analytics-bar-chart">
       {data.map((d, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+        <div key={`d-${i}`} className="flex-1 flex flex-col items-center gap-1">
           <motion.div
             initial={{ height: 0 }}
             animate={{ height: `${(d.views / maxVal) * maxHeight}%` }}
@@ -357,7 +357,7 @@ const CardAnalyticsPage = () => {
                       </div>
                       <div className="space-y-2">
                         {cardAnalytics.source_breakdown.slice(0, 8).map((s, i) => (
-                          <div key={i} className="flex items-center justify-between py-1">
+                          <div key={`s-${i}`} className="flex items-center justify-between py-1">
                             <span className="text-sm truncate flex-1">{s.source}</span>
                             <span className="text-sm font-medium ml-2">{s.count}</span>
                           </div>
@@ -378,7 +378,7 @@ const CardAnalyticsPage = () => {
                       <div className="space-y-2">
                         {cardAnalytics.recent_viewers.map((v, i) => (
                           <Link
-                            key={i}
+                            key={`v-${i}`}
                             to={`/profile/${v.id}`}
                             className="flex items-center gap-3 py-2 hover:bg-muted/50 rounded-lg px-2 transition-colors"
                             data-testid={`viewer-${v.id}`}

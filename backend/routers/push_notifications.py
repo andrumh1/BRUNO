@@ -49,6 +49,11 @@ class NotificationPayload(BaseModel):
     url: Optional[str] = "/"
     tag: Optional[str] = None
     data: Optional[dict] = None
+    image: Optional[str] = None
+    actions: Optional[list] = None
+    vibrate: Optional[list] = None
+    renotify: bool = False
+    silent: bool = False
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Verify token and get current user"""
@@ -177,7 +182,13 @@ async def send_push_notification(user_id: str, notification: NotificationPayload
         "badge": notification.badge,
         "url": notification.url,
         "tag": notification.tag,
-        "data": notification.data or {}
+        "data": notification.data or {},
+        "image": notification.image,
+        "actions": notification.actions or [],
+        "vibrate": notification.vibrate or [100, 50, 100],
+        "renotify": notification.renotify,
+        "silent": notification.silent,
+        "requireInteraction": True,
     })
     
     failed_endpoints = []
@@ -241,27 +252,31 @@ async def notify_new_message(user_id: str, sender_name: str, message_preview: st
         body=message_preview[:100],
         icon="/bruno-logo.png",
         url="/chat",
-        tag=f"message_{user_id}"
+        tag=f"message_{user_id}",
+        renotify=True,
+        actions=[{"action": "reply", "title": "Responder"}, {"action": "dismiss", "title": "Cerrar"}],
+        vibrate=[200, 100, 200],
     ))
 
 async def notify_new_follower(user_id: str, follower_name: str):
     """Send notification for new follower"""
     await send_push_notification(user_id, NotificationPayload(
         title="Nuevo seguidor",
-        body=f"{follower_name} comenzó a seguirte",
+        body=f"{follower_name} comenzo a seguirte",
         icon="/bruno-logo.png",
         url="/my-profile",
-        tag="follower"
+        tag="follower",
+        actions=[{"action": "view_profile", "title": "Ver perfil"}],
     ))
 
 async def notify_new_like(user_id: str, liker_name: str, content_type: str):
     """Send notification for new like"""
     await send_push_notification(user_id, NotificationPayload(
         title="Nuevo like",
-        body=f"A {liker_name} le gustó tu {content_type}",
+        body=f"A {liker_name} le gusto tu {content_type}",
         icon="/bruno-logo.png",
         url="/feed",
-        tag="like"
+        tag="like",
     ))
 
 async def notify_new_comment(user_id: str, commenter_name: str, comment_preview: str):

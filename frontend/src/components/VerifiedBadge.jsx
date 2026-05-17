@@ -240,7 +240,7 @@ export const TierSelector = ({ currentTier, onSelect }) => {
             
             <ul className="space-y-2">
               {tier.features.map((feature, idx) => (
-                <li key={idx} className="text-sm flex items-center gap-2">
+                <li key={`feature-${idx}`} className="text-sm flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
                   {feature}
                 </li>

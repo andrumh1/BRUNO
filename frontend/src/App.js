@@ -66,6 +66,7 @@ import PremiumPage from "@/pages/PremiumPage";
 import HashtagPage from "@/pages/HashtagPage";
 import SavedPostsPage from "@/pages/SavedPostsPage";
 import SettingsPage from "@/pages/SettingsPage";
+import PartnerDashboardPage from "@/pages/PartnerDashboardPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -131,6 +132,7 @@ function AppRouter() {
       <Route path="/saved" element={<ProtectedRoute><SavedPostsPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/premium" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
+      <Route path="/partner-dashboard" element={<ProtectedRoute><PartnerDashboardPage /></ProtectedRoute>} />
       <Route path="/payment/success" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
       <Route path="/payment/cancel" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
       <Route path="/reels" element={<ReelsPage />} />

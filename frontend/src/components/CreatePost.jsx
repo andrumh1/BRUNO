@@ -202,7 +202,7 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
               {media.length > 0 && (
                 <div className="grid grid-cols-2 gap-2">
                   {media.map((item, index) => (
-                    <div key={index} className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+                    <div key={`item-${index}`} className="relative aspect-video rounded-lg overflow-hidden bg-muted">
                       {item.type === "image" ? (
                         <img src={item.url} alt="" className="w-full h-full object-cover" />
                       ) : (

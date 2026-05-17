@@ -683,7 +683,7 @@ const BrunoCameraPage = () => {
                   </div>
                   <div className="grid grid-cols-8 gap-2">
                     {STICKERS.map((emoji, i) => (
-                      <button key={i} onClick={() => addSticker(emoji)} className="text-2xl hover:scale-125 active:scale-90 transition-transform" data-testid={`sticker-${i}`}>
+                      <button key={`emoji-${i}`} onClick={() => addSticker(emoji)} className="text-2xl hover:scale-125 active:scale-90 transition-transform" data-testid={`sticker-${i}`}>
                         {emoji}
                       </button>
                     ))}

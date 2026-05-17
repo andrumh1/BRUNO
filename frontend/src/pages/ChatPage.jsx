@@ -912,7 +912,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                       {message.message_type !== 'sticker' && message.message_type !== 'card' && message.attachments?.length > 0 && (
                         <div className="mb-2">
                           {message.attachments.map((att, idx) => (
-                            <FileAttachment key={idx} file={att} isOwn={isOwn} />
+                            <FileAttachment key={`att-${idx}`} file={att} isOwn={isOwn} />
                           ))}
                         </div>
                       )}

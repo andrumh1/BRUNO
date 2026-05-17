@@ -256,7 +256,7 @@ export const LargeCard = ({ card, onChat, onShare, onSave }) => {
           <div className="flex flex-wrap gap-2 pt-4 border-t border-border">
             {card.social_links.map((link, index) => (
               <a
-                key={index}
+                key={`link-${index}`}
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"

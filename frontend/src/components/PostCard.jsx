@@ -320,7 +320,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
         {post.hashtags && post.hashtags.length > 0 && (
           <div className="px-4 pb-2 flex flex-wrap gap-1.5">
             {post.hashtags.map((tag, i) => (
-              <Link key={i} to={`/hashtag/${tag}`} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors" data-testid={`hashtag-pill-${tag}`}>
+              <Link key={`tag-${i}`} to={`/hashtag/${tag}`} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors" data-testid={`hashtag-pill-${tag}`}>
                 #{tag}
               </Link>
             ))}
@@ -331,7 +331,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
         {post.media && post.media.length > 0 && (
           <div className={`grid gap-1 ${post.media.length === 1 ? '' : 'grid-cols-2'}`}>
             {post.media.slice(0, 4).map((media, i) => (
-              <div key={i} className={`relative ${post.media.length === 1 ? 'aspect-video' : 'aspect-square'} bg-muted overflow-hidden`}>
+              <div key={`media-${i}`} className={`relative ${post.media.length === 1 ? 'aspect-video' : 'aspect-square'} bg-muted overflow-hidden`}>
                 {media.type === "image" ? (
                   <img src={media.url} alt="" className="w-full h-full object-cover" loading="lazy" />
                 ) : media.type === "video" ? (

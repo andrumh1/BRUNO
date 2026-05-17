@@ -84,7 +84,7 @@ const SocialLinkSelector = ({ links = [], onChange }) => {
             
             return (
               <div
-                key={index}
+                key={`${link.type}-${link.url}`}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-sm border"
                 style={{ borderColor: `${color}40`, backgroundColor: `${color}15` }}
               >

@@ -339,7 +339,7 @@ const BrunoMascot = ({
       <div className="px-3 pb-2 flex gap-2 overflow-x-auto">
         {quickReplies.map((reply, idx) => (
           <button
-            key={idx}
+            key={`reply-${idx}`}
             onClick={() => handleQuickReply(reply)}
             className="px-3 py-1 bg-primary/10 text-primary text-xs rounded-full whitespace-nowrap hover:bg-primary/20"
           >

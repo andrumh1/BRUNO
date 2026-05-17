@@ -158,7 +158,7 @@ const BeaconsStyleCard = ({
           <div className="flex justify-start gap-1.5 mb-2.5">
             {card.social_links.slice(0, 6).map((link, i) => (
               <SocialLinkButton 
-                key={i} link={link} size="sm" onlyIcon 
+                key={`link-${i}`} link={link} size="sm" onlyIcon 
                 className="!w-8 !h-8 !rounded-full !bg-white/15 hover:!bg-white/30 !text-current backdrop-blur-sm"
               />
             ))}
@@ -224,7 +224,7 @@ const BeaconsStyleCard = ({
                 </p>
                 <ul className="space-y-0.5">
                   {jobDetails.requirements.slice(0, 3).map((req, i) => (
-                    <li key={i} className="text-[11px] opacity-80 flex items-start gap-1">
+                    <li key={`req-${i}`} className="text-[11px] opacity-80 flex items-start gap-1">
                       <span className="mt-0.5 shrink-0">-</span>
                       <span className="line-clamp-1">{req}</span>
                     </li>
@@ -250,7 +250,7 @@ const BeaconsStyleCard = ({
         {card.gallery_photos?.length > 0 && (
           <div className="flex gap-1.5 mt-2.5">
             {card.gallery_photos.slice(0, 3).map((p, i) => (
-              <div key={i} className="w-14 h-14 rounded-xl overflow-hidden">
+              <div key={`p-${i}`} className="w-14 h-14 rounded-xl overflow-hidden">
                 <img src={p} alt="" className="w-full h-full object-cover" />
               </div>
             ))}

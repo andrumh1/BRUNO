@@ -61,7 +61,7 @@ const HashtagPage = () => {
           <div className="mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {trending.filter(t => t.hashtag !== tag.toLowerCase()).slice(0, 6).map((t, i) => (
               <Link
-                key={i}
+                key={`t-${i}`}
                 to={`/hashtag/${t.hashtag}`}
                 className="flex-shrink-0 px-3 py-1.5 rounded-full bg-muted text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors"
               >

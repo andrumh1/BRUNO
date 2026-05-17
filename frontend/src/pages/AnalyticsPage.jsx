@@ -35,7 +35,7 @@ const SimpleBarChart = ({ data, height = 120 }) => {
     <div className="flex items-end gap-1 h-full" style={{ height }}>
       {data.map((item, idx) => (
         <div
-          key={idx}
+          key={`item-${idx}`}
           className="flex-1 flex flex-col items-center gap-1"
         >
           <div 
@@ -313,7 +313,7 @@ const AnalyticsPage = () => {
               {analytics.top_locations.length > 0 ? (
                 <div className="space-y-2">
                   {analytics.top_locations.slice(0, 5).map((loc, idx) => (
-                    <div key={idx} className="flex items-center justify-between">
+                    <div key={`loc-${idx}`} className="flex items-center justify-between">
                       <span className="text-sm">{loc.location}</span>
                       <span className="text-sm font-medium">{loc.views}</span>
                     </div>
@@ -333,7 +333,7 @@ const AnalyticsPage = () => {
               {analytics.top_referrers.length > 0 ? (
                 <div className="space-y-2">
                   {analytics.top_referrers.slice(0, 5).map((ref, idx) => (
-                    <div key={idx} className="flex items-center justify-between">
+                    <div key={`ref-${idx}`} className="flex items-center justify-between">
                       <span className="text-sm truncate max-w-[200px]">{ref.referrer}</span>
                       <span className="text-sm font-medium">{ref.views}</span>
                     </div>

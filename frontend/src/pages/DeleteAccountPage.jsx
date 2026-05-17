@@ -157,7 +157,7 @@ const DeleteAccountPage = () => {
                   "Tus puntos y recompensas",
                   "Tus suscripciones activas"
                 ].map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3 text-muted-foreground">
+                  <div key={`item-${idx}`} className="flex items-center gap-3 text-muted-foreground">
                     <XCircle className="w-4 h-4 text-destructive" />
                     <span>{item}</span>
                   </div>

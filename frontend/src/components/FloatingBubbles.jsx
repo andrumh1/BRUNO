@@ -77,14 +77,14 @@ const MessageBubble = ({ msg, navigate }) => {
         {cards.length > 0 && (
           <div className="space-y-1">
             {cards.map((card, i) => (
-              <CardPreview key={i} card={card} onClick={() => navigate(`/c/${card.id}`)} />
+              <CardPreview key={`card-${i}`} card={card} onClick={() => navigate(`/c/${card.id}`)} />
             ))}
           </div>
         )}
         {actions.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {actions.map((action, i) => (
-              <ActionButton key={i} action={action}
+              <ActionButton key={`action-${i}`} action={action}
                 onClick={() => {
                   if (action.type === 'route') navigate(action.value);
                   else if (action.type === 'search') navigate(`/feed?search=${encodeURIComponent(action.value)}`);
@@ -384,7 +384,7 @@ const FloatingBubbles = () => {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5 bg-gradient-to-b from-transparent to-muted/10">
             {aiMessages.map((msg, i) => (
-              <MessageBubble key={i} msg={msg} navigate={(path) => { navigate(path); setShowAIChat(false); }} />
+              <MessageBubble key={`msg-${i}`} msg={msg} navigate={(path) => { navigate(path); setShowAIChat(false); }} />
             ))}
             {aiLoading && (
               <div className="flex justify-start">

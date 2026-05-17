@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import SocialLinkSelector from "@/components/SocialLinkSelector";
+import { CurriculumFields } from "@/components/CurriculumFields";
 import TemplateSelector from "@/components/TemplateSelector";
 import LocationSelector from "@/components/LocationSelector";
 import ImageEditor from "@/components/ImageEditor";
@@ -504,385 +505,13 @@ const CreateCardPage = () => {
               </Card>
 
               {/* CURRICULUM Fields */}
-              {formData.card_type === "curriculum" && (
-                <>
-                  {/* Experiencia Laboral */}
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="w-5 h-5 text-primary" />
-                          <CardTitle>{t("curriculum.experience")}</CardTitle>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addCurriculumItem("experience")}
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          {t("curriculum.addExperience")}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {formData.custom_fields.experience.map((exp, index) => (
-                        <div key={index} className="p-4 border border-border rounded-lg space-y-3 relative">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute top-2 right-2 h-8 w-8 text-destructive"
-                            onClick={() => removeCurriculumItem("experience", index)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <div className="grid grid-cols-2 gap-3">
-                            <Input
-                              placeholder={t("curriculum.company")}
-                              value={exp.company}
-                              onChange={(e) => updateCurriculumItem("experience", index, "company", e.target.value)}
-                            />
-                            <Input
-                              placeholder={t("curriculum.position")}
-                              value={exp.position}
-                              onChange={(e) => updateCurriculumItem("experience", index, "position", e.target.value)}
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <Input
-                              type="date"
-                              placeholder={t("curriculum.startDate")}
-                              value={exp.startDate}
-                              onChange={(e) => updateCurriculumItem("experience", index, "startDate", e.target.value)}
-                            />
-                            <Input
-                              type="date"
-                              placeholder={t("curriculum.endDate")}
-                              value={exp.endDate}
-                              onChange={(e) => updateCurriculumItem("experience", index, "endDate", e.target.value)}
-                              disabled={exp.current}
-                            />
-                          </div>
-                          <label className="flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={exp.current}
-                              onChange={(e) => updateCurriculumItem("experience", index, "current", e.target.checked)}
-                            />
-                            {t("curriculum.current")}
-                          </label>
-                          <textarea
-                            placeholder={t("cardForm.description")}
-                            value={exp.description}
-                            onChange={(e) => updateCurriculumItem("experience", index, "description", e.target.value)}
-                            className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          />
-                        </div>
-                      ))}
-                      {formData.custom_fields.experience.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          {t("curriculum.addExperience")} para comenzar
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Educación */}
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <GraduationCap className="w-5 h-5 text-primary" />
-                          <CardTitle>{t("curriculum.education")}</CardTitle>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addCurriculumItem("education")}
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          {t("curriculum.addEducation")}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {formData.custom_fields.education.map((edu, index) => (
-                        <div key={index} className="p-4 border border-border rounded-lg space-y-3 relative">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute top-2 right-2 h-8 w-8 text-destructive"
-                            onClick={() => removeCurriculumItem("education", index)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <div className="grid grid-cols-2 gap-3">
-                            <Input
-                              placeholder={t("curriculum.institution")}
-                              value={edu.institution}
-                              onChange={(e) => updateCurriculumItem("education", index, "institution", e.target.value)}
-                            />
-                            <Input
-                              placeholder={t("curriculum.degree")}
-                              value={edu.degree}
-                              onChange={(e) => updateCurriculumItem("education", index, "degree", e.target.value)}
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <Input
-                              type="date"
-                              value={edu.startDate}
-                              onChange={(e) => updateCurriculumItem("education", index, "startDate", e.target.value)}
-                            />
-                            <Input
-                              type="date"
-                              value={edu.endDate}
-                              onChange={(e) => updateCurriculumItem("education", index, "endDate", e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                      {formData.custom_fields.education.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          {t("curriculum.addEducation")} para comenzar
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Habilidades */}
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Award className="w-5 h-5 text-primary" />
-                          <CardTitle>{t("curriculum.skills")}</CardTitle>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addCurriculumItem("skills")}
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          {t("curriculum.addSkill")}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {formData.custom_fields.skills.map((skill, index) => (
-                        <div key={index} className="flex items-center gap-3">
-                          <Input
-                            placeholder={t("curriculum.skills")}
-                            value={skill.name}
-                            onChange={(e) => updateCurriculumItem("skills", index, "name", e.target.value)}
-                            className="flex-1"
-                          />
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={skill.level}
-                            onChange={(e) => updateCurriculumItem("skills", index, "level", parseInt(e.target.value))}
-                            className="w-20"
-                          />
-                          <span className="text-sm text-muted-foreground">%</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            onClick={() => removeCurriculumItem("skills", index)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  {/* Idiomas */}
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Languages className="w-5 h-5 text-primary" />
-                          <CardTitle>{t("curriculum.languages")}</CardTitle>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addCurriculumItem("languages")}
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          {t("curriculum.addLanguage")}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {formData.custom_fields.languages.map((lang, index) => (
-                        <div key={index} className="flex items-center gap-3">
-                          <Input
-                            placeholder={t("curriculum.languages")}
-                            value={lang.name}
-                            onChange={(e) => updateCurriculumItem("languages", index, "name", e.target.value)}
-                            className="flex-1"
-                          />
-                          <select
-                            value={lang.level}
-                            onChange={(e) => updateCurriculumItem("languages", index, "level", e.target.value)}
-                            className="h-10 px-3 rounded-md border border-input bg-background text-sm"
-                          >
-                            <option value="native">{t("curriculum.native")}</option>
-                            <option value="fluent">{t("curriculum.fluent")}</option>
-                            <option value="intermediate">{t("curriculum.intermediate")}</option>
-                            <option value="basic">{t("curriculum.basic")}</option>
-                          </select>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            onClick={() => removeCurriculumItem("languages", index)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  {/* Documentos */}
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-5 h-5 text-primary" />
-                          <CardTitle>{t("curriculum.documents")}</CardTitle>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addCurriculumItem("documents")}
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          {t("curriculum.addDocument")}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {formData.custom_fields.documents.map((doc, index) => (
-                        <div key={index} className="flex items-center gap-3">
-                          <Input
-                            placeholder="Nombre del documento"
-                            value={doc.name}
-                            onChange={(e) => updateCurriculumItem("documents", index, "name", e.target.value)}
-                            className="flex-1"
-                          />
-                          <Input
-                            placeholder="URL del documento"
-                            value={doc.url}
-                            onChange={(e) => updateCurriculumItem("documents", index, "url", e.target.value)}
-                            className="flex-1"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            onClick={() => removeCurriculumItem("documents", index)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  {/* Referencias Laborales */}
-                  <Card className="glass-card">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Briefcase className="w-5 h-5 text-primary" />
-                          <CardTitle>{t("curriculum.references")}</CardTitle>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addCurriculumItem("references")}
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          {t("curriculum.addReference")}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {formData.custom_fields.references.map((ref, index) => (
-                        <div key={index} className="p-4 border border-border rounded-lg space-y-3 relative">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute top-2 right-2 h-8 w-8 text-destructive"
-                            onClick={() => removeCurriculumItem("references", index)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <Input
-                              placeholder={t("curriculum.referenceName")}
-                              value={ref.name}
-                              onChange={(e) => updateCurriculumItem("references", index, "name", e.target.value)}
-                            />
-                            <Input
-                              placeholder={t("curriculum.referencePosition")}
-                              value={ref.position}
-                              onChange={(e) => updateCurriculumItem("references", index, "position", e.target.value)}
-                            />
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <Input
-                              placeholder={t("curriculum.referenceCompany")}
-                              value={ref.company}
-                              onChange={(e) => updateCurriculumItem("references", index, "company", e.target.value)}
-                            />
-                            <Input
-                              placeholder={t("curriculum.referenceRelationship")}
-                              value={ref.relationship}
-                              onChange={(e) => updateCurriculumItem("references", index, "relationship", e.target.value)}
-                            />
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <Input
-                              placeholder={t("curriculum.referencePhone")}
-                              value={ref.phone}
-                              onChange={(e) => updateCurriculumItem("references", index, "phone", e.target.value)}
-                            />
-                            <Input
-                              type="email"
-                              placeholder={t("curriculum.referenceEmail")}
-                              value={ref.email}
-                              onChange={(e) => updateCurriculumItem("references", index, "email", e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                      {formData.custom_fields.references.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          {t("curriculum.addReference")} para comenzar
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </>
-              )}
+              <CurriculumFields
+                formData={formData}
+                setFormData={setFormData}
+                addCurriculumItem={addCurriculumItem}
+                updateCurriculumItem={updateCurriculumItem}
+                removeCurriculumItem={removeCurriculumItem}
+              />
 
               {/* Job/Service Card Fields */}
               {(formData.card_type === "oferta_trabajo" || formData.card_type === "busqueda_personal" || formData.card_type === "solicitud_servicio") && (
@@ -1124,7 +753,7 @@ const CreateCardPage = () => {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       {(formData.custom_fields.job_details?.requirements || []).map((req, index) => (
-                        <div key={index} className="flex items-center gap-2">
+                        <div key={`req-${index}`} className="flex items-center gap-2">
                           <Input
                             placeholder="Ej: Manejo de Excel avanzado"
                             value={req}
@@ -1208,7 +837,7 @@ const CreateCardPage = () => {
                       </CardHeader>
                       <CardContent className="space-y-2">
                         {(formData.custom_fields.job_details?.benefits || []).map((benefit, index) => (
-                          <div key={index} className="flex items-center gap-2">
+                          <div key={`benefit-${index}`} className="flex items-center gap-2">
                             <Input
                               placeholder="Ej: Seguro médico, Home office, etc."
                               value={benefit}
@@ -1298,7 +927,7 @@ const CreateCardPage = () => {
                   />
                   {/* Additional locations */}
                   {formData.locations.map((loc, idx) => (
-                    <div key={idx} className="flex items-start gap-2 p-3 rounded-xl border bg-muted/30">
+                    <div key={`loc-${idx}`} className="flex items-start gap-2 p-3 rounded-xl border bg-muted/30">
                       <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <Input
@@ -1574,7 +1203,7 @@ const CreateCardPage = () => {
                         <div className="flex flex-wrap justify-center gap-2 my-3">
                           {formData.social_links.map((link, index) => (
                             <div
-                              key={index}
+                              key={`link-${index}`}
                               className="w-8 h-8 rounded-full flex items-center justify-center bg-white/20"
                             >
                               <span className="text-[10px] font-bold">

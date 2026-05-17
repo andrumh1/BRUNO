@@ -129,7 +129,7 @@ const DownloadAppButton = ({ variant = "default", size = "default", className = 
               {/* Instrucciones paso a paso */}
               <div className="space-y-2">
                 {getDownloadInstructions().steps.map((step, index) => (
-                  <p key={index} className="text-sm text-muted-foreground">
+                  <p key={`step-${index}`} className="text-sm text-muted-foreground">
                     {step}
                   </p>
                 ))}

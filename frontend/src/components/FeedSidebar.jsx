@@ -24,7 +24,7 @@ export const TrendingSidebar = ({ trending }) => {
         </div>
         <div className="space-y-2">
           {trending.slice(0, 6).map((t, i) => (
-            <Link key={i} to={`/hashtag/${t.hashtag}`} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted transition-colors group" data-testid={`trending-${t.hashtag}`}>
+            <Link key={`t-${i}`} to={`/hashtag/${t.hashtag}`} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted transition-colors group" data-testid={`trending-${t.hashtag}`}>
               <div className="flex items-center gap-2 min-w-0">
                 <Hash className="w-3.5 h-3.5 text-primary shrink-0" />
                 <span className="text-sm font-medium truncate group-hover:text-primary">#{t.hashtag}</span>

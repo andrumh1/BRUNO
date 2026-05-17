@@ -95,7 +95,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
             </div>
             <div className="flex flex-wrap gap-2">
               {(customFields.interests || []).map((interest, index) => (
-                <div key={index} className="flex items-center gap-1 bg-muted rounded-full px-3 py-1">
+                <div key={`interest-${index}`} className="flex items-center gap-1 bg-muted rounded-full px-3 py-1">
                   <Input
                     className="h-6 w-24 border-0 bg-transparent p-0 text-sm"
                     placeholder="Interés"
@@ -188,7 +188,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               </Button>
             </div>
             {(customFields.responsibilities || []).map((resp, index) => (
-              <div key={index} className="flex items-center gap-2">
+              <div key={`resp-${index}`} className="flex items-center gap-2">
                 <Input
                   placeholder="Responsabilidad o función"
                   value={resp.text}
@@ -289,7 +289,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
                 </Button>
               </div>
               {(customFields.services || []).map((service, index) => (
-                <div key={index} className="p-3 border border-border rounded-xl space-y-2 bg-background/50">
+                <div key={`service-${index}`} className="p-3 border border-border rounded-xl space-y-2 bg-background/50">
                   <div className="flex items-center gap-2">
                     <Input
                       placeholder="Nombre del servicio"
@@ -352,7 +352,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
                 </Button>
               </div>
               {(customFields.catalogs || []).map((item, index) => (
-                <div key={index} className="p-4 border border-border rounded-xl space-y-3 bg-background/50">
+                <div key={`item-${index}`} className="p-4 border border-border rounded-xl space-y-3 bg-background/50">
                   <div className="flex items-center gap-2">
                     <Input
                       placeholder="Nombre del producto"
@@ -457,7 +457,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
                 </Button>
               </div>
               {(customFields.gallery || []).map((photo, index) => (
-                <div key={index} className="flex items-center gap-2">
+                <div key={`photo-${index}`} className="flex items-center gap-2">
                   <Input
                     placeholder="URL de la imagen"
                     value={photo.url}
@@ -556,7 +556,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               </Button>
             </div>
             {(customFields.attractions || []).map((attraction, index) => (
-              <div key={index} className="flex items-center gap-2">
+              <div key={`attraction-${index}`} className="flex items-center gap-2">
                 <Input
                   placeholder="Nombre de la atracción"
                   value={attraction.name}
@@ -592,7 +592,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               </Button>
             </div>
             {(customFields.warnings || []).map((warning, index) => (
-              <div key={index} className="flex items-center gap-2">
+              <div key={`warning-${index}`} className="flex items-center gap-2">
                 <Input
                   placeholder="Advertencia de seguridad"
                   value={warning.text}
@@ -708,7 +708,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
                 </Button>
               </div>
               {(customFields.allergies || []).map((allergy, index) => (
-                <div key={index} className="flex items-center gap-2">
+                <div key={`allergy-${index}`} className="flex items-center gap-2">
                   <Input
                     placeholder="Alergia"
                     value={allergy.name}
@@ -750,7 +750,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
                 </Button>
               </div>
               {(customFields.medications || []).map((med, index) => (
-                <div key={index} className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <div key={`med-${index}`} className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   <Input
                     placeholder="Medicamento"
                     value={med.name}
@@ -814,7 +814,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
               </Button>
             </div>
             {(customFields.emergencyContacts || []).map((contact, index) => (
-              <div key={index} className="p-3 border border-border rounded-lg space-y-2">
+              <div key={`contact-${index}`} className="p-3 border border-border rounded-lg space-y-2">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <Input
                     placeholder="Nombre"
@@ -1053,7 +1053,7 @@ const ProfileSpecificFields = ({ cardType, customFields, onChange }) => {
                 </Button>
               </div>
               {(customFields.ownerContacts || []).map((contact, index) => (
-                <div key={index} className="p-3 border border-border rounded-lg space-y-2">
+                <div key={`contact-${index}`} className="p-3 border border-border rounded-lg space-y-2">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <Input
                       placeholder="Nombre del dueño"

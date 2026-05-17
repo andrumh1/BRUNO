@@ -72,7 +72,7 @@ const PricingCard = ({ name, price, period, features, popular, cta }) => (
     </div>
     <ul className="space-y-3 mb-8">
       {features.map((feature, i) => (
-        <li key={i} className="flex items-center gap-2">
+        <li key={`feature-${i}`} className="flex items-center gap-2">
           <Check className={`w-5 h-5 ${popular ? 'text-yellow-300' : 'text-green-500'}`} />
           <span className={popular ? 'text-white/90' : 'text-gray-600'}>{feature}</span>
         </li>
@@ -382,7 +382,7 @@ const BrunoWebsite = () => {
               { name: "Pack Empresa x10", price: "$199.99", category: "Empresas" },
               { name: "Diseño Personalizado", price: "$49.99", category: "Servicios" }
             ].map((product, i) => (
-              <div key={i} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 hover:shadow-lg transition-shadow">
+              <div key={`product-${i}`} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 hover:shadow-lg transition-shadow">
                 <div className="aspect-square bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl mb-4 flex items-center justify-center">
                   <CreditCard className="w-16 h-16 text-white/80" />
                 </div>

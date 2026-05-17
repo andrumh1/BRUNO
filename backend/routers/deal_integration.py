@@ -309,3 +309,67 @@ async def get_partner_commissions(current_user: User = Depends(get_current_user)
         {"_id": 0}
     ).sort("created_at", -1).to_list(100)
     return commissions
+
+
+@router.get("/partner/dashboard")
+async def get_partner_dashboard(current_user: User = Depends(get_current_user)):
+    """Get partner dashboard with metrics, commissions, and performance data."""
+    partner_id = current_user.id
+
+    # Commissions
+    commissions = await db.deal_commissions.find(
+        {"partner_id": partner_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(200)
+
+    total_earned = sum(c.get("amount", 0) for c in commissions)
+    total_orders = len(commissions)
+
+    # Orders originated by this partner
+    partner_orders = await db.deal_orders.find(
+        {"partner_id": partner_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(200)
+
+    paid_orders = [o for o in partner_orders if o.get("status") == "paid"]
+    pending_orders = [o for o in partner_orders if o.get("status") == "pending_payment"]
+    total_sales_volume = sum(o.get("total", 0) for o in paid_orders)
+
+    # Monthly breakdown (last 6 months)
+    from collections import defaultdict
+    monthly = defaultdict(lambda: {"revenue": 0, "commissions": 0, "orders": 0})
+    for c in commissions:
+        month = c.get("created_at", "")[:7]  # "2026-05"
+        if month:
+            monthly[month]["commissions"] += c.get("amount", 0)
+            monthly[month]["orders"] += 1
+    for o in paid_orders:
+        month = o.get("created_at", "")[:7]
+        if month:
+            monthly[month]["revenue"] += o.get("total", 0)
+
+    monthly_data = [{"month": k, **v} for k, v in sorted(monthly.items(), reverse=True)[:6]]
+
+    # Top products
+    product_stats = defaultdict(lambda: {"count": 0, "revenue": 0, "name": ""})
+    for o in paid_orders:
+        pid = o.get("product_id", "unknown")
+        product_stats[pid]["count"] += 1
+        product_stats[pid]["revenue"] += o.get("total", 0)
+        product_stats[pid]["name"] = o.get("product_name", "N/A")
+
+    top_products = sorted(product_stats.values(), key=lambda x: x["revenue"], reverse=True)[:5]
+
+    return {
+        "summary": {
+            "total_earned": round(total_earned, 2),
+            "total_orders": total_orders,
+            "total_sales_volume": round(total_sales_volume, 2),
+            "pending_orders": len(pending_orders),
+            "paid_orders": len(paid_orders),
+            "conversion_rate": round(len(paid_orders) / max(len(partner_orders), 1) * 100, 1),
+        },
+        "monthly": monthly_data,
+        "top_products": top_products,
+        "recent_commissions": commissions[:10],
+        "recent_orders": partner_orders[:10],
+    }
+

@@ -550,7 +550,7 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
               {BG_GRADIENTS.map((g, i) => (
                 <button
-                  key={i}
+                  key={`g-${i}`}
                   onClick={() => { setBgGradient(g); setMode("select"); }}
                   className={`w-10 h-10 rounded-xl shrink-0 transition-all ${bgGradient === g ? "ring-2 ring-white scale-110" : ""}`}
                   style={{ background: g }}
@@ -583,7 +583,7 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
               data-testid="story-poll-question"
             />
             {pollOptions.map((opt, idx) => (
-              <div key={idx} className="flex gap-2">
+              <div key={`opt-${idx}`} className="flex gap-2">
                 <Input
                   value={opt}
                   onChange={(e) => { const n = [...pollOptions]; n[idx] = e.target.value; setPollOptions(n); }}

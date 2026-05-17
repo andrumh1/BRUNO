@@ -333,7 +333,7 @@ export const StoryViewer = ({ userStories, allUsers, onClose, onNavigate }) => {
         {/* Progress bars */}
         <div className="absolute top-2 left-2 right-2 z-20 flex gap-1">
           {stories.map((_, idx) => (
-            <div key={idx} className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden">
+            <div key={`_-${idx}`} className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-white rounded-full transition-all"
                 style={{ 
@@ -661,7 +661,7 @@ export const CreateStoryModal = ({ isOpen, onClose, onCreated }) => {
                       {pollQuestion || "Tu pregunta aqui..."}
                     </p>
                     {pollOptions.filter(o => o).map((opt, i) => (
-                      <div key={i} className="bg-white/20 backdrop-blur rounded-xl px-4 py-2.5 text-white text-sm text-center">
+                      <div key={`opt-${i}`} className="bg-white/20 backdrop-blur rounded-xl px-4 py-2.5 text-white text-sm text-center">
                         {opt || `Opción ${i + 1}`}
                       </div>
                     ))}
@@ -679,7 +679,7 @@ export const CreateStoryModal = ({ isOpen, onClose, onCreated }) => {
                 
                 <div className="space-y-2">
                   {pollOptions.map((opt, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
+                    <div key={`opt-${idx}`} className="flex items-center gap-2">
                       <Input
                         placeholder={`Opción ${idx + 1}`}
                         value={opt}

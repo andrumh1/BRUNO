@@ -145,18 +145,24 @@ async def get_card_analytics(
     end_date = datetime.now(timezone.utc)
     start_date = end_date - timedelta(days=days)
     
-    # Get all views in date range
     views = await db.card_views.find({
         "card_id": card_id,
         "created_at": {"$gte": start_date.isoformat(), "$lte": end_date.isoformat()}
     }, {"_id": 0}).to_list(10000)
     
-    # Calculate metrics
+    return {
+        "card_id": card_id,
+        "card_title": card.get("title"),
+        "period_days": days,
+        **_compute_view_metrics(views, days),
+    }
+
+
+def _compute_view_metrics(views: list, days: int) -> dict:
+    """Compute all analytics metrics from a list of views."""
     total_views = len(views)
-    unique_ips = set(v.get("viewer_ip") for v in views if v.get("viewer_ip"))
-    unique_visitors = len(unique_ips)
+    unique_ips = {v.get("viewer_ip") for v in views if v.get("viewer_ip")}
     
-    # Views by time period
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
@@ -165,71 +171,55 @@ async def get_card_analytics(
     views_this_week = sum(1 for v in views if v.get("created_at", "") >= week_ago.isoformat())
     views_this_month = sum(1 for v in views if v.get("created_at", "") >= month_ago.isoformat())
     
-    # Top locations
+    # Aggregate locations, referrers, and daily views
     location_counts = {}
+    referrer_counts = {}
+    ip_view_counts = {}
+    
     for v in views:
         loc = v.get("viewer_location", {})
         if loc and loc.get("country"):
             key = f"{loc.get('city', 'Unknown')}, {loc.get('country')}"
             location_counts[key] = location_counts.get(key, 0) + 1
+        
+        ref = v.get("referrer", "Direct")
+        if ref:
+            referrer_counts[ref] = referrer_counts.get(ref, 0) + 1
+        
+        ip = v.get("viewer_ip")
+        if ip:
+            ip_view_counts[ip] = ip_view_counts.get(ip, 0) + 1
     
     top_locations = sorted(
         [{"location": k, "views": v} for k, v in location_counts.items()],
-        key=lambda x: x["views"],
-        reverse=True
+        key=lambda x: x["views"], reverse=True
     )[:10]
     
-    # Views by day (last 30 days)
+    top_referrers = sorted(
+        [{"referrer": k, "views": v} for k, v in referrer_counts.items()],
+        key=lambda x: x["views"], reverse=True
+    )[:10]
+    
     views_by_day = []
     for i in range(min(days, 30)):
         day = today - timedelta(days=i)
         day_str = day.strftime("%Y-%m-%d")
-        day_views = sum(1 for v in views if v.get("created_at", "").startswith(day_str))
-        views_by_day.append({
-            "date": day_str,
-            "views": day_views
-        })
+        views_by_day.append({"date": day_str, "views": sum(1 for v in views if v.get("created_at", "").startswith(day_str))})
     views_by_day.reverse()
     
-    # Top referrers
-    referrer_counts = {}
-    for v in views:
-        ref = v.get("referrer", "Direct")
-        if ref:
-            referrer_counts[ref] = referrer_counts.get(ref, 0) + 1
-    
-    top_referrers = sorted(
-        [{"referrer": k, "views": v} for k, v in referrer_counts.items()],
-        key=lambda x: x["views"],
-        reverse=True
-    )[:10]
-    
-    # Average view duration
     durations = [v.get("duration_seconds", 0) for v in views if v.get("duration_seconds")]
-    avg_duration = sum(durations) / len(durations) if durations else 0
-    
-    # Returning visitors (IPs that viewed more than once)
-    ip_view_counts = {}
-    for v in views:
-        ip = v.get("viewer_ip")
-        if ip:
-            ip_view_counts[ip] = ip_view_counts.get(ip, 0) + 1
-    returning_visitors = sum(1 for count in ip_view_counts.values() if count > 1)
     
     return {
-        "card_id": card_id,
-        "card_title": card.get("title"),
-        "period_days": days,
         "total_views": total_views,
-        "unique_visitors": unique_visitors,
+        "unique_visitors": len(unique_ips),
         "views_today": views_today,
         "views_this_week": views_this_week,
         "views_this_month": views_this_month,
         "top_locations": top_locations,
         "views_by_day": views_by_day,
         "top_referrers": top_referrers,
-        "average_view_duration": round(avg_duration, 1),
-        "returning_visitors": returning_visitors
+        "average_view_duration": round(sum(durations) / len(durations), 1) if durations else 0,
+        "returning_visitors": sum(1 for count in ip_view_counts.values() if count > 1),
     }
 
 

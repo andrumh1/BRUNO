@@ -204,7 +204,7 @@ const PremiumPage = () => {
             { icon: Star, label: "Sin anuncios", color: "text-green-500" },
           ].map((f, i) => (
             <motion.div
-              key={i}
+              key={`f-${i}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
@@ -285,7 +285,7 @@ const PremiumPage = () => {
                 <h3 className="font-semibold text-sm mb-3">Historial de pagos</h3>
                 <div className="space-y-2">
                   {subscription.payment_history.map((txn, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div key={`txn-${i}`} className="flex items-center justify-between py-2 border-b last:border-0">
                       <div>
                         <p className="text-sm font-medium">{txn.package_name}</p>
                         <p className="text-[10px] text-muted-foreground">

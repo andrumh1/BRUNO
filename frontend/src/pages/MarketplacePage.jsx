@@ -484,7 +484,7 @@ const MarketplacePage = () => {
                     </div>
                     <ul className="mt-3 space-y-1">
                       {sub.features.map((f, i) => (
-                        <li key={i} className="text-sm text-muted-foreground flex items-center gap-2">
+                        <li key={`f-${i}`} className="text-sm text-muted-foreground flex items-center gap-2">
                           <Zap className="w-3 h-3 text-primary" />
                           {f}
                         </li>

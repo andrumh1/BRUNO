@@ -250,7 +250,7 @@ const ReelsPage = () => {
           {reels.length > 1 && (
             <div className="absolute top-12 left-4 right-4 flex gap-0.5 z-20">
               {reels.slice(0, 20).map((_, i) => (
-                <div key={i} className={`h-0.5 flex-1 rounded-full transition-all ${i === activeIndex ? "bg-white" : "bg-white/20"}`} />
+                <div key={`_-${i}`} className={`h-0.5 flex-1 rounded-full transition-all ${i === activeIndex ? "bg-white" : "bg-white/20"}`} />
               ))}
             </div>
           )}

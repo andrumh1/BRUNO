@@ -213,7 +213,7 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
             <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] px-2.5 py-1.5 rounded-2xl ${isOwn ? "bg-gradient-to-br from-primary to-primary/90 text-white rounded-br-md" : "bg-muted/80 rounded-bl-md"}`}>
                 {msg.attachments?.length > 0 && msg.message_type !== 'card' && (
-                  <div className="mb-1">{msg.attachments.map((att, i) => <MsgAttachment key={i} att={att} isOwn={isOwn} />)}</div>
+                  <div className="mb-1">{msg.attachments.map((att, i) => <MsgAttachment key={`att-${i}`} att={att} isOwn={isOwn} />)}</div>
                 )}
                 {msg.content && msg.message_type !== 'audio' && msg.message_type !== 'sticker' && (
                   <p className="text-xs leading-relaxed">{msg.content}</p>

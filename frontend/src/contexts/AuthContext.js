@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { secureStorage } from "@/utils/secureStorage";
 
 const AuthContext = createContext({
   user: null,
@@ -16,9 +17,8 @@ const AuthContext = createContext({
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Storage keys
-const TOKEN_KEY = "bruno_token";
-const USER_KEY = "bruno_user";
+const USER_KEY = "user";
+const TOKEN_KEY = "token";
 const SESSION_PERSISTENT_KEY = "bruno_session_persistent";
 
 export function AuthProvider({ children }) {
@@ -27,7 +27,6 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const [sessionPersistent, setSessionPersistent] = useState(true);
 
-  // Initialize from storage
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -35,49 +34,47 @@ export function AuthProvider({ children }) {
         const isPersistent = storedPersistent !== "false";
         setSessionPersistent(isPersistent);
 
-        // Try to get token from localStorage or sessionStorage
-        let storedToken = localStorage.getItem(TOKEN_KEY);
+        // Migrate from old unencrypted storage if present
+        const oldToken = localStorage.getItem("bruno_token");
+        if (oldToken) {
+          await secureStorage.setItem(TOKEN_KEY, oldToken);
+          localStorage.removeItem("bruno_token");
+          localStorage.removeItem("bruno_user");
+        }
+
+        let storedToken = await secureStorage.getItem(TOKEN_KEY);
         if (!storedToken && !isPersistent) {
           storedToken = sessionStorage.getItem(TOKEN_KEY);
         }
 
         if (storedToken) {
-          // Try to get cached user first for faster load
-          const cachedUser = localStorage.getItem(USER_KEY);
+          const cachedUser = await secureStorage.getItem(USER_KEY);
           if (cachedUser) {
-            try {
-              setUser(JSON.parse(cachedUser));
-            } catch (e) {
-              // error handled
-            }
+            try { setUser(JSON.parse(cachedUser)); } catch {}
           }
-
           setToken(storedToken);
-          
-          // Validate token with server in background
           await refreshUser(storedToken);
         }
-      } catch (error) {
-        // error handled
+      } catch {
         clearAuth();
       } finally {
         setIsLoading(false);
       }
     };
-
     initAuth();
   }, []);
 
-  // Clear all auth data
   const clearAuth = () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    secureStorage.removeItem(TOKEN_KEY);
+    secureStorage.removeItem(USER_KEY);
     sessionStorage.removeItem(TOKEN_KEY);
+    // Also clean up old unencrypted storage
+    localStorage.removeItem("bruno_token");
+    localStorage.removeItem("bruno_user");
     setToken(null);
     setUser(null);
   };
 
-  // Refresh user data from server
   const refreshUser = useCallback(async (authToken = null) => {
     const currentToken = authToken || token;
     if (!currentToken) {
@@ -90,109 +87,82 @@ export function AuthProvider({ children }) {
         headers: { Authorization: `Bearer ${currentToken}` },
         timeout: 10000,
       });
-      
+
       const userData = response.data;
-      
-      // Auto-refresh token if backend sent a new one
       let activeToken = currentToken;
       if (userData.refreshed_token) {
         activeToken = userData.refreshed_token;
-        localStorage.setItem(TOKEN_KEY, activeToken);
+        await secureStorage.setItem(TOKEN_KEY, activeToken);
         delete userData.refreshed_token;
       }
-      
+
       setUser(userData);
       setToken(activeToken);
-      
-      // Cache user data for faster loads
-      localStorage.setItem(USER_KEY, JSON.stringify(userData));
-      
+      await secureStorage.setItem(USER_KEY, JSON.stringify(userData));
       return userData;
     } catch (error) {
-      // error handled
-      // Only clear auth if it's an authentication error (401/403)
       if (error.response?.status === 401 || error.response?.status === 403) {
         clearAuth();
       }
-      
       return null;
     } finally {
       setIsLoading(false);
     }
   }, [token]);
 
-  // Login function
   const login = async (userData, userToken, keepSession = true) => {
-    // Store token based on session preference
     if (keepSession) {
-      localStorage.setItem(TOKEN_KEY, userToken);
+      await secureStorage.setItem(TOKEN_KEY, userToken);
       localStorage.setItem(SESSION_PERSISTENT_KEY, "true");
     } else {
       sessionStorage.setItem(TOKEN_KEY, userToken);
       localStorage.setItem(SESSION_PERSISTENT_KEY, "false");
     }
-    
-    // Cache user data
-    localStorage.setItem(USER_KEY, JSON.stringify(userData));
-    
+    await secureStorage.setItem(USER_KEY, JSON.stringify(userData));
+
     setToken(userToken);
     setUser(userData);
     setSessionPersistent(keepSession);
-    
-    // Refresh from server to ensure we have latest data
     await refreshUser(userToken);
   };
 
-  // Update user data locally and on server
   const updateUser = async (updates) => {
     if (!token || !user) return false;
-
     try {
-      const response = await axios.put(
-        `${API}/auth/me`,
-        updates,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
+      const response = await axios.put(`${API}/auth/me`, updates, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const updatedUser = response.data;
       setUser(updatedUser);
-      localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
-      
+      await secureStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
       return true;
-    } catch (error) {
-      // error handled
+    } catch {
       return false;
     }
   };
 
-  // Logout function
   const logout = async () => {
     try {
-      // Notify server (optional - for audit logging)
       if (token) {
-        await axios.post(
-          `${API}/auth/logout`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        ).catch(() => {}); // Ignore errors
+        await axios.post(`${API}/auth/logout`, {}, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
       }
     } finally {
       clearAuth();
     }
   };
 
-  // Toggle session persistence
-  const setKeepSession = (keep) => {
+  const setKeepSession = async (keep) => {
     setSessionPersistent(keep);
     localStorage.setItem(SESSION_PERSISTENT_KEY, keep ? "true" : "false");
-    
     if (token) {
       if (keep) {
-        localStorage.setItem(TOKEN_KEY, token);
+        await secureStorage.setItem(TOKEN_KEY, token);
         sessionStorage.removeItem(TOKEN_KEY);
       } else {
         sessionStorage.setItem(TOKEN_KEY, token);
-        localStorage.removeItem(TOKEN_KEY);
+        secureStorage.removeItem(TOKEN_KEY);
       }
     }
   };

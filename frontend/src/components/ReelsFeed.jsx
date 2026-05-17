@@ -220,7 +220,7 @@ const ReelItem = ({ reel, isActive, onLike, onComment, onShare, onSave }) => {
             <div className="h-64 overflow-y-auto">
               {reel.comments?.length > 0 ? (
                 reel.comments.map((comment, i) => (
-                  <div key={i} className="flex gap-3 mb-4">
+                  <div key={`comment-${i}`} className="flex gap-3 mb-4">
                     <div className="w-8 h-8 rounded-full bg-muted" />
                     <div>
                       <p className="text-sm"><strong>{comment.author}</strong> {comment.text}</p>
@@ -386,7 +386,7 @@ const ReelsFeed = () => {
       <div className="absolute top-4 left-4 right-16 flex gap-1 z-20">
         {reels.map((_, index) => (
           <div
-            key={index}
+            key={`_-${index}`}
             className={`h-1 flex-1 rounded-full transition-all ${
               index === activeIndex ? 'bg-white' : 'bg-white/30'
             }`}

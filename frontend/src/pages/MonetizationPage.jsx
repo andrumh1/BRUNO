@@ -236,7 +236,7 @@ const MonetizationPage = () => {
                         
                         <div className="mt-3 flex flex-wrap gap-1">
                           {promo.benefits.map((benefit, idx) => (
-                            <span key={idx} className="text-xs px-2 py-0.5 bg-muted rounded-full">
+                            <span key={`benefit-${idx}`} className="text-xs px-2 py-0.5 bg-muted rounded-full">
                               {benefit}
                             </span>
                           ))}

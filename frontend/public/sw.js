@@ -1,19 +1,12 @@
-// BRUNO Service Worker v5 - Push Notifications + NFC Instant Redirect + Safari Cache Fix
-const SW_VERSION = 'v5';
+// BRUNO Service Worker v6 - Enhanced Push Notifications for Mobile
+const SW_VERSION = 'v6';
 const CACHE_NAME = 'bruno-' + SW_VERSION;
 
-// Always bypass cache for these patterns
 const NEVER_CACHE = ['/api/', '/ws/', 'chrome-extension', '/sockjs-node'];
 
-// Install - force immediate activation
-self.addEventListener('install', () => {
-  console.log('[SW] Installing', SW_VERSION);
-  self.skipWaiting();
-});
+self.addEventListener('install', () => { self.skipWaiting(); });
 
-// Activate - purge all old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating', SW_VERSION);
   event.waitUntil(
     caches.keys().then((names) =>
       Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
@@ -21,19 +14,15 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch - network-first strategy
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = event.request.url;
   if (NEVER_CACHE.some((p) => url.includes(p))) return;
 
-  // HTML navigation requests: ALWAYS go to network, NO cache fallback
-  // This prevents NFC/card deep links from showing stale/home page
   if (event.request.mode === 'navigate' || event.request.destination === 'document') {
     event.respondWith(
       fetch(event.request, { cache: 'no-store' })
         .then((response) => {
-          // Cache the latest index.html for true offline fallback
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', clone));
           return response;
@@ -43,7 +32,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // All other assets: network-first with brief cache fallback
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -57,54 +45,76 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Push notification
+// Enhanced push notification handler for mobile
 self.addEventListener('push', (event) => {
   let data = {
     title: 'BRUNO',
     body: 'Tienes una nueva notificacion',
     icon: '/bruno-logo.png',
-    badge: '/bruno-logo.png',
+    badge: '/bruno-badge.png',
     url: '/',
     tag: 'bruno-notification',
+    image: null,
+    actions: [],
+    vibrate: [100, 50, 100],
+    renotify: false,
+    silent: false,
+    requireInteraction: false,
   };
+
   if (event.data) {
     try { data = { ...data, ...event.data.json() }; } catch (e) { data.body = event.data.text(); }
   }
+
   const options = {
     body: data.body,
     icon: data.icon,
     badge: data.badge,
     tag: data.tag,
-    data: { url: data.url, ...data.data },
-    vibrate: [100, 50, 100],
-    requireInteraction: false,
-    renotify: true,
-    silent: false,
+    data: { url: data.url, ...(data.data || {}) },
+    vibrate: data.vibrate || [100, 50, 100],
+    requireInteraction: data.requireInteraction || false,
+    renotify: data.renotify || false,
+    silent: data.silent || false,
   };
-  if (data.tag === 'incoming_call') {
+
+  // Rich notification image (shows large preview on mobile)
+  if (data.image) {
+    options.image = data.image;
+  }
+
+  // Merge server-sent actions with contextual defaults
+  if (data.actions && data.actions.length > 0) {
+    options.actions = data.actions.slice(0, 2); // Max 2 actions on most platforms
+  } else if (data.tag === 'incoming_call') {
     options.requireInteraction = true;
-    options.vibrate = [200, 100, 200, 100, 200];
+    options.vibrate = [200, 100, 200, 100, 200, 100, 200];
     options.actions = [
       { action: 'accept', title: 'Aceptar' },
       { action: 'decline', title: 'Rechazar' },
     ];
-  } else if (data.tag?.startsWith('message_')) {
+  } else if (data.tag && data.tag.startsWith('message_')) {
+    options.renotify = true;
     options.actions = [
       { action: 'reply', title: 'Responder' },
       { action: 'dismiss', title: 'Cerrar' },
     ];
   }
+
   event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
-// Notification click
+// Notification click handler
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
   let url = data.url || '/';
+
   if (event.action === 'accept' && data.call_id) url = `/chat?accept_call=${data.call_id}`;
   else if (event.action === 'decline' || event.action === 'dismiss') return;
   else if (event.action === 'reply') url = '/chat';
+  else if (event.action === 'view_profile') url = data.profile_url || '/my-profile';
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const c of list) {
@@ -119,7 +129,4 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 self.addEventListener('notificationclose', () => {});
-
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-messages') console.log('[SW] Syncing messages...');
-});
+self.addEventListener('sync', () => {});
