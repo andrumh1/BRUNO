@@ -16,7 +16,8 @@ import {
   Truck,
   Loader2,
   Info,
-  ChevronDown
+  ChevronDown,
+  Zap
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -60,7 +61,10 @@ const NewProductPage = () => {
     tags: [],
     shipping_available: false,
     shipping_cost: "",
-    stock: ""
+    stock: "",
+    deal_enabled: false,
+    deal_partner_id: "",
+    deal_referral_code: ""
   });
   
   const [tagInput, setTagInput] = useState("");
@@ -165,7 +169,10 @@ const NewProductPage = () => {
         tags: formData.tags,
         shipping_available: formData.shipping_available,
         shipping_cost: formData.shipping_cost ? parseFloat(formData.shipping_cost) : null,
-        stock: formData.stock ? parseInt(formData.stock) : null
+        stock: formData.stock ? parseInt(formData.stock) : null,
+        deal_enabled: formData.deal_enabled,
+        deal_partner_id: formData.deal_partner_id.trim() || null,
+        deal_referral_code: formData.deal_referral_code.trim() || null
       };
       
       await axios.post(`${API}/marketplace/products`, productData, {
@@ -485,6 +492,56 @@ const NewProductPage = () => {
                   </button>
                 </span>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* DEAL Integration */}
+        <div className="border border-emerald-200 bg-emerald-50/50 rounded-xl p-4 space-y-3" data-testid="deal-integration-section">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-emerald-600" />
+              <span className="font-medium text-sm">Vender via DEAL</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, deal_enabled: !formData.deal_enabled })}
+              className={`w-12 h-7 rounded-full transition-colors relative ${
+                formData.deal_enabled ? 'bg-emerald-500' : 'bg-gray-300'
+              }`}
+              data-testid="deal-enabled-toggle"
+            >
+              <div className={`w-5 h-5 bg-white rounded-full shadow-sm transition-transform absolute top-1 ${
+                formData.deal_enabled ? 'translate-x-6' : 'translate-x-0.5'
+              }`} />
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Habilita la compra directa a través de DEAL. Los clientes podrán pagar desde la app.
+          </p>
+          
+          {formData.deal_enabled && (
+            <div className="space-y-3 pt-2 border-t border-emerald-200">
+              <div>
+                <label className="text-xs font-medium mb-1 block">Partner ID <span className="text-muted-foreground">(opcional)</span></label>
+                <Input
+                  value={formData.deal_partner_id}
+                  onChange={(e) => setFormData({ ...formData, deal_partner_id: e.target.value })}
+                  placeholder="ID del partner asociado"
+                  className="h-9 text-sm"
+                  data-testid="deal-partner-id-input"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium mb-1 block">Código de referido <span className="text-muted-foreground">(opcional)</span></label>
+                <Input
+                  value={formData.deal_referral_code}
+                  onChange={(e) => setFormData({ ...formData, deal_referral_code: e.target.value })}
+                  placeholder="Ej: BRUNO2026"
+                  className="h-9 text-sm"
+                  data-testid="deal-referral-code-input"
+                />
+              </div>
             </div>
           )}
         </div>

@@ -21,7 +21,9 @@ import {
   Loader2,
   Eye,
   Plus,
-  Minus
+  Minus,
+  Zap,
+  CheckCircle2
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -50,6 +52,8 @@ const ProductDetailPage = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [dealLoading, setDealLoading] = useState(false);
+  const [dealOrderResult, setDealOrderResult] = useState(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -114,8 +118,35 @@ const ProductDetailPage = () => {
       navigate('/login');
       return;
     }
-    // Navigate to chat with seller
     navigate(`/chat?new=${product.seller?.id}`);
+  };
+
+  const handleDealPurchase = async () => {
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+    setDealLoading(true);
+    try {
+      const isService = product.category === "services";
+      const response = await axios.post(`${API}/deal/send-order`, {
+        product_id: product.id,
+        product_name: product.title,
+        product_type: isService ? "service" : "product",
+        price: product.price,
+        currency: product.currency || "USD",
+        quantity,
+        partner_id: product.deal_partner_id || null,
+        referral_code: product.deal_referral_code || null,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDealOrderResult(response.data);
+    } catch (error) {
+      alert(error.response?.data?.detail || "Error al procesar la orden");
+    } finally {
+      setDealLoading(false);
+    }
   };
 
   const handleShare = async () => {
@@ -316,6 +347,42 @@ const ProductDetailPage = () => {
         </div>
       </div>
 
+      {/* DEAL Order Confirmation */}
+      {dealOrderResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setDealOrderResult(null)}>
+          <div className="bg-background rounded-2xl p-6 mx-4 max-w-sm w-full space-y-4 shadow-2xl" onClick={e => e.stopPropagation()} data-testid="deal-order-confirmation">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <CheckCircle2 className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-lg font-bold">Orden Enviada</h3>
+              <p className="text-sm text-muted-foreground mt-1">Tu orden fue enviada a DEAL para procesamiento de pago</p>
+            </div>
+            <div className="bg-muted/50 rounded-xl p-3 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Producto</span>
+                <span className="font-medium">{dealOrderResult.product_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total</span>
+                <span className="font-bold text-primary">${dealOrderResult.price?.toLocaleString()} {dealOrderResult.currency}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Estado</span>
+                <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">Pendiente de pago</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Orden</span>
+                <span className="font-mono text-xs">{dealOrderResult.id?.slice(0, 8)}...</span>
+              </div>
+            </div>
+            <Button className="w-full" onClick={() => setDealOrderResult(null)} data-testid="deal-order-close-btn">
+              Entendido
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 z-40">
         <div className="max-w-4xl mx-auto flex gap-3">
@@ -343,16 +410,33 @@ const ProductDetailPage = () => {
             Contactar
           </Button>
           
-          {/* Add to cart button */}
           {product.seller_id !== user?.id && (
-            <Button className="flex-1" onClick={handleAddToCart} disabled={addingToCart}>
-              {addingToCart ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <ShoppingCart className="w-4 h-4 mr-2" />
-              )}
-              Agregar
-            </Button>
+            product.deal_enabled ? (
+              /* DEAL Purchase Button */
+              <Button
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                onClick={handleDealPurchase}
+                disabled={dealLoading}
+                data-testid="deal-purchase-btn"
+              >
+                {dealLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Zap className="w-4 h-4 mr-2" />
+                )}
+                {product.category === "services" ? "Solicitar Servicio" : "Comprar"}
+              </Button>
+            ) : (
+              /* Standard Add to Cart */
+              <Button className="flex-1" onClick={handleAddToCart} disabled={addingToCart}>
+                {addingToCart ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                )}
+                Agregar
+              </Button>
+            )
           )}
         </div>
       </div>

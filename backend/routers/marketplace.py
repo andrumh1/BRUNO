@@ -29,6 +29,9 @@ class ProductCreate(BaseModel):
     shipping_cost: Optional[float] = None
     condition: str = "new"  # new, used, refurbished
     tags: List[str] = []
+    deal_enabled: bool = False  # Enable purchase via DEAL
+    deal_partner_id: Optional[str] = None
+    deal_referral_code: Optional[str] = None
 
 
 class ProductUpdate(BaseModel):
@@ -45,6 +48,9 @@ class ProductUpdate(BaseModel):
     condition: Optional[str] = None
     status: Optional[str] = None  # active, sold, paused
     tags: Optional[List[str]] = None
+    deal_enabled: Optional[bool] = None
+    deal_partner_id: Optional[str] = None
+    deal_referral_code: Optional[str] = None
 
 
 class CartItem(BaseModel):

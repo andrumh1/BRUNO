@@ -5344,12 +5344,14 @@ from routers.lives import router as lives_router, set_db as lives_set_db
 from routers.monetization import router as monetization_router, set_db as monetization_set_db
 from routers.moderation import router as moderation_router, set_db as moderation_set_db
 from routers.albums import router as albums_router, set_db as albums_set_db
+from routers.deal_integration import router as deal_router
 api_router.include_router(notifications_router)
 api_router.include_router(points_router)
 api_router.include_router(marketplace_router)
 api_router.include_router(stories_router)
 api_router.include_router(store_router)
 api_router.include_router(analytics_router)
+api_router.include_router(deal_router)
 
 # Set database for compliance router
 compliance_set_db(db)
