@@ -282,7 +282,7 @@ const SettingsPage = () => {
                 <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Cuenta</h2>
                 <div className="divide-y">
                   <OptionRow icon={User} label="Editar perfil" onClick={() => navigate("/edit-profile")} />
-                  <OptionRow icon={Lock} label="Cambiar contrasena" onClick={() => {}} value="" />
+                  <OptionRow icon={Lock} label="Cambiar contrasena" onClick={() => navigate("/change-password")} />
                   <OptionRow icon={Shield} label="Usuarios bloqueados" onClick={() => navigate("/settings/blocked")} />
                 </div>
               </CardContent>

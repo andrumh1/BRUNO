@@ -71,6 +71,9 @@ import SettingsPage from "@/pages/SettingsPage";
 import PartnerDashboardPage from "@/pages/PartnerDashboardPage";
 import BrunoUIKitPage from "@/pages/BrunoUIKitPage";
 import WelcomePage from "@/pages/WelcomePage";
+import EditProfilePage from "@/pages/EditProfilePage";
+import ChangePasswordPage from "@/pages/ChangePasswordPage";
+import BlockedUsersPage from "@/pages/BlockedUsersPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -119,6 +122,11 @@ function AppRouter() {
       <Route path="/my-profile" element={<ProtectedRoute><MyProfilePage /></ProtectedRoute>} />
       <Route path="/points" element={<ProtectedRoute><PointsPage /></ProtectedRoute>} />
       <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettingsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/settings/blocked" element={<ProtectedRoute><BlockedUsersPage /></ProtectedRoute>} />
+      <Route path="/edit-profile" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
+      <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
+      <Route path="/settings/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       <Route path="/analytics" element={<ProtectedRoute><CardAnalyticsPage /></ProtectedRoute>} />
       <Route path="/analytics/:cardId" element={<ProtectedRoute><CardAnalyticsPage /></ProtectedRoute>} />
       <Route path="/camera" element={<ProtectedRoute><BrunoCameraPage /></ProtectedRoute>} />

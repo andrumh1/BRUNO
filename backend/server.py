@@ -1455,6 +1455,26 @@ async def update_my_profile(profile_input: UserProfileUpdate, current_user: User
     
     return UserProfile(**profile)
 
+
+class ChangePasswordInput(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8)
+
+
+@api_router.post("/auth/change-password")
+async def change_password(payload: ChangePasswordInput, current_user: User = Depends(get_current_user)):
+    user_doc = await db.users.find_one({"id": current_user.id})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if not verify_password(payload.current_password, user_doc.get("hashed_password", "")):
+        raise HTTPException(status_code=400, detail="Contraseña actual incorrecta")
+    new_hash = get_password_hash(payload.new_password)
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$set": {"hashed_password": new_hash, "password_changed_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"status": "ok", "message": "Contraseña actualizada"}
+
 # ============================================================================
 # ALBUM ROUTES
 # ============================================================================

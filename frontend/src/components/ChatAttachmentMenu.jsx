@@ -3,18 +3,17 @@ import {
   Camera,
   Image as ImageIcon,
   FileText,
-  Mic,
   CreditCard,
   Smile,
-  MapPin,
   X,
   Video
 } from "lucide-react";
+import { useBrunoCamera } from "@/contexts/BrunoCameraContext";
 
 const ATTACHMENT_OPTIONS = [
-  { id: "camera", icon: Camera, label: "Camara", color: "bg-red-500", accept: "image/*", capture: true },
+  { id: "camera", icon: Camera, label: "Camara", color: "bg-red-500", bruno: "photo" },
   { id: "gallery", icon: ImageIcon, label: "Galeria", color: "bg-blue-500", accept: "image/*,video/*" },
-  { id: "video", icon: Video, label: "Video", color: "bg-pink-500", accept: "video/*", capture: true },
+  { id: "video", icon: Video, label: "Video", color: "bg-pink-500", bruno: "video" },
   { id: "document", icon: FileText, label: "Documento", color: "bg-purple-500", accept: ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" },
   { id: "card", icon: CreditCard, label: "Tarjeta", color: "bg-green-500" },
   { id: "sticker", icon: Smile, label: "Sticker", color: "bg-orange-500" },
@@ -22,6 +21,7 @@ const ATTACHMENT_OPTIONS = [
 
 export const ChatAttachmentMenu = ({ isOpen, onClose, onFileSelect, onCardPick, onStickerPick, compact = false }) => {
   const fileRefs = useRef({});
+  const { open: openBrunoCamera } = useBrunoCamera();
 
   if (!isOpen) return null;
 
@@ -36,7 +36,19 @@ export const ChatAttachmentMenu = ({ isOpen, onClose, onFileSelect, onCardPick, 
       onClose();
       return;
     }
-    // Trigger file input
+    // Camera and Video options → open Bruno Pro Camera instead of file input
+    if (option.bruno) {
+      onClose();
+      openBrunoCamera({
+        mode: option.bruno === "video" ? "video" : (option.bruno === "photo" ? "photo" : "both"),
+        onCapture: async (file, meta) => {
+          const type = file.type?.startsWith("video") ? "video" : "image";
+          onFileSelect?.(file, type, meta);
+        },
+      });
+      return;
+    }
+    // Other options (gallery/document) → file input
     const input = fileRefs.current[option.id];
     if (input) input.click();
   };
@@ -104,14 +116,13 @@ export const ChatAttachmentMenu = ({ isOpen, onClose, onFileSelect, onCardPick, 
           ))}
         </div>
 
-        {/* Hidden file inputs */}
-        {options.filter(o => o.accept).map((option) => (
+        {/* Hidden file inputs (only for non-bruno options like gallery/document) */}
+        {options.filter(o => o.accept && !o.bruno).map((option) => (
           <input
             key={option.id}
             ref={el => fileRefs.current[option.id] = el}
             type="file"
             accept={option.accept}
-            capture={option.capture ? (option.id === "video" ? "environment" : "environment") : undefined}
             className="hidden"
             onChange={(e) => handleFileChange(e, option)}
           />

@@ -21,6 +21,49 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Premium Templates, Multi-Locations, Drag-to-Reorder
 
 
+### Phase 48: Profile/Settings Repair + Chat Camera Fix (2026-05-17)
+
+**Settings menu — items reparados** (todos navegaban a home antes):
+- `/edit-profile` → nuevo `EditProfilePage.jsx`
+- `/change-password` → nuevo `ChangePasswordPage.jsx`
+- `/settings/blocked` → nuevo `BlockedUsersPage.jsx`
+- Ruta `/settings` añadida (faltaba en App.js — por eso todo redirigía)
+
+**`EditProfilePage`** — editor completo:
+- 6 campos editables: nombre, bio, ubicación, profesión, empresa, sitio web (con maxLength)
+- Avatar con botón cámara naranja flotante → bottom-sheet menu con 4 opciones:
+  1. Ver foto de perfil (modal full-screen con backdrop)
+  2. Ver historia (navega a /my-profile?tab=stories)
+  3. Cambiar con cámara Bruno (abre BrunoQuickCamera modo foto)
+  4. Elegir de la galería (file picker tradicional)
+- Upload via `/api/upload/image`, persiste en `/api/profile` PUT
+- Loading + spinner durante upload, toast Bruno success/error
+
+**`ChangePasswordPage`** — flujo completo:
+- 3 campos con eye-toggle (current/new/confirm)
+- Validación: min 8 chars, requiere mayúscula o número, confirm debe coincidir
+- Strength meter de 4 niveles (rojo→ámbar→amarillo→verde→verde fuerte)
+- Backend nuevo endpoint POST `/api/auth/change-password` con verificación de current_password vía bcrypt
+
+**`BlockedUsersPage`** — listado y unblock:
+- GET `/api/users/me/blocked` (endpoint ya existía)
+- POST `/api/users/{id}/block` (toggle)
+- Empty state limpio + toast feedback al desbloquear
+
+**Chat camera fix**:
+- `ChatAttachmentMenu` ya no usa `<input type="file" capture="environment">` para Camera/Video
+- Ahora invoca `useBrunoCamera().open({ mode, onCapture })` → la misma cámara pro global
+- File picker reservado sólo para Galería y Documento
+
+🧪 **Verificación end-to-end:**
+- Settings renderiza con los 3 items ✓
+- Editar perfil carga datos del usuario y muestra menú de 4 opciones al tocar cámara ✓
+- Change password page navega correctamente ✓
+- Blocked users empty state visible ✓
+- Attach Camera del chat abre BRUNO Camera HD (no file picker) ✓
+
+
+
 ### Phase 47: Audio Waveform + Typing Dots (2026-05-17)
 **BrunoAudioWaveform** (`/components/bruno/BrunoAudioWaveform.jsx`) — WhatsApp-style voice notes:
 - 32 barras con alturas deterministas (hash del URL → siempre igual para el mismo audio)
