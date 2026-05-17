@@ -21,6 +21,29 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Premium Templates, Multi-Locations, Drag-to-Reorder
 
 
+### Phase 42: Pro Camera + Pill Chat Input (2026-05-17)
+**Goal:** Modernizar el chat con identidad Bruno y cámara TikTok-style.
+
+**BrunoQuickCamera** (`/components/bruno/BrunoQuickCamera.jsx`):
+- Modal full-screen con stream `getUserMedia` + filtros CSS en tiempo real (14 presets: Beauty, Glow, Cálido, Sunset, Vintage, Drama, B&N, Cinema, Neon, Dreamy, Noir, Fade, etc.).
+- Foto/Video con switch, shutter blanco animado, recording timer rojo, espejado opcional.
+- Captura → preview → enviar (devuelve File al callback `onCapture`).
+- Header con logo Bruno + flip cámara delantera/trasera.
+
+**BrunoPillInput** (`/components/bruno/BrunoPillInput.jsx`):
+- Input estilo "pill" coherente con la nav Bruno. Glow naranja al focus, glass-blur, auto-resize 1→6 líneas.
+- Botón `+` naranja externo para adjuntos, cámara interna que se desliza/oculta al escribir, sticker/emoji, mic↔send que rota con AnimatePresence.
+- Banner de respuesta dinámico arriba de la pill (expand/collapse).
+
+**ChatPage integración:**
+- Reemplazado el `<form>` legacy por `<BrunoPillInput>` + `<BrunoQuickCamera>` modal.
+- Captura desde cámara → sube como adjunto via `handleFileSelect`.
+- Toast Bruno tras capturar.
+
+**Tests visuales:** pill renderiza, textarea funcional, botones mic/send swap al escribir, modal cámara abre y cierra, capturas en `/tmp/chat-direct.png`, `/tmp/chat-pill-typing.png`, `/tmp/chat-camera-open.png`.
+
+
+
 ### Phase 41: Onboarding /welcome + P1/P2 UI System rollout (2026-05-17)
 **New page `/welcome`** — 4-step interactive onboarding showcasing the Bruno UI:
 - Step 1 Intro: mascot animation + Native-Ready chip

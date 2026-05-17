@@ -8,6 +8,9 @@ import VideoCallModal from "@/components/VideoCallModal";
 import { StickerPicker, StickerMessage } from "@/components/StickerPicker";
 import { CardPicker, CardMessagePreview } from "@/components/CardPicker";
 import { ChatAttachmentMenu } from "@/components/ChatAttachmentMenu";
+import BrunoPillInput from "@/components/bruno/BrunoPillInput";
+import BrunoQuickCamera from "@/components/bruno/BrunoQuickCamera";
+import { brunoToast } from "@/components/bruno/BrunoToast";
 import axios from "axios";
 import { 
   ArrowLeft, 
@@ -399,6 +402,8 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [showCardPicker, setShowCardPicker] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
   // Video call state
   const [videoCallState, setVideoCallState] = useState({
     isOpen: false,
@@ -1020,74 +1025,44 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         onClose={() => setShowCardPicker(false)}
         onSelect={handleSendCard}
       />
-      
-      {/* Modern Input */}
-      <form onSubmit={handleSend} className="px-3 py-2.5 border-t bg-background/80 backdrop-blur-xl flex items-center gap-2">
-        <Button 
-          type="button" 
-          variant="ghost" 
-          size="icon"
-          className="rounded-full h-9 w-9 shrink-0"
-          onClick={() => setShowAttachMenu(!showAttachMenu)}
-          disabled={uploading || isRecording}
-          data-testid="chat-attach-btn"
-        >
-          {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Paperclip className="w-5 h-5" />}
-        </Button>
-        
-        <div className="flex-1 relative">
-          <Input
-            value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-              handleTyping();
-            }}
-            placeholder="Escribe un mensaje..."
-            className="rounded-xl pr-10 bg-muted/40 border-0 h-10"
-            disabled={isRecording}
-            data-testid="chat-input"
-          />
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="icon" 
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full"
-            onClick={() => setShowStickerPicker(!showStickerPicker)}
-            data-testid="sticker-picker-btn"
-          >
-            <Smile className="w-5 h-5 text-muted-foreground" />
-          </Button>
-          
-          {/* Sticker Picker */}
-          <StickerPicker
-            isOpen={showStickerPicker}
-            onClose={() => setShowStickerPicker(false)}
-            onSelect={handleSendSticker}
-          />
-        </div>
-        
-        {newMessage.trim() || pendingMedia ? (
-          <Button 
-            type="submit" 
-            size="icon" 
-            className="rounded-full h-10 w-10 shadow-lg shadow-primary/20 shrink-0"
-            disabled={sending}
-            data-testid="send-message-btn"
-          >
-            {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-          </Button>
-        ) : (
-          <Button 
-            type="button" 
-            size="icon"
-            variant={isRecording ? "destructive" : "ghost"}
-            className="rounded-full h-10 w-10 shrink-0"
-            onClick={isRecording ? stopRecording : startRecording}
-          >
-            {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-          </Button>
-        )}
-      </form>
+
+      {/* Bruno Pro Camera */}
+      <BrunoQuickCamera
+        open={showCamera}
+        onClose={() => setShowCamera(false)}
+        onCapture={async (file) => {
+          await handleFileSelect(file, file.type.startsWith("video") ? "video" : "image");
+          brunoToast.success("Capturado");
+        }}
+      />
+
+      {/* Sticker Picker (floating popover) */}
+      <StickerPicker
+        isOpen={showStickerPicker}
+        onClose={() => setShowStickerPicker(false)}
+        onSelect={(s) => { handleSendSticker(s); setShowStickerPicker(false); }}
+      />
+
+      {/* Bruno Pill Input */}
+      <div className="border-t bg-background/80 backdrop-blur-xl">
+        <BrunoPillInput
+          value={newMessage}
+          onChange={setNewMessage}
+          onTyping={handleTyping}
+          onSend={(text) => handleSend({ preventDefault: () => {} })}
+          onAttach={() => setShowAttachMenu(!showAttachMenu)}
+          onCamera={() => setShowCamera(true)}
+          onStickers={() => setShowStickerPicker((v) => !v)}
+          onMicStart={startRecording}
+          onMicStop={stopRecording}
+          isRecording={isRecording}
+          sending={sending}
+          uploading={uploading}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          placeholder="Escribe un mensaje..."
+        />
+      </div>
     </div>
   );
 };
