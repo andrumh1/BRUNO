@@ -31,7 +31,7 @@ const MobileBottomNav = () => {
     { id: 'reels', icon: Film, label: 'Reels', path: '/reels', matchPaths: ['/reels', '/lives'], hasIndicator: true },
     { id: 'create', icon: Plus, label: '', path: '/camera', isCreate: true },
     { id: 'map', icon: Map, label: 'Mapa', path: '/map', matchPaths: ['/map'] },
-    { id: 'notifications', icon: Bell, label: 'Alertas', path: '/settings/notifications', matchPaths: ['/settings/notifications'], hasBadge: true },
+    { id: 'notifications', icon: Bell, label: 'Alertas', path: '/notifications', matchPaths: ['/notifications', '/settings/notifications'], hasBadge: true },
     { id: 'profile', icon: User, label: 'Perfil', path: '/my-profile', matchPaths: ['/my-profile', '/dashboard'], showAvatar: true }
   ];
 
