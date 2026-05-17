@@ -7,6 +7,7 @@ import PostCard from "@/components/PostCard";
 import CardPreviewModal from "@/components/CardPreviewModal";
 import DraggableList from "@/components/DraggableList";
 import { PointsWidget } from "@/components/PointsSystem";
+import QuickStoryButton from "@/components/bruno/QuickStoryButton";
 import axios from "axios";
 import { 
   ArrowLeft,
@@ -495,6 +496,7 @@ const MyProfilePage = () => {
             <Button variant="outline" size="icon">
               <Share2 className="w-4 h-4" />
             </Button>
+            <QuickStoryButton variant="icon" testId="profile-quick-story" />
           </div>
         )}
 

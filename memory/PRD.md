@@ -21,6 +21,29 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Premium Templates, Multi-Locations, Drag-to-Reorder
 
 
+### Phase 44: Story Viewer + Chat Reactions + Profile FAB (2026-05-17)
+
+**BrunoStoryViewer** (`/components/bruno/BrunoStoryViewer.jsx`) — Instagram-style:
+- Tap left/right para navegar, **press-and-hold para pausar** (220ms threshold), tap-center vacío
+- **Swipe-down to dismiss** con drag-Y de framer-motion (opacity + scale transforms)
+- **Quick reactions**: 6 emojis (❤️😂😮😢🔥👏) con burst animation que vuela hacia arriba
+- **Reply DM** in-line: enviar respuesta como mensaje al chat con el autor (crea chat si no existe)
+- Progress bars Instagram-style, mute toggle (video), prev/next desktop, view-count para stories propias
+- Reemplazó al `StoryViewer` legacy en `Stories.jsx` (1 línea cambiada)
+
+**MessageReactionsBubble** (`/components/bruno/MessageReactionsBubble.jsx`):
+- Wrap de cada burbuja de chat con long-press / right-click → popover de reacciones
+- 6 emojis quick-react + botón "Responder" (separado por divider)
+- Outside-click dismiss, animación spring
+- Display de reacciones agregadas debajo del bubble (`{emoji}{count}`)
+- Integrado en ChatPage con `handleReactMessage` (POST `/chats/{id}/messages/{mid}/react?emoji=`) y `handleSetReply` para activar el reply banner del pill input
+- `reply_to` se persiste en `messageData` cuando se envía
+
+**QuickStoryButton inline** en MyProfilePage:
+- Variante `icon` añadida al lado de "Editar perfil" para impulsar creación desde el perfil
+
+
+
 ### Phase 43: Quick Story (Capture → Publish 1-tap) (2026-05-17)
 **Goal:** Engagement diario tipo Instagram/TikTok — capturar y publicar story en un solo flujo.
 

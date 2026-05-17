@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
+import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
 import { 
   Plus, 
   X, 
@@ -117,7 +118,7 @@ export const StoriesRow = ({ onCreateStory }) => {
       </div>
 
       {viewingStories && (
-        <StoryViewer
+        <BrunoStoryViewer
           userStories={viewingStories}
           allUsers={storiesData}
           onClose={() => setViewingStories(null)}

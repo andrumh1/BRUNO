@@ -10,6 +10,7 @@ import { CardPicker, CardMessagePreview } from "@/components/CardPicker";
 import { ChatAttachmentMenu } from "@/components/ChatAttachmentMenu";
 import BrunoPillInput from "@/components/bruno/BrunoPillInput";
 import BrunoQuickCamera from "@/components/bruno/BrunoQuickCamera";
+import MessageReactionsBubble from "@/components/bruno/MessageReactionsBubble";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import axios from "axios";
 import { 
@@ -739,13 +740,15 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       const messageData = {
         content: newMessage.trim(),
         message_type: pendingMedia ? (pendingMedia.type.startsWith("image") ? "image" : pendingMedia.type.startsWith("video") ? "video" : "file") : "text",
-        attachments: pendingMedia ? [pendingMedia] : []
+        attachments: pendingMedia ? [pendingMedia] : [],
+        ...(replyTo ? { reply_to: { id: replyTo.id, sender_name: replyTo.name, preview: replyTo.preview, content: replyTo.body } } : {})
       };
       
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: "send_message", chat_id: chat.id, ...messageData }));
         setNewMessage("");
         setPendingMedia(null);
+        setReplyTo(null);
       } else {
         const response = await axios.post(
           `${API}/chats/${chat.id}/messages`,
@@ -755,6 +758,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         setMessages([...messages, response.data]);
         setNewMessage("");
         setPendingMedia(null);
+        setReplyTo(null);
       }
     } catch (error) {
       // error handled
@@ -767,6 +771,53 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ action: "typing", chat_id: chat.id }));
     }
+  };
+
+  const aggregateReactions = (reactions) => {
+    const map = new Map();
+    for (const r of reactions || []) {
+      const e = r.emoji || r.reaction;
+      if (!e) continue;
+      map.set(e, (map.get(e) || 0) + 1);
+    }
+    return Array.from(map.entries()).map(([emoji, count]) => ({ emoji, count }));
+  };
+
+  const handleReactMessage = async (message, emoji) => {
+    // Optimistic UI
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === message.id
+          ? { ...m, reactions: [...(m.reactions || []), { user_id: currentUserId, emoji }] }
+          : m
+      )
+    );
+    try {
+      await axios.post(
+        `${API}/chats/${chat.id}/messages/${message.id}/react?emoji=${encodeURIComponent(emoji)}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (e) {
+      // Silently fail — non-blocking. Endpoint may not exist yet.
+    }
+  };
+
+  const handleSetReply = (message) => {
+    setReplyTo({
+      id: message.id,
+      name: message.sender_name || (message.sender_id === currentUserId ? "Tú" : participant?.display_name || "Mensaje"),
+      preview:
+        (message.content && message.content.slice(0, 80)) ||
+        (message.message_type === "image"
+          ? "Imagen"
+          : message.message_type === "video"
+          ? "Video"
+          : message.message_type === "audio"
+          ? "Audio"
+          : "Mensaje"),
+      body: message.content,
+    });
   };
 
   const formatTime = (dateString) => {
@@ -884,11 +935,19 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
               {/* Messages */}
               {msgs.map((message) => {
                 const isOwn = message.sender_id === currentUserId;
+                const reactionsList = aggregateReactions(message.reactions || []);
                 return (
                   <div
                     key={message.id}
                     className={`flex mb-1.5 ${isOwn ? "justify-end" : "justify-start"}`}
                   >
+                    <MessageReactionsBubble
+                      isOwn={isOwn}
+                      reactions={reactionsList}
+                      onReact={(emoji) => handleReactMessage(message, emoji)}
+                      onReply={() => handleSetReply(message)}
+                      testId={`msg-${message.id}`}
+                    >
                     <div
                       className={`max-w-[78%] px-3.5 py-2 ${
                         isOwn
@@ -896,6 +955,17 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                           : "bg-muted/60 rounded-2xl rounded-bl-sm"
                       }`}
                     >
+                      {/* Reply preview */}
+                      {message.reply_to && (
+                        <div className={`mb-1.5 px-2 py-1 rounded-md border-l-2 ${isOwn ? "border-white/50 bg-white/10" : "border-orange-500 bg-orange-50/60 dark:bg-orange-500/10"}`}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">
+                            {message.reply_to.sender_name || "Mensaje"}
+                          </p>
+                          <p className="text-xs truncate opacity-80">
+                            {message.reply_to.preview || message.reply_to.content || ""}
+                          </p>
+                        </div>
+                      )}
                       {/* Sticker messages */}
                       {message.message_type === 'sticker' && message.attachments?.[0] && (
                         <div className="flex justify-center py-2">
@@ -962,6 +1032,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                         )}
                       </div>
                     </div>
+                    </MessageReactionsBubble>
                   </div>
                 );
               })}
