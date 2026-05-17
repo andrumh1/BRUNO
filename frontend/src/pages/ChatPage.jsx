@@ -12,6 +12,8 @@ import BrunoPillInput from "@/components/bruno/BrunoPillInput";
 import BrunoQuickCamera from "@/components/bruno/BrunoQuickCamera";
 import MessageReactionsBubble from "@/components/bruno/MessageReactionsBubble";
 import CircularVideoMessage from "@/components/bruno/CircularVideoMessage";
+import BrunoAudioWaveform from "@/components/bruno/BrunoAudioWaveform";
+import TypingDots from "@/components/bruno/TypingDots";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import axios from "axios";
 import { 
@@ -210,7 +212,7 @@ const FileAttachment = ({ file, isOwn }) => {
   }
 
   if (file.type?.startsWith('audio')) {
-    return <AudioPlayer url={file.url} isOwn={isOwn} />;
+    return <BrunoAudioWaveform url={file.url} isOwn={isOwn} />;
   }
 
   return (
@@ -878,7 +880,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
           <h3 className="font-semibold text-sm truncate hover:text-primary transition-colors">{participant.display_name || participant.username}</h3>
           <p className="text-[10px] text-muted-foreground">
             {isTyping ? (
-              <span className="text-primary font-medium">escribiendo<span className="animate-pulse">...</span></span>
+              <TypingDots label="escribiendo" />
             ) : "En linea"}
           </p>
         </Link>

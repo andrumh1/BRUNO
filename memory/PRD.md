@@ -21,6 +21,24 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Premium Templates, Multi-Locations, Drag-to-Reorder
 
 
+### Phase 47: Audio Waveform + Typing Dots (2026-05-17)
+**BrunoAudioWaveform** (`/components/bruno/BrunoAudioWaveform.jsx`) — WhatsApp-style voice notes:
+- 32 barras con alturas deterministas (hash del URL → siempre igual para el mismo audio)
+- Color naranja Bruno en propias, blanco en burbujas ajenas
+- Barra actual pulsa verticalmente (`scaleY` 1→1.6→1 loop) durante reproducción
+- Tap en cualquier barra → seek a esa posición
+- Timer dinámico: muestra tiempo total cuando pausado, restante cuando reproduciendo
+- Reemplaza al viejo `AudioPlayer` del ChatPage
+
+**TypingDots** (`/components/bruno/TypingDots.jsx`):
+- 3 puntos con `y: [0,-3,0]` + `opacity: [0.4,1,0.4]` con delays escalonados (0/180/360ms)
+- Reemplaza al texto plano `escribiendo<animate-pulse>...` en la cabecera del chat
+- Acepta `label` prop ("escribiendo", o el nombre del usuario)
+
+🧪 Verificado visualmente: waveform Bruno renderiza con barras blancas en burbuja propia (color naranja), play/pause funcional.
+
+
+
 ### Phase 46: Camera Unification + Circular Video Notes (2026-05-17)
 
 **Camera unified across the app** via `BrunoCameraProvider` (`/contexts/BrunoCameraContext.jsx`):
