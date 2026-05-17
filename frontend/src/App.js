@@ -69,6 +69,7 @@ import SavedPostsPage from "@/pages/SavedPostsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import PartnerDashboardPage from "@/pages/PartnerDashboardPage";
 import BrunoUIKitPage from "@/pages/BrunoUIKitPage";
+import WelcomePage from "@/pages/WelcomePage";
 
 function AppRouter() {
   const location = useLocation();
@@ -99,6 +100,7 @@ function AppRouter() {
       <Route path="/legal/community" element={<CommunityGuidelinesPage />} />
       <Route path="/legal/data-rights" element={<DataRightsPage />} />
       <Route path="/ui-kit" element={<BrunoUIKitPage />} />
+      <Route path="/welcome" element={<WelcomePage />} />
       <Route path="/c/:cardId" element={<ViewCardPage />} />
       <Route path="/n/:nfcId" element={<NFCRedirectPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />

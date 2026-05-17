@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import axios from "axios";
 import { Plus, CreditCard, QrCode, Nfc, LogOut, Eye, Edit, Trash2, Settings, MapPin, Grid3X3, List, Share2 } from "lucide-react";
+import BrunoModal from "@/components/bruno/BrunoModal";
+import { brunoToast } from "@/components/bruno/BrunoToast";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -19,6 +21,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, views: 0 });
   const [viewMode, setViewMode] = useState("grid");
+  const [cardToDelete, setCardToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user || !token) {
@@ -47,17 +51,28 @@ const Dashboard = () => {
   }, [user, token, navigate]);
 
   const handleDeleteCard = async (cardId) => {
-    if (!window.confirm(t("common.confirm") + "?")) return;
+    setCardToDelete(cards.find((c) => c.id === cardId) || { id: cardId, title: "" });
+  };
 
+  const confirmDeleteCard = async () => {
+    if (!cardToDelete) return;
+    setDeleting(true);
     try {
-      await axios.delete(`${API}/cards/${cardId}`, {
+      await axios.delete(`${API}/cards/${cardToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setCards(prevCards => prevCards.filter((card) => card.id !== cardId));
-      setStats(prevStats => ({ ...prevStats, total: prevStats.total - 1 }));
-    } catch (error) {
-      // error handled
-      alert(t("common.error"));
+      setCards((prev) => prev.filter((c) => c.id !== cardToDelete.id));
+      setStats((prev) => ({ ...prev, total: Math.max(prev.total - 1, 0) }));
+      brunoToast.success("Tarjeta eliminada", {
+        description: cardToDelete.title ? `"${cardToDelete.title}" se ha eliminado.` : undefined,
+      });
+      setCardToDelete(null);
+    } catch (_e) {
+      brunoToast.error("No se pudo eliminar", {
+        description: "Vuelve a intentarlo en unos segundos.",
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -430,6 +445,28 @@ const Dashboard = () => {
           </div>
         )}
       </main>
+
+      <BrunoModal
+        open={!!cardToDelete}
+        onClose={() => !deleting && setCardToDelete(null)}
+        variant="danger"
+        title="Eliminar tarjeta"
+        description={
+          cardToDelete?.title
+            ? `Vas a eliminar "${cardToDelete.title}". Esta acción no se puede deshacer.`
+            : "Esta acción no se puede deshacer."
+        }
+        primaryAction={{
+          label: deleting ? "Eliminando..." : "Eliminar",
+          onClick: confirmDeleteCard,
+          loading: deleting,
+        }}
+        secondaryAction={{
+          label: "Cancelar",
+          onClick: () => setCardToDelete(null),
+        }}
+        testId="dashboard-delete-modal"
+      />
     </div>
   );
 };

@@ -21,6 +21,23 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Premium Templates, Multi-Locations, Drag-to-Reorder
 
 
+### Phase 41: Onboarding /welcome + P1/P2 UI System rollout (2026-05-17)
+**New page `/welcome`** — 4-step interactive onboarding showcasing the Bruno UI:
+- Step 1 Intro: mascot animation + Native-Ready chip
+- Step 2 Features: 4 feature chips + 2 ExpandableCards (cards & DEAL)
+- Step 3 Interact: 4 demo buttons triggering brunoToast variants (follow/publish/like/loading)
+- Step 4 Ready: success state + CTAs to "Create card" or "Explore"
+- Skip flow with BrunoModal confirmation
+- Persisted via localStorage `bruno_welcome_seen`
+
+**P1: Toast migration** — `ActivateNFCPage` and `NFCManagerPage` now use `brunoToast` (drop-in via `as toast` import alias, no call-site changes).
+
+**P2: Dashboard delete confirm** — replaced native `window.confirm` with `<BrunoModal variant="danger">` including loading state, branded design, and follow-up `brunoToast.success/error` for the result. No more raw `alert()`.
+
+**Toaster mounted** in `App.js` (was missing — toasts didn't render before this phase).
+
+
+
 ### Phase 39: Mobile-Native API Surface (2026-05-17)
 **Goal:** Backend ready for React Native / Flutter consumption.
 

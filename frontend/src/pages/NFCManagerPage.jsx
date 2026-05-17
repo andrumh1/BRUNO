@@ -11,7 +11,7 @@ import {
   Smartphone, QrCode, AlertTriangle, Loader2, ChevronRight,
   Package, Eye, EyeOff
 } from "lucide-react";
-import { toast } from "sonner";
+import { brunoToast as toast } from "@/components/bruno/BrunoToast";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

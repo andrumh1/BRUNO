@@ -9,7 +9,7 @@ import {
   ArrowLeft, Nfc, CheckCircle2, Smartphone, AlertCircle,
   ShoppingBag, Link2, Copy, Loader2, ExternalLink, RefreshCw
 } from "lucide-react";
-import { toast } from "sonner";
+import { brunoToast as toast } from "@/components/bruno/BrunoToast";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
