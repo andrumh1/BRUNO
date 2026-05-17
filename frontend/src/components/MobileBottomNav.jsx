@@ -2,16 +2,21 @@ import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavScroll } from "@/contexts/NavScrollContext";
+import { useBrunoCamera } from "@/contexts/BrunoCameraContext";
+import axios from "axios";
 import { 
   Home, Film, Map, ShoppingBag, User, Plus, Bell,
   ChevronUp, ChevronDown
 } from "lucide-react";
 
+const API = process.env.REACT_APP_BACKEND_URL + "/api";
+
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { minimized, setMinimized, touchHandlers } = useNavScroll();
+  const { open: openCamera } = useBrunoCamera();
   
   const hiddenPaths = ['/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || 
@@ -94,7 +99,37 @@ const MobileBottomNav = () => {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => navigate(item.path)}
+                    onClick={() => openCamera({
+                      mode: "both",
+                      onCapture: async (file, meta) => {
+                        // Upload + auto-publish as story (default flow for the "+" button)
+                        try {
+                          const form = new FormData();
+                          form.append("file", file);
+                          const ep = file.type.startsWith("video") ? "/upload/chat-file" : "/upload/image";
+                          const up = await axios.post(`${API}${ep}`, form, {
+                            headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
+                          });
+                          const mediaUrl = up.data.url || up.data.secure_url;
+                          if (!mediaUrl) throw new Error("no url");
+                          await axios.post(`${API}/stories/`, {
+                            media_url: mediaUrl,
+                            media_type: file.type.startsWith("video") ? "video" : "image",
+                            caption: null,
+                            duration: file.type.startsWith("video") ? 15 : 5,
+                            visibility: "public",
+                            music: meta?.music || null,
+                          }, { headers: { Authorization: `Bearer ${token}` } });
+                          const { brunoToast } = await import("@/components/bruno/BrunoToast");
+                          brunoToast.publish("Publicado en Story", {
+                            description: "Disponible durante 24h en tu perfil.",
+                          });
+                        } catch (_) {
+                          const { brunoToast } = await import("@/components/bruno/BrunoToast");
+                          brunoToast.error("No se pudo publicar");
+                        }
+                      }
+                    })}
                     className="relative flex items-center justify-center w-11 h-11 -mt-4"
                     data-testid={`nav-${item.id}`}
                   >

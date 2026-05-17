@@ -27,6 +27,7 @@ class StoryCreate(BaseModel):
     link_url: Optional[str] = None
     link_text: Optional[str] = None
     poll_id: Optional[str] = None  # attach a poll to story
+    music: Optional[dict] = None  # { trackId, title, url, volume, start, end }
 
 
 class CardStoryCreate(BaseModel):

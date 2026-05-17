@@ -7,7 +7,7 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import { TourProvider, TourOverlay } from "@/components/WelcomeTour";
 import { NavScrollProvider } from "@/contexts/NavScrollContext";
 import { Toaster } from "sonner";
-import QuickStoryFAB from "@/components/bruno/QuickStoryFAB";
+import { BrunoCameraProvider } from "@/contexts/BrunoCameraContext";
 
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
@@ -161,13 +161,13 @@ function App() {
             <BrowserRouter>
               <NavScrollProvider>
               <TourProvider>
+                <BrunoCameraProvider>
                 <AppRouter />
                 <FloatingBubbles />
                 <FloatingChatBubble />
                 <PictureInPicture />
                 <CameraFloatingButton />
                 <MobileBottomNav />
-                <QuickStoryFAB />
                 <TourOverlay />
                 <Toaster
                   position="top-center"
@@ -178,6 +178,7 @@ function App() {
                     classNames: { toast: "w-full" },
                   }}
                 />
+                </BrunoCameraProvider>
               </TourProvider>
               </NavScrollProvider>
             </BrowserRouter>

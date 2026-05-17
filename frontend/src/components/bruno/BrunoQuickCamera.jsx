@@ -7,24 +7,32 @@ import {
   RotateCcw,
   FlipHorizontal,
   Send,
-  Check,
   Loader2,
   Sparkles,
   Sun,
   Moon,
   Zap,
+  Music2,
+  ZoomIn,
 } from "lucide-react";
+import MusicPicker from "./MusicPicker";
 
 /**
- * BrunoQuickCamera — pro modal camera with TikTok-style real-time CSS filters.
+ * BrunoQuickCamera — Pro modal camera (TikTok-class).
+ *
+ * Features:
+ *   • Highest-quality stream the device supports (asks for 4K → 1080p fallback)
+ *   • Native aspect-ratio container — no awful crops, no distortions
+ *   • Pinch / slider zoom (uses MediaTrackConstraints when supported)
+ *   • 14 real-time CSS filters
+ *   • Music: search library, volume, trim — attaches metadata to the capture
+ *   • Photo / Video modes, recording timer, mirror toggle
  *
  * Props:
  *   open
  *   onClose
- *   onCapture(file: File, meta: { type: "image"|"video", filterId: string })
- *   mode: "photo" | "video" | "both" (default both)
- *
- * Lightweight (CSS filters, no face-api) — for the full AR experience use /camera.
+ *   onCapture(file: File, meta: { type, filterId, music?, aspectRatio, zoom })
+ *   mode: "photo" | "video" | "both"
  */
 
 const FILTERS = [
@@ -46,6 +54,14 @@ const FILTERS = [
 
 const QUICK_ICONS = [Sparkles, Sun, Zap, Moon];
 
+// Resolution tiers to try, in order of preference.
+const RES_TIERS = [
+  { label: "4K", width: 3840, height: 2160 },
+  { label: "QHD", width: 2560, height: 1440 },
+  { label: "FHD", width: 1920, height: 1080 },
+  { label: "HD", width: 1280, height: 720 },
+];
+
 export default function BrunoQuickCamera({
   open,
   onClose,
@@ -55,59 +71,134 @@ export default function BrunoQuickCamera({
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const trackRef = useRef(null);
   const recorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const musicAudioRef = useRef(null);
 
   const [facing, setFacing] = useState("user");
   const [filter, setFilter] = useState(FILTERS[0]);
   const [captureMode, setCaptureMode] = useState(mode === "video" ? "video" : "photo");
   const [recording, setRecording] = useState(false);
   const [recordTime, setRecordTime] = useState(0);
-  const [preview, setPreview] = useState(null); // { url, blob, type }
+  const [preview, setPreview] = useState(null);
   const [sending, setSending] = useState(false);
   const [streamError, setStreamError] = useState(null);
   const [mirrored, setMirrored] = useState(true);
+  const [resolutionLabel, setResolutionLabel] = useState("HD");
+  const [aspectRatio, setAspectRatio] = useState(null); // e.g. 9/16, 16/9
+  // Zoom
+  const [zoomCaps, setZoomCaps] = useState(null); // { min, max, step }
+  const [zoom, setZoom] = useState(1);
+  const [showZoom, setShowZoom] = useState(false);
+  // Music
+  const [showMusic, setShowMusic] = useState(false);
+  const [music, setMusic] = useState(null); // {track, volume, start, end}
 
   // ─── Stream lifecycle ────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
-
     let cancelled = false;
+
     const startStream = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: captureMode === "video",
-        });
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
+      let stream = null;
+      for (const tier of RES_TIERS) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: facing,
+              width: { ideal: tier.width },
+              height: { ideal: tier.height },
+              frameRate: { ideal: 30 },
+            },
+            audio: captureMode === "video",
+          });
+          setResolutionLabel(tier.label);
+          break;
+        } catch (_) {
+          continue;
+        }
+      }
+      if (!stream) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facing },
+            audio: captureMode === "video",
+          });
+          setResolutionLabel("Auto");
+        } catch (e) {
+          setStreamError(e?.message || "No se pudo acceder a la cámara");
           return;
         }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        setStreamError(null);
-      } catch (e) {
-        setStreamError(e?.message || "No se pudo acceder a la cámara");
       }
+      if (cancelled) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      streamRef.current = stream;
+      const track = stream.getVideoTracks()[0];
+      trackRef.current = track;
+
+      // Probe device capabilities for zoom
+      try {
+        const caps = track.getCapabilities?.();
+        if (caps?.zoom) {
+          setZoomCaps({ min: caps.zoom.min, max: caps.zoom.max, step: caps.zoom.step || 0.1 });
+          const settings = track.getSettings?.();
+          setZoom(settings?.zoom || caps.zoom.min || 1);
+        } else {
+          setZoomCaps(null);
+        }
+      } catch (_) {
+        setZoomCaps(null);
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          const w = videoRef.current.videoWidth;
+          const h = videoRef.current.videoHeight;
+          if (w && h) setAspectRatio(w / h);
+        };
+      }
+      setStreamError(null);
     };
+
     startStream();
     return () => {
       cancelled = true;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
+        trackRef.current = null;
       }
     };
   }, [open, facing, captureMode]);
 
-  // Stop on close
+  // Apply zoom via constraints
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || !zoomCaps) return;
+    try {
+      track.applyConstraints({ advanced: [{ zoom }] }).catch(() => {});
+    } catch (_) {
+      /* unsupported */
+    }
+  }, [zoom, zoomCaps]);
+
+  // Reset state on close
   useEffect(() => {
     if (!open) {
       setPreview(null);
       setRecording(false);
       setRecordTime(0);
+      setShowMusic(false);
+      setShowZoom(false);
+      setMusic(null);
+      if (musicAudioRef.current) {
+        musicAudioRef.current.pause();
+        musicAudioRef.current = null;
+      }
     }
   }, [open]);
 
@@ -140,7 +231,7 @@ export default function BrunoQuickCamera({
     return canvas;
   };
 
-  const snapPhoto = async () => {
+  const snapPhoto = () => {
     const canvas = drawFrame();
     if (!canvas) return;
     canvas.toBlob(
@@ -150,28 +241,44 @@ export default function BrunoQuickCamera({
         setPreview({ url, blob, type: "image" });
       },
       "image/jpeg",
-      0.92
+      0.95
     );
   };
 
   const startRecord = () => {
     if (!streamRef.current) return;
     chunksRef.current = [];
-    const recorder = new MediaRecorder(streamRef.current, {
-      mimeType: MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-        ? "video/webm;codecs=vp9,opus"
-        : "video/webm",
-    });
+
+    // Music preview during recording (best-effort browser playback)
+    if (music?.track) {
+      const audio = new Audio(music.track.url);
+      audio.volume = music.volume ?? 0.7;
+      audio.currentTime = music.start || 0;
+      audio.play().catch(() => {});
+      musicAudioRef.current = audio;
+    }
+
+    const mimePref = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+      "video/mp4",
+    ].find((m) => MediaRecorder.isTypeSupported(m));
+    const recorder = new MediaRecorder(streamRef.current, mimePref ? { mimeType: mimePref } : undefined);
     recorderRef.current = recorder;
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunksRef.current.push(e.data);
     };
     recorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: "video/webm" });
+      const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "video/webm" });
       const url = URL.createObjectURL(blob);
       setPreview({ url, blob, type: "video" });
+      if (musicAudioRef.current) {
+        musicAudioRef.current.pause();
+        musicAudioRef.current = null;
+      }
     };
-    recorder.start();
+    recorder.start(250);
     setRecording(true);
     setRecordTime(0);
   };
@@ -181,15 +288,16 @@ export default function BrunoQuickCamera({
       recorderRef.current.stop();
       setRecording(false);
     }
+    if (musicAudioRef.current) {
+      musicAudioRef.current.pause();
+      musicAudioRef.current = null;
+    }
   };
 
   const handleShutter = () => {
-    if (captureMode === "photo") {
-      snapPhoto();
-    } else {
-      if (recording) stopRecord();
-      else startRecord();
-    }
+    if (captureMode === "photo") snapPhoto();
+    else if (recording) stopRecord();
+    else startRecord();
   };
 
   const handleSend = async () => {
@@ -197,14 +305,29 @@ export default function BrunoQuickCamera({
     setSending(true);
     try {
       const ext = preview.type === "image" ? "jpg" : "webm";
-      const mime = preview.type === "image" ? "image/jpeg" : "video/webm";
+      const mime = preview.type === "image" ? "image/jpeg" : preview.blob.type || "video/webm";
       const file = new File(
         [preview.blob],
         `bruno-${Date.now()}.${ext}`,
         { type: mime }
       );
-      await onCapture?.(file, { type: preview.type, filterId: filter.id });
-      // Cleanup
+      await onCapture?.(file, {
+        type: preview.type,
+        filterId: filter.id,
+        resolution: resolutionLabel,
+        aspectRatio,
+        zoom,
+        music: music
+          ? {
+              trackId: music.track.id,
+              title: music.track.title,
+              url: music.track.url,
+              volume: music.volume,
+              start: music.start,
+              end: music.end,
+            }
+          : null,
+      });
       URL.revokeObjectURL(preview.url);
       setPreview(null);
       onClose?.();
@@ -218,7 +341,12 @@ export default function BrunoQuickCamera({
     setPreview(null);
   };
 
-  // ─── UI ──────────────────────────────────────────────────────────────────
+  // Container style: respect native aspect-ratio when known
+  const stageStyle = aspectRatio
+    ? { aspectRatio: `${aspectRatio}` }
+    : { aspectRatio: "9/16" };
+
+  // ─── Render ──────────────────────────────────────────────────────────────
   return (
     <AnimatePresence>
       {open && (
@@ -240,13 +368,10 @@ export default function BrunoQuickCamera({
               <X className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2">
-              <img
-                src="/bruno-icon.png"
-                alt="Bruno"
-                className="h-7 w-7 rounded-lg object-contain"
-              />
-              <span className="text-white text-sm font-bold tracking-tight">
-                BRUNO Camera
+              <img src="/bruno-icon.png" alt="Bruno" className="h-7 w-7 rounded-lg object-contain" />
+              <span className="text-white text-sm font-bold tracking-tight">BRUNO Camera</span>
+              <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-orange-300 bg-orange-500/20 rounded-full px-2 py-0.5">
+                {resolutionLabel}
               </span>
             </div>
             <button
@@ -259,7 +384,7 @@ export default function BrunoQuickCamera({
             </button>
           </div>
 
-          {/* Preview / Video stage */}
+          {/* Stage — native aspect ratio */}
           <div className="absolute inset-0 grid place-items-center overflow-hidden">
             {streamError && (
               <div className="text-white text-sm text-center px-6 max-w-sm">
@@ -268,40 +393,88 @@ export default function BrunoQuickCamera({
               </div>
             )}
 
-            {preview ? (
-              preview.type === "image" ? (
-                <img
-                  src={preview.url}
-                  alt="captured"
-                  className="max-h-full max-w-full object-contain"
-                  data-testid="quick-camera-preview-img"
-                />
+            <div
+              className="relative max-h-full max-w-full"
+              style={stageStyle}
+            >
+              {preview ? (
+                preview.type === "image" ? (
+                  <img
+                    src={preview.url}
+                    alt="captured"
+                    className="h-full w-full object-contain"
+                    data-testid="quick-camera-preview-img"
+                  />
+                ) : (
+                  <video
+                    src={preview.url}
+                    controls
+                    autoPlay
+                    loop
+                    className="h-full w-full"
+                    data-testid="quick-camera-preview-video"
+                  />
+                )
               ) : (
                 <video
-                  src={preview.url}
-                  controls
+                  ref={videoRef}
                   autoPlay
-                  loop
-                  className="max-h-full max-w-full"
-                  data-testid="quick-camera-preview-video"
+                  playsInline
+                  muted
+                  style={{
+                    filter: filter.filter,
+                    transform: mirrored && facing === "user" ? "scaleX(-1)" : undefined,
+                  }}
+                  className="h-full w-full object-contain"
+                  data-testid="quick-camera-video"
                 />
-              )
-            ) : (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                style={{
-                  filter: filter.filter,
-                  transform: mirrored && facing === "user" ? "scaleX(-1)" : undefined,
-                }}
-                className="h-full w-full object-cover"
-                data-testid="quick-camera-video"
-              />
-            )}
+              )}
+            </div>
             <canvas ref={canvasRef} className="hidden" />
           </div>
+
+          {/* Right-side vertical zoom slider — only if device supports zoom */}
+          {!preview && zoomCaps && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1">
+              <button
+                onClick={() => setShowZoom((v) => !v)}
+                className="grid place-items-center h-10 w-10 rounded-full bg-white/10 backdrop-blur text-white"
+                data-testid="quick-camera-zoom-toggle"
+              >
+                <ZoomIn className="h-5 w-5" />
+              </button>
+              <AnimatePresence>
+                {showZoom && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 180 }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="flex items-center"
+                  >
+                    <input
+                      type="range"
+                      min={zoomCaps.min}
+                      max={zoomCaps.max}
+                      step={zoomCaps.step}
+                      value={zoom}
+                      onChange={(e) => setZoom(Number(e.target.value))}
+                      data-testid="quick-camera-zoom-slider"
+                      className="accent-orange-500"
+                      style={{
+                        writingMode: "bt-lr",
+                        WebkitAppearance: "slider-vertical",
+                        height: 160,
+                        width: 20,
+                      }}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <span className="text-white text-[10px] font-bold bg-black/40 rounded-full px-2 py-0.5">
+                {zoom.toFixed(1)}x
+              </span>
+            </div>
+          )}
 
           {/* Recording badge */}
           {recording && (
@@ -314,6 +487,24 @@ export default function BrunoQuickCamera({
               {String(Math.floor(recordTime / 60)).padStart(2, "0")}:
               {String(recordTime % 60).padStart(2, "0")}
             </motion.div>
+          )}
+
+          {/* Music chip — top center under header */}
+          {!preview && captureMode === "video" && (
+            <button
+              onClick={() => setShowMusic(true)}
+              data-testid="quick-camera-music-btn"
+              className={`absolute top-16 left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 border transition-colors ${
+                music
+                  ? "bg-orange-500 border-orange-500 text-white"
+                  : "bg-white/10 border-white/20 text-white backdrop-blur"
+              }`}
+            >
+              <Music2 className="h-3.5 w-3.5" />
+              <span className="max-w-[140px] truncate">
+                {music ? music.track.title : "Añadir música"}
+              </span>
+            </button>
           )}
 
           {/* Bottom controls */}
@@ -353,9 +544,7 @@ export default function BrunoQuickCamera({
                       onClick={() => setCaptureMode("photo")}
                       data-testid="quick-camera-mode-photo"
                       className={`text-xs font-bold px-4 py-1.5 rounded-full transition-colors ${
-                        captureMode === "photo"
-                          ? "bg-white text-black"
-                          : "text-white/70"
+                        captureMode === "photo" ? "bg-white text-black" : "text-white/70"
                       }`}
                     >
                       FOTO
@@ -364,9 +553,7 @@ export default function BrunoQuickCamera({
                       onClick={() => setCaptureMode("video")}
                       data-testid="quick-camera-mode-video"
                       className={`text-xs font-bold px-4 py-1.5 rounded-full transition-colors ${
-                        captureMode === "video"
-                          ? "bg-white text-black"
-                          : "text-white/70"
+                        captureMode === "video" ? "bg-white text-black" : "text-white/70"
                       }`}
                     >
                       VIDEO
@@ -398,14 +585,10 @@ export default function BrunoQuickCamera({
                         recording ? "h-7 w-7 bg-white" : "h-16 w-16 border-[3px] border-zinc-800"
                       }`}
                     />
-                    <span className="absolute inset-0 rounded-full ring-2 ring-orange-500/0 hover:ring-orange-500/80 transition-all" />
                   </motion.button>
 
                   <button
-                    onClick={() => {
-                      if (captureMode === "photo") setCaptureMode("video");
-                      else setCaptureMode("photo");
-                    }}
+                    onClick={() => setCaptureMode(captureMode === "photo" ? "video" : "photo")}
                     className="grid place-items-center h-12 w-12 rounded-full bg-white/10 backdrop-blur text-white hover:bg-white/20"
                     aria-label="Cambiar modo"
                   >
@@ -427,9 +610,14 @@ export default function BrunoQuickCamera({
                 >
                   <RotateCcw className="h-6 w-6" />
                 </button>
-                <p className="text-white/70 text-xs">
-                  {preview.type === "image" ? "Foto lista" : "Video listo"} ·{" "}
+                <p className="text-white/70 text-xs text-center">
+                  {preview.type === "image" ? "Foto" : "Video"} ·{" "}
                   <span className="font-semibold text-orange-300">{filter.name}</span>
+                  {music && (
+                    <>
+                      {" "}· <span className="font-semibold text-orange-300">🎵 {music.track.title}</span>
+                    </>
+                  )}
                 </p>
                 <motion.button
                   whileTap={{ scale: 0.95 }}
@@ -448,6 +636,14 @@ export default function BrunoQuickCamera({
               </div>
             )}
           </div>
+
+          {/* Music Picker overlay */}
+          <MusicPicker
+            open={showMusic}
+            onClose={() => setShowMusic(false)}
+            current={music}
+            onApply={setMusic}
+          />
         </motion.div>
       )}
     </AnimatePresence>

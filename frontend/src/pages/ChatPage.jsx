@@ -11,6 +11,7 @@ import { ChatAttachmentMenu } from "@/components/ChatAttachmentMenu";
 import BrunoPillInput from "@/components/bruno/BrunoPillInput";
 import BrunoQuickCamera from "@/components/bruno/BrunoQuickCamera";
 import MessageReactionsBubble from "@/components/bruno/MessageReactionsBubble";
+import CircularVideoMessage from "@/components/bruno/CircularVideoMessage";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import axios from "axios";
 import { 
@@ -936,6 +937,42 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
               {msgs.map((message) => {
                 const isOwn = message.sender_id === currentUserId;
                 const reactionsList = aggregateReactions(message.reactions || []);
+                // ── Video note (circular bubble) — special rendering ──
+                if (message.message_type === "video_note" && message.attachments?.[0]?.url) {
+                  return (
+                    <div
+                      key={message.id}
+                      className={`flex mb-1.5 ${isOwn ? "justify-end" : "justify-start"}`}
+                    >
+                      <MessageReactionsBubble
+                        isOwn={isOwn}
+                        reactions={reactionsList}
+                        onReact={(emoji) => handleReactMessage(message, emoji)}
+                        onReply={() => handleSetReply(message)}
+                        testId={`msg-${message.id}`}
+                      >
+                        <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
+                          <CircularVideoMessage
+                            src={message.attachments[0].url}
+                            isOwn={isOwn}
+                            size={180}
+                            testId={`video-note-${message.id}`}
+                          />
+                          <div className={`flex items-center gap-1 mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
+                            <span className="text-[9px] text-muted-foreground">
+                              {formatTime(message.created_at)}
+                            </span>
+                            {isOwn && (message.is_read ? (
+                              <CheckCheck className="w-3.5 h-3.5 text-muted-foreground" />
+                            ) : (
+                              <Check className="w-3 h-3 text-muted-foreground/60" />
+                            ))}
+                          </div>
+                        </div>
+                      </MessageReactionsBubble>
+                    </div>
+                  );
+                }
                 return (
                   <div
                     key={message.id}
@@ -1101,9 +1138,48 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       <BrunoQuickCamera
         open={showCamera}
         onClose={() => setShowCamera(false)}
-        onCapture={async (file) => {
-          await handleFileSelect(file, file.type.startsWith("video") ? "video" : "image");
-          brunoToast.success("Capturado");
+        onCapture={async (file, meta) => {
+          // Video → send as a Telegram-style video note (circular bubble)
+          if (meta?.type === "video" || file.type.startsWith("video")) {
+            try {
+              setUploading(true);
+              const form = new FormData();
+              form.append("file", file);
+              const up = await axios.post(`${API}/upload/chat-file`, form, {
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
+              });
+              const messageData = {
+                content: "",
+                message_type: "video_note",
+                attachments: [{
+                  url: up.data.url || up.data.secure_url,
+                  type: file.type,
+                  filename: file.name,
+                  size: file.size,
+                  music: meta?.music || null,
+                }],
+              };
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: "send_message", chat_id: chat.id, ...messageData }));
+              } else {
+                const res = await axios.post(
+                  `${API}/chats/${chat.id}/messages`,
+                  messageData,
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+                setMessages((prev) => [...prev, res.data]);
+              }
+              brunoToast.success("Video enviado");
+            } catch (_) {
+              brunoToast.error("No se pudo enviar el video");
+            } finally {
+              setUploading(false);
+            }
+            return;
+          }
+          // Photo → keep current flow: stage as pendingMedia
+          await handleFileSelect(file, "image");
+          brunoToast.success("Foto lista para enviar");
         }}
       />
 

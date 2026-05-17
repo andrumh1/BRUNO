@@ -143,22 +143,6 @@ export const BrunoPillInput = forwardRef(function BrunoPillInput(
           transition={{ duration: 0.25 }}
           className="flex-1 min-w-0 flex items-end gap-1 bg-white dark:bg-zinc-900 rounded-[28px] border border-zinc-200/80 dark:border-zinc-800 backdrop-blur-xl px-2 py-1"
         >
-          {/* Camera button — slides in inside the pill */}
-          <motion.button
-            type="button"
-            initial={false}
-            animate={{ width: hasText ? 0 : 36, opacity: hasText ? 0 : 1 }}
-            transition={{ duration: 0.22 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={onCamera}
-            disabled={isRecording}
-            aria-label="Cámara"
-            data-testid="pill-camera-btn"
-            className="overflow-hidden shrink-0 grid place-items-center h-9 rounded-full text-zinc-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10 transition-colors"
-          >
-            <Camera className="h-5 w-5" />
-          </motion.button>
-
           {/* Textarea */}
           <textarea
             ref={textareaRef}
@@ -190,6 +174,28 @@ export const BrunoPillInput = forwardRef(function BrunoPillInput(
             <Smile className="h-5 w-5" />
           </motion.button>
         </motion.div>
+
+        {/* Camera button — outside the pill, next to mic. Hidden when typing. */}
+        <AnimatePresence initial={false}>
+          {!hasText && (
+            <motion.button
+              key="cam-outside"
+              type="button"
+              initial={{ scale: 0, width: 0, marginLeft: 0 }}
+              animate={{ scale: 1, width: 44, marginLeft: 0 }}
+              exit={{ scale: 0, width: 0 }}
+              transition={{ duration: 0.22 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onCamera}
+              disabled={isRecording}
+              aria-label="Cámara"
+              data-testid="pill-camera-btn"
+              className="shrink-0 grid place-items-center h-11 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-orange-50 dark:hover:bg-orange-500/15 hover:text-orange-500 transition-colors overflow-hidden"
+            >
+              <Camera className="h-5 w-5 shrink-0" />
+            </motion.button>
+          )}
+        </AnimatePresence>
 
         {/* Send / Mic button — outside the pill, swaps */}
         <div className="shrink-0 relative h-11 w-11">

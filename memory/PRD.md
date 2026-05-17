@@ -21,6 +21,36 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Premium Templates, Multi-Locations, Drag-to-Reorder
 
 
+### Phase 46: Camera Unification + Circular Video Notes (2026-05-17)
+
+**Camera unified across the app** via `BrunoCameraProvider` (`/contexts/BrunoCameraContext.jsx`):
+- Single global BrunoQuickCamera instance mounted at app root
+- `useBrunoCamera().open({ onCapture, mode })` from anywhere → opens the same pro camera
+- Nav `+` button replaced: now opens BrunoQuickCamera with auto-publish-to-story `onCapture`
+- Removed duplicate `QuickStoryFAB`
+- Removed `/camera` page nav (still accessible via route)
+
+**BrunoQuickCamera Pro upgrades:**
+- 4K → QHD → FHD → HD resolution fallback chain via `getUserMedia` constraints
+- Native aspect-ratio container (reads `video.videoWidth/Height`)
+- Pinch/slider zoom using `track.applyConstraints({ advanced: [{ zoom }] })` when supported
+- Music module (`MusicPicker.jsx`): 8 royalty-free tracks, 9 categories, search, volume slider, trim start/end, applied to recording (played alongside video)
+- Resolution badge in header
+
+**Pill input reorg:**
+- Camera button moved OUT of pill, sits next to mic (Instagram-style)
+- Hides when typing (mic→send swap unchanged)
+
+**Circular Video Messages** (`CircularVideoMessage.jsx`) — Telegram-style video notes:
+- 180px circle with progress ring (orange Bruno color)
+- Auto-play loop muted when scrolled into view (IntersectionObserver, threshold 0.4)
+- Tap → unmute first, second tap → play/pause
+- Bottom-right corner badge with mute/play state
+- Backend accepts `message_type: "video_note"` without schema changes
+- ChatPage's camera capture: video → directly sent as video_note with optional music metadata; photo → staged as pendingMedia
+
+
+
 ### Phase 44: Story Viewer + Chat Reactions + Profile FAB (2026-05-17)
 
 **BrunoStoryViewer** (`/components/bruno/BrunoStoryViewer.jsx`) — Instagram-style:
