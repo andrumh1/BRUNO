@@ -334,6 +334,8 @@ async def deal_webhook(request: Request, x_deal_signature: Optional[str] = Heade
     await _update_order_status(order["id"], payload, now)
     await _register_commission(payload, order, now)
     await _activate_product(payload, order, now)
+    await _notify_partner_commission(payload, order)
+    await _notify_buyer_payment(payload, order)
 
     return {"status": "ok", "order_id": order["id"], "payment_status": payload.payment_status}
 

@@ -20,6 +20,41 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Story Editor, Universal Minimization, PiP, View Modes
 - Premium Templates, Multi-Locations, Drag-to-Reorder
 
+
+### Phase 39: Mobile-Native API Surface (2026-05-17)
+**Goal:** Backend ready for React Native / Flutter consumption.
+
+**Push Notifications (FCM/APNs/Expo)**
+- POST /api/mobile/devices/register — store device tokens with platform metadata (idempotent by user+token)
+- GET /api/mobile/devices — list active devices (token redacted)
+- DELETE /api/mobile/devices/{id} — soft-unregister, flips push flag when no devices remain
+- Collection: mobile_devices
+
+**Biometric Auth (FaceID / Fingerprint)**
+- Public-key challenge/response on top of JWT. Supports ed25519, ecdsa-p256, rsa-2048.
+- POST /api/mobile/biometric/enroll — register device public key (authenticated)
+- POST /api/mobile/biometric/challenge — request one-time challenge (public, 120s TTL)
+- POST /api/mobile/biometric/verify — sign challenge → returns access + refresh token pair
+- POST /api/mobile/auth/refresh — refresh-token rotation (old token revoked)
+- POST /api/mobile/auth/logout — revoke refresh token
+- GET / DELETE /api/mobile/biometric/credentials — list/revoke
+- Collections: biometric_credentials, biometric_challenges, refresh_tokens
+
+**Offline Sync**
+- GET /api/mobile/sync/manifest — per-collection last_modified + count
+- GET /api/mobile/sync/cards|store|deal-orders — delta sync with `since` + cursor pagination
+- GET /api/mobile/sync/profile — user snapshot
+- GET /api/mobile/sync/bootstrap — one-shot hydration for first install
+- POST /api/mobile/sync/push — apply offline changes (create/update/delete) with last-write-wins
+- GET /api/mobile/config — public app config (VAPID key, feature flags, endpoint catalog)
+
+**DEAL Push Notifications Wiring (Phase 38 P0 → completed)**
+- Webhook /api/deal/webhook now fires `_notify_partner_commission` and `_notify_buyer_payment`
+- Partners get instant push on commission earned; buyers get paid/failed/refunded notifications
+
+**Tests:** /app/backend/tests/test_mobile_native.py — 21/21 passing (push registration, biometric flow with Ed25519 signatures, replay protection, refresh rotation, delta sync, offline push).
+
+
 ### Phase 37: DEAL Integration (2026-05-17)
 - Outbound: POST /api/deal/send-order (cliente, producto, precio, partner_id, referral_code, origen: Bruno)
 - Inbound: POST /api/deal/webhook (HMAC-SHA256 verified, updates status, registers commission, activates service)

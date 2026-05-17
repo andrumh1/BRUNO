@@ -4246,6 +4246,8 @@ api_router.include_router(analytics_router)
 api_router.include_router(deal_router)
 from routers.posts_feed import router as posts_feed_router
 api_router.include_router(posts_feed_router)
+from routers.mobile_native import router as mobile_native_router
+api_router.include_router(mobile_native_router)
 
 # Set database for compliance router
 compliance_set_db(db)
