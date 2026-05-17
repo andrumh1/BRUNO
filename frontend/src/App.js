@@ -6,6 +6,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { TourProvider, TourOverlay } from "@/components/WelcomeTour";
 import { NavScrollProvider } from "@/contexts/NavScrollContext";
+import { Toaster } from "sonner";
 
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
@@ -67,6 +68,7 @@ import HashtagPage from "@/pages/HashtagPage";
 import SavedPostsPage from "@/pages/SavedPostsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import PartnerDashboardPage from "@/pages/PartnerDashboardPage";
+import BrunoUIKitPage from "@/pages/BrunoUIKitPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -96,6 +98,7 @@ function AppRouter() {
       <Route path="/legal" element={<LegalHubPage />} />
       <Route path="/legal/community" element={<CommunityGuidelinesPage />} />
       <Route path="/legal/data-rights" element={<DataRightsPage />} />
+      <Route path="/ui-kit" element={<BrunoUIKitPage />} />
       <Route path="/c/:cardId" element={<ViewCardPage />} />
       <Route path="/n/:nfcId" element={<NFCRedirectPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />
@@ -162,6 +165,15 @@ function App() {
                 <CameraFloatingButton />
                 <MobileBottomNav />
                 <TourOverlay />
+                <Toaster
+                  position="top-center"
+                  expand
+                  visibleToasts={5}
+                  toastOptions={{
+                    unstyled: true,
+                    classNames: { toast: "w-full" },
+                  }}
+                />
               </TourProvider>
               </NavScrollProvider>
             </BrowserRouter>
