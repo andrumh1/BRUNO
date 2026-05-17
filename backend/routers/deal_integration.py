@@ -22,6 +22,7 @@ sys.path.insert(0, '/app/backend')
 from utils.database import db
 from utils.security import get_current_user
 from models.user import User
+from routers.push_notifications import send_push_notification, NotificationPayload
 
 router = APIRouter(prefix="/deal", tags=["deal-integration"])
 
@@ -162,6 +163,64 @@ async def _activate_product(payload: DealWebhookPayload, order: dict, now: str):
         "service_status": payload.service_status or "active",
         "activated_at": now,
     })
+
+
+async def _notify_partner_commission(payload: DealWebhookPayload, order: dict):
+    """Send push notification to partner when they earn a commission."""
+    if payload.payment_status != "paid" or not payload.partner_id or not payload.commission_amount:
+        return
+    currency = order.get("currency", "USD")
+    product_name = order.get("product_name", "producto")
+    try:
+        await send_push_notification(payload.partner_id, NotificationPayload(
+            title="Nueva comision DEAL",
+            body=f"+${payload.commission_amount:.2f} {currency} por venta de {product_name}",
+            icon="/bruno-logo.png",
+            url="/partner-dashboard",
+            tag="deal_commission",
+            renotify=True,
+            vibrate=[200, 100, 200],
+            actions=[{"action": "view_dashboard", "title": "Ver Dashboard"}],
+            data={"type": "deal_commission", "order_id": order["id"], "amount": payload.commission_amount},
+        ))
+    except Exception:
+        pass  # Non-blocking
+
+
+async def _notify_buyer_payment(payload: DealWebhookPayload, order: dict):
+    """Send push notification to buyer about payment status."""
+    user_id = order.get("user_id")
+    if not user_id:
+        return
+    product_name = order.get("product_name", "producto")
+
+    if payload.payment_status == "paid":
+        title = "Pago confirmado"
+        body = f"Tu compra de {product_name} fue procesada exitosamente"
+        tag = "deal_payment_success"
+    elif payload.payment_status == "failed":
+        title = "Pago fallido"
+        body = f"No se pudo procesar el pago de {product_name}. Intenta de nuevo."
+        tag = "deal_payment_failed"
+    elif payload.payment_status == "refunded":
+        title = "Reembolso procesado"
+        body = f"Se ha reembolsado tu compra de {product_name}"
+        tag = "deal_refund"
+    else:
+        return
+
+    try:
+        await send_push_notification(user_id, NotificationPayload(
+            title=title,
+            body=body,
+            icon="/bruno-logo.png",
+            url="/marketplace",
+            tag=tag,
+            vibrate=[100, 50, 100],
+            data={"type": "deal_payment", "order_id": order["id"], "status": payload.payment_status},
+        ))
+    except Exception:
+        pass  # Non-blocking
 
 
 # ─── Endpoints ────────────────────────────────────────────────────────────────
