@@ -21,6 +21,27 @@ Build a comprehensive social networking platform called "BRUNO" with digital bus
 - Premium Templates, Multi-Locations, Drag-to-Reorder
 
 
+### Phase 43: Quick Story (Capture → Publish 1-tap) (2026-05-17)
+**Goal:** Engagement diario tipo Instagram/TikTok — capturar y publicar story en un solo flujo.
+
+**Components added:**
+- `QuickStoryButton.jsx` — botón con 3 variantes (floating/inline/icon) que abre BrunoQuickCamera. Tras capturar, monta `CaptionOverlay` con preview + caption (200 chars) + visibility (public/followers/private) + tap único "Publicar Story · 24h".
+- `QuickStoryFAB.jsx` — wrapper global que monta el FAB sólo para usuarios autenticados y se oculta en rutas donde estorbaría (login, chat, camera, welcome, public card pages, lives, reels, qr, etc.).
+- Integrado en `App.js` como overlay global.
+
+**Pipeline:**
+1. Tap FAB → BrunoQuickCamera con filtros TikTok-style
+2. Capturar (foto/video) → CaptionOverlay con preview filtrado
+3. Tap "Publicar" → POST `/api/upload/image|chat-file` → POST `/api/stories/` con caption + visibility → toast Bruno publish + auto-cierre
+4. Story expira en 24h (manejado por backend)
+
+**Tests verificados:**
+- FAB visible en /feed, oculto en /chat /welcome
+- Camera modal abre desde FAB
+- Pipeline backend (upload + create story) probado vía curl → Story creada con `expires_at` +24h ✓
+
+
+
 ### Phase 42: Pro Camera + Pill Chat Input (2026-05-17)
 **Goal:** Modernizar el chat con identidad Bruno y cámara TikTok-style.
 

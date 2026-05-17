@@ -7,6 +7,7 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import { TourProvider, TourOverlay } from "@/components/WelcomeTour";
 import { NavScrollProvider } from "@/contexts/NavScrollContext";
 import { Toaster } from "sonner";
+import QuickStoryFAB from "@/components/bruno/QuickStoryFAB";
 
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
@@ -166,6 +167,7 @@ function App() {
                 <PictureInPicture />
                 <CameraFloatingButton />
                 <MobileBottomNav />
+                <QuickStoryFAB />
                 <TourOverlay />
                 <Toaster
                   position="top-center"
