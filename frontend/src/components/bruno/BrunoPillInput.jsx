@@ -175,27 +175,30 @@ export const BrunoPillInput = forwardRef(function BrunoPillInput(
           </motion.button>
         </motion.div>
 
-        {/* Camera button — outside the pill, next to mic. Hidden when typing. */}
-        <AnimatePresence initial={false}>
-          {!hasText && (
-            <motion.button
-              key="cam-outside"
-              type="button"
-              initial={{ scale: 0, width: 0, marginLeft: 0 }}
-              animate={{ scale: 1, width: 44, marginLeft: 0 }}
-              exit={{ scale: 0, width: 0 }}
-              transition={{ duration: 0.22 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onCamera}
-              disabled={isRecording}
-              aria-label="Cámara"
-              data-testid="pill-camera-btn"
-              className="shrink-0 grid place-items-center h-11 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-orange-50 dark:hover:bg-orange-500/15 hover:text-orange-500 transition-colors overflow-hidden"
-            >
-              <Camera className="h-5 w-5 shrink-0" />
-            </motion.button>
-          )}
-        </AnimatePresence>
+        {/* Camera button — outside the pill, ALWAYS visible next to mic. */}
+        <motion.button
+          type="button"
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          whileTap={{ scale: 0.88 }}
+          whileHover={{ scale: 1.05 }}
+          transition={{ type: "spring", stiffness: 380, damping: 20 }}
+          onClick={onCamera}
+          disabled={isRecording}
+          aria-label="Cámara"
+          data-testid="pill-camera-btn"
+          className="shrink-0 grid place-items-center h-11 w-11 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-orange-500/15 hover:text-orange-500 transition-colors relative"
+        >
+          <Camera className="h-5 w-5" />
+          {/* Subtle pulse ring to draw attention */}
+          <motion.span
+            aria-hidden
+            initial={{ opacity: 0, scale: 1 }}
+            animate={{ opacity: [0.4, 0, 0.4], scale: [1, 1.4, 1] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute inset-0 rounded-full ring-2 ring-orange-500/40 pointer-events-none"
+          />
+        </motion.button>
 
         {/* Send / Mic button — outside the pill, swaps */}
         <div className="shrink-0 relative h-11 w-11">

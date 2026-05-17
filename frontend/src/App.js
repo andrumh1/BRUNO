@@ -74,6 +74,7 @@ import WelcomePage from "@/pages/WelcomePage";
 import EditProfilePage from "@/pages/EditProfilePage";
 import ChangePasswordPage from "@/pages/ChangePasswordPage";
 import BlockedUsersPage from "@/pages/BlockedUsersPage";
+import DevicesPage from "@/pages/DevicesPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -124,6 +125,7 @@ function AppRouter() {
       <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettingsPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/settings/blocked" element={<ProtectedRoute><BlockedUsersPage /></ProtectedRoute>} />
+      <Route path="/settings/devices" element={<ProtectedRoute><DevicesPage /></ProtectedRoute>} />
       <Route path="/edit-profile" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
       <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       <Route path="/settings/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />

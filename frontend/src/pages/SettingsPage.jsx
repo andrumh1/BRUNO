@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Check,
   Loader2,
+  Smartphone,
   Settings as SettingsIcon
 } from "lucide-react";
 
@@ -284,6 +285,7 @@ const SettingsPage = () => {
                   <OptionRow icon={User} label="Editar perfil" onClick={() => navigate("/edit-profile")} />
                   <OptionRow icon={Lock} label="Cambiar contrasena" onClick={() => navigate("/change-password")} />
                   <OptionRow icon={Shield} label="Usuarios bloqueados" onClick={() => navigate("/settings/blocked")} />
+                  <OptionRow icon={Smartphone} label="Dispositivos y sesiones" onClick={() => navigate("/settings/devices")} />
                 </div>
               </CardContent>
             </Card>
