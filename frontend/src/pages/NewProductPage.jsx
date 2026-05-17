@@ -104,7 +104,7 @@ const NewProductPage = () => {
           images: [...prev.images, response.data.url]
         }));
       } catch (error) {
-        console.error("Error uploading image:", error);
+        // error handled
       }
     }
     
@@ -181,7 +181,7 @@ const NewProductPage = () => {
       
       navigate('/marketplace/my-products');
     } catch (error) {
-      console.error("Error creating product:", error);
+      // error handled
       alert(error.response?.data?.detail || 'Error al publicar producto');
     } finally {
       setLoading(false);

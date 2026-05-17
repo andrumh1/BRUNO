@@ -57,7 +57,7 @@ const PremiumPage = () => {
         // Continue polling
         setPollCount(prev => prev + 1);
       } catch (e) {
-        console.error("Error polling status:", e);
+        // error handled
       }
     };
 
@@ -74,7 +74,7 @@ const PremiumPage = () => {
       setPackages(pkgRes.data);
       setSubscription(subRes.data);
     } catch (e) {
-      console.error("Error:", e);
+      // error handled
     } finally {
       setLoading(false);
     }
@@ -93,7 +93,7 @@ const PremiumPage = () => {
         window.location.href = res.data.url;
       }
     } catch (e) {
-      console.error("Checkout error:", e);
+      // error handled
       alert("Error al iniciar el pago. Intenta de nuevo.");
     } finally {
       setCheckoutLoading(null);

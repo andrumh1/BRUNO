@@ -43,7 +43,7 @@ export const CardPicker = ({ isOpen, onClose, onSelect }) => {
         });
         setCards(response.data);
       } catch (error) {
-        console.error("Error fetching cards:", error);
+        // error handled
       } finally {
         setLoading(false);
       }

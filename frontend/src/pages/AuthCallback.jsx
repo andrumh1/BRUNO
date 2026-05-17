@@ -24,7 +24,7 @@ const AuthCallback = () => {
         const sessionId = params.get('session_id');
 
         if (!sessionId) {
-          console.error('No session_id found');
+          // error handled
           navigate('/login');
           return;
         }
@@ -39,7 +39,7 @@ const AuthCallback = () => {
         // Redirect to dashboard
         navigate('/dashboard', { replace: true });
       } catch (error) {
-        console.error('Auth callback error:', error);
+        // error handled
         navigate('/login');
       }
     };

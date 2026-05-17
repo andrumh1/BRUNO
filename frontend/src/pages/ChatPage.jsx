@@ -73,7 +73,7 @@ const useAudioRecorder = () => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
     } catch (error) {
-      console.error("Error accessing microphone:", error);
+      // error handled
     }
   };
 
@@ -423,7 +423,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       });
       setMessages(response.data);
     } catch (error) {
-      console.error("Error fetching messages:", error);
+      // error handled
     } finally {
       setLoading(false);
     }
@@ -483,7 +483,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
           setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null, callType: "video" });
         }
       } catch (e) {
-        console.error("Error parsing WS message:", e);
+        // error handled
       }
     };
 
@@ -523,7 +523,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         callType: callType
       });
     } catch (error) {
-      console.error("Error starting call:", error);
+      // error handled
     } finally {
       setCallLoading(false);
     }
@@ -537,7 +537,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       });
       setVideoCallState(prev => ({ ...prev, isIncoming: false }));
     } catch (error) {
-      console.error("Error answering call:", error);
+      // error handled
     }
   };
 
@@ -549,7 +549,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       });
       setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null, callType: "video" });
     } catch (error) {
-      console.error("Error declining call:", error);
+      // error handled
     }
   };
 
@@ -560,7 +560,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
           headers: { Authorization: `Bearer ${token}` }
         });
       } catch (error) {
-        console.error("Error ending call:", error);
+        // error handled
       }
     }
     setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null, callType: "video" });
@@ -609,7 +609,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       
       clearAudio();
     } catch (error) {
-      console.error("Error sending audio:", error);
+      // error handled
     } finally {
       setUploading(false);
     }
@@ -641,7 +641,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         });
       }
     } catch (error) {
-      console.error("Error sending sticker:", error);
+      // error handled
     } finally {
       setSending(false);
       setShowStickerPicker(false);
@@ -676,7 +676,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         });
       }
     } catch (error) {
-      console.error("Error sending card:", error);
+      // error handled
     } finally {
       setSending(false);
       setShowCardPicker(false);
@@ -719,7 +719,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         size: file.size
       });
     } catch (error) {
-      console.error("Error uploading file:", error);
+      // error handled
     } finally {
       setUploading(false);
     }
@@ -752,7 +752,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         setPendingMedia(null);
       }
     } catch (error) {
-      console.error("Error sending message:", error);
+      // error handled
     } finally {
       setSending(false);
     }
@@ -1111,7 +1111,7 @@ const NewChatModal = ({ isOpen, onClose, onSelectUser, token }) => {
       });
       setResults(response.data);
     } catch (error) {
-      console.error("Error searching users:", error);
+      // error handled
     } finally {
       setLoading(false);
     }
@@ -1231,7 +1231,7 @@ const ChatPage = () => {
               });
             }
           } catch (e) {
-            console.error("Error parsing WS message:", e);
+            // error handled
           }
         };
         
@@ -1241,12 +1241,12 @@ const ChatPage = () => {
         };
         
         socket.onerror = (error) => {
-          console.error("WebSocket error:", error);
+          // error handled
         };
         
         return socket;
       } catch (error) {
-        console.error("WebSocket connection error:", error);
+        // error handled
         return null;
       }
     };
@@ -1282,7 +1282,7 @@ const ChatPage = () => {
         if (targetChat) setSelectedChat(targetChat);
       }
     } catch (error) {
-      console.error("Error fetching chats:", error);
+      // error handled
     } finally {
       setLoading(false);
     }
@@ -1337,7 +1337,7 @@ const ChatPage = () => {
       setShowNewChat(false);
       navigate(`/chat/${newChat.id}`, { replace: true });
     } catch (error) {
-      console.error("Error creating chat:", error);
+      // error handled
     }
   };
 

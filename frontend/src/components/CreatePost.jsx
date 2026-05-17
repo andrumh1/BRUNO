@@ -47,7 +47,7 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
         const mediaType = file.type.startsWith("video/") ? "video" : "image";
         setMedia(prev => [...prev, { type: mediaType, url: response.data.url }]);
       } catch (error) {
-        console.error("Error uploading file:", error);
+        // error handled
       }
     }
     setUploading(false);
@@ -134,7 +134,7 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
       setSelectedCard(null);
       if (onPostCreated) onPostCreated(response.data);
     } catch (error) {
-      console.error("Error creating post:", error);
+      // error handled
     } finally {
       setPosting(false);
     }

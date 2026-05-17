@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
             try {
               setUser(JSON.parse(cachedUser));
             } catch (e) {
-              console.error("Error parsing cached user:", e);
+              // error handled
             }
           }
 
@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
           await refreshUser(storedToken);
         }
       } catch (error) {
-        console.error("Auth initialization error:", error);
+        // error handled
         clearAuth();
       } finally {
         setIsLoading(false);
@@ -109,8 +109,7 @@ export function AuthProvider({ children }) {
       
       return userData;
     } catch (error) {
-      console.error("Auth refresh failed:", error);
-      
+      // error handled
       // Only clear auth if it's an authentication error (401/403)
       if (error.response?.status === 401 || error.response?.status === 403) {
         clearAuth();
@@ -161,7 +160,7 @@ export function AuthProvider({ children }) {
       
       return true;
     } catch (error) {
-      console.error("Error updating user:", error);
+      // error handled
       return false;
     }
   };

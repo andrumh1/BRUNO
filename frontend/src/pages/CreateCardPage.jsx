@@ -158,7 +158,7 @@ const CreateCardPage = () => {
           setAiGenerated(true);
           sessionStorage.removeItem("ai_generated_card");
         } catch (e) {
-          console.error("Error parsing AI data:", e);
+          // error handled
         }
       }
     }
@@ -203,7 +203,7 @@ const CreateCardPage = () => {
         [`${type}_url`]: response.data.url,
       });
     } catch (error) {
-      console.error(`Error uploading ${type}:`, error);
+      // error handled
       alert(t("common.error") + ": " + t("cardForm.uploading"));
     } finally {
       uploadSetter(false);
@@ -284,7 +284,7 @@ const CreateCardPage = () => {
         navigate(`/my-profile`);
       }
     } catch (error) {
-      console.error("Error creating card:", error);
+      // error handled
       alert(t("common.error"));
     } finally {
       setLoading(false);

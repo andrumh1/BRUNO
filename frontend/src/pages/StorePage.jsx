@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -71,25 +71,18 @@ const StorePage = () => {
     { value: "meow_services", label: "MEOW APP", icon: "Sparkles" },
   ];
 
-  useEffect(() => {
-    fetchProducts();
-    if (user && token) {
-      fetchUserData();
-    }
-  }, [user, token]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/store/products`);
       setProducts(response.data);
     } catch (error) {
-      console.error("Error fetching products:", error);
+      // fetch failed
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/user/saved-data`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -98,9 +91,16 @@ const StorePage = () => {
       const defaultAddr = response.data.addresses?.find(a => a.is_default);
       if (defaultAddr) setSelectedAddress(defaultAddr.id);
     } catch (error) {
-      console.error("Error fetching user data:", error);
+      // fetch failed
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    fetchProducts();
+    if (user && token) {
+      fetchUserData();
+    }
+  }, [user, token, fetchProducts, fetchUserData]);
 
   const addToCart = (product, color = null) => {
     const existingItem = cart.find(item => 
@@ -173,7 +173,7 @@ const StorePage = () => {
       // Redirect to Stripe
       window.location.href = checkoutResponse.data.checkout_url;
     } catch (error) {
-      console.error("Checkout error:", error);
+      // error handled
       alert("Error al procesar el pago. Intenta de nuevo.");
     }
   };
@@ -199,7 +199,7 @@ const StorePage = () => {
         country: ""
       });
     } catch (error) {
-      console.error("Error adding address:", error);
+      // error handled
     }
   };
 

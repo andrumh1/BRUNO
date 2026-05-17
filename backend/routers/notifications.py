@@ -273,7 +273,6 @@ async def send_email_notification(recipient_email: str, recipient_name: str, pay
     if not RESEND_AVAILABLE:
         return False
     
-    notification_type = payload.get("type", "general")
     title = payload.get("title", "Notificación de BRUNO")
     body = payload.get("body", "")
     url = payload.get("url", "https://bruno.app")

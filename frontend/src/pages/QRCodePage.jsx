@@ -27,7 +27,7 @@ const QRCodePage = () => {
       });
       setQrData(response.data);
     } catch (error) {
-      console.error("Error fetching QR code:", error);
+      // error handled
       alert("Error al generar el código QR");
     } finally {
       setLoading(false);

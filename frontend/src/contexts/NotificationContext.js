@@ -48,7 +48,7 @@ export const NotificationProvider = ({ children }) => {
           await sendSubscriptionToServer(existingSub);
         }
       } catch (error) {
-        console.error('SW registration failed:', error);
+        // error handled
       }
     };
     
@@ -110,7 +110,7 @@ export const NotificationProvider = ({ children }) => {
       
       return false;
     } catch (error) {
-      console.error('Failed to request permission:', error);
+      // error handled
       return false;
     }
   }, [isSupported, token]);
@@ -127,7 +127,7 @@ export const NotificationProvider = ({ children }) => {
           headers: { Authorization: `Bearer ${token}` }
         });
       } catch (error) {
-        console.error('Failed to unsubscribe:', error);
+        // error handled
       }
     }
   }, [subscription, token]);

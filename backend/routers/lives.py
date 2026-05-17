@@ -265,7 +265,7 @@ async def end_live(
         for ws in live_connections[live_id]:
             try:
                 await ws.send_json({"type": "live_ended", "live_id": live_id})
-            except:
+            except Exception:
                 pass
         del live_connections[live_id]
     
@@ -379,7 +379,7 @@ async def post_comment(
         for ws in live_connections[live_id]:
             try:
                 await ws.send_json(message)
-            except:
+            except Exception:
                 pass
     
     return {k: v for k, v in comment_doc.items() if k != "_id"}
@@ -453,7 +453,7 @@ async def send_gift(
         for ws in live_connections[live_id]:
             try:
                 await ws.send_json(message)
-            except:
+            except Exception:
                 pass
     
     return {k: v for k, v in gift_doc.items() if k != "_id"}
@@ -498,5 +498,5 @@ async def verify_token_from_header(token: str):
             return None
         
         return user
-    except:
+    except Exception:
         return None

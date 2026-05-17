@@ -84,7 +84,7 @@ const StartLivePage = () => {
     // Fetch categories
     axios.get(`${API}/lives/categories`)
       .then(res => setCategories(res.data))
-      .catch(console.error);
+      .catch(() => {});
   }, [token, authLoading, navigate]);
 
   // Initialize camera
@@ -111,7 +111,7 @@ const StartLivePage = () => {
         videoRef.current.srcObject = mediaStream;
       }
     } catch (err) {
-      console.error("Error accessing camera:", err);
+      // error handled
       alert("No se pudo acceder a la cámara. Verifica los permisos.");
     }
   };
@@ -151,7 +151,7 @@ const StartLivePage = () => {
         videoRef.current.srcObject = mediaStream;
       }
     } catch (err) {
-      console.error("Error switching camera:", err);
+      // error handled
     }
   };
 

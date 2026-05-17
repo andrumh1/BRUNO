@@ -119,7 +119,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
       if (res.data.liked) spawnParticle(REACTIONS[0]);
       if (onLike) onLike(post.id, res.data);
       if (onLikeUpdate) onLikeUpdate(post.id, res.data);
-    } catch (e) { console.error(e); }
+    } catch (e) { }
   };
 
   const handleReaction = async (type) => {
@@ -140,7 +140,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
         setIsLiked(false);
         setLikesCount(prev => Math.max(0, prev - 1));
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { }
   };
 
   const handleBookmark = async () => {
@@ -150,7 +150,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
         headers: { Authorization: `Bearer ${token}` }
       });
       setIsBookmarked(res.data.bookmarked);
-    } catch (e) { console.error(e); }
+    } catch (e) { }
   };
 
   const handleRepost = async () => {
@@ -160,7 +160,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
         headers: { Authorization: `Bearer ${token}` }
       });
       alert("Publicacion compartida en tu perfil!");
-    } catch (e) { console.error(e); }
+    } catch (e) { }
   };
 
   const handleShare = async () => {
@@ -184,7 +184,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
       const res = await axios.get(`${API}/posts/${post.id}/comments`);
       setComments(res.data);
       setShowComments(true);
-    } catch (e) { console.error(e); } finally { setLoadingComments(false); }
+    } catch (e) { } finally { setLoadingComments(false); }
   };
 
   const handleComment = async (e) => {
@@ -196,7 +196,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
       });
       setComments([res.data, ...comments]);
       setNewComment("");
-    } catch (e) { console.error(e); }
+    } catch (e) { }
   };
 
   const handleDelete = async () => {
@@ -204,7 +204,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
     try {
       await axios.delete(`${API}/posts/${post.id}`, { headers: { Authorization: `Bearer ${token}` } });
       if (onDelete) onDelete(post.id);
-    } catch (e) { console.error(e); }
+    } catch (e) { }
   };
 
   const formatDate = (dateString) => {

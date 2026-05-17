@@ -28,7 +28,7 @@ const HashtagPage = () => {
         setPosts(postsRes.data);
         setTrending(trendingRes.data);
       } catch (e) {
-        console.error(e);
+        // error handled
       } finally {
         setLoading(false);
       }

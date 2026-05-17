@@ -115,7 +115,7 @@ const CardAnalyticsPage = () => {
       });
       setOverview(res.data);
     } catch (e) {
-      console.error("Error fetching analytics:", e);
+      // error handled
     } finally {
       setLoading(false);
     }
@@ -130,7 +130,7 @@ const CardAnalyticsPage = () => {
       });
       setCardAnalytics(res.data);
     } catch (e) {
-      console.error("Error fetching card analytics:", e);
+      // error handled
     } finally {
       setDetailLoading(false);
     }

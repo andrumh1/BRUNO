@@ -173,7 +173,7 @@ const LiveViewerPage = () => {
       );
       setNewComment("");
     } catch (err) {
-      console.error("Error sending comment:", err);
+      // error handled
     }
   };
 

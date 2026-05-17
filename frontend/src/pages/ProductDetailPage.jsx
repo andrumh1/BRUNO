@@ -63,7 +63,7 @@ const ProductDetailPage = () => {
         setProduct(response.data);
         setIsFavorited(response.data.is_favorited || false);
       } catch (error) {
-        console.error("Error fetching product:", error);
+        // error handled
         navigate('/marketplace');
       } finally {
         setLoading(false);
@@ -85,7 +85,7 @@ const ProductDetailPage = () => {
       });
       setIsFavorited(!isFavorited);
     } catch (error) {
-      console.error("Error toggling favorite:", error);
+      // error handled
     }
   };
 
@@ -106,7 +106,7 @@ const ProductDetailPage = () => {
       // Show success feedback
       alert('Producto agregado al carrito');
     } catch (error) {
-      console.error("Error adding to cart:", error);
+      // error handled
       alert(error.response?.data?.detail || 'Error al agregar al carrito');
     } finally {
       setAddingToCart(false);

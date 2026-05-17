@@ -270,7 +270,7 @@ const VideoCallModal = ({
           onClose();
         });
         newCallObject.on('error', (e) => {
-          console.error('Daily error:', e);
+          // error handled
           onClose();
         });
         
@@ -280,7 +280,7 @@ const VideoCallModal = ({
           await newCallObject.join({ url: roomUrl });
         }
       } catch (error) {
-        console.error('Error initializing call:', error);
+        // error handled
         onClose();
       }
     };

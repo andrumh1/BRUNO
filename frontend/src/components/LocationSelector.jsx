@@ -40,7 +40,7 @@ const LocationSelector = ({ location, onChange }) => {
           onChange(locationData);
           setShowModal(false);
         } catch (error) {
-          console.error("Error getting address:", error);
+          // error handled
           onChange({ lat, lng, address: `${lat}, ${lng}`, place_name: "Ubicación Actual" });
           setShowModal(false);
         }
@@ -79,7 +79,7 @@ const LocationSelector = ({ location, onChange }) => {
         alert("No se encontró la dirección. Intenta con otra búsqueda.");
       }
     } catch (error) {
-      console.error("Error searching address:", error);
+      // error handled
       alert("Error al buscar la dirección");
     }
     setLoading(false);

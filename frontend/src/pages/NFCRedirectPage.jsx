@@ -34,7 +34,7 @@ const NFCRedirectPage = () => {
         setMessage(response.data.message || "Esta tarjeta NFC no esta registrada.");
       } catch (error) {
         if (cancelled) return;
-        console.error("Error resolving NFC:", error);
+        // error handled
         setStatus("error");
         setMessage("Error al procesar la tarjeta NFC. Intenta de nuevo.");
       }

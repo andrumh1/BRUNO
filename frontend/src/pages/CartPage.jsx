@@ -42,7 +42,7 @@ const CartPage = () => {
       });
       setCart(response.data);
     } catch (error) {
-      console.error("Error fetching cart:", error);
+      // error handled
     } finally {
       setLoading(false);
     }
@@ -67,7 +67,7 @@ const CartPage = () => {
       });
       fetchCart();
     } catch (error) {
-      console.error("Error updating quantity:", error);
+      // error handled
     }
   };
 
@@ -78,7 +78,7 @@ const CartPage = () => {
       });
       fetchCart();
     } catch (error) {
-      console.error("Error removing item:", error);
+      // error handled
     }
   };
 
@@ -91,7 +91,7 @@ const CartPage = () => {
       });
       setCart({ items: [], total: 0 });
     } catch (error) {
-      console.error("Error clearing cart:", error);
+      // error handled
     }
   };
 

@@ -85,7 +85,7 @@ const MonetizationPage = () => {
       setUserCards(cardsRes.data);
       setUserPosts(postsRes.data);
     } catch (err) {
-      console.error("Error fetching data:", err);
+      // error handled
     } finally {
       setLoading(false);
     }

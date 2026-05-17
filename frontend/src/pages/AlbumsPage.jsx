@@ -53,7 +53,7 @@ const AlbumsPage = () => {
       });
       setAlbums(response.data);
     } catch (error) {
-      console.error("Error fetching albums:", error);
+      // error handled
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ const AlbumsPage = () => {
       });
       setAlbumMedia(response.data);
     } catch (error) {
-      console.error("Error fetching media:", error);
+      // error handled
     } finally {
       setMediaLoading(false);
     }
@@ -100,7 +100,7 @@ const AlbumsPage = () => {
       setShowCreateModal(false);
       setNewAlbum({ name: "", description: "", is_private: true });
     } catch (error) {
-      console.error("Error creating album:", error);
+      // error handled
     }
   };
 
@@ -118,7 +118,7 @@ const AlbumsPage = () => {
         setAlbumMedia([]);
       }
     } catch (error) {
-      console.error("Error deleting album:", error);
+      // error handled
     }
   };
 
@@ -168,7 +168,7 @@ const AlbumsPage = () => {
         }));
         
       } catch (error) {
-        console.error("Error uploading:", error);
+        // error handled
       }
     }
     
@@ -197,7 +197,7 @@ const AlbumsPage = () => {
         media_count: Math.max(0, prev.media_count - 1)
       }));
     } catch (error) {
-      console.error("Error deleting media:", error);
+      // error handled
     }
   };
 

@@ -105,7 +105,7 @@ const MyProfilePage = () => {
         phone: response.data.phone || ''
       });
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      // error handled
       // Create basic profile from user data
       setProfile({
         ...user,
@@ -125,7 +125,7 @@ const MyProfilePage = () => {
       });
       setPosts(response.data);
     } catch (error) {
-      console.error("Error fetching posts:", error);
+      // error handled
     }
   }, [token, user]);
 
@@ -138,7 +138,7 @@ const MyProfilePage = () => {
       });
       setCards(response.data);
     } catch (error) {
-      console.error("Error fetching cards:", error);
+      // error handled
     }
   }, [token]);
 
@@ -148,7 +148,7 @@ const MyProfilePage = () => {
       const response = await axios.get(`${API}/cards/explore?limit=20`);
       setExploreCards(response.data || []);
     } catch (error) {
-      console.error("Error fetching explore cards:", error);
+      // error handled
     }
   }, []);
 
@@ -158,7 +158,7 @@ const MyProfilePage = () => {
       const response = await axios.get(`${API}/albums`, { headers: { Authorization: `Bearer ${token}` } });
       setAlbums(response.data || []);
     } catch (error) {
-      console.error("Error fetching albums:", error);
+      // error handled
     }
   }, [token]);
 
@@ -168,7 +168,7 @@ const MyProfilePage = () => {
       await axios.delete(`${API}/cards/${cardId}`, { headers: { Authorization: `Bearer ${token}` } });
       setCards(prev => prev.filter(c => c.id !== cardId));
     } catch (err) {
-      console.error("Error deleting card:", err);
+      // error handled
     }
   };
 
@@ -218,7 +218,7 @@ const MyProfilePage = () => {
       setProfile(prev => ({ ...prev, ...editData }));
       setIsEditing(false);
     } catch (error) {
-      console.error("Error updating profile:", error);
+      // error handled
     } finally {
       setSaving(false);
     }
@@ -240,7 +240,7 @@ const MyProfilePage = () => {
       if (type === "followers") setFollowersList(res.data);
       else setFollowingList(res.data);
     } catch (e) {
-      console.error("Error loading list:", e);
+      // error handled
     } finally {
       setListLoading(false);
     }

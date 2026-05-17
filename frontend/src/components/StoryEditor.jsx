@@ -320,7 +320,7 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
       handleReset();
       onClose();
     } catch (err) {
-      console.error("Error publishing story:", err);
+      // error handled
     } finally {
       setLoading(false);
     }

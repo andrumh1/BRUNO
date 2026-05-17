@@ -72,7 +72,7 @@ const FeedPage = () => {
       });
       setForYouPosts(res.data);
     } catch (e) {
-      console.error("Error fetching for-you:", e);
+      // fetch failed
     } finally {
       setLoadingForYou(false);
     }
@@ -96,7 +96,7 @@ const FeedPage = () => {
       const response = await axios.get(`${API}/posts`, { headers });
       setPosts(response.data);
     } catch (error) {
-      console.error("Error fetching posts:", error);
+      // fetch failed
     } finally {
       setLoadingPosts(false);
     }
@@ -111,7 +111,7 @@ const FeedPage = () => {
       });
       setUserCards(response.data);
     } catch (error) {
-      console.error("Error fetching user cards:", error);
+      // fetch failed
     }
   }, [token]);
 
@@ -121,7 +121,7 @@ const FeedPage = () => {
       const response = await axios.get(`${API}/public/cards`);
       setCards(response.data);
     } catch (error) {
-      console.error("Error fetching public cards:", error);
+      // fetch failed
     } finally {
       setLoading(false);
     }
@@ -291,8 +291,8 @@ const FeedPage = () => {
             {card.description && <p className="text-xs text-muted-foreground line-clamp-2">{card.description}</p>}
             {card.social_links?.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-1">
-                {card.social_links.slice(0, 4).map((link, i) => (
-                  <SocialLinkButton key={i} link={link} size="sm" onlyIcon={true} />
+                {card.social_links.slice(0, 4).map((link) => (
+                  <SocialLinkButton key={`${link.platform}-${link.url}`} link={link} size="sm" onlyIcon={true} />
                 ))}
                 {card.social_links.length > 4 && <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium">+{card.social_links.length - 4}</div>}
               </div>
@@ -627,8 +627,8 @@ const FeedPage = () => {
                       <h3 className="font-bold text-sm">Tendencias</h3>
                     </div>
                     <div className="space-y-2">
-                      {trending.slice(0, 6).map((t, i) => (
-                        <Link key={i} to={`/hashtag/${t.hashtag}`} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted transition-colors group">
+                      {trending.slice(0, 6).map((t) => (
+                        <Link key={t.hashtag} to={`/hashtag/${t.hashtag}`} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-muted transition-colors group">
                           <div className="flex items-center gap-2 min-w-0">
                             <Hash className="w-3.5 h-3.5 text-primary shrink-0" />
                             <span className="text-sm font-medium truncate group-hover:text-primary">#{t.hashtag}</span>

@@ -106,7 +106,7 @@ const EditCardPage = () => {
         }
       });
     } catch (err) {
-      console.error("Error fetching card:", err);
+      // error handled
       setError(t("common.error"));
     } finally {
       setLoading(false);
@@ -177,7 +177,7 @@ const EditCardPage = () => {
         [`${type}_url`]: response.data.url,
       });
     } catch (error) {
-      console.error(`Error uploading ${type}:`, error);
+      // error handled
       alert(t("common.error"));
     } finally {
       uploadSetter(false);
@@ -222,23 +222,24 @@ const EditCardPage = () => {
   };
 
   const getEmptyItem = (field) => {
+    const _key = `${field}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     switch (field) {
       case "experience":
-        return { company: "", position: "", startDate: "", endDate: "", current: false, description: "" };
+        return { _key, company: "", position: "", startDate: "", endDate: "", current: false, description: "" };
       case "education":
-        return { institution: "", degree: "", startDate: "", endDate: "", description: "" };
+        return { _key, institution: "", degree: "", startDate: "", endDate: "", description: "" };
       case "skills":
-        return { name: "", level: 80 };
+        return { _key, name: "", level: 80 };
       case "languages":
-        return { name: "", level: "intermediate" };
+        return { _key, name: "", level: "intermediate" };
       case "certifications":
-        return { name: "", issuer: "", date: "", url: "" };
+        return { _key, name: "", issuer: "", date: "", url: "" };
       case "documents":
-        return { name: "", url: "", type: "pdf" };
+        return { _key, name: "", url: "", type: "pdf" };
       case "references":
-        return { name: "", position: "", company: "", relationship: "", phone: "", email: "" };
+        return { _key, name: "", position: "", company: "", relationship: "", phone: "", email: "" };
       default:
-        return {};
+        return { _key };
     }
   };
 
@@ -264,7 +265,7 @@ const EditCardPage = () => {
       alert(t("cardForm.savedSuccess") || "Tarjeta actualizada!");
       navigate(`/c/${cardId}`);
     } catch (error) {
-      console.error("Error updating card:", error);
+      // error handled
       const errorMsg = error.response?.data?.detail || t("common.error");
       setError(errorMsg);
       alert(errorMsg);
@@ -525,7 +526,7 @@ const EditCardPage = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {(formData.custom_fields?.experience || []).map((exp, index) => (
-                        <div key={index} className="p-4 border border-border rounded-lg space-y-3 relative">
+                        <div key={exp._key || `exp-${index}`} className="p-4 border border-border rounded-lg space-y-3 relative">
                           <Button
                             type="button"
                             variant="ghost"
@@ -600,7 +601,7 @@ const EditCardPage = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {(formData.custom_fields?.education || []).map((edu, index) => (
-                        <div key={index} className="p-4 border border-border rounded-lg space-y-3 relative">
+                        <div key={edu._key || `edu-${index}`} className="p-4 border border-border rounded-lg space-y-3 relative">
                           <Button
                             type="button"
                             variant="ghost"
@@ -660,7 +661,7 @@ const EditCardPage = () => {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {(formData.custom_fields?.skills || []).map((skill, index) => (
-                        <div key={index} className="flex items-center gap-3">
+                        <div key={skill._key || `skill-${index}`} className="flex items-center gap-3">
                           <Input
                             placeholder={t("curriculum.skills")}
                             value={skill.name}
@@ -711,7 +712,7 @@ const EditCardPage = () => {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {(formData.custom_fields?.languages || []).map((lang, index) => (
-                        <div key={index} className="flex items-center gap-3">
+                        <div key={lang._key || `lang-${index}`} className="flex items-center gap-3">
                           <Input
                             placeholder={t("curriculum.languages")}
                             value={lang.name}
@@ -763,7 +764,7 @@ const EditCardPage = () => {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {(formData.custom_fields?.documents || []).map((doc, index) => (
-                        <div key={index} className="flex items-center gap-3">
+                        <div key={doc._key || `doc-${index}`} className="flex items-center gap-3">
                           <Input
                             placeholder="Nombre del documento"
                             value={doc.name}
@@ -1017,9 +1018,9 @@ const EditCardPage = () => {
                     {/* Social Links Preview */}
                     {formData.social_links.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-4">
-                        {formData.social_links.map((link, index) => (
+                        {formData.social_links.map((link) => (
                           <div
-                            key={index}
+                            key={`${link.type}-${link.url}`}
                             className="w-10 h-10 rounded-full flex items-center justify-center"
                             style={{ backgroundColor: `${formData.text_color}20` }}
                           >

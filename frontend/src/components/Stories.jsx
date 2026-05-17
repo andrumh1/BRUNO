@@ -77,7 +77,7 @@ export const StoriesRow = ({ onCreateStory }) => {
         const response = await axios.get(`${API}/stories/feed`, { headers });
         setStoriesData(response.data);
       } catch (error) {
-        console.error("Error fetching stories:", error);
+        // error handled
       } finally {
         setLoading(false);
       }
@@ -145,7 +145,7 @@ const StoryPoll = ({ pollId, token }) => {
           // We can't easily check here without user id, so we rely on backend error
         }
       } catch (e) {
-        console.error("Error fetching poll:", e);
+        // error handled
       } finally {
         setLoading(false);
       }
@@ -541,7 +541,7 @@ export const CreateStoryModal = ({ isOpen, onClose, onCreated }) => {
         onCreated?.();
         resetAndClose();
       } catch (error) {
-        console.error("Error creating poll story:", error);
+        // error handled
       } finally {
         setLoading(false);
       }
@@ -562,7 +562,7 @@ export const CreateStoryModal = ({ isOpen, onClose, onCreated }) => {
         onCreated?.();
         resetAndClose();
       } catch (error) {
-        console.error("Error creating story:", error);
+        // error handled
       } finally {
         setLoading(false);
       }

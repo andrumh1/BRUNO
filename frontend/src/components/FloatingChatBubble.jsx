@@ -79,7 +79,7 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
     try {
       const r = await axios.get(`${API}/chats/${chat.id}/messages?limit=50`, { headers: { Authorization: `Bearer ${token}` } });
       setMessages(r.data);
-    } catch (e) { console.error(e); }
+    } catch (e) { }
     finally { setLoading(false); }
   }, [chat?.id, token]);
 
@@ -108,7 +108,7 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
       const ep = type === "document" ? "/upload/file" : "/upload/chat-file";
       const r = await axios.post(`${API}${ep}`, fd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } });
       setPendingMedia({ url: r.data.url, type: file.type, filename: file.name, size: file.size });
-    } catch (e) { console.error(e); }
+    } catch (e) { }
     finally { setUploading(false); }
   };
 
@@ -128,13 +128,13 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
           const msgD = { content: "Nota de voz", message_type: "audio", attachments: [{ url: up.data.url, type: "audio/webm", filename: "audio.webm" }] };
           if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ action: "send_message", chat_id: chat.id, ...msgD }));
           else await axios.post(`${API}/chats/${chat.id}/messages`, msgD, { headers: { Authorization: `Bearer ${token}` } });
-        } catch (e) { console.error(e); }
+        } catch (e) { }
         finally { setUploading(false); }
       };
       mediaRecorderRef.current.start();
       setIsRecording(true); setRecordTime(0);
       timerRef.current = setInterval(() => setRecordTime(t => t + 1), 1000);
-    } catch (e) { console.error("Mic:", e); }
+    } catch (e) { }
   };
 
   const stopRecording = () => {
@@ -156,7 +156,7 @@ const ChatWindow = ({ chat, onClose, onMinimize, isMinimized, currentUserId, ws,
       if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ action: "send_message", chat_id: chat.id, ...msgD }));
       else await axios.post(`${API}/chats/${chat.id}/messages`, msgD, { headers: { Authorization: `Bearer ${token}` } });
       setNewMessage(""); setPendingMedia(null);
-    } catch (e) { console.error(e); }
+    } catch (e) { }
     finally { setSending(false); }
   };
 
@@ -440,7 +440,7 @@ const FloatingChatBubble = () => {
       setChats(prev => prev.find(c => c.id === newChat.id) ? prev : [newChat, ...prev]);
       handleSelectChat(newChat);
       setShowNewChat(false);
-    } catch (e) { console.error(e); }
+    } catch (e) { }
   };
 
   if (!user || shouldHide) return null;

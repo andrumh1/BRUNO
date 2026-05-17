@@ -63,7 +63,7 @@ const UserProfilePage = () => {
       setIsFollowing(response.data.is_following || false);
       setIsBlocked(response.data.is_blocked_by_me || false);
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      // error handled
     }
   }, [userId, token]);
 
@@ -73,7 +73,7 @@ const UserProfilePage = () => {
       const response = await axios.get(`${API}/users/${userId}/posts`, { headers });
       setPosts(response.data);
     } catch (error) {
-      console.error("Error fetching user posts:", error);
+      // error handled
     }
   }, [userId, token]);
 
@@ -113,7 +113,7 @@ const UserProfilePage = () => {
         followers_count: res.data.following ? prev.followers_count + 1 : prev.followers_count - 1
       }));
     } catch (error) {
-      console.error("Error following user:", error);
+      // error handled
     } finally {
       setFollowLoading(false);
     }
@@ -130,7 +130,7 @@ const UserProfilePage = () => {
       if (res.data.blocked) setIsFollowing(false);
       setShowMenu(false);
     } catch (error) {
-      console.error("Error blocking user:", error);
+      // error handled
     } finally {
       setBlockLoading(false);
     }
@@ -144,7 +144,7 @@ const UserProfilePage = () => {
       });
       navigate(`/chat/${response.data.id}`);
     } catch (error) {
-      console.error("Error starting chat:", error);
+      // error handled
     }
   };
 
@@ -162,7 +162,7 @@ const UserProfilePage = () => {
       if (type === "followers") setFollowersList(res.data);
       else setFollowingList(res.data);
     } catch (e) {
-      console.error("Error loading list:", e);
+      // error handled
     } finally {
       setListLoading(false);
     }

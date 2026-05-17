@@ -10,8 +10,8 @@ import uuid
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
 # Test credentials
-TEST_EMAIL = "demo@bruno.com"
-TEST_PASSWORD = "demo123"
+TEST_EMAIL = os.getenv("TEST_USER_EMAIL", "demo@bruno.com")
+TEST_PASSWORD = os.getenv("TEST_USER_PASSWORD", "demo123")
 TEST_CARD_ID = "01e1d78c-a082-4de5-9590-ef3b0ed532b2"
 
 

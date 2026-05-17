@@ -271,7 +271,7 @@ const MarketplacePage = () => {
           { id: "business", name: "BRUNO Business", price: 29.99, features: ["Tarjetas ilimitadas", "Equipo de 10", "API access", "Soporte prioritario"], icon: "🏢" }
         ]);
       } catch (error) {
-        console.error("Error fetching PIUP products:", error);
+        // error handled
       }
     };
     fetchPiupProducts();
@@ -284,7 +284,7 @@ const MarketplacePage = () => {
         const response = await axios.get(`${API}/marketplace/categories`);
         setCategories(response.data);
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        // error handled
       }
     };
     fetchCategories();
@@ -306,7 +306,7 @@ const MarketplacePage = () => {
       const response = await axios.get(`${API}/marketplace/products?${params.toString()}`, { headers });
       setProducts(response.data.products || []);
     } catch (error) {
-      console.error("Error fetching products:", error);
+      // error handled
     } finally {
       setLoading(false);
     }
@@ -326,7 +326,7 @@ const MarketplacePage = () => {
         });
         setCartCount(response.data.items?.length || 0);
       } catch (error) {
-        console.error("Error fetching cart:", error);
+        // error handled
       }
     };
     fetchCart();
@@ -354,7 +354,7 @@ const MarketplacePage = () => {
         return newFavs;
       });
     } catch (error) {
-      console.error("Error toggling favorite:", error);
+      // error handled
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,15 @@ const ViewCardPage = () => {
 
   const isOwner = user && card && user.id === card.user_id;
 
+  const fetchCard = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/cards/${cardId}`);
+      setCard(response.data);
+    } catch (err) {
+      setError(err.response?.data?.detail || "Tarjeta no encontrada");
+    } finally { setLoading(false); }
+  }, [cardId]);
+
   const handleStartChat = async () => {
     if (!token || !user) { navigate("/login"); return; }
     if (!card?.user_id || card.user_id === user.id) return;
@@ -33,10 +42,10 @@ const ViewCardPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       navigate(`/chat/${response.data.id}`);
-    } catch (e) { console.error("Error starting chat:", e); }
+    } catch (e) { }
   };
 
-  useEffect(() => { fetchCard(); }, [cardId]);
+  useEffect(() => { fetchCard(); }, [fetchCard]);
 
   // Track card view for analytics
   useEffect(() => {
@@ -47,27 +56,19 @@ const ViewCardPage = () => {
     }).catch(() => {});
   }, [cardId, token]);
 
-  const fetchCard = async () => {
-    try {
-      const response = await axios.get(`${API}/cards/${cardId}`);
-      setCard(response.data);
-    } catch (err) {
-      setError(err.response?.data?.detail || "Tarjeta no encontrada");
-    } finally { setLoading(false); }
-  };
-
   const fetchQRCode = async () => {
     try {
       const response = await axios.get(`${API}/cards/${cardId}/qr`);
       setQrData(response.data);
       setShowQR(true);
-    } catch (e) { console.error("Error fetching QR:", e); }
+    } catch (e) { }
   };
 
   const handleShare = async () => {
     const url = window.location.href;
     if (navigator.share) {
-      try { await navigator.share({ title: card.title, text: card.subtitle || "", url }); } catch (e) { console.warn("Share cancelled or unsupported:", e.message); }
+      try { await navigator.share({ title: card.title, text: card.subtitle || "", url }); } catch (e) {
+ }
     } else {
       navigator.clipboard.writeText(url);
       setCopied(true);
@@ -312,7 +313,7 @@ const ViewCardPage = () => {
                     <h3 className="text-xs font-bold uppercase tracking-wider opacity-60 mb-3">Galeria</h3>
                     <div className="grid grid-cols-3 gap-2">
                       {card.gallery_photos.map((photo, i) => (
-                        <div key={i} className="aspect-square rounded-xl overflow-hidden">
+                        <div key={photo} className="aspect-square rounded-xl overflow-hidden">
                           <img src={photo} alt={`Foto ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
                         </div>
                       ))}

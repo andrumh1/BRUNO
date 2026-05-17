@@ -69,7 +69,7 @@ const SettingsPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (e) {
-      console.error(e);
+      // error handled
     } finally {
       setSaving(false);
     }

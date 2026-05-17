@@ -32,7 +32,7 @@ export const PointsWidget = ({ className = "" }) => {
         });
         setPoints(response.data);
       } catch (error) {
-        console.error("Error fetching points:", error);
+        // error handled
       } finally {
         setLoading(false);
       }
@@ -88,7 +88,7 @@ export const DailyCheckIn = ({ onCheckIn }) => {
       setResult(response.data);
       if (onCheckIn) onCheckIn(response.data);
     } catch (error) {
-      console.error("Check-in error:", error);
+      // error handled
     } finally {
       setLoading(false);
     }
@@ -165,7 +165,7 @@ export const PointsPage = () => {
         setLeaderboard(leaderboardRes.data);
         setHistory(historyRes.data);
       } catch (error) {
-        console.error("Error fetching points data:", error);
+        // error handled
       } finally {
         setLoading(false);
       }

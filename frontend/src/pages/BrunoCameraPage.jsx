@@ -167,7 +167,7 @@ const BrunoCameraPage = () => {
         ]);
         setModelsLoaded(true);
       } catch (error) {
-        console.error("Error loading face models:", error);
+        // error handled
       }
     };
     loadModels();
@@ -379,7 +379,7 @@ const BrunoCameraPage = () => {
       setStream(s);
       if (videoRef.current) videoRef.current.srcObject = s;
     } catch (err) {
-      console.error("Camera error:", err);
+      // error handled
     }
   };
 
@@ -473,7 +473,7 @@ const BrunoCameraPage = () => {
       });
       navigate("/feed");
     } catch (err) {
-      console.error("Publish error:", err);
+      // error handled
     } finally {
       setPublishing(false);
     }

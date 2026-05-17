@@ -50,7 +50,7 @@ const ActivateNFCPage = () => {
       const res = await axios.get(`${API}/cards`, { headers: { Authorization: `Bearer ${token}` } });
       setCards(res.data);
     } catch (err) {
-      console.error("Error fetching cards:", err);
+      // error handled
     }
   };
 
@@ -59,7 +59,7 @@ const ActivateNFCPage = () => {
       const res = await axios.get(`${API}/nfc/my-cards`, { headers: { Authorization: `Bearer ${token}` } });
       setExistingNfcCards(res.data);
     } catch (err) {
-      console.error("Error fetching NFC cards:", err);
+      // error handled
     }
   };
 
@@ -119,7 +119,7 @@ const ActivateNFCPage = () => {
       setSuccess(true);
       setSuccessMsg("NFC grabado exitosamente con tu tarjeta");
     } catch (err) {
-      console.error("NFC write error:", err);
+      // error handled
       setNfcStatus("error");
       if (err.name === "NotAllowedError") {
         setNfcMsg("Permiso NFC denegado. Habilita NFC en la configuracion del navegador.");

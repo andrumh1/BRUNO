@@ -103,7 +103,7 @@ const NotificationSettingsPage = () => {
         });
         setPreferences(prev => ({ ...prev, ...response.data }));
       } catch (error) {
-        console.error("Error fetching preferences:", error);
+        // error handled
       } finally {
         setLoading(false);
       }
@@ -121,7 +121,7 @@ const NotificationSettingsPage = () => {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {
-      console.error("Error saving preferences:", error);
+      // error handled
       alert("Error al guardar las preferencias");
     } finally {
       setSaving(false);

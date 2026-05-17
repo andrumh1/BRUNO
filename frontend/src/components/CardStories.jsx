@@ -97,7 +97,7 @@ export const CardStoriesGallery = ({ cardId, isOwner = false }) => {
         const response = await axios.get(`${API}/stories/card/${cardId}`);
         setStories(response.data);
       } catch (error) {
-        console.error("Error fetching card stories:", error);
+        // error handled
       } finally {
         setLoading(false);
       }
@@ -115,7 +115,7 @@ export const CardStoriesGallery = ({ cardId, isOwner = false }) => {
       });
       setStories(prev => prev.filter(s => s.id !== storyId));
     } catch (error) {
-      console.error("Error deleting story:", error);
+      // error handled
     }
   };
 
@@ -395,7 +395,7 @@ const AddCardStoryModal = ({ cardId, onClose, onAdded }) => {
         views: 0
       });
     } catch (error) {
-      console.error("Error creating card story:", error);
+      // error handled
     } finally {
       setLoading(false);
     }

@@ -37,7 +37,7 @@ const Dashboard = () => {
         const totalViews = response.data.reduce((acc, card) => acc + (card.views || 0), 0);
         setStats({ total: response.data.length, views: totalViews });
       } catch (error) {
-        console.error("Error fetching cards:", error);
+        // error handled
       } finally {
         setLoading(false);
       }
@@ -56,7 +56,7 @@ const Dashboard = () => {
       setCards(prevCards => prevCards.filter((card) => card.id !== cardId));
       setStats(prevStats => ({ ...prevStats, total: prevStats.total - 1 }));
     } catch (error) {
-      console.error("Error deleting card:", error);
+      // error handled
       alert(t("common.error"));
     }
   };

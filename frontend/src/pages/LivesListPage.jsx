@@ -79,7 +79,7 @@ const LivesListPage = () => {
         setFollowingLives(followingRes.data);
       }
     } catch (err) {
-      console.error("Error fetching lives:", err);
+      // error handled
     } finally {
       setLoading(false);
     }

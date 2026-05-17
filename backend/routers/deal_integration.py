@@ -103,6 +103,67 @@ async def send_to_deal_api(order_data: dict) -> dict:
         return response.json()
 
 
+# ─── Webhook Handlers ─────────────────────────────────────────────────────────
+
+PAYMENT_STATUS_MAP = {
+    "paid": "paid",
+    "failed": "payment_failed",
+    "refunded": "refunded",
+}
+
+
+async def _update_order_status(order_id: str, payload: DealWebhookPayload, now: str):
+    """Update the local order with DEAL's payment info."""
+    update_fields = {
+        "deal_id": payload.deal_id,
+        "payment_status": payload.payment_status,
+        "amount_paid": payload.amount_paid,
+        "updated_at": now,
+    }
+    status = PAYMENT_STATUS_MAP.get(payload.payment_status)
+    if status:
+        update_fields["status"] = status
+    if payload.service_status:
+        update_fields["service_status"] = payload.service_status
+    if payload.commission_amount is not None:
+        update_fields["commission_amount"] = payload.commission_amount
+
+    await db.deal_orders.update_one({"id": order_id}, {"$set": update_fields})
+
+
+async def _register_commission(payload: DealWebhookPayload, order: dict, now: str):
+    """Register partner commission if payment is successful."""
+    if payload.payment_status != "paid" or not payload.partner_id or not payload.commission_amount:
+        return
+    await db.deal_commissions.insert_one({
+        "id": str(uuid.uuid4()),
+        "deal_id": payload.deal_id,
+        "order_id": order["id"],
+        "partner_id": payload.partner_id,
+        "amount": payload.commission_amount,
+        "currency": order.get("currency", "USD"),
+        "status": "earned",
+        "created_at": now,
+    })
+
+
+async def _activate_product(payload: DealWebhookPayload, order: dict, now: str):
+    """Activate the product/service after successful payment."""
+    if payload.payment_status != "paid":
+        return
+    await db.deal_activations.insert_one({
+        "id": str(uuid.uuid4()),
+        "order_id": order["id"],
+        "deal_id": payload.deal_id,
+        "user_id": order["user_id"],
+        "product_id": order.get("product_id"),
+        "product_name": order.get("product_name"),
+        "product_type": order.get("product_type", "product"),
+        "service_status": payload.service_status or "active",
+        "activated_at": now,
+    })
+
+
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.post("/send-order", response_model=DealOrderOut)
@@ -197,13 +258,11 @@ async def deal_webhook(request: Request, x_deal_signature: Optional[str] = Heade
     """
     body = await request.body()
 
-    # Verify signature
     if x_deal_signature and not verify_webhook_signature(body, x_deal_signature):
         raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
     payload = DealWebhookPayload(**(await request.json()))
 
-    # Find local order
     order = await db.deal_orders.find_one(
         {"$or": [{"id": payload.order_id}, {"deal_id": payload.deal_id}]},
         {"_id": 0}
@@ -213,60 +272,9 @@ async def deal_webhook(request: Request, x_deal_signature: Optional[str] = Heade
 
     now = datetime.now(timezone.utc).isoformat()
 
-    # 1. Update order status
-    update_fields = {
-        "deal_id": payload.deal_id,
-        "payment_status": payload.payment_status,
-        "amount_paid": payload.amount_paid,
-        "updated_at": now,
-    }
-
-    if payload.payment_status == "paid":
-        update_fields["status"] = "paid"
-    elif payload.payment_status == "failed":
-        update_fields["status"] = "payment_failed"
-    elif payload.payment_status == "refunded":
-        update_fields["status"] = "refunded"
-
-    if payload.service_status:
-        update_fields["service_status"] = payload.service_status
-
-    if payload.commission_amount is not None:
-        update_fields["commission_amount"] = payload.commission_amount
-
-    await db.deal_orders.update_one(
-        {"id": order["id"]},
-        {"$set": update_fields}
-    )
-
-    # 2. Register partner commission if paid
-    if payload.payment_status == "paid" and payload.partner_id and payload.commission_amount:
-        commission_record = {
-            "id": str(uuid.uuid4()),
-            "deal_id": payload.deal_id,
-            "order_id": order["id"],
-            "partner_id": payload.partner_id,
-            "amount": payload.commission_amount,
-            "currency": order.get("currency", "USD"),
-            "status": "earned",
-            "created_at": now,
-        }
-        await db.deal_commissions.insert_one(commission_record)
-
-    # 3. Activate product/service if paid
-    if payload.payment_status == "paid":
-        activation = {
-            "id": str(uuid.uuid4()),
-            "order_id": order["id"],
-            "deal_id": payload.deal_id,
-            "user_id": order["user_id"],
-            "product_id": order.get("product_id"),
-            "product_name": order.get("product_name"),
-            "product_type": order.get("product_type", "product"),
-            "service_status": payload.service_status or "active",
-            "activated_at": now,
-        }
-        await db.deal_activations.insert_one(activation)
+    await _update_order_status(order["id"], payload, now)
+    await _register_commission(payload, order, now)
+    await _activate_product(payload, order, now)
 
     return {"status": "ok", "order_id": order["id"], "payment_status": payload.payment_status}
 

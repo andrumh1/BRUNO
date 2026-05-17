@@ -82,7 +82,7 @@ const NFCWritePage = () => {
       });
       setCards(response.data);
     } catch (error) {
-      console.error("Error fetching cards:", error);
+      // error handled
     }
   };
 
@@ -98,7 +98,7 @@ const NFCWritePage = () => {
       setNfcStatus("idle");
       setStatusMessage("¡Permisos NFC concedidos!");
     } catch (error) {
-      console.error("NFC permission error:", error);
+      // error handled
       if (error.name === "NotAllowedError") {
         setNfcPermission("denied");
         setNfcStatus("error");
@@ -159,7 +159,7 @@ const NFCWritePage = () => {
         navigate("/my-profile");
       }, 3000);
     } catch (error) {
-      console.error("Error writing to NFC:", error);
+      // error handled
       setNfcStatus("error");
       
       if (error.name === "NotAllowedError") {

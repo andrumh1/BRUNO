@@ -102,7 +102,7 @@ const NFCManagerPage = () => {
       setStoreProducts(productsRes.data.filter(p => p.category?.startsWith("nfc") || p.id?.startsWith("nfc")));
       setUserCards(cardsRes.data);
     } catch (err) {
-      console.error("Error loading NFC data:", err);
+      // error handled
     } finally {
       setLoading(false);
     }

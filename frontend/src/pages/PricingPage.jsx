@@ -32,7 +32,7 @@ const PricingPage = () => {
       const response = await axios.get(`${API}/payments/checkout/status/${sessionId}`);
       setPaymentStatus(response.data);
     } catch (error) {
-      console.error("Error checking payment status:", error);
+      // error handled
       setPaymentStatus({ status: "error", payment_status: "failed" });
     }
   };
@@ -65,7 +65,7 @@ const PricingPage = () => {
         window.location.href = response.data.url;
       }
     } catch (error) {
-      console.error("Error creating checkout session:", error);
+      // error handled
       alert(t("common.error"));
     } finally {
       setLoading(null);

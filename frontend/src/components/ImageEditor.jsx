@@ -40,7 +40,7 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
           setLoading(false);
         };
         img.onerror = (e) => {
-          console.error("Error loading image:", e);
+          // error handled
           setLoading(false);
         };
         img.src = imageUrl;
@@ -59,7 +59,7 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
             setLoading(false);
           };
           imgRetry.onerror = (e) => {
-            console.error("Error loading image after retry:", e);
+            // error handled
             setLoading(false);
           };
           imgRetry.src = imageUrl;

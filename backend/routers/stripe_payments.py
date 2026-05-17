@@ -171,7 +171,7 @@ async def check_payment_status(session_id: str, request: Request, current_user: 
 
     try:
         status: CheckoutStatusResponse = await stripe_checkout.get_checkout_status(session_id)
-    except Exception as e:
+    except Exception:
         return {
             "status": txn.get("status", "unknown"),
             "payment_status": txn.get("payment_status", "pending"),

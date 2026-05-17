@@ -36,8 +36,8 @@ async def _get_user_from_token(credentials: HTTPAuthorizationCredentials = Depen
         return user
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 @router.post("/cards/{card_id}/view")
 async def track_card_view(card_id: str, request: Request, source_url: Optional[str] = None):

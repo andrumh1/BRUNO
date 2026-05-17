@@ -226,7 +226,7 @@ async def take_moderation_action(
     content_id: str,
     action: str,  # warn, remove, suspend, ban
     reason: str,
-    report_ids: List[str] = [],
+    report_ids: Optional[List[str]] = None,
     current_user: dict = Depends(get_current_user_from_token)
 ):
     """Take moderation action on content (admin only)"""
@@ -298,7 +298,7 @@ async def take_moderation_action(
         "content_id": content_id,
         "action": action,
         "reason": reason,
-        "report_ids": report_ids,
+        "report_ids": report_ids or [],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.moderation_actions.insert_one(action_doc)

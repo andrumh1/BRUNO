@@ -51,7 +51,7 @@ const ReelItem = ({ reel, isActive }) => {
     if (token) {
       try {
         await axios.post(`${API}/posts/${reel.id}/like`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      } catch (err) { console.error("Error loading reels:", err); }
+      } catch (err) { }
     }
   };
 
@@ -175,7 +175,7 @@ const ReelsPage = () => {
       setReels(reelsData);
       setLives(Array.isArray(livesRes.data) ? livesRes.data : livesRes.data?.lives || []);
     } catch (err) {
-      console.error("Error fetching reels/lives:", err);
+      // error handled
     } finally {
       setLoading(false);
     }

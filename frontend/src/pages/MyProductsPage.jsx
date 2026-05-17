@@ -63,7 +63,7 @@ const MyProductsPage = () => {
       });
       setProducts(response.data);
     } catch (error) {
-      console.error("Error fetching products:", error);
+      // error handled
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ const MyProductsPage = () => {
         p.id === productId ? { ...p, status: newStatus } : p
       ));
     } catch (error) {
-      console.error("Error updating status:", error);
+      // error handled
     }
   };
 
@@ -97,7 +97,7 @@ const MyProductsPage = () => {
       
       setProducts(prev => prev.filter(p => p.id !== productId));
     } catch (error) {
-      console.error("Error deleting product:", error);
+      // error handled
     }
   };
 

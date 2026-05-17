@@ -272,7 +272,7 @@ const ReelsFeed = () => {
         }));
         setReels(reelsData);
       } catch (error) {
-        console.error("Error fetching reels:", error);
+        // error handled
       } finally {
         setLoading(false);
       }
@@ -315,7 +315,7 @@ const ReelsFeed = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (error) {
-      console.error("Error liking reel:", error);
+      // error handled
     }
   };
 

@@ -132,7 +132,7 @@ const MapPage = () => {
           setMapCenter([loc.lat, loc.lng]);
         },
         (error) => {
-          console.error("Error getting location:", error);
+          // error handled
         },
         { enableHighAccuracy: true }
       );
@@ -152,7 +152,7 @@ const MapPage = () => {
             }));
           }
         },
-        (error) => console.error("Location watch error:", error),
+        () => {},
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
       );
     }
@@ -209,7 +209,7 @@ const MapPage = () => {
         
         return ws;
       } catch (e) {
-        console.error("WebSocket error:", e);
+        // error handled
         return null;
       }
     };
@@ -242,7 +242,7 @@ const MapPage = () => {
       const cardsWithLocation = response.data.filter(card => card.location?.lat && card.location?.lng);
       setCards(cardsWithLocation);
     } catch (error) {
-      console.error("Error fetching cards:", error);
+      // error handled
       try {
         const response = await axios.get(`${API}/cards`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -250,7 +250,7 @@ const MapPage = () => {
         const cardsWithLocation = response.data.filter(card => card.location?.lat && card.location?.lng);
         setCards(cardsWithLocation);
       } catch (e) {
-        console.error("Error fetching user cards:", e);
+        // error handled
       }
     } finally {
       setLoading(false);
@@ -325,7 +325,7 @@ const MapPage = () => {
       );
       navigate(`/chat/${response.data.id}`);
     } catch (error) {
-      console.error("Error starting chat:", error);
+      // error handled
     }
   };
 
@@ -344,7 +344,7 @@ const MapPage = () => {
       );
       navigate(`/chat/${response.data.id}`);
     } catch (error) {
-      console.error("Error starting chat:", error);
+      // error handled
     }
   };
 
