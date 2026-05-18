@@ -327,6 +327,58 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 ## Phase 50: NFC Scan Push Notifications (2026-05-18)
 
+**Feature: "Tu tarjeta cobro vida"** — el dueno recibe una push enriquecida cada vez que alguien escanea su NFC.
+
+- `routers/push_notifications.py` → nuevo helper `notify_nfc_scan(user_id, card_id, card_title, card_image, nfc_id)`:
+  - Title: "Tu tarjeta cobro vida"
+  - `image`: banner_url o avatar_url de la card → preview rico en movil
+  - Action unica: "Ver analitica" → deep-link a `/c/{card_id}/analytics`
+  - Tag `nfc_scan_{nfc_id}` → notificaciones se reemplazan en lugar de apilarse
+- `routers/nfc.py` → `_fire_nfc_scan_push` con `asyncio.create_task` (fire-and-forget) cableado en `/nfc/go/{id}` y `/nfc/resolve/{id}`
+- `public/sw.js` → v8: handler para action `view_analytics` + matcher para tags `nfc_scan_`
+
+## Phase 51: PIUP Manager — Reestructuracion completa del modulo NFC (2026-05-18)
+
+**Backend (`routers/piup.py`, 350 lineas):**
+- Catalogo completo de **19 productos PIUP** seedeados in-memory con campos: id, name, category, schema_id (link a NFC schema), styles (codigos C/U/R + 1..7), base_price
+- Tabla de tamanos: 1=1x1cm, 2=3x3cm, 3=5x5cm, 4=7x7cm, 5=R3x5cm, 6=R4x7cm, 7=R ID (85x55mm)
+- 9 colores disponibles (negro, blanco, naranja, dorado, plateado, azul, verde, rojo, holografico)
+- 4 categorias: Hogar (5), Restaurantes y comercios (3), Oficinas (10), Mascotas (1)
+- **Endpoints:**
+  - `GET /api/piup/catalog` — productos con filtros opcionales `?category=` y `?style=`
+  - `GET /api/piup/sizes` — tabla de tamanos + formas + colores
+  - `GET /api/piup/my-tags` — JOIN cards + nfc_cards con summary (physical/digital_only)
+  - `POST /api/piup/request-physical` — crea orden en `piup_orders` con validacion de estilo permitido
+  - `GET /api/piup/orders` — historial de pedidos
+  - `POST /api/piup/activate-by-qr` — vincula NFC ↔ card, dispara WS event `piup_activated`
+
+**Frontend (`pages/PiupManagerPage.jsx` + `components/piup/*.jsx`):**
+- `PiupManagerPage` (ruta `/piup`) — header con conteos (fisicos/digitales) y 3 tabs animados con `motion.div` layoutId
+- **MisTagsTab**: grid de tarjetas con badge "PIUP fisico" o "Solo digital", botones "Solicitar PIUP" / "Renovar" / "Ver", CTA a Activar
+- **ActivarPiupTab**: escaner QR con `jsQR` + camera environment (1280px), parse de URL/plain payload, fallback manual; flujo 3 pasos (Escanear → Elegir tarjeta → Confirmar); ring + scanline animados
+- **TiendaPiupTab**: filtros por categoria + forma (C/U/R), grid de 19 productos
+- **PiupProductCard** + **PiupProductConfigurator**: configurador modal con StylePills (forma+tamano), color picker (9), card link select, qty stepper, total dinamico
+
+**Real-time (Phase 3):**
+- `activate-by-qr` dispara `asyncio.create_task(_broadcast_activation())` → `ws_manager.send_personal_message({"type":"piup_activated",...})`
+- `PiupManagerPage` se suscribe via `useRealtimeNotifications().subscribe()` y refresca `my-tags` automaticamente
+- QR del producto fisico + NFC chip ambos resuelven a la misma URL `/c/{card_id}` (unificacion); endpoint NFC `/api/nfc/go/{nfc_id}` redirige al mismo destino que el QR generado por `/api/cards/{card_id}/qr`
+
+**Dependencias:**
+- `jsqr@1.4.0` agregado para escaner QR client-side
+
+**Verificacion:**
+- Backend curl: catalog (19 productos), my-tags (summary correcto 1 fisico/2 digital), request-physical valida estilo + crea orden, activate-by-qr retorna redirect_url + nfc_endpoint
+- Frontend screenshots: 3 tabs funcionando, configurador modal abre al hacer click en producto
+
+## Remaining Backlog (post-51)
+- server.py: extraer AI routes, Cards, Stripe (~1500 lineas)
+- FeedPage.jsx (882) + MyProfilePage.jsx (953) breakdown
+- Cablear `notify_story_reaction` en BrunoStoryViewer + `notify_incoming_call` en `/calls/start`
+- ProfileSpecificFields.jsx (>1000 lineas) breakdown
+- Integrar pago Stripe en flujo "Solicitar PIUP" (actualmente crea orden pendiente sin checkout)
+- Generar QR del PIUP fisico apuntando a `/api/nfc/go/{nfc_id}` (consistencia QR ↔ NFC en print-on-demand)
+
 **Feature: "Tu tarjeta cobro vida"** — el dueño recibe una push enriquecida cada vez que alguien escanea su NFC.
 
 **Implementación:**
