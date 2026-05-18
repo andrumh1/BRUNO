@@ -1,5 +1,5 @@
-// BRUNO Service Worker v6 - Enhanced Push Notifications for Mobile
-const SW_VERSION = 'v6';
+// BRUNO Service Worker v7 - Enhanced Push Notifications for Mobile
+const SW_VERSION = 'v7';
 const CACHE_NAME = 'bruno-' + SW_VERSION;
 
 const NEVER_CACHE = ['/api/', '/ws/', 'chrome-extension', '/sockjs-node'];
@@ -99,6 +99,16 @@ self.addEventListener('push', (event) => {
       { action: 'reply', title: 'Responder' },
       { action: 'dismiss', title: 'Cerrar' },
     ];
+  } else if (data.tag && data.tag.startsWith('comment_')) {
+    options.renotify = true;
+    options.actions = [
+      { action: 'reply', title: 'Responder' },
+      { action: 'dismiss', title: 'Cerrar' },
+    ];
+  } else if (data.tag && data.tag.startsWith('follower')) {
+    options.actions = [{ action: 'view_profile', title: 'Ver perfil' }];
+  } else if (data.tag && data.tag.startsWith('story_reaction')) {
+    options.actions = [{ action: 'view_story', title: 'Ver historia' }];
   }
 
   event.waitUntil(self.registration.showNotification(data.title, options));
@@ -112,8 +122,13 @@ self.addEventListener('notificationclick', (event) => {
 
   if (event.action === 'accept' && data.call_id) url = `/chat?accept_call=${data.call_id}`;
   else if (event.action === 'decline' || event.action === 'dismiss') return;
-  else if (event.action === 'reply') url = '/chat';
-  else if (event.action === 'view_profile') url = data.profile_url || '/my-profile';
+  else if (event.action === 'reply') {
+    if (data.kind === 'comment' && data.post_id) url = `/post/${data.post_id}`;
+    else if (data.kind === 'message' && data.chat_id) url = `/chat?chat=${data.chat_id}`;
+    else url = data.url || '/chat';
+  }
+  else if (event.action === 'view_profile') url = data.profile_url || data.url || '/my-profile';
+  else if (event.action === 'view_story') url = data.url || '/my-profile?tab=stories';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {

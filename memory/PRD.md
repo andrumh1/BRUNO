@@ -296,9 +296,40 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 ```
 
 ## Remaining Backlog
-- server.py still 4311 lines — extract NFC (9 endpoints), uploads (7), subscriptions (5) to further reduce
+- server.py now 3695 lines — further extraction possible: AI/Stripe/cards/auth
 - Type hints coverage (20.2% → target 60%)
 - ProfileSpecificFields.jsx (>1000 lines) needs breakdown
+- FeedPage.jsx (882 lines) needs breakdown
+
+## Phase 49: Tri-Track Refactor & Push Polish (2026-05-18)
+
+**P2 Backend — `server.py` 4334 → 3695 lines (-639, ~14%)**
+- Extracted uploads to `routers/uploads.py` (218 lines): /upload/{image,audio,file,chat-file,avatar,banner} + DELETE
+- Extracted NFC to `routers/nfc.py` (461 lines): activate, resolve, go (302 redirect), my-cards, update-card, configure-product, lock, resolve-product, product-schemas
+- New routers use `utils/database`, `utils/security`, `models/user` (consistent with prior refactors)
+- All endpoints verified via curl (200/422/302 as expected)
+
+**P2 Frontend — `EditCardPage.jsx` 1080 → 799 lines (-281, ~26%)**
+- Replaced inline curriculum block (290 lines) with existing `<CurriculumFields/>` component
+- Added `references` to fallback custom_fields default
+- Removed unused lucide-react icon imports (Plus, Trash2, Briefcase, GraduationCap, Award, Languages, FileText)
+
+**P1 Mobile Push Notifications — richer presentations**
+- `routers/push_notifications.py` helpers now accept context IDs + avatars for deep-linking:
+  - `notify_new_message(chat_id, sender_avatar)` → tag per chat for grouping
+  - `notify_new_follower(follower_id, follower_avatar)` → deep-links to follower's profile
+  - `notify_new_like(post_id, image_url)` → rich preview when liked content has media
+  - `notify_new_comment(post_id, commenter_avatar)` → reply action deep-links to post
+  - NEW `notify_story_reaction(story_id, emoji, reactor_avatar)` — story engagement push
+  - NEW `notify_incoming_call(call_id, caller_avatar, video)` — requireInteraction + persistent
+- Fixed `requireInteraction: True` hard-coded for ALL notifications → now only true for calls
+- Service worker bumped to v7 with action handlers for `view_story`, `follower`, `comment_`, and contextual deep-link routing per `data.kind`
+
+## Remaining Backlog (post-49)
+- server.py further reduction: extract AI routes (/ai/*), card routes, Stripe payments
+- FeedPage.jsx (882) + MyProfilePage.jsx (953) breakdown
+- Wire `notify_story_reaction` from BrunoStoryViewer reaction handler
+- Wire `notify_incoming_call` from /calls/start endpoint
 
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 (Emergent LLM Key), Stripe, Daily.co, Cloudinary, Leaflet

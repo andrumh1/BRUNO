@@ -188,7 +188,7 @@ async def send_push_notification(user_id: str, notification: NotificationPayload
         "vibrate": notification.vibrate or [100, 50, 100],
         "renotify": notification.renotify,
         "silent": notification.silent,
-        "requireInteraction": True,
+        "requireInteraction": notification.tag == "incoming_call",
     })
     
     failed_endpoints = []
@@ -245,46 +245,97 @@ async def send_test_notification(
 
 
 # Helper functions for other modules to send notifications
-async def notify_new_message(user_id: str, sender_name: str, message_preview: str):
-    """Send notification for new chat message"""
+async def notify_new_message(user_id: str, sender_name: str, message_preview: str, chat_id: Optional[str] = None, sender_avatar: Optional[str] = None):
+    """Send notification for new chat message — grouped by chat for mobile."""
+    tag = f"message_{chat_id}" if chat_id else f"message_{user_id}"
+    url = f"/chat?chat={chat_id}" if chat_id else "/chat"
     await send_push_notification(user_id, NotificationPayload(
         title=f"Mensaje de {sender_name}",
-        body=message_preview[:100],
-        icon="/bruno-logo.png",
-        url="/chat",
-        tag=f"message_{user_id}",
+        body=message_preview[:120],
+        icon=sender_avatar or "/bruno-logo.png",
+        badge="/bruno-badge.png",
+        url=url,
+        tag=tag,
         renotify=True,
         actions=[{"action": "reply", "title": "Responder"}, {"action": "dismiss", "title": "Cerrar"}],
         vibrate=[200, 100, 200],
+        data={"chat_id": chat_id, "url": url, "kind": "message"},
     ))
 
-async def notify_new_follower(user_id: str, follower_name: str):
-    """Send notification for new follower"""
+async def notify_new_follower(user_id: str, follower_name: str, follower_id: Optional[str] = None, follower_avatar: Optional[str] = None):
+    """Send notification for new follower."""
+    profile_url = f"/profile/{follower_id}" if follower_id else "/my-profile"
     await send_push_notification(user_id, NotificationPayload(
         title="Nuevo seguidor",
         body=f"{follower_name} comenzo a seguirte",
-        icon="/bruno-logo.png",
-        url="/my-profile",
-        tag="follower",
+        icon=follower_avatar or "/bruno-logo.png",
+        badge="/bruno-badge.png",
+        url=profile_url,
+        tag=f"follower_{follower_id}" if follower_id else "follower",
         actions=[{"action": "view_profile", "title": "Ver perfil"}],
+        vibrate=[100, 50, 100],
+        data={"profile_url": profile_url, "url": profile_url, "kind": "follower"},
     ))
 
-async def notify_new_like(user_id: str, liker_name: str, content_type: str):
-    """Send notification for new like"""
+async def notify_new_like(user_id: str, liker_name: str, content_type: str, post_id: Optional[str] = None, image_url: Optional[str] = None):
+    """Send notification for new like — rich preview if image is available."""
+    url = f"/post/{post_id}" if post_id else "/feed"
     await send_push_notification(user_id, NotificationPayload(
         title="Nuevo like",
         body=f"A {liker_name} le gusto tu {content_type}",
         icon="/bruno-logo.png",
-        url="/feed",
-        tag="like",
+        badge="/bruno-badge.png",
+        url=url,
+        tag=f"like_{post_id}" if post_id else "like",
+        image=image_url,
+        vibrate=[80, 40, 80],
+        data={"post_id": post_id, "url": url, "kind": "like"},
     ))
 
-async def notify_new_comment(user_id: str, commenter_name: str, comment_preview: str):
-    """Send notification for new comment"""
+async def notify_new_comment(user_id: str, commenter_name: str, comment_preview: str, post_id: Optional[str] = None, commenter_avatar: Optional[str] = None):
+    """Send notification for new comment."""
+    url = f"/post/{post_id}" if post_id else "/feed"
     await send_push_notification(user_id, NotificationPayload(
         title=f"Comentario de {commenter_name}",
-        body=comment_preview[:100],
-        icon="/bruno-logo.png",
-        url="/feed",
-        tag="comment"
+        body=comment_preview[:120],
+        icon=commenter_avatar or "/bruno-logo.png",
+        badge="/bruno-badge.png",
+        url=url,
+        tag=f"comment_{post_id}" if post_id else "comment",
+        renotify=True,
+        actions=[{"action": "reply", "title": "Responder"}, {"action": "dismiss", "title": "Cerrar"}],
+        vibrate=[100, 50, 100, 50, 100],
+        data={"post_id": post_id, "url": url, "kind": "comment"},
+    ))
+
+async def notify_story_reaction(user_id: str, reactor_name: str, emoji: str, story_id: Optional[str] = None, reactor_avatar: Optional[str] = None):
+    """Send notification when someone reacts to a story."""
+    url = f"/stories/{story_id}" if story_id else "/my-profile?tab=stories"
+    await send_push_notification(user_id, NotificationPayload(
+        title=f"{reactor_name} reacciono a tu historia",
+        body=f"{emoji}  Toca para ver",
+        icon=reactor_avatar or "/bruno-logo.png",
+        badge="/bruno-badge.png",
+        url=url,
+        tag=f"story_reaction_{story_id}" if story_id else "story_reaction",
+        vibrate=[100, 50, 100],
+        data={"story_id": story_id, "url": url, "kind": "story_reaction"},
+    ))
+
+async def notify_incoming_call(user_id: str, caller_name: str, call_id: str, caller_avatar: Optional[str] = None, video: bool = False):
+    """Incoming call notification — requireInteraction + persistent actions."""
+    url = f"/chat?accept_call={call_id}"
+    body = "Llamada de video entrante" if video else "Llamada entrante"
+    await send_push_notification(user_id, NotificationPayload(
+        title=caller_name,
+        body=body,
+        icon=caller_avatar or "/bruno-logo.png",
+        badge="/bruno-badge.png",
+        url=url,
+        tag="incoming_call",
+        renotify=True,
+        silent=False,
+        vibrate=[200, 100, 200, 100, 200, 100, 200],
+        actions=[{"action": "accept", "title": "Aceptar"}, {"action": "decline", "title": "Rechazar"}],
+        data={"call_id": call_id, "url": url, "kind": "call", "video": video},
     ))
