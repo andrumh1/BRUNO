@@ -325,11 +325,30 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 - Fixed `requireInteraction: True` hard-coded for ALL notifications → now only true for calls
 - Service worker bumped to v7 with action handlers for `view_story`, `follower`, `comment_`, and contextual deep-link routing per `data.kind`
 
-## Remaining Backlog (post-49)
-- server.py further reduction: extract AI routes (/ai/*), card routes, Stripe payments
-- FeedPage.jsx (882) + MyProfilePage.jsx (953) breakdown
-- Wire `notify_story_reaction` from BrunoStoryViewer reaction handler
-- Wire `notify_incoming_call` from /calls/start endpoint
+## Phase 50: NFC Scan Push Notifications (2026-05-18)
+
+**Feature: "Tu tarjeta cobro vida"** — el dueño recibe una push enriquecida cada vez que alguien escanea su NFC.
+
+**Implementación:**
+- `routers/push_notifications.py` → nuevo helper `notify_nfc_scan(user_id, card_id, card_title, card_image, nfc_id)`:
+  - Title: "Tu tarjeta cobro vida"
+  - Body: `«{card_title}»`
+  - `image`: banner_url o avatar_url de la card → preview rico en móvil
+  - Action única: "Ver analitica" → deep-link a `/c/{card_id}/analytics`
+  - Tag `nfc_scan_{nfc_id}` → notificaciones se reemplazan en lugar de apilarse (anti-spam)
+- `routers/nfc.py` → helper interno `_fire_nfc_scan_push` con `asyncio.create_task` (fire-and-forget) cableado en:
+  - `GET /nfc/go/{nfc_id}` (302 redirect — entry primario)
+  - `GET /nfc/resolve/{nfc_id}` (JSON)
+  - Nunca bloquea el redirect del usuario que escanea; errores se loguean como warning
+- `public/sw.js` → v8: handler para action `view_analytics` + matcher para tags `nfc_scan_`
+- Subscripciones expiradas (410 Gone) se limpian automáticamente vía la lógica existente de `send_push_notification`
+
+**Verificación end-to-end:**
+- Activar NFC: 200 ✓
+- `/nfc/resolve/{id}`: 200 con card data ✓
+- `/nfc/go/{id}`: 302 → redirect a `/c/{card_id}` ✓
+- Logs muestran que el push se dispara correctamente (410 Gone solo porque la sub de testing esta vencida — el código limpia automáticamente)
+
 
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 (Emergent LLM Key), Stripe, Daily.co, Cloudinary, Leaflet

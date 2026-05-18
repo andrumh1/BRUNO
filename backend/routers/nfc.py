@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from typing import Optional
 import os
 import uuid
+import asyncio
+import logging
 
 import sys
 sys.path.insert(0, '/app/backend')
@@ -16,7 +18,26 @@ from utils.database import db
 from utils.security import get_current_user
 from models.user import User
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/nfc", tags=["nfc"])
+
+
+async def _fire_nfc_scan_push(owner_id: str, card: Optional[dict], nfc_id: str) -> None:
+    """Best-effort push to the tag owner when their NFC is scanned.
+    Swallows all errors so it never blocks the scanning user's redirect.
+    """
+    try:
+        from routers.push_notifications import notify_nfc_scan
+        await notify_nfc_scan(
+            user_id=owner_id,
+            card_id=card.get("id") if card else None,
+            card_title=card.get("title") if card else None,
+            card_image=(card.get("banner_url") or card.get("avatar_url")) if card else None,
+            nfc_id=nfc_id,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"NFC scan push failed for owner={owner_id}: {e}")
 
 
 # ─── Models ──────────────────────────────────────────────────────────────────
@@ -104,6 +125,10 @@ async def resolve_nfc_card(nfc_id: str):
     if not card:
         return {"found": False, "message": "Linked card no longer exists", "redirect_url": None, "nfc_id": nfc_id}
 
+    # Fire-and-forget push to the owner ("your card came to life")
+    if nfc_card.get("user_id"):
+        asyncio.create_task(_fire_nfc_scan_push(nfc_card["user_id"], card, nfc_id))
+
     frontend_url = os.environ.get('FRONTEND_URL')
     return {
         "found": True,
@@ -126,6 +151,10 @@ async def nfc_direct_redirect(nfc_id: str):
     card = await db.cards.find_one({"id": nfc_card["card_id"]}, {"_id": 0})
     if not card:
         return RedirectResponse(url=f"{frontend_url}/n/{nfc_id}", status_code=302)
+
+    # Fire-and-forget push to the owner — runs in background, never blocks redirect
+    if nfc_card.get("user_id"):
+        asyncio.create_task(_fire_nfc_scan_push(nfc_card["user_id"], card, nfc_id))
 
     return RedirectResponse(url=f"{frontend_url}/c/{nfc_card['card_id']}", status_code=302)
 

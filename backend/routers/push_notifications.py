@@ -339,3 +339,32 @@ async def notify_incoming_call(user_id: str, caller_name: str, call_id: str, cal
         actions=[{"action": "accept", "title": "Aceptar"}, {"action": "decline", "title": "Rechazar"}],
         data={"call_id": call_id, "url": url, "kind": "call", "video": video},
     ))
+
+
+async def notify_nfc_scan(
+    user_id: str,
+    card_id: Optional[str] = None,
+    card_title: Optional[str] = None,
+    card_image: Optional[str] = None,
+    nfc_id: Optional[str] = None,
+):
+    """Notify the owner when their NFC card/tag is scanned.
+
+    Rich rendering: shows card banner as preview image on mobile, quick action
+    to open analytics. Tag is per-NFC so refresh-spam replaces in place.
+    """
+    url = f"/c/{card_id}/analytics" if card_id else "/nfc-cards"
+    body = f"Alguien acaba de escanear tu tarjeta «{card_title}»" if card_title else "Alguien acaba de escanear tu tarjeta NFC"
+    await send_push_notification(user_id, NotificationPayload(
+        title="Tu tarjeta cobro vida",
+        body=body,
+        icon="/bruno-logo.png",
+        badge="/bruno-badge.png",
+        url=url,
+        tag=f"nfc_scan_{nfc_id or card_id or 'generic'}",
+        image=card_image,
+        renotify=False,
+        vibrate=[80, 40, 80],
+        actions=[{"action": "view_analytics", "title": "Ver analitica"}],
+        data={"card_id": card_id, "nfc_id": nfc_id, "url": url, "kind": "nfc_scan"},
+    ))

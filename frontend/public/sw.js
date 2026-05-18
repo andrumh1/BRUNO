@@ -1,5 +1,5 @@
-// BRUNO Service Worker v7 - Enhanced Push Notifications for Mobile
-const SW_VERSION = 'v7';
+// BRUNO Service Worker v8 - NFC scan push + richer mobile notifications
+const SW_VERSION = 'v8';
 const CACHE_NAME = 'bruno-' + SW_VERSION;
 
 const NEVER_CACHE = ['/api/', '/ws/', 'chrome-extension', '/sockjs-node'];
@@ -109,6 +109,8 @@ self.addEventListener('push', (event) => {
     options.actions = [{ action: 'view_profile', title: 'Ver perfil' }];
   } else if (data.tag && data.tag.startsWith('story_reaction')) {
     options.actions = [{ action: 'view_story', title: 'Ver historia' }];
+  } else if (data.tag && data.tag.startsWith('nfc_scan_')) {
+    options.actions = [{ action: 'view_analytics', title: 'Ver analitica' }];
   }
 
   event.waitUntil(self.registration.showNotification(data.title, options));
@@ -129,6 +131,7 @@ self.addEventListener('notificationclick', (event) => {
   }
   else if (event.action === 'view_profile') url = data.profile_url || data.url || '/my-profile';
   else if (event.action === 'view_story') url = data.url || '/my-profile?tab=stories';
+  else if (event.action === 'view_analytics') url = data.url || (data.card_id ? `/c/${data.card_id}/analytics` : '/nfc-cards');
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
