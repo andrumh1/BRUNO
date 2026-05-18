@@ -151,15 +151,23 @@ export const BrunoPillInput = forwardRef(function BrunoPillInput(
               onChange?.(e.target.value);
               onTyping?.();
             }}
-            onFocus={() => setFocused(true)}
+            onFocus={() => {
+              setFocused(true);
+              // Ensure the input stays in view when the keyboard opens.
+              setTimeout(() => {
+                try {
+                  textareaRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+                } catch (_) { /* no-op */ }
+              }, 250);
+            }}
             onBlur={() => setFocused(false)}
             onKeyDown={handleKey}
             disabled={disabled || isRecording}
             placeholder={placeholder}
             rows={1}
             data-testid="pill-textarea"
-            className="flex-1 min-w-0 bg-transparent resize-none outline-none border-0 px-2 py-2 text-sm text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 leading-[22px]"
-            style={{ maxHeight: 6 * 22 }}
+            className="flex-1 min-w-0 bg-transparent resize-none outline-none border-0 px-2 py-2 text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 leading-[22px]"
+            style={{ maxHeight: 6 * 22, fontSize: "16px" }}
           />
 
           {/* Sticker / emoji */}

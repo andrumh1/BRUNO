@@ -507,8 +507,13 @@ export default function BrunoQuickCamera({
             </button>
           )}
 
-          {/* Bottom controls */}
-          <div className="absolute bottom-0 inset-x-0 z-20 pb-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+          {/* Bottom controls — animated padding to accommodate the nav pill */}
+          <motion.div
+            layout
+            animate={{ paddingBottom: `calc(24px + var(--nav-reserve, 0px))` }}
+            transition={{ type: "spring", stiffness: 280, damping: 32 }}
+            className="absolute bottom-0 inset-x-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent"
+          >
             {!preview ? (
               <>
                 {/* Filter strip */}
@@ -635,7 +640,7 @@ export default function BrunoQuickCamera({
                 </motion.button>
               </div>
             )}
-          </div>
+          </motion.div>
 
           {/* Music Picker overlay */}
           <MusicPicker

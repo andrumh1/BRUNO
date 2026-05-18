@@ -26,6 +26,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRealtimeNotifications } from "@/contexts/RealtimeNotificationContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 
@@ -122,6 +123,7 @@ function NotificationRow({ notif, onMark, onClick }) {
 export default function NotificationsPage() {
   const navigate = useNavigate();
   const { token } = useAuth();
+  const { subscribe: subscribeRealtime, connected: realtimeConnected } = useRealtimeNotifications();
   const { isSubscribed, permission, subscribe, unsubscribe, isSupported } = usePushNotifications();
 
   const [notifs, setNotifs] = useState([]);
@@ -147,10 +149,16 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!token) return;
     load();
-    // poll every 60s
-    const iv = setInterval(load, 60000);
-    return () => clearInterval(iv);
-  }, [token]);
+    // Realtime subscription — new notifications appear instantly
+    const unsubscribe = subscribeRealtime((notif) => {
+      setNotifs((arr) => {
+        // De-duplicate by id
+        if (notif.id && arr.some((n) => n.id === notif.id)) return arr;
+        return [{ ...notif, is_read: false }, ...arr];
+      });
+    });
+    return () => unsubscribe?.();
+  }, [token, subscribeRealtime]);
 
   const handleMark = async (id) => {
     setNotifs((arr) =>
@@ -227,6 +235,16 @@ export default function NotificationsPage() {
               <Bell className="w-5 h-5 text-orange-500" />
             )}
             <h1 className="font-bold text-base">Notificaciones</h1>
+            {realtimeConnected && (
+              <span
+                title="Conectado en tiempo real"
+                data-testid="realtime-status"
+                className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/15 rounded-full px-1.5 py-0.5"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                LIVE
+              </span>
+            )}
             {unreadCount > 0 && (
               <span className="text-[10px] font-bold uppercase tracking-wider text-white bg-orange-500 rounded-full px-2 py-0.5">
                 {unreadCount}

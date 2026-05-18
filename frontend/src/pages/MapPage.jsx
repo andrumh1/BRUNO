@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { AvatarWithBadge } from "@/components/VerifiedBadge";
 import axios from "axios";
+import MapProfilesBar from "@/components/bruno/MapProfilesBar";
 import { 
   MapPin, 
   ArrowLeft, 
@@ -784,6 +785,18 @@ const MapPage = () => {
           </Card>
         </div>
       )}
+
+      {/* Bruno Profiles Bar — above the nav */}
+      <MapProfilesBar
+        nearbyUsers={onlineUsers}
+        cards={cards}
+        currentUserId={user?.id}
+        onSelect={(item) => {
+          if (item.kind === "card" && item.location) {
+            setSelectedCard(item);
+          }
+        }}
+      />
     </div>
   );
 };

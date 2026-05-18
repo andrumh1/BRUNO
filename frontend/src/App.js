@@ -8,6 +8,7 @@ import { TourProvider, TourOverlay } from "@/components/WelcomeTour";
 import { NavScrollProvider } from "@/contexts/NavScrollContext";
 import { Toaster } from "sonner";
 import { BrunoCameraProvider } from "@/contexts/BrunoCameraContext";
+import RealtimeNotificationProvider from "@/contexts/RealtimeNotificationContext";
 
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
@@ -174,6 +175,7 @@ function App() {
               <NavScrollProvider>
               <TourProvider>
                 <BrunoCameraProvider>
+                <RealtimeNotificationProvider>
                 <AppRouter />
                 <FloatingBubbles />
                 <FloatingChatBubble />
@@ -190,6 +192,7 @@ function App() {
                     classNames: { toast: "w-full" },
                   }}
                 />
+                </RealtimeNotificationProvider>
                 </BrunoCameraProvider>
               </TourProvider>
               </NavScrollProvider>

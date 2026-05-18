@@ -388,6 +388,7 @@ async def toggle_like(post_id: str, current_user: User = Depends(get_current_use
             notif_doc = notification.model_dump()
             notif_doc['created_at'] = notif_doc['created_at'].isoformat()
             await db.notifications.insert_one(notif_doc)
+            await emit_notification_ws(notif_doc)
             
             # Send push notification
             from routers.push_notifications import notify_new_like
@@ -441,6 +442,7 @@ async def create_comment(
         notif_doc = notification.model_dump()
         notif_doc['created_at'] = notif_doc['created_at'].isoformat()
         await db.notifications.insert_one(notif_doc)
+        await emit_notification_ws(notif_doc)
         
         # Send push notification
         from routers.push_notifications import notify_new_comment
@@ -648,6 +650,7 @@ async def _notify_mentions(content: str, actor_id: str, actor_name: str, target_
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             await db.notifications.insert_one(notif)
+            await emit_notification_ws(notif)
             
             from routers.push_notifications import send_push_notification, NotificationPayload
             await send_push_notification(mentioned_user["id"], NotificationPayload(
@@ -1219,6 +1222,7 @@ async def send_message(
             notif_doc = notification.model_dump()
             notif_doc['created_at'] = notif_doc['created_at'].isoformat()
             await db.notifications.insert_one(notif_doc)
+            await emit_notification_ws(notif_doc)
             
             # Send push notification
             msg_preview = message_data.content[:50] if message_data.content else "Envió un archivo"
@@ -1296,6 +1300,7 @@ async def get_unread_count(current_user: User = Depends(get_current_user)):
 # ============================================================================
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from utils.notification_realtime import emit_notification_ws
 
 # Store active AI chat sessions
 ai_chat_sessions = {}

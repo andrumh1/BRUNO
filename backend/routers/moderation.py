@@ -8,6 +8,7 @@ from typing import Optional, List
 from datetime import datetime, timezone
 import os
 import re
+from utils.notification_realtime import emit_notification_ws
 
 router = APIRouter(tags=["moderation"])
 
@@ -282,14 +283,16 @@ async def take_moderation_action(
     elif action == "warn":
         # Send warning (create notification)
         user_id = content.get("author_id") or content.get("user_id") or content_id
-        await db.notifications.insert_one({
+        warn_notif = {
             "user_id": user_id,
             "type": "moderation_warning",
             "title": "Advertencia de Moderación",
             "message": reason,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "read": False
-        })
+        }
+        await db.notifications.insert_one(warn_notif)
+        await emit_notification_ws(warn_notif)
     
     # Record the action
     action_doc = {

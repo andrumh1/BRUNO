@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavScroll } from "@/contexts/NavScrollContext";
@@ -16,12 +16,37 @@ const MobileBottomNav = () => {
   const location = useLocation();
   const { user, token } = useAuth();
   const { minimized, setMinimized, touchHandlers } = useNavScroll();
-  const { open: openCamera } = useBrunoCamera();
+  const { open: openCamera, isOpen: cameraOpen } = useBrunoCamera();
   
   const hiddenPaths = ['/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || 
                      location.pathname.match(/^\/lives\/[^/]+$/) ||
                      location.pathname.startsWith('/chat/');
+
+  // Auto-minimize when camera opens to free up the capture button space
+  const wasMinimizedBeforeCamera = useRef(null);
+  useEffect(() => {
+    if (cameraOpen) {
+      if (wasMinimizedBeforeCamera.current === null) {
+        wasMinimizedBeforeCamera.current = minimized;
+        if (!minimized) setMinimized(true);
+      }
+    } else if (wasMinimizedBeforeCamera.current !== null) {
+      if (wasMinimizedBeforeCamera.current === false) setMinimized(false);
+      wasMinimizedBeforeCamera.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraOpen]);
+
+  // Sync nav reserved space to a CSS var so screens (camera, map, etc.) can offset above it
+  useEffect(() => {
+    if (shouldHide) {
+      document.documentElement.style.setProperty("--nav-reserve", "0px");
+      return;
+    }
+    const reserve = minimized ? 64 : 88;
+    document.documentElement.style.setProperty("--nav-reserve", `${reserve}px`);
+  }, [shouldHide, minimized]);
 
   if (shouldHide) return null;
 
@@ -48,7 +73,7 @@ const MobileBottomNav = () => {
       <>
         <div className="h-10" />
         <div
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999]"
+          className={`fixed bottom-4 left-1/2 -translate-x-1/2 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           data-testid="mobile-bottom-nav"
         >
@@ -72,7 +97,7 @@ const MobileBottomNav = () => {
     <>
       <div className="h-20" />
       <nav 
-        className="fixed bottom-3 left-3 right-3 z-[9999] animate-in slide-in-from-bottom-4 duration-300"
+        className={`fixed bottom-3 left-3 right-3 animate-in slide-in-from-bottom-4 duration-300 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         data-testid="mobile-bottom-nav"
         {...touchHandlers}

@@ -15,6 +15,7 @@ import CircularVideoMessage from "@/components/bruno/CircularVideoMessage";
 import BrunoAudioWaveform from "@/components/bruno/BrunoAudioWaveform";
 import TypingDots from "@/components/bruno/TypingDots";
 import { brunoToast } from "@/components/bruno/BrunoToast";
+import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
 import axios from "axios";
 import { 
   ArrowLeft, 
@@ -1312,7 +1313,9 @@ const ChatPage = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const { chatId } = useParams();
-  
+
+  // Track visual viewport (keyboard avoidance on mobile)
+  useVisualViewportHeight();
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1487,7 +1490,11 @@ const ChatPage = () => {
   }
 
   return (
-    <div className="h-screen flex bg-background" data-testid="chat-page">
+    <div
+      className="flex bg-background overflow-hidden"
+      data-testid="chat-page"
+      style={{ height: "var(--app-vh, 100dvh)" }}
+    >
       {/* Chat List - Hidden on mobile when chat is selected */}
       <div className={`${isMobile && selectedChat ? "hidden" : "flex"} w-full md:w-96 border-r`}>
         <ChatList

@@ -10,6 +10,7 @@ from datetime import datetime, timezone, timedelta
 from jose import jwt
 import uuid
 import os
+from utils.notification_realtime import emit_notification_ws
 
 router = APIRouter(prefix="/api", tags=["social"])
 security = HTTPBearer()
@@ -122,6 +123,7 @@ async def toggle_follow(user_id: str, current_user: dict = Depends(_get_user)):
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.notifications.insert_one(notification)
+        await emit_notification_ws(notification)
 
         try:
             from routers.push_notifications import notify_new_follower
@@ -381,6 +383,7 @@ async def repost(post_id: str, quote: str = "", current_user: dict = Depends(_ge
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.notifications.insert_one(notif)
+        await emit_notification_ws(notif)
 
     repost_doc.pop("_id", None)
     return repost_doc
