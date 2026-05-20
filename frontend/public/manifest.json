@@ -4,16 +4,22 @@
   "description": "Crea y comparte tarjetas de presentación digitales con estilo futurista",
   "icons": [
     {
-      "src": "/bruno-logo.png",
+      "src": "/bruno-mascot.png?v=8",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/bruno-logo.png",
+      "src": "/bruno-mascot.png?v=8",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/bruno-mascot.png?v=8",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/",

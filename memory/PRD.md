@@ -351,6 +351,37 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 **Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
 
+## Phase 54: Branding oficial — Logo PIUP/Bruno (2026-05-20)
+
+**Logo oficial** (perro con VR goggles, naranja `#FF7F00`, fondo cream):
+- Descargado desde `customer-assets.emergentagent.com/.../LBPP1.png` y guardado como `/bruno-official.png` (~97 KB)
+
+**Archivos reemplazados** (el contenido del archivo cambia, las refs en codigo NO):
+- `/bruno-mascot.png` → nuevo logo
+- `/bruno-icon.png` → nuevo logo
+- `/bruno-badge.png` → nuevo logo (creado para push notifications)
+- `/mascots/bruno-icon.png` → nuevo logo (defensivo)
+
+**Sin tocar** (logo wordmark "BRUNO" para el nav superior izquierdo):
+- `/bruno-logo.png` → mantiene su diseño original con el nombre BRUNO escrito
+- Refs en `Dashboard.jsx`, `FeedPage.jsx`, `LandingPage.jsx`, `HelpPage.jsx`, `PricingPage.jsx`, `ContactPage.jsx` se mantienen
+
+**Refactor selectivo**:
+- `BrunoMascot.jsx`: reemplazo `bruno-mascot.webp` → `bruno-mascot.png?v=8` (5 ocurrencias)
+- `BrunoMascot.jsx`: reemplazo `/mascots/bruno-logo.png` → `/mascots/bruno-icon.png?v=8` (2 ocurrencias)
+
+**Index.html**:
+- 4 links de favicon agregados: `icon` (32x32, 192x192), `shortcut icon`, `apple-touch-icon` — todos a `/bruno-mascot.png?v=8`
+
+**Manifest.json** (PWA):
+- Reescrito con 3 icon entries (192/512 any, 192 maskable) apuntando a `/bruno-mascot.png?v=8`
+- `theme_color: "#FF6B35"` conservado (naranja BRUNO)
+
+**Verificacion**:
+- Screenshot Login: card con nuevo logo mascot visible
+- Screenshot Feed: top-left mantiene wordmark "BRUNO" original sin cambios
+- `document.querySelectorAll('link[rel*="icon"]')` devuelve 4 entradas con la nueva URL
+
 ## Phase 53: Stripe PIUP + Story Reactions Push + Highlights + Story Rings (2026-05-20)
 
 ### Backend

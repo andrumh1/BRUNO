@@ -51,7 +51,7 @@ export const BrunoAvatar = ({
     <div className={`relative ${className}`}>
       <div className={`${sizes[size]} ${ANIMATIONS[moodConfig.animation] || ""}`}>
         <img 
-          src="/bruno-mascot.webp"
+          src="/bruno-mascot.png?v=8"
           alt="BRUNO"
           className="w-full h-full object-contain drop-shadow-lg"
         />
@@ -291,7 +291,7 @@ const BrunoMascot = ({
     <div className="fixed bottom-24 left-4 w-80 max-h-[500px] bg-card rounded-2xl shadow-2xl border z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4">
       {/* Header */}
       <div className="p-3 bg-gradient-to-r from-primary to-orange-500 flex items-center gap-3">
-        <img src="/mascots/bruno-logo.png" alt="BRUNO" className="w-10 h-10 rounded-full object-cover border-2 border-white/30" />
+        <img src="/mascots/bruno-icon.png?v=8" alt="BRUNO" className="w-10 h-10 rounded-full object-cover border-2 border-white/30" />
         <div className="flex-1">
           <h3 className="font-bold text-white">BRUNO IA</h3>
           <p className="text-xs text-white/80">Tu asistente personal</p>
@@ -309,7 +309,7 @@ const BrunoMascot = ({
             className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}
           >
             {msg.from === "bruno" && (
-              <img src="/bruno-mascot.webp" alt="" className="w-6 h-6 rounded-full mr-2 flex-shrink-0" />
+              <img src="/bruno-mascot.png?v=8" alt="" className="w-6 h-6 rounded-full mr-2 flex-shrink-0" />
             )}
             <div className={`max-w-[80%] px-3 py-2 rounded-2xl ${
               msg.from === "user" 
@@ -323,7 +323,7 @@ const BrunoMascot = ({
         
         {isTyping && (
           <div className="flex items-center gap-2">
-            <img src="/bruno-mascot.webp" alt="" className="w-6 h-6 rounded-full animate-bounce" />
+            <img src="/bruno-mascot.png?v=8" alt="" className="w-6 h-6 rounded-full animate-bounce" />
             <div className="bg-muted px-3 py-2 rounded-2xl rounded-bl-sm">
               <div className="flex gap-1">
                 <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{animationDelay: "0ms"}} />
