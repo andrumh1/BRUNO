@@ -7,7 +7,7 @@ Owns three responsibilities:
 3. Activation by QR scan: links a physical NFC tag to a Bruno card or
    profile, ensuring NFC + QR resolve to the same URL.
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 from typing import List, Optional, Dict
@@ -376,3 +376,186 @@ async def activate_by_qr(payload: PiupActivate, current_user: User = Depends(get
     asyncio.create_task(_broadcast_activation(current_user.id, response))
 
     return response
+
+
+# ─── Stripe Checkout for PIUP physical orders ────────────────────────────────
+
+class PiupCheckoutRequest(BaseModel):
+    product_id: str
+    style: str
+    color_id: str = "black"
+    card_id: Optional[str] = None
+    shipping_address: Optional[dict] = None
+    quantity: int = Field(default=1, ge=1, le=20)
+    origin_url: str  # frontend origin so we can build success/cancel URLs
+
+
+@router.post("/checkout")
+async def piup_stripe_checkout(
+    req: PiupCheckoutRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Create a Stripe checkout session for a PIUP physical order.
+
+    1. Validates product + style + color.
+    2. Creates an internal piup_orders row in `pending_payment` status.
+    3. Spawns a Stripe Checkout session (amount calculated server-side).
+    4. Stores session_id on the order so the webhook can mark paid.
+    """
+    product = next((p for p in PIUP_CATALOG if p["id"] == req.product_id), None)
+    if not product:
+        raise HTTPException(status_code=404, detail="PIUP product not found")
+    if req.style not in product["styles"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Style {req.style} not available for {product['name']}",
+        )
+    color = next((c for c in DEFAULT_COLORS if c["id"] == req.color_id), None)
+    if not color:
+        raise HTTPException(status_code=400, detail=f"Invalid color: {req.color_id}")
+
+    if req.card_id:
+        card = await db.cards.find_one({"id": req.card_id, "user_id": current_user.id})
+        if not card:
+            raise HTTPException(status_code=404, detail="Linked Bruno card not found")
+
+    unit_price = float(product["base_price"])
+    total_price = round(unit_price * req.quantity, 2)
+
+    style_code = req.style
+    shape = style_code[0]
+    size = SIZE_TABLE.get(style_code[1:], {})
+
+    # Create the order in pending_payment state
+    order_id = str(uuid.uuid4())
+    order_doc = {
+        "id": order_id,
+        "user_id": current_user.id,
+        "kind": "piup_physical",
+        "product_id": req.product_id,
+        "product_name": product["name"],
+        "category": product["category"],
+        "style": style_code,
+        "shape": shape,
+        "shape_label": SHAPE_LABEL.get(shape, shape),
+        "size_label": size.get("label", ""),
+        "color_id": req.color_id,
+        "color_name": color["name"],
+        "quantity": req.quantity,
+        "unit_price": unit_price,
+        "total_price": total_price,
+        "currency": "USD",
+        "card_id": req.card_id,
+        "shipping_address": req.shipping_address or {},
+        "status": "pending_payment",
+        "payment_status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.piup_orders.insert_one(order_doc)
+
+    api_key = os.environ.get("STRIPE_API_KEY")
+    if not api_key:
+        # Mark order so admin can fulfill manually; UI receives a soft error.
+        await db.piup_orders.update_one(
+            {"id": order_id},
+            {"$set": {"status": "pending", "payment_status": "manual"}},
+        )
+        raise HTTPException(status_code=503, detail="Pagos no configurados — pedido guardado para revision manual")
+
+    from emergentintegrations.payments.stripe.checkout import (
+        StripeCheckout, CheckoutSessionRequest,
+    )
+
+    origin = req.origin_url.rstrip("/")
+    success_url = f"{origin}/piup?tab=my-tags&piup_session={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{origin}/piup?tab=store"
+    host_url = str(request.base_url).rstrip("/")
+    webhook_url = f"{host_url}/api/piup/webhook/stripe"
+
+    stripe_checkout = StripeCheckout(api_key=api_key, webhook_url=webhook_url)
+
+    metadata = {
+        "user_id": current_user.id,
+        "order_id": order_id,
+        "product_id": req.product_id,
+        "product_name": product["name"],
+        "kind": "piup_physical",
+    }
+
+    try:
+        session = await stripe_checkout.create_checkout_session(CheckoutSessionRequest(
+            amount=total_price,
+            currency="usd",
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata=metadata,
+        ))
+    except Exception as e:
+        logger.error(f"Stripe error creating PIUP session: {e}")
+        raise HTTPException(status_code=500, detail=f"Stripe error: {str(e)}")
+
+    await db.piup_orders.update_one(
+        {"id": order_id},
+        {"$set": {"stripe_session_id": session.session_id, "updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+
+    return {
+        "checkout_url": session.url,
+        "session_id": session.session_id,
+        "order_id": order_id,
+        "amount": total_price,
+        "currency": "USD",
+    }
+
+
+@router.get("/checkout/status/{session_id}")
+async def piup_checkout_status(
+    session_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Polls Stripe for the checkout session status; updates the order on success."""
+    order = await db.piup_orders.find_one(
+        {"stripe_session_id": session_id, "user_id": current_user.id},
+        {"_id": 0},
+    )
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.get("payment_status") == "paid":
+        return {"status": "complete", "payment_status": "paid", "order": order}
+
+    api_key = os.environ.get("STRIPE_API_KEY")
+    if not api_key:
+        return {"status": "unknown", "payment_status": order.get("payment_status", "pending"), "order": order}
+
+    from emergentintegrations.payments.stripe.checkout import StripeCheckout
+    host_url = str(request.base_url).rstrip("/")
+    webhook_url = f"{host_url}/api/piup/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=api_key, webhook_url=webhook_url)
+
+    try:
+        st = await stripe_checkout.get_checkout_status(session_id)
+    except Exception as e:
+        logger.warning(f"Failed to poll Stripe: {e}")
+        return {"status": "pending", "payment_status": order.get("payment_status", "pending"), "order": order}
+
+    new_payment_status = "paid" if st.payment_status == "paid" else "pending"
+    new_order_status = "paid" if new_payment_status == "paid" else order.get("status", "pending_payment")
+
+    await db.piup_orders.update_one(
+        {"stripe_session_id": session_id},
+        {"$set": {
+            "payment_status": new_payment_status,
+            "status": new_order_status,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }},
+    )
+
+    refreshed = await db.piup_orders.find_one({"stripe_session_id": session_id}, {"_id": 0})
+    return {
+        "status": st.status,
+        "payment_status": new_payment_status,
+        "order": refreshed,
+    }

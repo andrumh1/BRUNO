@@ -203,7 +203,7 @@ async def react_to_story(
     reaction: str,  # emoji
     current_user: User = Depends(get_current_user)
 ):
-    """React to a story"""
+    """React to a story — also fires a push notification to the owner."""
     story = await db.stories.find_one({"id": story_id})
     
     if not story:
@@ -217,6 +217,23 @@ async def react_to_story(
             "created_at": datetime.now(timezone.utc).isoformat()
         }}}
     )
+
+    # Fire-and-forget push notification to the owner (skip if reacting to own story)
+    if story.get("user_id") and story["user_id"] != current_user.id:
+        import asyncio
+        async def _push():
+            try:
+                from routers.push_notifications import notify_story_reaction
+                await notify_story_reaction(
+                    user_id=story["user_id"],
+                    reactor_name=current_user.name or current_user.email or "Alguien",
+                    emoji=reaction,
+                    story_id=story_id,
+                    reactor_avatar=getattr(current_user, "avatar_url", None),
+                )
+            except Exception:
+                pass
+        asyncio.create_task(_push())
     
     return {"status": "reacted"}
 
@@ -358,3 +375,158 @@ async def reorder_card_stories(
         )
     
     return {"status": "reordered"}
+
+
+# ==================== SAVED STORIES / HIGHLIGHTS ====================
+
+class HighlightSaveInput(BaseModel):
+    collection: str = "Destacadas"  # collection name e.g. "Viajes", "Trabajo"
+    cover_url: Optional[str] = None
+
+
+@router.post("/{story_id}/save")
+async def save_story_to_highlights(
+    story_id: str,
+    payload: HighlightSaveInput,
+    current_user: User = Depends(get_current_user),
+):
+    """Save a 24h story to permanent highlights (Instagram-style).
+
+    Stories normally expire after 24h. Saving copies the media reference
+    into the `story_highlights` collection where it lives indefinitely,
+    grouped by collection name.
+    """
+    story = await db.stories.find_one({"id": story_id})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    if story.get("user_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the owner can save this story")
+
+    highlight_doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user.id,
+        "story_id": story_id,
+        "collection": (payload.collection or "Destacadas").strip()[:60],
+        "cover_url": payload.cover_url or story.get("media_url"),
+        "media_url": story.get("media_url"),
+        "media_type": story.get("media_type", "image"),
+        "caption": story.get("caption"),
+        "music": story.get("music"),
+        "saved_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.story_highlights.update_one(
+        {"user_id": current_user.id, "story_id": story_id},
+        {"$set": highlight_doc},
+        upsert=True,
+    )
+    await db.stories.update_one({"id": story_id}, {"$set": {"is_highlighted": True}})
+
+    highlight_doc.pop("_id", None)
+    return {"status": "saved", "highlight": highlight_doc}
+
+
+@router.delete("/{story_id}/save")
+async def unsave_story_from_highlights(
+    story_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Remove a story from highlights (keeps the 24h story intact)."""
+    deleted = await db.story_highlights.delete_one({
+        "user_id": current_user.id,
+        "story_id": story_id,
+    })
+    if deleted.deleted_count:
+        await db.stories.update_one({"id": story_id}, {"$set": {"is_highlighted": False}})
+    return {"status": "unsaved", "removed": deleted.deleted_count}
+
+
+@router.get("/highlights/{user_id}")
+async def get_highlights(user_id: str):
+    """Public: list a user's highlight collections (grouped by name)."""
+    rows = await db.story_highlights.find(
+        {"user_id": user_id},
+        {"_id": 0},
+    ).sort("saved_at", -1).to_list(500)
+
+    collections: dict = {}
+    for r in rows:
+        col_name = r.get("collection") or "Destacadas"
+        if col_name not in collections:
+            collections[col_name] = {
+                "name": col_name,
+                "cover_url": r.get("cover_url") or r.get("media_url"),
+                "count": 0,
+                "items": [],
+            }
+        collections[col_name]["count"] += 1
+        collections[col_name]["items"].append(r)
+
+    return {
+        "user_id": user_id,
+        "collections": list(collections.values()),
+        "total_items": len(rows),
+    }
+
+
+@router.patch("/highlights/{highlight_id}")
+async def update_highlight(
+    highlight_id: str,
+    payload: HighlightSaveInput,
+    current_user: User = Depends(get_current_user),
+):
+    """Rename a highlight's collection or change its cover."""
+    h = await db.story_highlights.find_one({"id": highlight_id})
+    if not h:
+        raise HTTPException(status_code=404, detail="Highlight not found")
+    if h.get("user_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Not yours")
+
+    updates = {}
+    if payload.collection:
+        updates["collection"] = payload.collection.strip()[:60]
+    if payload.cover_url:
+        updates["cover_url"] = payload.cover_url
+
+    if updates:
+        await db.story_highlights.update_one({"id": highlight_id}, {"$set": updates})
+
+    return {"status": "updated", "updates": updates}
+
+
+@router.delete("/highlights/{highlight_id}")
+async def delete_highlight(
+    highlight_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Remove a single highlight."""
+    h = await db.story_highlights.find_one({"id": highlight_id})
+    if not h:
+        raise HTTPException(status_code=404, detail="Highlight not found")
+    if h.get("user_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Not yours")
+
+    await db.story_highlights.delete_one({"id": highlight_id})
+    return {"status": "deleted"}
+
+
+@router.get("/active-users")
+async def get_users_with_active_stories(
+    user_ids: str,  # comma-separated user_ids
+):
+    """Public: which of these users have at least one non-expired story right now?
+
+    Used by the Feed/Profile to draw a gradient ring around their avatars
+    when there is something to watch.
+    """
+    ids = [u.strip() for u in user_ids.split(",") if u.strip()]
+    if not ids:
+        return {"active": {}}
+    now_iso = datetime.now(timezone.utc).isoformat()
+    cursor = db.stories.aggregate([
+        {"$match": {"user_id": {"$in": ids}, "expires_at": {"$gt": now_iso}}},
+        {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
+    ])
+    active = {}
+    async for row in cursor:
+        active[row["_id"]] = row["count"]
+    return {"active": active, "checked": len(ids)}

@@ -8,6 +8,10 @@ import CardPreviewModal from "@/components/CardPreviewModal";
 import DraggableList from "@/components/DraggableList";
 import { PointsWidget } from "@/components/PointsSystem";
 import QuickStoryButton from "@/components/bruno/QuickStoryButton";
+import StoryRing from "@/components/bruno/StoryRing";
+import HighlightsSection from "@/components/bruno/HighlightsSection";
+import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
+import useActiveStories from "@/hooks/useActiveStories";
 import axios from "axios";
 import { 
   ArrowLeft,
@@ -74,6 +78,11 @@ const MyProfilePage = () => {
   const [followersList, setFollowersList] = useState([]);
   const [followingList, setFollowingList] = useState([]);
   const [albums, setAlbums] = useState([]);
+
+  // Active stories ring + viewer
+  const activeStoriesIds = user?.id ? [user.id] : [];
+  const { activeMap, openStories, closeStories, openedStories } = useActiveStories(activeStoriesIds, { enabled: !!user?.id });
+  const hasActiveStory = !!(user?.id && activeMap[user.id]);
   const [previewCard, setPreviewCard] = useState(null);
   const [reorderMode, setReorderMode] = useState(false);
   const [reorderSaving, setReorderSaving] = useState(false);
@@ -376,20 +385,30 @@ const MyProfilePage = () => {
       {/* Profile Header */}
       <div className="px-4 py-6">
         <div className="flex items-start gap-4">
-          {/* Avatar */}
-          <div className="relative">
-            <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-primary to-orange-500 p-0.5">
-              <div className="w-full h-full rounded-full bg-background overflow-hidden">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-muted">
-                    <User className="w-10 h-10 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-            </div>
-            <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center border-2 border-background">
+          {/* Avatar with story ring */}
+          <div className="relative" data-testid="my-profile-avatar-wrapper">
+            <StoryRing
+              hasActive={hasActiveStory}
+              size={96}
+              thickness={3}
+              testId="my-profile-story-ring"
+              onOpen={() => openStories(user.id, profile?.name || user?.name, profile?.avatar_url)}
+            >
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/30 to-orange-500/30">
+                  <User className="w-10 h-10 text-muted-foreground" />
+                </div>
+              )}
+            </StoryRing>
+            <button
+              type="button"
+              onClick={() => navigate("/edit-profile")}
+              className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center border-2 border-background"
+              data-testid="my-profile-avatar-edit-btn"
+              aria-label="Editar avatar"
+            >
               <Camera className="w-4 h-4 text-white" />
             </button>
           </div>
@@ -505,6 +524,14 @@ const MyProfilePage = () => {
           <PointsWidget />
         </div>
       </div>
+
+      {/* Saved Stories / Highlights */}
+      <HighlightsSection
+        userId={user?.id}
+        isOwner
+        userName={profile?.name || user?.name || ""}
+        avatarUrl={profile?.avatar_url || ""}
+      />
 
       {/* Tabs */}
       <div className="border-b sticky top-14 bg-background z-20">
@@ -945,6 +972,15 @@ const MyProfilePage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Active 24h story viewer (opens from clicking the story ring around avatar) */}
+      {openedStories && (
+        <BrunoStoryViewer
+          userStories={openedStories}
+          allUsers={[]}
+          onClose={closeStories}
+        />
       )}
     </div>
   );

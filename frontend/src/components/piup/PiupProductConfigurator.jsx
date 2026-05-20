@@ -39,12 +39,38 @@ export default function PiupProductConfigurator({ product, cards, colors, auth, 
   const submit = async () => {
     setSubmitting(true);
     try {
+      // Try Stripe checkout first; fallback to plain pending order if Stripe not configured.
+      try {
+        const res = await axios.post(
+          `${API}/piup/checkout`,
+          {
+            product_id: product.id,
+            style,
+            color_id: color,
+            card_id: cardId || null,
+            quantity,
+            origin_url: window.location.origin,
+          },
+          auth
+        );
+        if (res.data?.checkout_url) {
+          brunoToast.success("Redirigiendo a pago seguro Stripe...");
+          window.location.href = res.data.checkout_url;
+          return;
+        }
+      } catch (stripeErr) {
+        // 503 = Stripe not configured → fall back below
+        const status = stripeErr?.response?.status;
+        if (status !== 503) throw stripeErr;
+      }
+
+      // Fallback: legacy pending order without payment
       await axios.post(
         `${API}/piup/request-physical`,
         { product_id: product.id, style, color_id: color, card_id: cardId || null, quantity },
         auth
       );
-      brunoToast.success(`Pedido de ${product.name} (${style}) creado`);
+      brunoToast.success(`Pedido de ${product.name} (${style}) creado — pago manual pendiente`);
       onClose();
     } catch (e) {
       brunoToast.error(e?.response?.data?.detail || "No pudimos crear el pedido");

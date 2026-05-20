@@ -351,6 +351,42 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 **Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
 
+## Phase 53: Stripe PIUP + Story Reactions Push + Highlights + Story Rings (2026-05-20)
+
+### Backend
+- **Stripe checkout PIUP** (`routers/piup.py`):
+  - `POST /api/piup/checkout` — crea orden en `piup_orders` con status `pending_payment`, dispara `StripeCheckout.create_checkout_session()` con metadata `{user_id, order_id, product_id}`, devuelve `checkout_url`
+  - `GET /api/piup/checkout/status/{session_id}` — polling de estado tras redirect; actualiza `piup_orders` con `payment_status: paid` cuando Stripe lo confirma
+  - Fallback elegante: si `STRIPE_API_KEY` no configurado → 503 + orden guardada con `payment_status: manual`
+  - Verificado curl: devuelve URL real de Stripe `cs_test_a1zGWhqmQIGsQPKJVSC68...`
+- **Push de reaccion a historia** (`routers/stories.py`):
+  - `POST /stories/{id}/react` ahora dispara `notify_story_reaction(user_id, reactor_name, emoji, story_id, avatar)` como fire-and-forget si no es el propio dueno
+- **Saved Stories / Highlights** (`routers/stories.py`):
+  - `POST /stories/{id}/save` — guarda en coleccion `story_highlights` con collection name (idempotente con upsert)
+  - `DELETE /stories/{id}/save` — quita del highlights
+  - `GET /stories/highlights/{user_id}` — publica colecciones agrupadas con cover/count/items
+  - `PATCH /stories/highlights/{id}` — renombrar coleccion / cambiar cover
+  - `DELETE /stories/highlights/{id}` — eliminar item individual
+  - `GET /stories/active-users?user_ids=...` — devuelve mapa user_id→count de historias no expiradas (para anillo)
+
+### Frontend
+- **`<StoryRing>`** (`components/bruno/StoryRing.jsx`) — wrapper para avatares con anillo conic-gradient (naranja→rosa→purpura) cuando hay historia activa, gris cuando ya vista. Tap dispara `onOpen`.
+- **`useActiveStories`** (`hooks/useActiveStories.js`) — hook que consulta `/active-users` para una lista de IDs y expone `openStories(uid)` que carga + abre BrunoStoryViewer.
+- **`<HighlightsSection>`** (`components/bruno/HighlightsSection.jsx`) — seccion Instagram-style en perfil:
+  - Scroll horizontal de coleccion covers con gradiente conico purpura→rosa→naranja
+  - Botón "+ Nueva" (owner) que solicita nombre de coleccion y guarda la story mas reciente
+  - Disclosure "Gestionar destacadas" con boton eliminar por item
+  - Click en coleccion → abre BrunoStoryViewer con items de la coleccion (incluso despues de 24h)
+- **`MyProfilePage`** integrado:
+  - Avatar envuelto en `<StoryRing hasActive={...} size={96}>` que abre BrunoStoryViewer real
+  - `<HighlightsSection isOwner>` entre PointsWidget y tabs
+  - BrunoStoryViewer montado al final del componente
+- **`PiupProductConfigurator`** — `submit` ahora intenta `/piup/checkout` primero (redirige a Stripe), fallback elegante a `/piup/request-physical` si Stripe devuelve 503
+
+### Verificacion
+- curl: Stripe checkout 200 con URL real, active-users {user_id: 1}, save → "Demos" coleccion, get highlights total_items: 1
+- screenshot: anillo gradient visible, "Historias destacadas — 1 guardadas", coleccion "Demos · 1 story" + boton "+ Nueva"
+
 ## Phase 52: Correcciones criticas - Cámara/Video, Foto Perfil, Stories (2026-05-20)
 
 **Bug 1: Subir videos al Feed fallaba silenciosamente**
