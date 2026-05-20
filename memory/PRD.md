@@ -337,7 +337,42 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 - `routers/nfc.py` → `_fire_nfc_scan_push` con `asyncio.create_task` (fire-and-forget) cableado en `/nfc/go/{id}` y `/nfc/resolve/{id}`
 - `public/sw.js` → v8: handler para action `view_analytics` + matcher para tags `nfc_scan_`
 
-## Phase 51: PIUP Manager — Reestructuracion completa del modulo NFC (2026-05-18)
+## Phase 51: PIUP Manager — Modulo NFC completo (2026-05-18)
+
+**Backend `routers/piup.py` (350 lineas):**
+- 19 productos PIUP en catalogo (Hogar 5, Restaurantes 3, Oficinas 10, Mascotas 1)
+- Tabla de tamanos C/U/R x 1..7 (1=1x1cm, 2=3x3cm, 3=5x5cm, 4=7x7cm, R5=3x5, R6=4x7, R7=ID 85x55)
+- 9 colores; endpoints: catalog, sizes, my-tags, request-physical, orders, activate-by-qr
+
+**Frontend `PiupManagerPage` con 3 tabs (`/piup`):**
+- Mis Tags: badge fisico/digital + botones contextuales Solicitar/Renovar
+- Activar PIUP: escaner QR con `jsQR` (1280px env-facing camera), parse URL/plain, fallback manual
+- Tienda PIUP: filtros categoria + forma + grid de 19 productos + configurador modal con StylePills
+
+**Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
+
+## Phase 52: Correcciones criticas - Cámara/Video, Foto Perfil, Stories (2026-05-20)
+
+**Bug 1: Subir videos al Feed fallaba silenciosamente**
+- `CreatePost.jsx`: ahora detecta `file.type.startsWith("video/")` y enruta videos a `/upload/chat-file` (Cloudinary `resource_type=video`). Antes se enviaba todo a `/upload/image` con transformaciones que solo aplican a imágenes.
+- Botones "Imagen" y "Video" ahora resetean correctamente el atributo `accept` del input.
+- `routers/uploads.py` → `/upload/image` ahora detecta `content_type` y:
+  - Si video: usa `resource_type="video"` sin transformaciones
+  - Si imagen: aplica transformaciones (1200x1200 limit, quality auto:good)
+- Verificado vía curl: video mp4 sube con resource_type=video, format=mp4, duration=1.0s
+
+**Bug 2: Foto de perfil no persistía al salir sin Guardar**
+- `EditProfilePage.uploadAvatar`: ahora llama `PUT /api/profile` inmediatamente después del upload con `{...profile, avatar_url: url}` para fijar el cambio en DB sin requerir click en "Guardar"
+- Si el auto-save falla, fallback al comportamiento anterior con toast informativo
+- Verificado: upload → PUT /profile → GET /profile devuelve nuevo avatar_url persistido
+
+**Bug 3: "Ver historia" no abria nada**
+- `EditProfilePage`: el botón `avatar-menu-stories` navegaba a `/my-profile?tab=stories` (ruta sin handler). Ahora:
+  - Llama `GET /api/stories/user/{user.id}` directamente
+  - Si hay stories, abre `<BrunoStoryViewer>` inline con el data correcto
+  - Si no hay stories, toast informativo "No tienes historias activas"
+- Loading state con `Loader2` reemplazando el icono Sparkles mientras carga
+- Verificado vía screenshot: menu abre → click "Ver historia" → viewer aparece con video, header del usuario, barra de progreso, reacciones y botón Responder funcionando
 
 **Backend (`routers/piup.py`, 350 lineas):**
 - Catalogo completo de **19 productos PIUP** seedeados in-memory con campos: id, name, category, schema_id (link a NFC schema), styles (codigos C/U/R + 1..7), base_price

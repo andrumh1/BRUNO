@@ -6,6 +6,7 @@ import { ArrowLeft, Camera, Eye, Image as ImageIcon, Sparkles, Loader2, Check, X
 import { useAuth } from "@/contexts/AuthContext";
 import { useBrunoCamera } from "@/contexts/BrunoCameraContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
+import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -57,6 +58,8 @@ export default function EditProfilePage() {
   const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const [showAvatarFull, setShowAvatarFull] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [storiesData, setStoriesData] = useState(null);
+  const [loadingStories, setLoadingStories] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -124,10 +127,24 @@ export default function EditProfilePage() {
       });
       const url = res.data.url || res.data.secure_url;
       if (!url) throw new Error("upload failed");
+
+      // Optimistically reflect in local state
       setProfile((p) => ({ ...p, avatar_url: url }));
-      brunoToast.success("Foto actualizada", {
-        description: "Recuerda pulsar Guardar para conservar los cambios.",
-      });
+
+      // Persist avatar immediately so it survives navigation away from this page.
+      // We send a PATCH-style payload with current values + new avatar_url to keep
+      // the rest of the profile intact.
+      try {
+        await axios.put(
+          `${API}/profile`,
+          { ...profile, avatar_url: url },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        brunoToast.success("Foto de perfil actualizada");
+      } catch (err) {
+        // If auto-persist fails, still keep optimistic update but inform user.
+        brunoToast.info("Foto cargada — pulsa Guardar para conservar el cambio");
+      }
     } catch (_) {
       brunoToast.error("No se pudo subir la foto");
     } finally {
@@ -146,6 +163,37 @@ export default function EditProfilePage() {
   const handleChooseFromGallery = () => {
     setShowAvatarMenu(false);
     galleryRef.current?.click();
+  };
+
+  const openMyStories = async () => {
+    if (!user?.id) {
+      brunoToast.info("Inicia sesion para ver tus historias");
+      return;
+    }
+    setShowAvatarMenu(false);
+    setLoadingStories(true);
+    try {
+      const res = await axios.get(`${API}/stories/user/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const stories = res.data || [];
+      if (stories.length === 0) {
+        brunoToast.info("No tienes historias activas", {
+          description: "Publica una historia desde tu perfil para verla aqui.",
+        });
+        return;
+      }
+      setStoriesData({
+        user_id: user.id,
+        user_name: profile.display_name || user.email || "Tu",
+        avatar_url: profile.avatar_url,
+        stories,
+      });
+    } catch (_) {
+      brunoToast.error("No se pudieron cargar tus historias");
+    } finally {
+      setLoadingStories(false);
+    }
   };
 
   if (loading) {
@@ -329,15 +377,13 @@ export default function EditProfilePage() {
                   <span className="flex-1 text-sm font-semibold">Ver foto de perfil</span>
                 </button>
                 <button
-                  onClick={() => {
-                    setShowAvatarMenu(false);
-                    navigate("/my-profile?tab=stories");
-                  }}
+                  onClick={openMyStories}
                   data-testid="avatar-menu-stories"
-                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted/60 text-left"
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted/60 text-left disabled:opacity-60"
+                  disabled={loadingStories}
                 >
                   <span className="grid place-items-center h-10 w-10 rounded-full bg-purple-500/10 text-purple-500">
-                    <Sparkles className="h-5 w-5" />
+                    {loadingStories ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                   </span>
                   <span className="flex-1 text-sm font-semibold">Ver historia</span>
                 </button>
@@ -399,6 +445,17 @@ export default function EditProfilePage() {
               className="max-h-[80vh] max-w-[90vw] rounded-2xl object-contain"
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Inline Story viewer (option 2 from avatar menu) */}
+      <AnimatePresence>
+        {storiesData && (
+          <BrunoStoryViewer
+            userStories={storiesData}
+            allUsers={[]}
+            onClose={() => setStoriesData(null)}
+          />
         )}
       </AnimatePresence>
     </div>

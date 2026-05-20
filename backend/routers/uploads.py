@@ -34,28 +34,45 @@ async def upload_image(
     folder: str = "bruno",
     current_user: User = Depends(get_current_user),
 ):
-    """Upload an image to Cloudinary."""
+    """Upload an image or video to Cloudinary.
+
+    Detects content type and applies image transforms only when needed —
+    videos pass through as resource_type='video' without image transforms,
+    which would otherwise fail.
+    """
     try:
         contents = await file.read()
-        result = cloudinary.uploader.upload(
-            contents,
-            folder=f"{folder}/{current_user.id}",
-            resource_type="auto",
-            transformation=[
-                {'width': 1200, 'height': 1200, 'crop': 'limit'},
-                {'quality': 'auto:good'},
-            ],
-        )
+        content_type = (file.content_type or "").lower()
+        is_video = content_type.startswith("video")
+
+        if is_video:
+            result = cloudinary.uploader.upload(
+                contents,
+                folder=f"{folder}/{current_user.id}",
+                resource_type="video",
+            )
+        else:
+            result = cloudinary.uploader.upload(
+                contents,
+                folder=f"{folder}/{current_user.id}",
+                resource_type="image",
+                transformation=[
+                    {'width': 1200, 'height': 1200, 'crop': 'limit'},
+                    {'quality': 'auto:good'},
+                ],
+            )
         return {
             "url": result['secure_url'],
             "public_id": result['public_id'],
-            "width": result['width'],
-            "height": result['height'],
-            "format": result['format'],
+            "width": result.get('width'),
+            "height": result.get('height'),
+            "format": result.get('format'),
+            "resource_type": result.get('resource_type', 'image'),
+            "duration": result.get('duration'),
         }
     except Exception as e:
-        logger.error(f"Error uploading image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error uploading image: {str(e)}")
+        logger.error(f"Error uploading file: {e}")
+        raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
 
 
 @router.post("/audio")

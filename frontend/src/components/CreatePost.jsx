@@ -41,10 +41,14 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
       try {
         const formData = new FormData();
         formData.append("file", file);
-        const response = await axios.post(`${API}/upload/image`, formData, {
+        // Route videos to /upload/chat-file (uses resource_type=video on Cloudinary).
+        // /upload/image applies image-only transforms that fail for video files.
+        const isVideo = file.type.startsWith("video/");
+        const endpoint = isVideo ? "/upload/chat-file" : "/upload/image";
+        const response = await axios.post(`${API}${endpoint}`, formData, {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
         });
-        const mediaType = file.type.startsWith("video/") ? "video" : "image";
+        const mediaType = isVideo ? "video" : "image";
         setMedia(prev => [...prev, { type: mediaType, url: response.data.url }]);
       } catch (error) {
         // error handled
@@ -236,11 +240,11 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
                 <div className="flex items-center gap-1">
                   <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple onChange={handleFileSelect} className="hidden" />
                   
-                  <Button type="button" variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-primary">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { if (fileInputRef.current) fileInputRef.current.accept = "image/*,video/*"; fileInputRef.current?.click(); }} disabled={uploading} className="text-primary" data-testid="create-post-image-btn">
                     {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
                   </Button>
                   
-                  <Button type="button" variant="ghost" size="sm" onClick={() => { fileInputRef.current.accept = "video/*"; fileInputRef.current?.click(); }} disabled={uploading} className="text-primary">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { if (fileInputRef.current) fileInputRef.current.accept = "video/*"; fileInputRef.current?.click(); }} disabled={uploading} className="text-primary" data-testid="create-post-video-btn">
                     <Video className="w-5 h-5" />
                   </Button>
                   
