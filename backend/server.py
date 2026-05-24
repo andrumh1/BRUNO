@@ -3632,6 +3632,8 @@ from routers.nfc import router as nfc_router
 api_router.include_router(nfc_router)
 from routers.piup import router as piup_router
 api_router.include_router(piup_router)
+from routers.map_pins import router as map_pins_router
+api_router.include_router(map_pins_router)
 
 # Set database for compliance router
 compliance_set_db(db)
