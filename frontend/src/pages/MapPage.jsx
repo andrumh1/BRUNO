@@ -295,8 +295,8 @@ function PinDetailCard({ pin, navigate, onClose }) {
 function NoApiKeyFallback() {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6" data-testid="map-no-api-key">
-      <div className="max-w-md w-full rounded-3xl border border-border bg-card p-6 shadow-xl">
+    <div className="min-h-screen bg-background p-6 pb-32" data-testid="map-no-api-key">
+      <div className="max-w-md mx-auto rounded-3xl border border-border bg-card p-6 shadow-xl">
         <div className="flex items-center gap-3 mb-3">
           <button
             onClick={() => navigate(-1)}
@@ -324,10 +324,13 @@ function NoApiKeyFallback() {
         </div>
 
         <div className="mt-4 text-xs text-muted-foreground leading-relaxed">
-          La capa de PIUP (pins propios) ya esta lista en backend. Una vez agregues
-          la key y refresques, todo se activa automaticamente.
+          Mientras tanto, la barra de burbujas PIUP/Stories que veras abajo ya
+          esta operativa — lista para tu nuevo mapa cuando agregues la key.
         </div>
       </div>
+
+      {/* Pill bar works without the map — useful for verification & UX preview */}
+      <MapProfilesBar />
     </div>
   );
 }

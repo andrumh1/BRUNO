@@ -28,6 +28,7 @@ class StoryCreate(BaseModel):
     link_text: Optional[str] = None
     poll_id: Optional[str] = None  # attach a poll to story
     music: Optional[dict] = None  # { trackId, title, url, volume, start, end }
+    location: Optional[dict] = None  # { lat, lng, name, address } — for map display
 
 
 class CardStoryCreate(BaseModel):
@@ -530,3 +531,58 @@ async def get_users_with_active_stories(
     async for row in cursor:
         active[row["_id"]] = row["count"]
     return {"active": active, "checked": len(ids)}
+
+
+@router.get("/located")
+async def stories_with_location(
+    min_lat: Optional[float] = None,
+    max_lat: Optional[float] = None,
+    min_lng: Optional[float] = None,
+    max_lng: Optional[float] = None,
+    limit: int = 100,
+):
+    """Return active (non-expired) public stories that have a `location` field.
+
+    Used by the map's pill bar to show located stories. Optionally filters by
+    bounding box when the map is zoomed in.
+    """
+    now_iso = datetime.now(timezone.utc).isoformat()
+    q: dict = {
+        "expires_at": {"$gt": now_iso},
+        "visibility": "public",
+        "location": {"$exists": True, "$ne": None},
+        "media_url": {"$ne": ""},
+    }
+    if None not in (min_lat, max_lat, min_lng, max_lng):
+        q["location.lat"] = {"$gte": min_lat, "$lte": max_lat}
+        q["location.lng"] = {"$gte": min_lng, "$lte": max_lng}
+
+    rows = await db.stories.find(q, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+
+    # Hydrate with user info in batch
+    user_ids = list({r.get("user_id") for r in rows if r.get("user_id")})
+    users = {}
+    if user_ids:
+        async for u in db.users.find({"id": {"$in": user_ids}}, {"_id": 0, "id": 1, "name": 1, "avatar_url": 1}):
+            users[u["id"]] = u
+
+    items = []
+    for r in rows:
+        u = users.get(r.get("user_id"), {})
+        loc = r.get("location") or {}
+        items.append({
+            "id": r["id"],
+            "user_id": r.get("user_id"),
+            "user_name": u.get("name") or r.get("user_name") or "Bruno",
+            "avatar_url": u.get("avatar_url"),
+            "media_url": r.get("media_url"),
+            "media_type": r.get("media_type", "image"),
+            "caption": r.get("caption"),
+            "lat": loc.get("lat"),
+            "lng": loc.get("lng"),
+            "place_name": loc.get("name") or loc.get("address"),
+            "created_at": r.get("created_at"),
+            "expires_at": r.get("expires_at"),
+        })
+
+    return {"stories": items, "count": len(items)}

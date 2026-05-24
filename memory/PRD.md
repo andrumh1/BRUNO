@@ -351,7 +351,51 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 **Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
 
-## Phase 54: Branding oficial — Logo PIUP/Bruno (2026-05-20)
+## Phase 56: Map Pill Bar — PIUP Cards + Located Stories (2026-05-24)
+
+**Backend:**
+- `routers/stories.py` → `StoryCreate.location` field opcional `{lat, lng, name, address}`
+- `routers/stories.py` → `GET /api/stories/located` — historias 24h con ubicacion (bounding box opcional)
+- `routers/map_pins.py` → `GET /api/map-pins/cards-located` — tarjetas Bruno con direccion guardada
+- Verificado: 1 PIUP + 2 cards located + 1 story located via curl
+
+**Frontend `MapProfilesBar.jsx` reescrito (337 lineas):**
+- Self-fetch paralelo: `/map-pins` + `/map-pins/cards-located` + `/stories/located` cada 60s
+- 4 filtros: Todos / PIUP / Stories / En vivo
+- Bubble distintivos:
+  - PIUP → ring naranja + badge MapPin
+  - Story → ring fucsia + badge Play + place_name subtitulo
+  - Card → ring neutro + badge segun card_type
+  - User live → ring esmeralda animado
+- Header dinamico con badges PIUP / Stories / LIVE
+- Story bubble tap → BrunoStoryViewer inline
+- Card/PIUP tap → navigate `/c/{card_id}`
+- Renderiza en NoApiKeyFallback para verificacion sin Google key
+
+**Verificado screenshot mobile**:
+- Filtro PIUP muestra 3 elementos
+- Filtro Stories muestra 1 con anillo fucsia + "Bogota Centro"
+- Filtro Todos muestra 4
+
+## Phase 55: Mapa Hibrido Google Maps + PIUP (2026-05-24)
+
+**Pendiente:** activar con `REACT_APP_GOOGLE_MAPS_API_KEY` (user accion).
+
+**Backend `routers/map_pins.py` (312 lineas):**
+- 9 categorias (commerce, restaurant, service, health, education, office, personal, event, other)
+- Endpoints: `POST /claim` (idempotente), `DELETE /{id}`, `GET /mine`, `GET /` (bounding box), `GET /{id}`, `PATCH /{id}`, `GET /categories`
+
+**Frontend:**
+- `MapPage.jsx` migrado de Leaflet a `@vis.gl/react-google-maps@1.8.3`
+- `MapStyleSocial.jsx` — JSON style Snapchat-like (cream/orange, calles fuertes, hospitales/gobierno destacados)
+- `MapPinClaimModal.jsx` — bottom-sheet con selector de tarjeta + categoria + coords + titulo
+- `AdvancedMarker` con `<BrunoPin>` custom (circulo naranja con emoji + tail)
+- InfoWindow con avatar/banner + botones "Ver tarjeta" y "Como llegar"
+- Toggle Layers (mostrar/ocultar PIUP layer)
+- FAB "+" para reclamar pin
+- `MapPageLegacy.jsx` backup de la version Leaflet
+
+
 
 **Logo oficial** (perro con VR goggles, naranja `#FF7F00`, fondo cream):
 - Descargado desde `customer-assets.emergentagent.com/.../LBPP1.png` y guardado como `/bruno-official.png` (~97 KB)

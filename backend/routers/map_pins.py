@@ -228,6 +228,52 @@ async def list_pins(
     }
 
 
+@router.get("/cards-located")
+async def cards_with_location(
+    min_lat: Optional[float] = None,
+    max_lat: Optional[float] = None,
+    min_lng: Optional[float] = None,
+    max_lng: Optional[float] = None,
+    limit: int = 200,
+):
+    """Public: returns Bruno cards that have a saved address/location.
+
+    These are NOT explicitly claimed pins — they are user cards whose
+    `location` field has lat/lng. Useful for the pill bar to show "cards near
+    you" alongside reclaimed PIUP pins.
+    """
+    q: dict = {
+        "is_public": {"$ne": False},
+        "location.lat": {"$exists": True, "$ne": None},
+        "location.lng": {"$exists": True, "$ne": None},
+    }
+    if None not in (min_lat, max_lat, min_lng, max_lng):
+        q["location.lat"]["$gte"] = min_lat
+        q["location.lat"]["$lte"] = max_lat
+        q["location.lng"]["$gte"] = min_lng
+        q["location.lng"]["$lte"] = max_lng
+
+    rows = await db.cards.find(q, {"_id": 0}).limit(limit).to_list(limit)
+    items = []
+    for c in rows:
+        loc = c.get("location") or {}
+        items.append({
+            "id": c.get("id"),
+            "user_id": c.get("user_id"),
+            "title": c.get("title"),
+            "subtitle": c.get("subtitle"),
+            "card_type": c.get("card_type", "personal"),
+            "avatar_url": c.get("avatar_url"),
+            "banner_url": c.get("banner_url"),
+            "background_color": c.get("background_color", "#FF5A00"),
+            "lat": loc.get("lat"),
+            "lng": loc.get("lng"),
+            "address": loc.get("address") or loc.get("name"),
+            "place_name": loc.get("place_name") or loc.get("name"),
+        })
+    return {"cards": items, "count": len(items)}
+
+
 @router.get("/{pin_id}")
 async def get_pin(pin_id: str):
     """Public: detailed view of one pin — used when a user taps a pin on the map."""
