@@ -351,6 +351,41 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 **Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
 
+## Phase 57: Avatares burbuja + Sync global de Stories (2026-05-24)
+
+**Bug fix critico**: `StoryRing` no aplicaba `rounded-full` cuando `hasActive=false`, devolviendo un `<div>` cuadrado. Resultado visible: foto de perfil se veia cuadrada en EditProfile. Ambos branches del componente ahora aplican `rounded-full overflow-hidden`.
+
+**Mejoras estetica burbuja iluminada** (`StoryRing.jsx`):
+- Radial glow exterior animado (opacity 0.55 ↔ 0.95, scale 1 ↔ 1.18, 2.4s loop) con `blur(6px)`
+- Highlight glossy interno (gradient blanco 45% top-left) con `mixBlendMode: screen` para efecto burbuja
+- Anillo conic gradient naranja→rosa→purpura preservado
+
+**Componente reutilizable nuevo `BrunoAvatar`**:
+- Wrapper universal: `<BrunoAvatar userId src name size>`
+- Auto-detecta activeMap via `useStoryActivity()`
+- Tap abre BrunoStoryViewer con stories del usuario via `/stories/user/{id}`
+- Fallback con inicial cuando no hay avatar_url
+- Centralizado: cambios al ring/glow se aplican automaticamente en todas las apariciones
+
+**Sync global via context + WebSocket**:
+- `StoryActivityProvider` (`contexts/StoryActivityContext.jsx`): un solo `activeMap` compartido por toda la app
+- `registerUserIds(ids)` permite a cualquier lista registrar quien debe ser rastreado
+- `markUserActive(uid)` para updates instantaneos sin esperar refresh
+- Listener WS: evento `story_published` → marca al publisher como activo en TODOS los avatares
+- Listener WS: evento `story_expired` → quita ring
+- Safety refresh cada 90 segundos
+- Backend `routers/stories.py` → `_broadcast_story_published(user_id, story_id)` notifica al publisher + todos sus followers (consulta `db.follows`)
+
+**Aplicacion en pantallas**:
+- `EditProfilePage`: avatar 112px con BrunoAvatar (era `<div className="rounded-full">` con bug)
+- `MyProfilePage`: avatar 96px con BrunoAvatar (reemplaza implementacion manual con StoryRing + useActiveStories)
+- `ChatPage.ChatList`: avatares 48px de cada conversacion + `useEffect` que registra los IDs en context
+
+**Verificado screenshot mobile (390x844)**:
+- Edit Profile: burbuja naranja perfecta con glow gradient visible
+- My Profile: anillo + cover de coleccion "Demos" visibles  
+- Chat List: avatar "T" circular con indicador verde online — listo para iluminarse cuando ese usuario publique
+
 ## Phase 56: Map Pill Bar — PIUP Cards + Located Stories (2026-05-24)
 
 **Backend:**

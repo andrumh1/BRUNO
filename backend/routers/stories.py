@@ -64,12 +64,39 @@ async def create_story(
     }
     
     await db.stories.insert_one(story_doc)
+
+    # Fire-and-forget: notify the publisher + their followers so avatars light up
+    import asyncio
+    asyncio.create_task(_broadcast_story_published(current_user.id, story_doc["id"]))
     
     return {
         "id": story_doc["id"],
         "message": "Story created",
         "expires_at": expires_at.isoformat()
     }
+
+
+async def _broadcast_story_published(user_id: str, story_id: str) -> None:
+    """Best-effort WS broadcast so every avatar of this user lights up."""
+    try:
+        from server import ws_manager
+        # Notify the publisher's own session (they have multiple tabs / devices)
+        await ws_manager.send_personal_message(
+            {"type": "story_published", "kind": "story_published", "user_id": user_id, "story_id": story_id},
+            user_id,
+        )
+        # Also notify their followers so their avatars in feed/chat light up
+        followers = await db.follows.find({"following_id": user_id}, {"_id": 0, "follower_id": 1}).to_list(1000)
+        for f in followers:
+            try:
+                await ws_manager.send_personal_message(
+                    {"type": "story_published", "kind": "story_published", "user_id": user_id, "story_id": story_id},
+                    f["follower_id"],
+                )
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 @router.get("/feed")

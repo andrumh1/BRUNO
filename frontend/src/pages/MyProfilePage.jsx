@@ -8,7 +8,7 @@ import CardPreviewModal from "@/components/CardPreviewModal";
 import DraggableList from "@/components/DraggableList";
 import { PointsWidget } from "@/components/PointsSystem";
 import QuickStoryButton from "@/components/bruno/QuickStoryButton";
-import StoryRing from "@/components/bruno/StoryRing";
+import BrunoAvatar from "@/components/bruno/BrunoAvatar";
 import HighlightsSection from "@/components/bruno/HighlightsSection";
 import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
 import useActiveStories from "@/hooks/useActiveStories";
@@ -385,27 +385,20 @@ const MyProfilePage = () => {
       {/* Profile Header */}
       <div className="px-4 py-6">
         <div className="flex items-start gap-4">
-          {/* Avatar with story ring */}
+          {/* Avatar with story ring (auto-detects active stories via context) */}
           <div className="relative" data-testid="my-profile-avatar-wrapper">
-            <StoryRing
-              hasActive={hasActiveStory}
+            <BrunoAvatar
+              userId={user?.id}
+              src={profile?.avatar_url}
+              name={profile?.name || user?.name || user?.email}
               size={96}
               thickness={3}
               testId="my-profile-story-ring"
-              onOpen={() => openStories(user.id, profile?.name || user?.name, profile?.avatar_url)}
-            >
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/30 to-orange-500/30">
-                  <User className="w-10 h-10 text-muted-foreground" />
-                </div>
-              )}
-            </StoryRing>
+            />
             <button
               type="button"
               onClick={() => navigate("/edit-profile")}
-              className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center border-2 border-background"
+              className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center border-2 border-background z-10"
               data-testid="my-profile-avatar-edit-btn"
               aria-label="Editar avatar"
             >

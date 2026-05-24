@@ -14,6 +14,8 @@ import MessageReactionsBubble from "@/components/bruno/MessageReactionsBubble";
 import CircularVideoMessage from "@/components/bruno/CircularVideoMessage";
 import BrunoAudioWaveform from "@/components/bruno/BrunoAudioWaveform";
 import TypingDots from "@/components/bruno/TypingDots";
+import BrunoAvatar from "@/components/bruno/BrunoAvatar";
+import { useStoryActivity } from "@/contexts/StoryActivityContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
 import axios from "axios";
@@ -242,7 +244,14 @@ const FileAttachment = ({ file, isOwn }) => {
 // Chat List Component with modern design
 const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
   const navigate = useNavigate();
+  const { registerUserIds } = useStoryActivity();
   const [searchFilter, setSearchFilter] = useState("");
+
+  // Register every chat participant so their avatars know whether to glow
+  useEffect(() => {
+    const ids = chats.flatMap((c) => (c.other_participants || []).map((p) => p.id)).filter(Boolean);
+    if (ids.length) registerUserIds(ids);
+  }, [chats, registerUserIds]);
   
   const formatTime = (dateString) => {
     if (!dateString) return "";
@@ -334,25 +343,21 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
                 }`}
                 data-testid={`chat-item-${chat.id}`}
               >
-                {/* Avatar with online indicator */}
+                {/* Avatar with online indicator + story ring */}
                 <Link 
                   to={`/profile/${participant.id}`} 
                   onClick={(e) => e.stopPropagation()} 
                   className="relative flex-shrink-0"
                   data-testid="chat-list-profile-link"
                 >
-                  {participant.avatar_url ? (
-                    <img
-                      src={participant.avatar_url}
-                      alt={participant.display_name}
-                      className="w-12 h-12 rounded-full object-cover ring-2 ring-background hover:ring-primary/30 transition-all"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/80 to-primary/40 flex items-center justify-center text-white text-lg font-bold hover:shadow-lg transition-all">
-                      {(participant.display_name || participant.username || "?")[0].toUpperCase()}
-                    </div>
-                  )}
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full ring-2 ring-background" />
+                  <BrunoAvatar
+                    userId={participant.id}
+                    src={participant.avatar_url}
+                    name={participant.display_name || participant.username || "?"}
+                    size={48}
+                    thickness={2}
+                  />
+                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full ring-2 ring-background z-10" />
                 </Link>
 
                 {/* Chat Info */}

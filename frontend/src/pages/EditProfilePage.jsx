@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBrunoCamera } from "@/contexts/BrunoCameraContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
+import BrunoAvatar from "@/components/bruno/BrunoAvatar";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -237,25 +238,19 @@ export default function EditProfilePage() {
         {/* Avatar with camera-icon menu trigger */}
         <div className="flex flex-col items-center mb-6">
           <div className="relative">
-            <div className="h-28 w-28 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 overflow-hidden ring-4 ring-orange-500/20">
-              {profile.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt={profile.display_name}
-                  className="h-full w-full object-cover"
-                  data-testid="edit-profile-avatar-img"
-                />
-              ) : (
-                <div className="grid place-items-center h-full text-3xl font-bold text-orange-500">
-                  {(profile.display_name || user?.email || "?")[0]?.toUpperCase()}
-                </div>
-              )}
-            </div>
+            <BrunoAvatar
+              userId={user?.id}
+              src={profile.avatar_url}
+              name={profile.display_name || user?.email}
+              size={112}
+              thickness={3}
+              testId="edit-profile-avatar"
+            />
             <button
               onClick={() => setShowAvatarMenu(true)}
               disabled={uploadingAvatar}
               data-testid="edit-profile-avatar-camera-btn"
-              className="absolute -bottom-1 -right-1 h-10 w-10 rounded-full bg-orange-500 text-white grid place-items-center shadow-lg shadow-orange-500/30 hover:bg-orange-600 disabled:opacity-60"
+              className="absolute -bottom-1 -right-1 h-10 w-10 rounded-full bg-orange-500 text-white grid place-items-center shadow-lg shadow-orange-500/30 hover:bg-orange-600 disabled:opacity-60 z-10"
             >
               {uploadingAvatar ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
             </button>

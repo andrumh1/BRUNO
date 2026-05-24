@@ -9,6 +9,7 @@ import { NavScrollProvider } from "@/contexts/NavScrollContext";
 import { Toaster } from "sonner";
 import { BrunoCameraProvider } from "@/contexts/BrunoCameraContext";
 import RealtimeNotificationProvider from "@/contexts/RealtimeNotificationContext";
+import StoryActivityProvider from "@/contexts/StoryActivityContext";
 
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
@@ -179,6 +180,7 @@ function App() {
               <TourProvider>
                 <BrunoCameraProvider>
                 <RealtimeNotificationProvider>
+                <StoryActivityProvider>
                 <AppRouter />
                 <FloatingBubbles />
                 <FloatingChatBubble />
@@ -195,6 +197,7 @@ function App() {
                     classNames: { toast: "w-full" },
                   }}
                 />
+                </StoryActivityProvider>
                 </RealtimeNotificationProvider>
                 </BrunoCameraProvider>
               </TourProvider>
