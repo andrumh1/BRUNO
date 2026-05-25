@@ -134,7 +134,6 @@ export const BrunoPillInput = forwardRef(function BrunoPillInput(
 
         {/* The Pill */}
         <motion.div
-          layout
           animate={{
             boxShadow: focused
               ? "0 0 0 2px rgba(255,90,0,0.35), 0 6px 24px -8px rgba(255,90,0,0.25)"
@@ -153,12 +152,10 @@ export const BrunoPillInput = forwardRef(function BrunoPillInput(
             }}
             onFocus={() => {
               setFocused(true);
-              // Ensure the input stays in view when the keyboard opens.
-              setTimeout(() => {
-                try {
-                  textareaRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
-                } catch (_) { /* no-op */ }
-              }, 250);
+              // No scrollIntoView — it conflicts with the visualViewport-driven
+              // resize and causes the pill to "expand and disappear" the chat.
+              // The parent uses height:var(--app-vh) which already shifts the
+              // input above the keyboard naturally.
             }}
             onBlur={() => setFocused(false)}
             onKeyDown={handleKey}

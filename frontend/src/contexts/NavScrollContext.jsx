@@ -63,11 +63,13 @@ export const NavScrollProvider = ({ children }) => {
 
   useEffect(() => { prevMinimized.current = minimized; }, [minimized]);
 
-  // Scroll handler
+  // Scroll handler — minimize aggressively the moment the user scrolls down,
+  // expand only on a clear upward scroll. The nav should disappear during
+  // interactions and reappear only by intent (swipe-up or returning to feed).
   const handleScroll = useCallback(() => {
     const currentY = window.scrollY;
-    if (currentY > lastScrollY + 30 && currentY > 100) setMinimized(true);
-    else if (currentY < lastScrollY - 20) setMinimized(false);
+    if (currentY > lastScrollY + 8 && currentY > 24) setMinimized(true);
+    else if (currentY < lastScrollY - 48) setMinimized(false);
     setLastScrollY(currentY);
   }, [lastScrollY, setMinimized]);
 
@@ -76,8 +78,63 @@ export const NavScrollProvider = ({ children }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
-  // Reset on route change
-  useEffect(() => { setMinimized(false); }, [location.pathname, setMinimized]);
+  // Route change: only force-expand when the user lands on home (/, /feed),
+  // matching the user's explicit UX rule ("ir al inicio = barra visible").
+  // On other routes we leave the current state alone so the user keeps
+  // their preferred minimization.
+  useEffect(() => {
+    if (location.pathname === "/" || location.pathname === "/feed") {
+      setMinimized(false);
+    }
+  }, [location.pathname, setMinimized]);
+
+  // ── Global gestures (work from anywhere on the page) ──────────────────
+  //  • Swipe UP from the bottom 24px edge → expand the nav
+  //  • Touch anywhere ELSE while nav is expanded and the user is mid-interaction
+  //    → auto-minimize to get out of the way
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const EDGE = 24;          // bottom-edge sensitivity (px)
+    const SWIPE_THRESHOLD = 24; // upward distance to trigger expand (px)
+    let startY = null;
+    let startX = null;
+    let fromEdge = false;
+
+    const onTouchStart = (e) => {
+      const t = e.touches?.[0];
+      if (!t) return;
+      startY = t.clientY;
+      startX = t.clientX;
+      fromEdge = (window.innerHeight - t.clientY) <= EDGE;
+    };
+
+    const onTouchMove = (e) => {
+      if (startY === null) return;
+      const t = e.touches?.[0];
+      if (!t) return;
+      const dy = startY - t.clientY;  // positive = upward swipe
+      const dx = Math.abs(t.clientX - startX);
+      if (fromEdge && dy >= SWIPE_THRESHOLD && dx < 60) {
+        setMinimizedRaw(false);
+        startY = null;
+      }
+    };
+
+    const onTouchEnd = () => {
+      startY = null;
+      startX = null;
+      fromEdge = false;
+    };
+
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
+  }, []);
 
   // Touch gesture: swipe up = expand, swipe down = minimize
   const touchHandlers = {

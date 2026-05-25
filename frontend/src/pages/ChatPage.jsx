@@ -343,12 +343,12 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
                 }`}
                 data-testid={`chat-item-${chat.id}`}
               >
-                {/* Avatar with online indicator + story ring */}
-                <Link 
-                  to={`/profile/${participant.id}`} 
-                  onClick={(e) => e.stopPropagation()} 
+                {/* Avatar with online indicator + story ring.
+                    No Link — tapping anywhere on the row should open the chat.
+                    Profile navigation lives inside the chat header (ChatView). */}
+                <div
                   className="relative flex-shrink-0"
-                  data-testid="chat-list-profile-link"
+                  data-testid="chat-list-avatar"
                 >
                   <BrunoAvatar
                     userId={participant.id}
@@ -358,18 +358,16 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat }) => {
                     thickness={2}
                   />
                   <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full ring-2 ring-background z-10" />
-                </Link>
+                </div>
 
                 {/* Chat Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-0.5">
-                    <Link 
-                      to={`/profile/${participant.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="font-semibold text-sm truncate hover:text-primary transition-colors"
+                    <span
+                      className="font-semibold text-sm truncate"
                     >
                       {participant.display_name || participant.username}
-                    </Link>
+                    </span>
                     <span className="text-[10px] text-muted-foreground ml-2 shrink-0">
                       {formatTime(chat.last_message_at)}
                     </span>
@@ -1408,17 +1406,12 @@ const ChatPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setChats(response.data);
-      
-      if (chatId) {
-        const targetChat = response.data.find(c => c.id === chatId);
-        if (targetChat) setSelectedChat(targetChat);
-      }
     } catch (error) {
       // error handled
     } finally {
       setLoading(false);
     }
-  }, [token, chatId]);
+  }, [token]);
 
   useEffect(() => {
     if (!user) {
@@ -1427,6 +1420,18 @@ const ChatPage = () => {
     }
     fetchChats();
   }, [user, navigate, fetchChats]);
+
+  // Sync selectedChat from URL param (e.g. when route is /chat/:id).
+  // This runs both on initial mount once chats are loaded AND when the
+  // URL changes — without re-fetching chats (which previously caused a
+  // race where the first tap appeared to do nothing).
+  useEffect(() => {
+    if (!chatId || chats.length === 0) return;
+    const target = chats.find(c => c.id === chatId);
+    if (target && selectedChat?.id !== target.id) {
+      setSelectedChat(target);
+    }
+  }, [chatId, chats, selectedChat?.id]);
 
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);

@@ -351,9 +351,28 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 **Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
 
-## Phase 62: Likes Refinement — Separar "Received" vs "Given" (2026-05-25)
+## Phase 63: Chat Bugs + Nav Hairline Bar (2026-05-25)
 
-**Cambio semántico**: la stat "Likes" en el perfil ahora muestra los likes que el usuario RECIBE en sus publicaciones (no los que el usuario da). Los likes que el usuario ha dado ahora viven como un álbum virtual "Me gusta" en la pestaña Albums.
+**🐛 Bug 1: Chat no abría al primer click**
+- **Causa raíz**: el avatar del chat-item era un `<Link to="/profile/...">` con `stopPropagation`. El click de Playwright/usuario caía sobre el Link (centro del row), navegaba al perfil, y el `onClick` del row nunca disparaba
+- **Fix**: avatar y nombre del usuario ahora son `<div>`/`<span>` sin navegación. Cualquier tap en el row abre el chat. La navegación al perfil queda accesible desde el header de `ChatView`
+- **Bonus fix**: `fetchChats` ya no depende de `chatId` (eliminada race condition que re-fetcheaba en cada cambio de URL). Un `useEffect` separado sincroniza `selectedChat` desde el URL param
+
+**🐛 Bug 2: Input distorsionaba al abrir teclado**
+- **Causa raíz**: `BrunoPillInput` llamaba `scrollIntoView({ block: "end" })` en focus + `motion.div layout` re-layout-animaba al cambiar tamaño. Combinado con la resize del `visualViewport`, el contenido del chat "se expandía y desaparecía"
+- **Fix**: removido `scrollIntoView` (el padre ya tiene `height: var(--app-vh)` que ajusta naturalmente). Removido prop `layout` de la pill (solo CSS-anim de boxShadow). Resultado: focus solo activa el ring naranja, sin saltos
+
+**✨ Nav Pill rediseñada como barra hairline**
+- Estado minimizado: ahora es una **barra finísima** (`h-[3px]`) flush al borde inferior, con dos puntos naranja pulsantes y handle central. Ocupa solo ~14px de la pantalla (antes 64px)
+- Auto-minimize más agresivo: `scrollY > lastY + 8` (antes +30) y solo se expande con upward scroll >48px (antes >20) → el nav desaparece en cuanto el usuario empieza a manipular
+- **Gesture global swipe-up-from-bottom-edge**: detecta touchstart en los últimos 24px del viewport + swipe vertical >24px → expande el nav. Funciona desde CUALQUIER parte de la app sin tener que tocar la barra
+- Route change a `/` o `/feed` (Inicio) fuerza expand (regla UX del usuario)
+- Otras rutas conservan el estado previo del usuario (no se re-expande automáticamente)
+- `--nav-reserve` ahora 14px en minimizado (antes 64px), liberando esa franja para el contenido real
+
+**Verificado E2E**: chat abre al primer click ✅ · input no distorsiona en focus ✅ · nav-expand-btn aparece como hairline ✅
+
+## Phase 62: Likes Refinement — Separar "Received" vs "Given" (2026-05-25)**Cambio semántico**: la stat "Likes" en el perfil ahora muestra los likes que el usuario RECIBE en sus publicaciones (no los que el usuario da). Los likes que el usuario ha dado ahora viven como un álbum virtual "Me gusta" en la pestaña Albums.
 
 **Backend**:
 - Nuevo endpoint `GET /api/users/me/likes-received` → posts del usuario actual, agrupados por LIKER (quien dio like), con la lista de cuáles posts del usuario likeó esa persona. Excluye self-likes

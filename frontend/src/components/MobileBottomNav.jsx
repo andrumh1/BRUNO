@@ -46,7 +46,7 @@ const MobileBottomNav = () => {
       document.documentElement.style.setProperty("--nav-reserve", "0px");
       return;
     }
-    const reserve = minimized ? 64 : 88;
+    const reserve = minimized ? 14 : 88;
     document.documentElement.style.setProperty("--nav-reserve", `${reserve}px`);
   }, [shouldHide, minimized]);
 
@@ -69,25 +69,32 @@ const MobileBottomNav = () => {
     return location.pathname === item.path;
   };
 
-  // MINIMIZED STATE - compact pill
+  // MINIMIZED STATE — thin hairline bar flush against the bottom edge.
+  // Designed to disappear from the user's mental UI while remaining one
+  // tap away (or a swipe-up from the bottom edge — handled globally).
   if (minimized) {
     return (
       <>
-        <div className="h-10" />
+        <div className="h-3" />
         <div
-          className={`fixed bottom-4 left-1/2 -translate-x-1/2 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
+          className={`fixed inset-x-0 bottom-0 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
           style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           data-testid="mobile-bottom-nav"
         >
           <button
             onClick={() => setMinimized(false)}
             {...touchHandlers}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-xl shadow-black/10 hover:shadow-black/20 transition-all duration-300 active:scale-95"
+            className="group block w-full py-1.5 px-4 outline-none focus:outline-none"
+            aria-label="Mostrar barra de navegación"
             data-testid="nav-expand-btn"
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <ChevronUp className="w-4 h-4 text-muted-foreground" />
-            <span className="text-[10px] font-medium text-muted-foreground">BRUNO</span>
+            <div className="mx-auto flex items-center justify-center gap-1.5 w-32 max-w-[40vw]">
+              <span className="h-1 w-1 rounded-full bg-orange-500/80 animate-pulse" />
+              <span
+                className="h-[3px] flex-1 rounded-full bg-foreground/25 group-hover:bg-foreground/40 group-active:bg-primary transition-colors"
+              />
+              <span className="h-1 w-1 rounded-full bg-orange-500/80 animate-pulse" />
+            </div>
           </button>
         </div>
       </>
