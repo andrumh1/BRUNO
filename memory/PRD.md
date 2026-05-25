@@ -351,7 +351,62 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 **Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
 
-## Phase 58: Google Maps API Key activada — Mapa hibrido LIVE (2026-05-25)
+## Phase 59: 6-point UX Batch — Reactions, Auth, Camera Menu, Map BRUNO Palette, Stripe Webhook, OG Meta-Cards (2026-05-25)
+
+**P0 — Avatares + Camera/Publication Selector**
+- `PostCard.jsx`: avatar reemplazado por `<BrunoAvatar>` (anillo de story automático global, glow naranja cuando hay historia activa)
+- `FeedPage.jsx`: sección "Personas sugeridas" usa `<BrunoAvatar>` también
+- NUEVO `BrunoPublishMenu` (`components/bruno/BrunoPublishMenu.jsx`): bottom-sheet con 2 pasos
+  - Step 1: 4 tipos (Historia · Reel · Publicación · Estado) con iconos+gradientes
+  - Step 2: 3 fuentes (Cámara Bruno · Galería · Carpeta privada) — solo para Story/Reel
+  - Fast-path: Publicación/Estado saltan directo a navegación (no se muestra step 2)
+- `MobileBottomNav` reemplaza la cámara directa con el menú: nav `+` → menú → ruteo por tipo+fuente
+
+**P1 — Long-press Reactions + Optimistic UI + Auth**
+- NUEVO `ReactionBubble` (`components/bruno/ReactionBubble.jsx`):
+  - Hook `useReactionTrigger({ onTap, onReact })` que adjunta handlers a cualquier botón
+  - Press 1000ms → bubble flotante fixed-position con 6 emojis (👍❤️😂😮😢😡)
+  - Drag/hover sobre emoji → escala 1.5x + label visible
+  - Release con emoji activo → fire onReact, sin emoji → dismiss
+  - Tap corto (<1s) → fire onTap (like normal)
+  - Haptic vibration al aparecer (navigator.vibrate)
+- `PostCard.handleLike` ahora es 100% optimistic: flip UI inmediato → server → rollback en error
+- `PostCard.handleComment` ahora es 100% optimistic: comentario aparece con tempId antes de respuesta del backend
+- `PostCard.handleShare` usa la nueva URL de meta-card (`/api/share/p/{id}`) para previews ricos en WhatsApp/Twitter/Telegram
+
+**Auth UI Updates** (`LoginPage.jsx` + `RegisterPage.jsx`):
+- Eye/EyeOff toggle en cada campo password (cambia input type entre `password` y `text`)
+- LoginPage: checkbox "Recordar mi correo" (persiste email a `localStorage.bruno_remembered_email`)
+- LoginPage: checkbox "Mantener sesión activa" (persiste a `localStorage.bruno_keep_session_active`, enviado al backend como `keep_session_active`)
+- Restore de email recordado al montar LoginPage
+
+**P2 — Map BRUNO Palette + Stripe Webhook + OG Meta-Cards**
+- `MapStyleSocial.jsx` rewrite: paleta predominantemente naranja+beige
+  - Roads: peach (#FFE2C2) / orange highways (#FFB37A → #FF8C42), bordes naranja oscuro
+  - Landscape: beige profundo (#FFE6C7, #F5D6A2)
+  - Administrative labels: naranja oscuro (#9A3412, #B45309, #7C2D12) negrita
+  - POI commercial: muted -65% saturation para que los PIUP pins ganen siempre la atención
+- `routers/piup.py` → nuevo endpoint `POST /api/piup/webhook/stripe`:
+  - Verifica firma via `emergentintegrations.StripeCheckout.handle_webhook`
+  - Marca `piup_orders` como `paid` cuando llega evento
+  - Dispara WS event `piup_payment_received` al user_id del pedido (real-time refresh)
+  - 503 si `STRIPE_API_KEY` no configurada, 400 si firma inválida
+- NUEVO `routers/share_og.py` (Open Graph meta-cards):
+  - `GET /api/share/c/{card_id}` — tarjeta Bruno
+  - `GET /api/share/u/{user_id}` — perfil usuario
+  - `GET /api/share/p/{post_id}` — publicación
+  - HTML estética con paleta BRUNO (orange #FF6B35, beige #FFF1DF)
+  - OG tags (`og:type`, `og:title`, `og:description`, `og:image`, `og:url`)
+  - Twitter Card `summary_large_image`
+  - Auto-redirect via `<meta http-equiv="refresh">` + JS fallback
+  - 404 con HTML estética para recursos faltantes
+  - Wired en `server.py` via `api_router.include_router(share_og_router)`
+
+**Test results (iteration 56)**:
+- Backend: 11/11 (100%) — OG endpoints, Stripe webhook validation, login w/ extra fields, like/react/comment regression
+- Frontend: 100% post-fix (publish menu fast-path para post/status aplicada)
+
+
 
 **Cambios .env**:
 - `REACT_APP_GOOGLE_MAPS_API_KEY=AIzaSyDlkbZe-6pdqN-Xejx0oaSH47GDB9Ky9eI`

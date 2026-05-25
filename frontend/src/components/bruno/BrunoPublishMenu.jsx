@@ -45,6 +45,12 @@ export default function BrunoPublishMenu({ open, onClose, onPick }) {
 
   const handleTypeSelect = (t) => {
     setType(t);
+    // Fast-path: post and status don't need a media source picker
+    if (t.id === "post" || t.id === "status") {
+      onPick?.({ type: t.id });
+      onClose?.();
+      return;
+    }
     setStep(2);
   };
 
