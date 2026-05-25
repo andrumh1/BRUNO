@@ -1,0 +1,49 @@
+{
+  "summary": "Iteration 56: 6-point feature batch tested. Backend 11/11 passed (OG share endpoints, Stripe webhook validation, login with keep_session_active, like/react/comment regression). Frontend mostly working: Eye toggles (login+register), publish menu with 4 types + 3 sources + back, reaction bubble with 6 emojis after 1s long-press, optimistic comments, orange map palette, OG share returns valid HTML with og: meta. One UX bug found: tapping 'Publicación'/'Estado' type cards advances to source step instead of directly navigating.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "BrunoPublishMenu",
+        "issue": "Tapping 'Publicación' or 'Estado' type card advances to step 2 (source selection) but the navigations to /feed?compose=1 and /my-profile?status=1 (defined in MobileBottomNav onPick lines 226-233) only fire after also picking a source. For these two types the menu should skip step 2 and immediately invoke onPick({type:'post'|'status'}). Currently, since lines 226-233 return early without using `source`, the user is forced to make a meaningless source choice first.",
+        "selector": "[data-testid='publish-menu-type-post'], [data-testid='publish-menu-type-status']",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration56_features.py",
+    "/app/test_reports/pytest/pytest_iteration56.xml"
+  ],
+  "action_items": [
+    "In BrunoPublishMenu.handleTypeSelect (lines 46-49), short-circuit for types 'post' and 'status' by calling onPick({type:t.id}) and onClose() directly instead of advancing to step 2.",
+    "OPTIONAL data-testid alignment with review request (functionality already works): rename `login-remember-me` → `login-remember-email`, `login-keep-active` → `login-keep-session`, `comment-input` → `post-comment-input`, `comment-submit` → `post-comment-send`. Current names work, just mismatched with spec."
+  ],
+  "critical_code_review_comments": [
+    "share_og.py: clean, properly escapes HTML, returns 404 with HTML body for missing resources, uses request.base_url as origin fallback (production should set FRONTEND_URL env).",
+    "piup.py webhook: correctly returns 503 when STRIPE_API_KEY missing, 400 on invalid signature/payload via emergentintegrations handle_webhook.",
+    "BrunoPublishMenu: navigation logic split between two files (menu does step routing, MobileBottomNav does URL routing). For type=post/status the source step is unused — should short-circuit.",
+    "PostCard.jsx handleLike (line 100-119): properly optimistic — sets likesCount immediately then syncs with server response; rollback on error.",
+    "PostCard.jsx comment submit (line 205-211): optimistic comment renders within 120ms before server response — verified.",
+    "LoginPage.jsx: rememberMe (default true → email persisted to bruno_remembered_email), keepActive (default true → bruno_keep_session_active='1') — both verified via localStorage inspection.",
+    "MapStyleSocial.jsx renders with visible orange roads + beige landscape (Bogotá map screenshot confirms BRUNO palette)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration56_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11)",
+    "frontend": "95% (1 UX bug on type=post/status fast-path)"
+  },
+  "test_credentials": {"email": "newtest@bruno.com", "password": "Test1234!"},
+  "seed_data_creation": "Created TEST_post + TEST_comment via API regression tests; cleanup not needed.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter56 verified the 6-point batch. Backend share OG endpoints return 200 with og:* meta for existing resources and 404 (still HTML) for missing. Stripe webhook returns 400 with invalid sig (STRIPE_API_KEY configured) or 503 if no key. Login accepts extra keep_session_active field (pydantic ignores). Post like/react/comment endpoints regressed clean. Frontend testids actually in code: `login-remember-me` (not `login-remember-email`), `login-keep-active` (not `login-keep-session`), `comment-input`/`comment-submit` (not `post-comment-input`/`post-comment-send`). Reaction bubble appears after ~1s long-press with 6 emojis. Eye toggle present on both Login + Register. Map renders orange palette. Only remaining issue: publish menu should skip source step for type=post/status.",
+  "rca_of_issue": "BrunoPublishMenu.handleTypeSelect unconditionally sets step=2. The downstream onPick branches for type=='post' and type=='status' in MobileBottomNav ignore the `source` argument and just navigate, so the source step is dead UX for those types. Fix: in handleTypeSelect, if t.id in ['post','status'], call onPick({type:t.id}) and onClose() instead of setStep(2)."
+}

@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
-import { Mail, Lock, AlertCircle } from "lucide-react";
+import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -16,6 +16,20 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [keepActive, setKeepActive] = useState(true);
+
+  // Restore remembered email on mount
+  useEffect(() => {
+    try {
+      const rememberedEmail = localStorage.getItem("bruno_remembered_email");
+      if (rememberedEmail) {
+        setFormData((p) => ({ ...p, email: rememberedEmail }));
+        setRememberMe(true);
+      }
+    } catch (_) { /* no-op */ }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -29,8 +43,21 @@ const LoginPage = () => {
 
     try {
       const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|Opera Mini|IEMobile/i.test(navigator.userAgent);
-      const payload = { ...formData, platform: isMobile ? "mobile" : "web" };
+      const payload = {
+        ...formData,
+        platform: isMobile ? "mobile" : "web",
+        keep_session_active: keepActive,
+      };
       const response = await axios.post(`${API}/auth/login`, payload);
+      // Persist preferences
+      try {
+        if (rememberMe) {
+          localStorage.setItem("bruno_remembered_email", formData.email);
+        } else {
+          localStorage.removeItem("bruno_remembered_email");
+        }
+        localStorage.setItem("bruno_keep_session_active", keepActive ? "1" : "0");
+      } catch (_) { /* no-op */ }
       login(response.data.user, response.data.access_token);
       navigate("/my-profile");
     } catch (err) {
@@ -85,6 +112,7 @@ const LoginPage = () => {
                   onChange={handleChange}
                   className="pl-10"
                   required
+                  data-testid="login-email-input"
                 />
               </div>
             </div>
@@ -95,17 +123,51 @@ const LoginPage = () => {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}
-                  className="pl-10"
+                  className="pl-10 pr-10"
                   required
+                  data-testid="login-password-input"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 grid place-items-center w-8 h-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  data-testid="login-password-toggle"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            {/* Remember me + Keep session */}
+            <div className="space-y-2 pt-1">
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-orange-300 text-primary accent-orange-500 focus:ring-2 focus:ring-orange-400"
+                  data-testid="login-remember-me"
+                />
+                <span className="text-sm">Recordar mi correo</span>
+              </label>
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={keepActive}
+                  onChange={(e) => setKeepActive(e.target.checked)}
+                  className="h-4 w-4 rounded border-orange-300 text-primary accent-orange-500 focus:ring-2 focus:ring-orange-400"
+                  data-testid="login-keep-active"
+                />
+                <span className="text-sm">Mantener sesión activa</span>
+              </label>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading} data-testid="login-submit">
               {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
             </Button>
           </form>
@@ -124,6 +186,7 @@ const LoginPage = () => {
             variant="outline"
             className="w-full"
             onClick={handleGoogleLogin}
+            data-testid="login-google-btn"
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
               <path

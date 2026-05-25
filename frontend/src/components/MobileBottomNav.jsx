@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavScroll } from "@/contexts/NavScrollContext";
 import { useBrunoCamera } from "@/contexts/BrunoCameraContext";
+import BrunoPublishMenu from "@/components/bruno/BrunoPublishMenu";
 import axios from "axios";
 import { 
   Home, Film, Map, ShoppingBag, User, Plus, Bell,
@@ -17,6 +18,7 @@ const MobileBottomNav = () => {
   const { user, token } = useAuth();
   const { minimized, setMinimized, touchHandlers } = useNavScroll();
   const { open: openCamera, isOpen: cameraOpen } = useBrunoCamera();
+  const [publishMenuOpen, setPublishMenuOpen] = useState(false);
   
   const hiddenPaths = ['/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || 
@@ -124,37 +126,7 @@ const MobileBottomNav = () => {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => openCamera({
-                      mode: "both",
-                      onCapture: async (file, meta) => {
-                        // Upload + auto-publish as story (default flow for the "+" button)
-                        try {
-                          const form = new FormData();
-                          form.append("file", file);
-                          const ep = file.type.startsWith("video") ? "/upload/chat-file" : "/upload/image";
-                          const up = await axios.post(`${API}${ep}`, form, {
-                            headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
-                          });
-                          const mediaUrl = up.data.url || up.data.secure_url;
-                          if (!mediaUrl) throw new Error("no url");
-                          await axios.post(`${API}/stories/`, {
-                            media_url: mediaUrl,
-                            media_type: file.type.startsWith("video") ? "video" : "image",
-                            caption: null,
-                            duration: file.type.startsWith("video") ? 15 : 5,
-                            visibility: "public",
-                            music: meta?.music || null,
-                          }, { headers: { Authorization: `Bearer ${token}` } });
-                          const { brunoToast } = await import("@/components/bruno/BrunoToast");
-                          brunoToast.publish("Publicado en Story", {
-                            description: "Disponible durante 24h en tu perfil.",
-                          });
-                        } catch (_) {
-                          const { brunoToast } = await import("@/components/bruno/BrunoToast");
-                          brunoToast.error("No se pudo publicar");
-                        }
-                      }
-                    })}
+                    onClick={() => setPublishMenuOpen(true)}
                     className="relative flex items-center justify-center w-11 h-11 -mt-4"
                     data-testid={`nav-${item.id}`}
                   >
@@ -217,6 +189,79 @@ const MobileBottomNav = () => {
           </button>
         </div>
       </nav>
+
+      <BrunoPublishMenu
+        open={publishMenuOpen}
+        onClose={() => setPublishMenuOpen(false)}
+        onPick={async ({ type, source, file }) => {
+          // Helper: publish a story given a file
+          const publishStory = async (mediaFile, meta = {}) => {
+            try {
+              const form = new FormData();
+              form.append("file", mediaFile);
+              const isVideo = mediaFile.type.startsWith("video");
+              const ep = isVideo ? "/upload/chat-file" : "/upload/image";
+              const up = await axios.post(`${API}${ep}`, form, {
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
+              });
+              const mediaUrl = up.data.url || up.data.secure_url;
+              if (!mediaUrl) throw new Error("no url");
+              await axios.post(`${API}/stories/`, {
+                media_url: mediaUrl,
+                media_type: isVideo ? "video" : "image",
+                caption: null,
+                duration: isVideo ? 15 : 5,
+                visibility: "public",
+                music: meta?.music || null,
+              }, { headers: { Authorization: `Bearer ${token}` } });
+              const { brunoToast } = await import("@/components/bruno/BrunoToast");
+              brunoToast.publish("Publicado en Story", { description: "Disponible durante 24h." });
+            } catch (_) {
+              const { brunoToast } = await import("@/components/bruno/BrunoToast");
+              brunoToast.error("No se pudo publicar");
+            }
+          };
+
+          // Route by type
+          if (type === "post") {
+            navigate("/feed?compose=1");
+            return;
+          }
+          if (type === "status") {
+            navigate("/my-profile?status=1");
+            return;
+          }
+          if (type === "reel") {
+            // Reels are always video; gallery source uploads, camera opens video mode
+            if (source === "gallery" && file) {
+              navigate("/reels?upload=1");
+              return;
+            }
+            openCamera({
+              mode: "video",
+              onCapture: async (capturedFile) => {
+                navigate("/reels?upload=1");
+                await publishStory(capturedFile);
+              },
+            });
+            return;
+          }
+          // type === "story"
+          if (source === "gallery" && file) {
+            await publishStory(file);
+            return;
+          }
+          if (source === "private") {
+            navigate("/my-profile?tab=stories&private=1");
+            return;
+          }
+          // camera (live)
+          openCamera({
+            mode: "both",
+            onCapture: async (capturedFile, meta) => publishStory(capturedFile, meta),
+          });
+        }}
+      />
     </>
   );
 };

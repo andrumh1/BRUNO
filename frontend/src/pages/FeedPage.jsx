@@ -10,6 +10,7 @@ import SocialLinkButton from "@/components/SocialLinkButton";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import PostCard from "@/components/PostCard";
 import CreatePost from "@/components/CreatePost";
+import BrunoAvatar from "@/components/bruno/BrunoAvatar";
 import ReelsFeed from "@/components/ReelsFeed";
 import { StoriesRow } from "@/components/Stories";
 import StoryEditor from "@/components/StoryEditor";
@@ -650,13 +651,13 @@ const FeedPage = () => {
                     <div className="space-y-2.5">
                       {suggested.slice(0, 5).map((u) => (
                         <Link key={u.id} to={`/profile/${u.id}`} className="flex items-center gap-2.5 py-1 hover:opacity-80 transition-opacity">
-                          {u.avatar_url ? (
-                            <img src={u.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
-                              {(u.name || "U")[0].toUpperCase()}
-                            </div>
-                          )}
+                          <BrunoAvatar
+                            userId={u.id}
+                            src={u.avatar_url}
+                            name={u.name || u.username}
+                            size={32}
+                            thickness={2}
+                          />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold truncate">{u.name || u.username}</p>
                             {u.mutual_count > 0 && <p className="text-[10px] text-muted-foreground">{u.mutual_count} mutuales</p>}

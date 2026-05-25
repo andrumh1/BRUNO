@@ -559,3 +559,83 @@ async def piup_checkout_status(
         "payment_status": new_payment_status,
         "order": refreshed,
     }
+
+
+# ─── Stripe Webhook for PIUP orders ──────────────────────────────────────────
+
+@router.post("/webhook/stripe")
+async def piup_stripe_webhook(request: Request):
+    """Receives Stripe events for PIUP physical orders.
+
+    Triggered when a customer completes (or fails) checkout. Marks the
+    matching `piup_orders` row as paid and dispatches a realtime notification
+    so the user's manager refreshes automatically.
+
+    NOTE: Stripe must be configured with the public URL of this endpoint:
+      <FRONTEND_BACKEND_URL>/api/piup/webhook/stripe
+    plus the matching webhook secret stored in Stripe's dashboard. When using
+    Emergent's StripeCheckout helper the signature is verified inside
+    `handle_webhook`.
+    """
+    api_key = os.environ.get("STRIPE_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Stripe not configured")
+
+    from emergentintegrations.payments.stripe.checkout import StripeCheckout
+    host_url = str(request.base_url).rstrip("/")
+    webhook_url = f"{host_url}/api/piup/webhook/stripe"
+    stripe_checkout = StripeCheckout(api_key=api_key, webhook_url=webhook_url)
+
+    body = await request.body()
+    sig = request.headers.get("Stripe-Signature", "")
+
+    try:
+        event = await stripe_checkout.handle_webhook(body, sig)
+    except Exception as e:
+        logger.error(f"PIUP Stripe webhook signature/parse error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid Stripe payload")
+
+    session_id = getattr(event, "session_id", None)
+    payment_status = getattr(event, "payment_status", None) or "unknown"
+
+    if not session_id:
+        return {"received": True, "ignored": True}
+
+    order = await db.piup_orders.find_one({"stripe_session_id": session_id}, {"_id": 0})
+    if not order:
+        # Webhook fired for a non-PIUP session — ignore politely
+        return {"received": True, "matched": False}
+
+    new_payment_status = "paid" if payment_status == "paid" else payment_status
+    new_status = "paid" if new_payment_status == "paid" else order.get("status", "pending_payment")
+
+    await db.piup_orders.update_one(
+        {"stripe_session_id": session_id},
+        {"$set": {
+            "payment_status": new_payment_status,
+            "status": new_status,
+            "stripe_event_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }},
+    )
+
+    # Fire a realtime notification to the buyer so PIUPManager refreshes
+    if new_payment_status == "paid":
+        try:
+            from server import ws_manager
+            await ws_manager.send_personal_message({
+                "type": "piup_payment_received",
+                "order_id": order["id"],
+                "product_name": order.get("product_name", "PIUP"),
+                "amount": order.get("total_price", 0),
+                "currency": order.get("currency", "USD"),
+            }, order["user_id"])
+        except Exception as _e:
+            logger.warning(f"Failed to dispatch piup_payment_received realtime event: {_e}")
+
+    return {
+        "received": True,
+        "matched": True,
+        "payment_status": new_payment_status,
+        "order_id": order["id"],
+    }

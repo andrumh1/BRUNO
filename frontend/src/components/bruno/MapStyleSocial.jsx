@@ -1,60 +1,75 @@
 /**
- * MapStyleSocial — injects a Snapchat-inspired custom JSON style on the
- * current Google Map. Lives as a child of <Map> so it has access to useMap().
+ * MapStyleSocial — BRUNO-branded Google Maps JSON styling.
  *
- * Style philosophy:
- *   - Muted cream/sand background → highlights orange Bruno pins
- *   - Soft pastel roads with strong typography for street names
- *   - Public POIs (hospitals, government, transit) are KEPT visible
- *   - Commercial business POIs are slightly muted so BRUNO PIUP pins win the eye
+ *  Palette philosophy (per user request):
+ *    - PREDOMINANTLY ORANGE (#FF6B35 family) and BEIGE (#FFF1DF / #FBE4C2)
+ *    - All BRUNO PIUP pins are pure orange → the rest of the map is muted
+ *      cream/beige so they ALWAYS win attention
+ *    - Public POIs (hospitals, government, transit) remain readable but
+ *      tinted with the brand palette
+ *    - Roads use peach/orange tones instead of generic gray/white
+ *
+ *  Lives as a child of <Map> so it has access to useMap().
  */
 import { useEffect } from "react";
 import { useMap } from "@vis.gl/react-google-maps";
 
 const SOCIAL_STYLE = [
-  { elementType: "geometry", stylers: [{ color: "#FFF7EE" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#3A2E22" }] },
+  // Global base: warm beige
+  { elementType: "geometry", stylers: [{ color: "#FFF1DF" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#4B3321" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#FFF7EE" }, { weight: 2.5 }] },
 
-  // Land + parks
-  { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#FFF1DF" }] },
-  { featureType: "landscape.natural.terrain", elementType: "geometry", stylers: [{ color: "#FBE4C2" }] },
-  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#CDE9C5" }] },
+  // Land + parks (slightly darker beige; parks keep green for legibility)
+  { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#FFE6C7" }] },
+  { featureType: "landscape.natural.terrain", elementType: "geometry", stylers: [{ color: "#F5D6A2" }] },
+  { featureType: "landscape.man_made", elementType: "geometry", stylers: [{ color: "#FFEBD2" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#D2E4B2" }] },
   { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#3E7B36" }] },
 
-  // Water
+  // Water: muted teal so it doesn't compete with orange
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#A6D8E8" }] },
   { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#1F6F8B" }] },
 
-  // Roads — pastel orange highways, white streets, strong type
-  { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#FFFFFF" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#F2C9A0" }, { weight: 0.8 }] },
-  { featureType: "road.highway", elementType: "geometry.fill", stylers: [{ color: "#FFD7AE" }] },
-  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#FF9F4C" }, { weight: 1.2 }] },
-  { featureType: "road.arterial", elementType: "geometry.fill", stylers: [{ color: "#FFE8C9" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#5B4633" }] },
+  // ROADS — peach/orange tones (BRUNO brand)
+  { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#FFE2C2" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#E89B5C" }, { weight: 0.8 }] },
+  { featureType: "road.highway", elementType: "geometry.fill", stylers: [{ color: "#FFB37A" }] },
+  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#E06A1A" }, { weight: 1.5 }] },
+  { featureType: "road.highway.controlled_access", elementType: "geometry.fill", stylers: [{ color: "#FF8C42" }] },
+  { featureType: "road.highway.controlled_access", elementType: "geometry.stroke", stylers: [{ color: "#C24E00" }, { weight: 1.5 }] },
+  { featureType: "road.arterial", elementType: "geometry.fill", stylers: [{ color: "#FFCFA0" }] },
+  { featureType: "road.arterial", elementType: "geometry.stroke", stylers: [{ color: "#D88243" }, { weight: 0.6 }] },
+  { featureType: "road.local", elementType: "geometry.fill", stylers: [{ color: "#FFE9CC" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#7A3F11" }] },
+  { featureType: "road", elementType: "labels.text.stroke", stylers: [{ color: "#FFF7EE" }, { weight: 2.5 }] },
   { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
 
-  // Administrative — neighborhood / locality labels prominent
+  // Administrative — bold orange typography
   { featureType: "administrative.neighborhood", elementType: "labels.text.fill", stylers: [{ color: "#B45309" }] },
-  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#92400E" }, { weight: 700 }] },
+  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#9A3412" }, { weight: 700 }] },
   { featureType: "administrative.country", elementType: "labels.text.fill", stylers: [{ color: "#4B3321" }] },
   { featureType: "administrative.land_parcel", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "administrative.province", elementType: "labels.text.fill", stylers: [{ color: "#7C2D12" }] },
 
-  // Public POIs — KEEP and emphasize (hospitals, government, transit, schools)
+  // Public POIs — KEEP visible but tinted to brand palette
   { featureType: "poi.medical", elementType: "geometry", stylers: [{ color: "#FFD3D3" }] },
   { featureType: "poi.medical", elementType: "labels.text.fill", stylers: [{ color: "#B22222" }] },
   { featureType: "poi.medical", elementType: "labels.icon", stylers: [{ saturation: 15 }] },
-  { featureType: "poi.government", elementType: "geometry", stylers: [{ color: "#D7E3FF" }] },
-  { featureType: "poi.government", elementType: "labels.text.fill", stylers: [{ color: "#1E3A8A" }] },
-  { featureType: "poi.school", elementType: "labels.text.fill", stylers: [{ color: "#1F6F8B" }] },
-  { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#5B4633" }] },
+  { featureType: "poi.government", elementType: "geometry", stylers: [{ color: "#FFCFA0" }] },
+  { featureType: "poi.government", elementType: "labels.text.fill", stylers: [{ color: "#7C2D12" }] },
+  { featureType: "poi.school", elementType: "geometry", stylers: [{ color: "#F8E1B2" }] },
+  { featureType: "poi.school", elementType: "labels.text.fill", stylers: [{ color: "#7C5400" }] },
+  { featureType: "poi.place_of_worship", elementType: "labels.text.fill", stylers: [{ color: "#7C2D12" }] },
+  { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#7A3F11" }] },
+  { featureType: "transit.line", elementType: "geometry", stylers: [{ color: "#E89B5C" }] },
   { featureType: "transit.station", elementType: "labels.icon", stylers: [{ saturation: 10 }] },
 
   // Commercial POIs — muted so BRUNO PIUP pins win attention
   { featureType: "poi.business", elementType: "labels", stylers: [{ visibility: "simplified" }] },
-  { featureType: "poi.business", elementType: "labels.icon", stylers: [{ saturation: -50 }] },
-  { featureType: "poi.attraction", elementType: "labels.icon", stylers: [{ saturation: -30 }] },
+  { featureType: "poi.business", elementType: "labels.icon", stylers: [{ saturation: -65 }, { lightness: 8 }] },
+  { featureType: "poi.attraction", elementType: "labels.icon", stylers: [{ saturation: -40 }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#6B4226" }] },
 ];
 
 export default function MapStyleSocial() {
@@ -62,9 +77,6 @@ export default function MapStyleSocial() {
 
   useEffect(() => {
     if (!map) return;
-    // Applying a styles array to a vector map with a non-null mapId can be
-    // a no-op, but Google's docs say setOptions({styles}) still works on
-    // legacy maps. We try both for compatibility.
     try {
       map.setOptions({ styles: SOCIAL_STYLE });
     } catch (_) { /* ignore */ }

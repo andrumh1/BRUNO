@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { InlineVerifiedBadge } from "@/components/VerifiedBadge";
 import { ReportButton } from "@/components/ReportContentModal";
+import BrunoAvatar from "@/components/bruno/BrunoAvatar";
+import ReactionBubble, { useReactionTrigger, BRUNO_REACTIONS } from "@/components/bruno/ReactionBubble";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -17,26 +19,14 @@ import {
   Bookmark,
   BookmarkCheck,
   Play,
-  Flame,
-  Laugh,
-  Frown,
-  ThumbsUp,
   Repeat2,
-  X,
   Minimize2
 } from "lucide-react";
 import { useNavScroll } from "@/contexts/NavScrollContext";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
-const REACTIONS = [
-  { type: "like", icon: Heart, label: "Me gusta", color: "text-red-500", bg: "bg-red-500/10", fill: true },
-  { type: "love", icon: Heart, label: "Encanta", color: "text-pink-500", bg: "bg-pink-500/10", fill: true },
-  { type: "fire", icon: Flame, label: "Fuego", color: "text-orange-500", bg: "bg-orange-500/10", fill: false },
-  { type: "laugh", icon: Laugh, label: "Jaja", color: "text-yellow-500", bg: "bg-yellow-500/10", fill: false },
-  { type: "wow", icon: ThumbsUp, label: "Wow", color: "text-blue-500", bg: "bg-blue-500/10", fill: false },
-  { type: "sad", icon: Frown, label: "Triste", color: "text-purple-500", bg: "bg-purple-500/10", fill: false },
-];
+const REACTIONS = BRUNO_REACTIONS; // legacy fallback - same emoji list
 
 // Render content with clickable hashtags and @mentions
 const RenderContent = ({ content }) => {
@@ -67,21 +57,21 @@ const RenderContent = ({ content }) => {
   );
 };
 
-// Floating reaction particle animation
-const ReactionParticle = ({ icon: Icon, color, fill }) => (
+// Floating reaction particle animation (emoji-based)
+const ReactionParticle = ({ emoji }) => (
   <motion.div
     initial={{ opacity: 1, y: 0, scale: 0.5 }}
     animate={{ 
       opacity: 0, 
       y: -60, 
-      scale: 1.3,
+      scale: 1.5,
       x: Math.random() * 40 - 20 
     }}
     exit={{ opacity: 0 }}
     transition={{ duration: 0.8, ease: "easeOut" }}
-    className="absolute pointer-events-none"
+    className="absolute pointer-events-none text-2xl"
   >
-    <Icon className={`w-5 h-5 ${color} ${fill ? "fill-current" : ""}`} />
+    {emoji}
   </motion.div>
 );
 
@@ -97,51 +87,67 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
   const [newComment, setNewComment] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [showReactions, setShowReactions] = useState(false);
-  const [currentReaction, setCurrentReaction] = useState(null);
+  const [currentReaction, setCurrentReaction] = useState(post.user_reaction || null);
   const [particles, setParticles] = useState([]);
-  const reactionTimeout = useRef(null);
 
-  const spawnParticle = (reaction) => {
+  const spawnParticle = (emoji) => {
     const id = Date.now() + Math.random();
-    setParticles(prev => [...prev, { id, ...reaction }]);
+    setParticles(prev => [...prev, { id, emoji }]);
     setTimeout(() => setParticles(prev => prev.filter(p => p.id !== id)), 900);
   };
 
+  // Optimistic like: flip UI first, rollback on error
   const handleLike = async () => {
     if (!token) return;
+    const wasLiked = isLiked;
+    const prevCount = likesCount;
+    setIsLiked(!wasLiked);
+    setLikesCount(prev => prev + (wasLiked ? -1 : 1));
+    if (!wasLiked) spawnParticle("👍");
     try {
       const res = await axios.post(`${API}/posts/${post.id}/like`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      // Reconcile with server
       setIsLiked(res.data.liked);
       setLikesCount(res.data.likes_count);
-      if (res.data.liked) spawnParticle(REACTIONS[0]);
       if (onLike) onLike(post.id, res.data);
       if (onLikeUpdate) onLikeUpdate(post.id, res.data);
-    } catch (e) { }
+    } catch (e) {
+      // rollback
+      setIsLiked(wasLiked);
+      setLikesCount(prevCount);
+    }
   };
 
-  const handleReaction = async (type) => {
-    if (!token) return;
-    setShowReactions(false);
-    const reaction = REACTIONS.find(r => r.type === type);
+  // Long-press emoji reaction: optimistic + server sync
+  const handleReactionPick = async (reaction) => {
+    if (!token || !reaction) return;
+    const prev = { isLiked, likesCount, currentReaction };
+    setCurrentReaction(reaction.key);
+    setIsLiked(true);
+    if (!isLiked) setLikesCount(c => c + 1);
+    spawnParticle(reaction.emoji);
     try {
-      const res = await axios.post(`${API}/posts/${post.id}/react?reaction_type=${type}`, {}, {
+      const res = await axios.post(`${API}/posts/${post.id}/react?reaction_type=${reaction.key}`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.data.reacted) {
-        setCurrentReaction(type);
-        setIsLiked(true);
-        setLikesCount(prev => prev + (isLiked ? 0 : 1));
-        if (reaction) spawnParticle(reaction);
-      } else {
+      if (!res.data.reacted) {
         setCurrentReaction(null);
         setIsLiked(false);
-        setLikesCount(prev => Math.max(0, prev - 1));
+        setLikesCount(c => Math.max(0, c - 1));
       }
-    } catch (e) { }
+    } catch (e) {
+      setIsLiked(prev.isLiked);
+      setLikesCount(prev.likesCount);
+      setCurrentReaction(prev.currentReaction);
+    }
   };
+
+  const reactionTrigger = useReactionTrigger({
+    onTap: handleLike,
+    onReact: handleReactionPick,
+  });
 
   const handleBookmark = async () => {
     if (!token) return;
@@ -164,16 +170,18 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
   };
 
   const handleShare = async () => {
+    // Use BRUNO meta-card URL for rich previews on WhatsApp/Twitter/Telegram
+    const shareUrl = `${process.env.REACT_APP_BACKEND_URL}/api/share/p/${post.id}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Post by ${post.user?.display_name || post.user?.username}`,
-          text: post.content,
-          url: `${window.location.origin}/post/${post.id}`
+          title: `${post.user?.display_name || post.user?.username || "BRUNO"}`,
+          text: post.content || "Mira esta publicacion en BRUNO",
+          url: shareUrl,
         });
       } catch (e) {}
     } else {
-      navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
+      navigator.clipboard.writeText(shareUrl);
     }
   };
 
@@ -190,13 +198,27 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
   const handleComment = async (e) => {
     e.preventDefault();
     if (!newComment.trim() || !token) return;
+    const text = newComment.trim();
+    setNewComment("");
+    // Optimistic comment: render immediately with a temp id
+    const tempId = `temp-${Date.now()}`;
+    const optimistic = {
+      id: tempId,
+      content: text,
+      user: { id: user?.id, username: user?.username, display_name: user?.display_name, avatar_url: user?.avatar_url },
+      _optimistic: true,
+    };
+    setComments(prev => [optimistic, ...prev]);
     try {
-      const res = await axios.post(`${API}/posts/${post.id}/comments`, { content: newComment }, {
+      const res = await axios.post(`${API}/posts/${post.id}/comments`, { content: text }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setComments([res.data, ...comments]);
-      setNewComment("");
-    } catch (e) { }
+      setComments(prev => prev.map(c => c.id === tempId ? res.data : c));
+    } catch (e) {
+      // rollback on error
+      setComments(prev => prev.filter(c => c.id !== tempId));
+      setNewComment(text);
+    }
   };
 
   const handleDelete = async () => {
@@ -219,14 +241,10 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
     return new Date(dateString).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
   };
 
-  const onLongPressStart = () => {
-    reactionTimeout.current = setTimeout(() => setShowReactions(true), 400);
-  };
-  const onLongPressEnd = () => {
-    if (reactionTimeout.current) clearTimeout(reactionTimeout.current);
-  };
+  const onLongPressStart = () => {};
+  const onLongPressEnd = () => {};
 
-  const activeReaction = REACTIONS.find(r => r.type === currentReaction) || REACTIONS[0];
+  const activeReaction = BRUNO_REACTIONS.find(r => r.key === currentReaction) || BRUNO_REACTIONS[0];
   const isRepost = post.post_type === "repost";
 
   return (
@@ -243,25 +261,19 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
         {/* Header */}
         <div className="flex items-center justify-between p-4 pb-3">
           <div className="flex items-center gap-3">
-            {/* Avatar - opens stories if available */}
-            <button 
+            {/* Avatar with story ring (global sync) */}
+            <button
               onClick={() => onAvatarClick ? onAvatarClick(post.user) : navigate(`/profile/${post.user?.id}`)}
-              className="relative shrink-0 group"
+              className="relative shrink-0 group hover:scale-105 transition-transform"
               data-testid="post-user-avatar-btn"
             >
-              <div className="w-10 h-10 rounded-full p-0.5 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-500 group-hover:scale-105 transition-transform">
-                <div className="w-full h-full rounded-full bg-background p-[1px]">
-                  <div className="w-full h-full rounded-full overflow-hidden">
-                    {post.user?.avatar_url ? (
-                      <img src={post.user.avatar_url} alt={post.user.username} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
-                        {(post.user?.display_name || post.user?.username || "U")[0].toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <BrunoAvatar
+                userId={post.user?.id}
+                src={post.user?.avatar_url}
+                name={post.user?.display_name || post.user?.username}
+                size={40}
+                thickness={2}
+              />
             </button>
             {/* Name - navigates to profile */}
             <Link to={`/profile/${post.user?.id}`} className="hover:opacity-80 transition-opacity" data-testid="post-user-profile-link">
@@ -359,74 +371,45 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
           </Link>
         )}
 
-        {/* Animated Reactions popup */}
-        <AnimatePresence>
-          {showReactions && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.6, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.6, y: 10 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className="px-4 pb-1"
-            >
-              <div className="inline-flex items-center gap-0.5 bg-card border rounded-full p-1.5 shadow-xl" data-testid="reactions-popup">
-                {REACTIONS.map((r, idx) => (
-                  <motion.button
-                    key={r.type}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.04, type: "spring", stiffness: 500 }}
-                    onClick={() => handleReaction(r.type)}
-                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${currentReaction === r.type ? r.bg + " scale-110" : "hover:bg-muted"}`}
-                    whileHover={{ scale: 1.3 }}
-                    whileTap={{ scale: 0.85 }}
-                    title={r.label}
-                    data-testid={`reaction-${r.type}`}
-                  >
-                    <r.icon className={`w-4.5 h-4.5 ${r.color} ${currentReaction === r.type && r.fill ? "fill-current" : ""}`} />
-                  </motion.button>
-                ))}
-                <motion.button
-                  onClick={() => setShowReactions(false)}
-                  className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-muted ml-0.5"
-                  whileHover={{ rotate: 90 }}
-                >
-                  <X className="w-3 h-3 text-muted-foreground" />
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Long-press reaction bubble (rendered as fixed-position via portal-like flow) */}
+        <ReactionBubble
+          bubble={reactionTrigger.bubble}
+          hover={reactionTrigger.hover}
+          onPick={(r) => { reactionTrigger.close(r); }}
+        />
 
         {/* Actions */}
         <div className="flex items-center justify-between px-4 py-2.5 border-t relative">
-          {/* Floating reaction particles */}
+          {/* Floating reaction particles (emoji) */}
           <div className="absolute left-6 bottom-8 pointer-events-none">
             <AnimatePresence>
               {particles.map(p => (
-                <ReactionParticle key={p.id} icon={p.icon} color={p.color} fill={p.fill} />
+                <ReactionParticle key={p.id} emoji={p.emoji} />
               ))}
             </AnimatePresence>
           </div>
 
           <div className="flex items-center gap-3">
             <motion.button
-              onClick={handleLike}
-              onMouseDown={onLongPressStart}
-              onMouseUp={onLongPressEnd}
-              onTouchStart={onLongPressStart}
-              onTouchEnd={onLongPressEnd}
+              ref={reactionTrigger.triggerRef}
+              {...reactionTrigger.handlers}
               whileTap={{ scale: 0.85 }}
-              className={`flex items-center gap-1.5 transition-all ${isLiked ? activeReaction.color : "text-muted-foreground hover:text-red-500"}`}
+              className={`flex items-center gap-1.5 transition-all ${isLiked ? "text-orange-500" : "text-muted-foreground hover:text-red-500"}`}
               data-testid="post-like-btn"
+              aria-label={isLiked ? `Reaccion: ${activeReaction.label}` : "Me gusta"}
             >
               <motion.div
                 key={currentReaction || "default"}
                 initial={{ scale: 0.5, rotate: -15 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                className="grid place-items-center"
               >
-                <activeReaction.icon className={`w-5 h-5 ${isLiked && activeReaction.fill ? "fill-current" : ""}`} />
+                {currentReaction ? (
+                  <span style={{ fontSize: 22, lineHeight: 1 }}>{activeReaction.emoji}</span>
+                ) : (
+                  <Heart className={`w-5 h-5 ${isLiked ? "fill-current text-orange-500" : ""}`} />
+                )}
               </motion.div>
               <span className="text-sm font-medium">{likesCount}</span>
             </motion.button>
