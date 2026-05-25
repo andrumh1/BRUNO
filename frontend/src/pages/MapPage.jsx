@@ -112,7 +112,7 @@ export default function MapPage() {
           <MapStyleSocial />
         </Map>
 
-        <div className="absolute right-3 bottom-32 flex flex-col gap-2 z-20">
+        <div className="absolute right-3 flex flex-col gap-2 z-[60]" style={{ bottom: "calc(var(--nav-reserve, 96px) + 200px)" }}>
           <button
             onClick={() => {
               if (!navigator.geolocation) return;

@@ -351,6 +351,28 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 **Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
 
+## Phase 58: Google Maps API Key activada — Mapa hibrido LIVE (2026-05-25)
+
+**Cambios .env**:
+- `REACT_APP_GOOGLE_MAPS_API_KEY=AIzaSyDlkbZe-6pdqN-Xejx0oaSH47GDB9Ky9eI`
+- `REACT_APP_GOOGLE_MAPS_ID=DEMO_MAP_ID`
+
+**Fix posicion FAB**:
+- Los botones "+" reclamar PIUP y recenter ahora se posicionan dinamicamente arriba del pill bar (`bottom: calc(var(--nav-reserve) + 200px)` y `z-[60]`) para nunca quedar tapados.
+
+**Verificado visualmente con screenshots mobile (390x844):**
+1. Mapa hibrido Bogota: 
+   - Capa Google con calles (Av El Dorado, Carreras, Calles)
+   - Barrios: KENNEDY, GALAN, LOS MARTIRES, SANTA FE, LA CANDELARIA
+   - Hospitales visibles destacados: Hospital Universitario Mayor, Hospital Militar Central, Sociedad de Cirugia
+   - Centros comerciales, parques, universidades
+   - 1 pin PIUP naranja brand "Mi negocio" cerca LOS MARTIRES
+2. Modal "Reclamar punto":
+   - Selector de tarjeta funcional
+   - 9 categorias con iconos+colores BRUNO
+   - Coords auto-rellenadas
+   - Boton "Publicar pin en el mapa" prominente
+
 ## Phase 57: Avatares burbuja + Sync global de Stories (2026-05-24)
 
 **Bug fix critico**: `StoryRing` no aplicaba `rounded-full` cuando `hasActive=false`, devolviendo un `<div>` cuadrado. Resultado visible: foto de perfil se veia cuadrada en EditProfile. Ambos branches del componente ahora aplican `rounded-full overflow-hidden`.
