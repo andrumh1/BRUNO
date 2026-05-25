@@ -351,9 +351,30 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 **Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
 
-## Phase 61: Bug Fix Likes/Comentarios + Pestaña "Likes" en Perfil (2026-05-25)
+## Phase 62: Likes Refinement — Separar "Received" vs "Given" (2026-05-25)
 
-**🐛 Bug Crítico Corregido — Like no funcionaba**
+**Cambio semántico**: la stat "Likes" en el perfil ahora muestra los likes que el usuario RECIBE en sus publicaciones (no los que el usuario da). Los likes que el usuario ha dado ahora viven como un álbum virtual "Me gusta" en la pestaña Albums.
+
+**Backend**:
+- Nuevo endpoint `GET /api/users/me/likes-received` → posts del usuario actual, agrupados por LIKER (quien dio like), con la lista de cuáles posts del usuario likeó esa persona. Excluye self-likes
+- Endpoint anterior `GET /api/users/me/liked-posts` se mantiene para alimentar el álbum virtual "Me gusta"
+
+**Frontend**:
+- `LikesModal` (header "Te dieron Like"): ahora consume `likes-received`. Empty state: "Aún nadie te ha dado like"
+- Nuevo `MyLikedPostsModal` (header "Me gusta"): consume `liked-posts` (igual que antes)
+- `MyProfilePage`:
+  - Stat "Likes" usa `likesCount` desde `likes-received` (refleja lo recibido)
+  - Pestaña Albums ahora siempre muestra una grid; el **primer card** es el álbum auto "Me gusta" (gradiente rosa→naranja→rose con icono Heart, badge AUTO, contador de posts), siempre presente aunque no haya álbumes propios
+  - Si no hay álbumes propios, se renderiza un placeholder "+" para crear el primero (al lado del Me gusta)
+- Carga paralela de ambos counts (`Promise.all`) en `fetchLikesCount`
+
+**Verificado E2E**:
+- Stat Likes muestra 2 (likes recibidos de Andru Mieles) ✅
+- Modal "Te dieron Like" agrupa por liker ✅
+- Albums tab muestra card "Me gusta" con badge AUTO ✅
+- Modal "Me gusta" muestra 2 publicaciones · 2 perfiles (lo que YO he likeado) ✅
+
+## Phase 61: Bug Fix Likes/Comentarios + Pestaña "Likes" en Perfil (2026-05-25)**🐛 Bug Crítico Corregido — Like no funcionaba**
 - **Causa raíz**: el hook `useReactionTrigger` solo conectaba `onMouseDown`/`onTouchStart` a la `motion.button`, mientras que `onMouseUp`/`onTouchEnd` solo se montaban globalmente CUANDO el bubble estaba abierto. Resultado: en taps cortos (sin long-press) **nunca se disparaba `onTap`**, los likes no se incrementaban ni la petición se enviaba.
 - **Fix**: el botón ahora es un `<button>` nativo con `onClick={handleLike}` directo, y el hook expone `longPressFired.current` que el `onClick` consulta para suprimir el tap cuando se completó el long-press (evita doble-fire). Hook handlers locales `onMouseUp`/`onTouchEnd` ahora también cancelan el timer pendiente.
 - **Verificado**: `POST /api/posts/{id}/like` se dispara correctamente. Antes click: count=2 → Después click: count=3 (optimistic update + reconciliación server).

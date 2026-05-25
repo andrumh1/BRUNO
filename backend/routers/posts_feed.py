@@ -303,17 +303,7 @@ async def get_my_liked_posts(
 ):
     """Return all posts the current user has liked, grouped by author.
 
-    Response shape:
-    {
-      "total_likes": N,
-      "groups": [
-        {
-          "user": { id, username, display_name, avatar_url, is_verified },
-          "posts": [ {id, content, media, created_at, likes_count, comments_count, ...} ],
-          "count": int
-        }, ...
-      ]
-    }
+    Used by the "Me gusta" virtual album under Albums.
     """
     # 1. Find all like rows for this user, newest first
     like_cursor = db.likes.find(
@@ -373,6 +363,105 @@ async def get_my_liked_posts(
 
     return {
         "total_likes": len(posts),
+        "groups": list(groups_dict.values()),
+    }
+
+
+@router.get("/users/me/likes-received")
+async def get_likes_received(
+    current_user: User = Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 200,
+):
+    """Return all likes RECEIVED on the current user's own posts, grouped by liker.
+
+    This is the data the user actually wants to see under the "Likes" stat —
+    "who liked my stuff", not "what I liked".
+
+    Response shape:
+    {
+      "total_likes": N,
+      "groups": [
+        {
+          "user": liker_info,
+          "posts": [ {id, content, media, liked_at} ],  // posts the liker liked
+          "count": int
+        }, ...
+      ]
+    }
+    """
+    # 1. Find all my posts
+    my_post_ids = [
+        p["id"] async for p in db.posts.find(
+            {"user_id": current_user.id}, {"_id": 0, "id": 1}
+        )
+    ]
+    if not my_post_ids:
+        return {"total_likes": 0, "groups": []}
+
+    # 2. Find all like rows for my posts (newest first)
+    like_cursor = db.likes.find(
+        {"target_id": {"$in": my_post_ids}, "target_type": "post",
+         "user_id": {"$ne": current_user.id}},  # exclude self-likes
+        {"_id": 0, "user_id": 1, "target_id": 1, "created_at": 1},
+    ).sort("created_at", -1).skip(skip).limit(limit)
+    likes = await like_cursor.to_list(limit)
+    if not likes:
+        return {"total_likes": 0, "groups": []}
+
+    # 3. Resolve liker users + the specific posts they liked
+    liker_ids = list({lk["user_id"] for lk in likes})
+    post_ids_liked = list({lk["target_id"] for lk in likes})
+
+    users_map: dict = {}
+    profiles_map: dict = {}
+    posts_map: dict = {}
+    async for u in db.users.find({"id": {"$in": liker_ids}}, {"_id": 0, "hashed_password": 0}):
+        users_map[u["id"]] = u
+    async for pr in db.user_profiles.find({"user_id": {"$in": liker_ids}}, {"_id": 0}):
+        profiles_map[pr["user_id"]] = pr
+    async for p in db.posts.find({"id": {"$in": post_ids_liked}}, {"_id": 0}):
+        posts_map[p["id"]] = p
+
+    # 4. Group by liker, preserve newest-first order
+    groups_dict: dict = {}
+    for lk in likes:
+        liker_id = lk["user_id"]
+        u = users_map.get(liker_id)
+        pr = profiles_map.get(liker_id)
+        if not u:
+            continue  # liker deleted account
+        post = posts_map.get(lk["target_id"])
+        if not post:
+            continue
+        if liker_id not in groups_dict:
+            username = u.get("name") or u.get("email", "Unknown").split("@")[0]
+            groups_dict[liker_id] = {
+                "user": {
+                    "id": u["id"],
+                    "username": username,
+                    "display_name": (pr.get("display_name") if pr else None) or username,
+                    "avatar_url": pr.get("avatar_url") if pr else None,
+                    "is_verified": u.get("is_verified", False),
+                    "subscription_tier": u.get("subscription_tier", "free"),
+                },
+                "posts": [],
+                "count": 0,
+            }
+        # Attach a minimal post snapshot + liked_at timestamp
+        groups_dict[liker_id]["posts"].append({
+            "id": post["id"],
+            "content": post.get("content", ""),
+            "media": post.get("media", []),
+            "created_at": post.get("created_at"),
+            "likes_count": post.get("likes_count", 0),
+            "comments_count": post.get("comments_count", 0),
+            "liked_at": lk.get("created_at"),
+        })
+        groups_dict[liker_id]["count"] += 1
+
+    return {
+        "total_likes": sum(g["count"] for g in groups_dict.values()),
         "groups": list(groups_dict.values()),
     }
 

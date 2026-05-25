@@ -1,10 +1,11 @@
 /**
- * LikesModal — shows all posts the user has liked, grouped by author.
+ * LikesModal — shows everyone who liked the user's posts, grouped by liker.
  *
- *  Endpoint: GET /api/users/me/liked-posts
+ *  Endpoint: GET /api/users/me/likes-received
  *  Response: { total_likes, groups: [{ user, posts, count }] }
  *
- *  Each author group is collapsible; tap a post to navigate to the original.
+ *  Each liker group is collapsible — expanding it shows which of YOUR posts
+ *  that person liked. Tapping a post navigates to it.
  */
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -109,7 +110,7 @@ export default function LikesModal({ open, onClose }) {
     if (!open || !token) return;
     let active = true;
     setLoading(true);
-    axios.get(`${API}/users/me/liked-posts`, {
+    axios.get(`${API}/users/me/likes-received`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => { if (active) setData(res.data); })
@@ -139,9 +140,9 @@ export default function LikesModal({ open, onClose }) {
               <Heart className="w-4 h-4 text-white fill-white" />
             </div>
             <div>
-              <h3 className="font-bold text-stone-900">Tus likes</h3>
+              <h3 className="font-bold text-stone-900">Te dieron Like</h3>
               <p className="text-[11px] text-stone-500">
-                {loading ? "Cargando..." : `${data.total_likes} publicaci${data.total_likes === 1 ? "ón" : "ones"} · ${data.groups.length} perfil${data.groups.length === 1 ? "" : "es"}`}
+                {loading ? "Cargando..." : `${data.total_likes} like${data.total_likes === 1 ? "" : "s"} · ${data.groups.length} perfil${data.groups.length === 1 ? "" : "es"}`}
               </p>
             </div>
           </div>
@@ -163,8 +164,8 @@ export default function LikesModal({ open, onClose }) {
           ) : data.groups.length === 0 ? (
             <div className="text-center py-10">
               <Heart className="w-10 h-10 mx-auto text-orange-300 mb-3" />
-              <p className="text-sm font-semibold text-stone-700">Aún no tienes likes</p>
-              <p className="text-xs text-stone-500 mt-1">Toca el corazón en cualquier publicación para empezar.</p>
+              <p className="text-sm font-semibold text-stone-700">Aún nadie te ha dado like</p>
+              <p className="text-xs text-stone-500 mt-1">Cuando alguien reaccione a tus publicaciones, aparecerán aquí.</p>
             </div>
           ) : (
             data.groups.map((g, i) => (

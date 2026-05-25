@@ -12,6 +12,7 @@ import BrunoAvatar from "@/components/bruno/BrunoAvatar";
 import HighlightsSection from "@/components/bruno/HighlightsSection";
 import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
 import LikesModal from "@/components/bruno/LikesModal";
+import MyLikedPostsModal from "@/components/bruno/MyLikedPostsModal";
 import useActiveStories from "@/hooks/useActiveStories";
 import axios from "axios";
 import { 
@@ -54,7 +55,8 @@ import {
   Scale,
   TrendingUp,
   LayoutGrid,
-  ArrowUpDown
+  ArrowUpDown,
+  Heart
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -79,7 +81,9 @@ const MyProfilePage = () => {
   const [followersList, setFollowersList] = useState([]);
   const [followingList, setFollowingList] = useState([]);
   const [showLikes, setShowLikes] = useState(false);
+  const [showMyLiked, setShowMyLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
+  const [myLikedCount, setMyLikedCount] = useState(0);
   const [albums, setAlbums] = useState([]);
 
   // Active stories ring + viewer
@@ -155,16 +159,19 @@ const MyProfilePage = () => {
     }
   }, [token]);
 
-  // Fetch likes count for the Likes button badge
+  // Fetch likes RECEIVED count (for the "Likes" stat on profile)
   const fetchLikesCount = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await axios.get(`${API}/users/me/liked-posts`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setLikesCount(response.data?.total_likes || 0);
+      const [received, given] = await Promise.all([
+        axios.get(`${API}/users/me/likes-received`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API}/users/me/liked-posts`, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      setLikesCount(received.data?.total_likes || 0);
+      setMyLikedCount(given.data?.total_likes || 0);
     } catch (error) {
       setLikesCount(0);
+      setMyLikedCount(0);
     }
   }, [token]);
 
@@ -898,45 +905,71 @@ const MyProfilePage = () => {
                 Gestionar
               </Button>
             </div>
-            {albums.length === 0 ? (
-              <div className="text-center py-12">
-                <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground mb-3">No hay albums aun</p>
-                <Button onClick={() => navigate("/albums")} variant="outline" size="sm">
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Crear album
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {albums.map((album) => (
-                  <button
-                    key={album.id}
-                    onClick={() => navigate(`/albums?open=${album.id}`)}
-                    className="group relative aspect-square rounded-xl overflow-hidden bg-muted border hover:shadow-lg transition-all"
-                    data-testid={`album-card-${album.id}`}
-                  >
-                    {album.photos?.length > 0 ? (
-                      <img src={album.photos[0].url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-muted">
-                        <FolderOpen className="w-8 h-8 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8">
-                      <div className="flex items-center gap-1.5">
-                        {album.is_public ? (
-                          <Globe className="w-3 h-3 text-white/70" />
-                        ) : (
-                          <Shield className="w-3 h-3 text-white/70" />
-                        )}
-                        <span className="text-white text-sm font-semibold truncate">{album.name}</span>
-                      </div>
-                      <span className="text-white/60 text-[10px]">{album.photos?.length || 0} fotos</span>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Pinned virtual album: "Me gusta" (posts the user liked) */}
+              <button
+                onClick={() => setShowMyLiked(true)}
+                className="group relative aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-pink-500 via-orange-500 to-rose-500 border border-orange-200 hover:shadow-lg hover:shadow-orange-500/30 transition-all"
+                data-testid="album-card-me-gusta"
+              >
+                <div className="absolute inset-0 grid place-items-center">
+                  <div className="grid place-items-center w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                    <Heart className="w-8 h-8 text-white fill-white drop-shadow" />
+                  </div>
+                </div>
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8 text-left">
+                  <div className="flex items-center gap-1.5">
+                    <Heart className="w-3 h-3 text-white/80 fill-white/80" />
+                    <span className="text-white text-sm font-bold truncate">Me gusta</span>
+                  </div>
+                  <span className="text-white/80 text-[10px]">{myLikedCount} publicaci{myLikedCount === 1 ? "ón" : "ones"}</span>
+                </div>
+                <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-white/30 backdrop-blur-sm">
+                  <span className="text-[9px] font-bold text-white tracking-wider">AUTO</span>
+                </div>
+              </button>
+
+              {albums.length === 0 && (
+                <button
+                  onClick={() => navigate("/albums")}
+                  className="aspect-square rounded-xl border-2 border-dashed border-orange-300 bg-orange-50/30 hover:bg-orange-50 hover:border-orange-400 transition-colors grid place-items-center"
+                  data-testid="album-create-empty"
+                >
+                  <div className="text-center px-3">
+                    <Plus className="w-7 h-7 text-orange-500 mx-auto mb-1.5" />
+                    <p className="text-xs font-semibold text-orange-700">Crear álbum</p>
+                  </div>
+                </button>
+              )}
+
+              {albums.map((album) => (
+                <button
+                  key={album.id}
+                  onClick={() => navigate(`/albums?open=${album.id}`)}
+                  className="group relative aspect-square rounded-xl overflow-hidden bg-muted border hover:shadow-lg transition-all"
+                  data-testid={`album-card-${album.id}`}
+                >
+                  {album.photos?.length > 0 ? (
+                    <img src={album.photos[0].url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-muted">
+                      <FolderOpen className="w-8 h-8 text-muted-foreground" />
                     </div>
-                  </button>
-                ))}
-              </div>
-            )}
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 pt-8">
+                    <div className="flex items-center gap-1.5">
+                      {album.is_public ? (
+                        <Globe className="w-3 h-3 text-white/70" />
+                      ) : (
+                        <Shield className="w-3 h-3 text-white/70" />
+                      )}
+                      <span className="text-white text-sm font-semibold truncate">{album.name}</span>
+                    </div>
+                    <span className="text-white/60 text-[10px]">{album.photos?.length || 0} fotos</span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -996,8 +1029,11 @@ const MyProfilePage = () => {
         />
       )}
 
-      {/* Likes modal — shows all posts the user has liked, grouped by author */}
+      {/* Likes modal — shows people who LIKED MY posts, grouped by liker */}
       <LikesModal open={showLikes} onClose={() => setShowLikes(false)} />
+
+      {/* "Me gusta" virtual album — posts the user has liked, grouped by author */}
+      <MyLikedPostsModal open={showMyLiked} onClose={() => setShowMyLiked(false)} />
     </div>
   );
 };
