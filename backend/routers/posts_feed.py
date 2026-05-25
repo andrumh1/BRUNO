@@ -294,6 +294,89 @@ async def get_posts(
     
     return posts
 
+
+@router.get("/users/me/liked-posts")
+async def get_my_liked_posts(
+    current_user: User = Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 100,
+):
+    """Return all posts the current user has liked, grouped by author.
+
+    Response shape:
+    {
+      "total_likes": N,
+      "groups": [
+        {
+          "user": { id, username, display_name, avatar_url, is_verified },
+          "posts": [ {id, content, media, created_at, likes_count, comments_count, ...} ],
+          "count": int
+        }, ...
+      ]
+    }
+    """
+    # 1. Find all like rows for this user, newest first
+    like_cursor = db.likes.find(
+        {"user_id": current_user.id, "target_type": "post"},
+        {"_id": 0, "target_id": 1, "created_at": 1},
+    ).sort("created_at", -1).skip(skip).limit(limit)
+    likes = await like_cursor.to_list(limit)
+    if not likes:
+        return {"total_likes": 0, "groups": []}
+
+    post_ids = [lk["target_id"] for lk in likes]
+    like_order = {pid: i for i, pid in enumerate(post_ids)}
+
+    # 2. Fetch the actual posts (some may have been deleted — skip silently)
+    posts = await db.posts.find({"id": {"$in": post_ids}}, {"_id": 0}).to_list(len(post_ids))
+
+    # 3. Enrich with author info
+    author_ids = list({p["user_id"] for p in posts})
+    users_map: dict = {}
+    profiles_map: dict = {}
+    if author_ids:
+        async for u in db.users.find({"id": {"$in": author_ids}}, {"_id": 0, "hashed_password": 0}):
+            users_map[u["id"]] = u
+        async for pr in db.user_profiles.find({"user_id": {"$in": author_ids}}, {"_id": 0}):
+            profiles_map[pr["user_id"]] = pr
+
+    # 4. Stamp is_liked=True (we already know) and inject author block
+    for post in posts:
+        u = users_map.get(post["user_id"])
+        pr = profiles_map.get(post["user_id"])
+        username = (u.get("name") if u else None) or (u.get("email", "Unknown").split("@")[0] if u else "Unknown")
+        post["user"] = {
+            "id": u["id"] if u else None,
+            "username": username,
+            "display_name": (pr.get("display_name") if pr else None) or username,
+            "avatar_url": pr.get("avatar_url") if pr else None,
+            "is_verified": (u.get("is_verified", False) if u else False),
+            "subscription_tier": (u.get("subscription_tier", "free") if u else "free"),
+        }
+        post["is_liked"] = True
+
+    # Preserve like-order (newest like first)
+    posts.sort(key=lambda p: like_order.get(p["id"], 999999))
+
+    # 5. Group by author_id, preserve insertion order
+    groups_dict: dict = {}
+    for post in posts:
+        author_id = post["user_id"]
+        if author_id not in groups_dict:
+            groups_dict[author_id] = {
+                "user": post["user"],
+                "posts": [],
+                "count": 0,
+            }
+        groups_dict[author_id]["posts"].append(post)
+        groups_dict[author_id]["count"] += 1
+
+    return {
+        "total_likes": len(posts),
+        "groups": list(groups_dict.values()),
+    }
+
+
 @router.get("/posts/{post_id}")
 async def get_post(post_id: str, current_user: Optional[User] = Depends(get_current_user_optional)):
     """Get a single post"""

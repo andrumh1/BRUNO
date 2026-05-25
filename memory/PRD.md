@@ -351,6 +351,31 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 **Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
 
+## Phase 61: Bug Fix Likes/Comentarios + Pestaña "Likes" en Perfil (2026-05-25)
+
+**🐛 Bug Crítico Corregido — Like no funcionaba**
+- **Causa raíz**: el hook `useReactionTrigger` solo conectaba `onMouseDown`/`onTouchStart` a la `motion.button`, mientras que `onMouseUp`/`onTouchEnd` solo se montaban globalmente CUANDO el bubble estaba abierto. Resultado: en taps cortos (sin long-press) **nunca se disparaba `onTap`**, los likes no se incrementaban ni la petición se enviaba.
+- **Fix**: el botón ahora es un `<button>` nativo con `onClick={handleLike}` directo, y el hook expone `longPressFired.current` que el `onClick` consulta para suprimir el tap cuando se completó el long-press (evita doble-fire). Hook handlers locales `onMouseUp`/`onTouchEnd` ahora también cancelan el timer pendiente.
+- **Verificado**: `POST /api/posts/{id}/like` se dispara correctamente. Antes click: count=2 → Después click: count=3 (optimistic update + reconciliación server).
+- Comentarios optimistas ahora también actualizan badge `commentsCount` localmente
+- Repost optimista actualiza `sharesCount`
+- `handleShare` muestra toast "Link copiado" / "Compartido" (antes silent fail en desktop)
+- `handleRepost` y errores rollback con toast (antes `alert()`)
+
+**✨ Nueva pestaña "Likes" en perfil (junto a Siguiendo)**
+- Nuevo endpoint: `GET /api/users/me/liked-posts` → devuelve `{total_likes, groups: [{user, posts, count}]}` agrupado por autor
+- Nueva ruta en `routers/posts_feed.py`, ordenada por timestamp de like más reciente
+- Nuevo componente `LikesModal.jsx`:
+  - Modal bottom-sheet con header "Tus likes — N publicaciones · M perfiles"
+  - Grupos colapsables por autor (avatar con BrunoAvatar, badge naranja con count)
+  - Miniatura de cada post (media thumb 56x56, contenido truncado, contadores)
+  - Click en post navega a `/post/{id}`
+  - Primeros 2 grupos abiertos por defecto
+- `MyProfilePage`: cuarta stat `Likes` (count en naranja) entre "Siguiendo" y el divisor → abre `LikesModal`
+- Conteo se carga en paralelo con perfil/posts/cards (`fetchLikesCount`)
+
+**Verificado E2E**: login → /feed → click like → count incrementa + API request enviada; perfil → click Likes → modal abre con 1 publicación / 1 perfil
+
 ## Phase 60: Code Quality Cleanup (2026-05-25)
 
 **Circular Import Broken** — `server.py` ↔ routers

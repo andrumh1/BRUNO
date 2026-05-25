@@ -81,6 +81,8 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
   const { addMinimizedItem } = useNavScroll();
   const [isLiked, setIsLiked] = useState(post.is_liked || false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
+  const [commentsCount, setCommentsCount] = useState(post.comments_count || 0);
+  const [sharesCount, setSharesCount] = useState(post.shares_count || 0);
   const [isBookmarked, setIsBookmarked] = useState(post.is_bookmarked || false);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
@@ -161,12 +163,18 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
 
   const handleRepost = async () => {
     if (!token) return;
+    setSharesCount(c => c + 1);
     try {
       await axios.post(`${API}/posts/${post.id}/repost`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert("Publicacion compartida en tu perfil!");
-    } catch (e) { }
+      const { brunoToast } = await import("@/components/bruno/BrunoToast");
+      brunoToast.success("Compartido", { description: "La publicación está ahora en tu perfil." });
+    } catch (e) {
+      setSharesCount(c => Math.max(0, c - 1));
+      const { brunoToast } = await import("@/components/bruno/BrunoToast");
+      brunoToast.error("No se pudo compartir");
+    }
   };
 
   const handleShare = async () => {
@@ -179,9 +187,20 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
           text: post.content || "Mira esta publicacion en BRUNO",
           url: shareUrl,
         });
-      } catch (e) {}
+        const { brunoToast } = await import("@/components/bruno/BrunoToast");
+        brunoToast.success("Compartido");
+      } catch (e) {
+        // user cancelled — no feedback needed
+      }
     } else {
-      navigator.clipboard.writeText(shareUrl);
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        const { brunoToast } = await import("@/components/bruno/BrunoToast");
+        brunoToast.success("Link copiado", { description: "Pégalo donde quieras compartir." });
+      } catch (e) {
+        const { brunoToast } = await import("@/components/bruno/BrunoToast");
+        brunoToast.error("No se pudo copiar el link");
+      }
     }
   };
 
@@ -209,6 +228,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
       _optimistic: true,
     };
     setComments(prev => [optimistic, ...prev]);
+    setCommentsCount(c => c + 1);
     try {
       const res = await axios.post(`${API}/posts/${post.id}/comments`, { content: text }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -217,6 +237,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
     } catch (e) {
       // rollback on error
       setComments(prev => prev.filter(c => c.id !== tempId));
+      setCommentsCount(c => Math.max(0, c - 1));
       setNewComment(text);
     }
   };
@@ -390,11 +411,20 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
           </div>
 
           <div className="flex items-center gap-3">
-            <motion.button
+            <button
+              type="button"
               ref={reactionTrigger.triggerRef}
               {...reactionTrigger.handlers}
-              whileTap={{ scale: 0.85 }}
-              className={`flex items-center gap-1.5 transition-all ${isLiked ? "text-orange-500" : "text-muted-foreground hover:text-red-500"}`}
+              onClick={(e) => {
+                // Suppress tap action if the long-press bubble fired (user picked
+                // an emoji via the bubble flow instead).
+                if (reactionTrigger.longPressFired?.current) {
+                  reactionTrigger.longPressFired.current = false;
+                  return;
+                }
+                handleLike();
+              }}
+              className={`flex items-center gap-1.5 transition-all active:scale-90 ${isLiked ? "text-orange-500" : "text-muted-foreground hover:text-red-500"}`}
               data-testid="post-like-btn"
               aria-label={isLiked ? `Reaccion: ${activeReaction.label}` : "Me gusta"}
             >
@@ -412,16 +442,16 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
                 )}
               </motion.div>
               <span className="text-sm font-medium">{likesCount}</span>
-            </motion.button>
+            </button>
             
             <button onClick={loadComments} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors" data-testid="post-comment-btn">
               <MessageCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">{post.comments_count || 0}</span>
+              <span className="text-sm font-medium">{commentsCount}</span>
             </button>
             
             <button onClick={handleRepost} className="flex items-center gap-1.5 text-muted-foreground hover:text-green-500 transition-colors" data-testid="post-repost-btn">
               <Repeat2 className="w-5 h-5" />
-              <span className="text-sm font-medium">{post.shares_count || 0}</span>
+              <span className="text-sm font-medium">{sharesCount}</span>
             </button>
 
             <button onClick={handleShare} className="text-muted-foreground hover:text-primary transition-colors" data-testid="post-share-btn">

@@ -47,6 +47,10 @@ export function useReactionTrigger({ onTap, onReact, disabled = false } = {}) {
     }
   };
 
+  // True when the last interaction triggered the long-press bubble.
+  // Used by callers' onClick to suppress the tap action.
+  const longPressFired = useRef(false);
+
   const showBubbleFor = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
@@ -56,6 +60,7 @@ export function useReactionTrigger({ onTap, onReact, disabled = false } = {}) {
     x = Math.max(8, Math.min(window.innerWidth - bubbleWidth - 8, x));
     const y = rect.top - 64; // bubble sits 64px above trigger
     setBubble({ x, y, width: bubbleWidth });
+    longPressFired.current = true;
     // Haptic on supported devices
     if (navigator.vibrate) navigator.vibrate(20);
   }, []);
@@ -70,6 +75,7 @@ export function useReactionTrigger({ onTap, onReact, disabled = false } = {}) {
   const handleStart = useCallback((e) => {
     if (disabled) return;
     startedAt.current = Date.now();
+    longPressFired.current = false;
     cancelTimer();
     timerRef.current = setTimeout(showBubbleFor, PRESS_DELAY);
   }, [disabled, showBubbleFor]);
@@ -96,7 +102,6 @@ export function useReactionTrigger({ onTap, onReact, disabled = false } = {}) {
   }, [bubble]);
 
   const handleEnd = useCallback((e) => {
-    const elapsed = Date.now() - startedAt.current;
     if (bubble) {
       // Pick whatever's hovered, else dismiss
       if (hover) {
@@ -106,10 +111,10 @@ export function useReactionTrigger({ onTap, onReact, disabled = false } = {}) {
         close();
       }
     } else {
+      // Cancel the pending long-press timer — onClick will handle the tap.
       cancelTimer();
-      if (elapsed < PRESS_DELAY && onTap) onTap();
     }
-  }, [bubble, hover, onTap, close]);
+  }, [bubble, hover, close]);
 
   // Outside-click dismiss when bubble is open via mouse (touchend handled above)
   useEffect(() => {
@@ -136,11 +141,18 @@ export function useReactionTrigger({ onTap, onReact, disabled = false } = {}) {
     handlers: {
       onMouseDown: handleStart,
       onTouchStart: handleStart,
-      // Mouse up / touch end handled globally so dragging outside still works
+      // Cancel timer if user releases without triggering long-press.
+      // Native onClick on the button handles the actual tap.
+      onMouseUp: handleEnd,
+      onTouchEnd: handleEnd,
+      onMouseLeave: () => { if (!bubble) cancelTimer(); },
     },
     bubble,
     hover,
     close,
+    // True if the most recent interaction triggered the long-press bubble
+    // (callers should suppress their tap action in this case).
+    longPressFired,
   };
 }
 

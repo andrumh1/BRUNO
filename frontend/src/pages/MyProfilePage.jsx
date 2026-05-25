@@ -11,6 +11,7 @@ import QuickStoryButton from "@/components/bruno/QuickStoryButton";
 import BrunoAvatar from "@/components/bruno/BrunoAvatar";
 import HighlightsSection from "@/components/bruno/HighlightsSection";
 import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
+import LikesModal from "@/components/bruno/LikesModal";
 import useActiveStories from "@/hooks/useActiveStories";
 import axios from "axios";
 import { 
@@ -77,6 +78,8 @@ const MyProfilePage = () => {
   const [showFollowers, setShowFollowers] = useState(null);
   const [followersList, setFollowersList] = useState([]);
   const [followingList, setFollowingList] = useState([]);
+  const [showLikes, setShowLikes] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
   const [albums, setAlbums] = useState([]);
 
   // Active stories ring + viewer
@@ -152,6 +155,19 @@ const MyProfilePage = () => {
     }
   }, [token]);
 
+  // Fetch likes count for the Likes button badge
+  const fetchLikesCount = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await axios.get(`${API}/users/me/liked-posts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setLikesCount(response.data?.total_likes || 0);
+    } catch (error) {
+      setLikesCount(0);
+    }
+  }, [token]);
+
   // Fetch explore (all public) cards
   const fetchExploreCards = useCallback(async () => {
     try {
@@ -208,14 +224,14 @@ const MyProfilePage = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchProfile(), fetchPosts(), fetchCards(), fetchExploreCards(), fetchAlbums()]);
+      await Promise.all([fetchProfile(), fetchPosts(), fetchCards(), fetchExploreCards(), fetchAlbums(), fetchLikesCount()]);
       setLoading(false);
     };
     
     if (user && token) {
       loadData();
     }
-  }, [fetchProfile, fetchPosts, fetchCards, fetchExploreCards, fetchAlbums, user, token]);
+  }, [fetchProfile, fetchPosts, fetchCards, fetchExploreCards, fetchAlbums, fetchLikesCount, user, token]);
 
   // Handle profile update
   const handleSaveProfile = async () => {
@@ -420,6 +436,10 @@ const MyProfilePage = () => {
               <button className="text-center hover:opacity-70 transition-opacity" onClick={() => loadFollowersList("following")} data-testid="my-following-count">
                 <p className="text-xl font-bold">{profile?.following_count || 0}</p>
                 <p className="text-xs text-muted-foreground">Siguiendo</p>
+              </button>
+              <button className="text-center hover:opacity-70 transition-opacity" onClick={() => setShowLikes(true)} data-testid="my-likes-count">
+                <p className="text-xl font-bold text-orange-500">{likesCount}</p>
+                <p className="text-xs text-muted-foreground">Likes</p>
               </button>
             </div>
           </div>
@@ -975,6 +995,9 @@ const MyProfilePage = () => {
           onClose={closeStories}
         />
       )}
+
+      {/* Likes modal — shows all posts the user has liked, grouped by author */}
+      <LikesModal open={showLikes} onClose={() => setShowLikes(false)} />
     </div>
   );
 };
