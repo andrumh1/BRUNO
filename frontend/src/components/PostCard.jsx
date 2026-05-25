@@ -38,7 +38,7 @@ const RenderContent = ({ content }) => {
       {parts.map((part, i) => {
         if (part.startsWith("#")) {
           return (
-            <Link key={i} to={`/hashtag/${part.slice(1)}`} className="text-primary font-medium hover:underline" data-testid={`hashtag-${part.slice(1)}`}>
+            <Link key={`h-${i}-${part}`} to={`/hashtag/${part.slice(1)}`} className="text-primary font-medium hover:underline" data-testid={`hashtag-${part.slice(1)}`}>
               {part}
             </Link>
           );
@@ -46,12 +46,12 @@ const RenderContent = ({ content }) => {
         if (part.startsWith("@")) {
           const username = part.slice(1);
           return (
-            <Link key={i} to={`/profile/${username}`} className="text-sky-500 font-medium hover:underline" data-testid={`mention-${username}`}>
+            <Link key={`m-${i}-${username}`} to={`/profile/${username}`} className="text-sky-500 font-medium hover:underline" data-testid={`mention-${username}`}>
               {part}
             </Link>
           );
         }
-        return <span key={i}>{part}</span>;
+        return <span key={`t-${i}`}>{part}</span>;
       })}
     </p>
   );

@@ -79,7 +79,7 @@ async def create_story(
 async def _broadcast_story_published(user_id: str, story_id: str) -> None:
     """Best-effort WS broadcast so every avatar of this user lights up."""
     try:
-        from server import ws_manager
+        from utils.ws_manager import ws_manager
         # Notify the publisher's own session (they have multiple tabs / devices)
         await ws_manager.send_personal_message(
             {"type": "story_published", "kind": "story_published", "user_id": user_id, "story_id": story_id},

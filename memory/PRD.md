@@ -351,6 +351,31 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 **Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
 
+## Phase 60: Code Quality Cleanup (2026-05-25)
+
+**Circular Import Broken** — `server.py` ↔ routers
+- NUEVO `utils/ws_manager.py`: extrae `ConnectionManager` + instancia `ws_manager` a su propio módulo
+- `server.py`, `routers/stories.py`, `routers/piup.py`, `utils/notification_realtime.py` ahora importan `from utils.ws_manager import ws_manager` (top-level)
+- Eliminadas todas las `from server import ws_manager` (lazy imports anti-pattern)
+
+**Lint cleanup — backend**
+- F811: eliminados `UserProfile` / `UserProfileUpdate` duplicados al inicio (dead code)
+- F821 `ai_chat_sessions` undefined: agregado dict module-level + lazy `from emergentintegrations.llm.chat import LlmChat, UserMessage` dentro del endpoint `/api/ai/chat`
+- E722 bare `except`: convertidos a `except Exception` en map_manager broadcast
+- `ruff check server.py` ahora pasa limpio (de 11 errores a 0)
+
+**Hardcoded credentials → env vars** (en tests)
+- `tests/test_mobile_native.py`, `test_iteration56_features.py`, `test_iteration55_refactoring.py`, `test_code_quality_cleanup.py`: credentials ahora `os.environ.get("TEST_USER_EMAIL", "newtest@bruno.com")` con default
+
+**Frontend cleanup**
+- Array index keys reemplazados por composite keys (content+index) en `PostCard.RenderContent`, `ChatPage` mention parser, `BrunoStoryViewer` progress bars
+- Empty catch blocks en `secureStorage.js`: ahora loguean `console.warn` con mensaje del error (crypto unavailable o decrypt failed)
+
+**False positives confirmados** (no requirieron cambios):
+- `is None` en `utils/security.py` líneas 71/75/91/98/114/118 — es el idiom recomendado por PEP 8 (no anti-pattern)
+- Translations `password: "Contraseña"` en `LanguageContext.js` — son labels, no secrets
+- Missing hook deps en `ImageEditor`, `ViewCardPage`, `UserProfilePage` — todas las dependencias están listadas correctamente; eslint pasa limpio en los 3 archivos
+
 ## Phase 59: 6-point UX Batch — Reactions, Auth, Camera Menu, Map BRUNO Palette, Stripe Webhook, OG Meta-Cards (2026-05-25)
 
 **P0 — Avatares + Camera/Publication Selector**

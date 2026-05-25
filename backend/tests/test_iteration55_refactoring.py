@@ -20,8 +20,8 @@ from datetime import datetime
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
 # Test credentials
-TEST_EMAIL = "newtest@bruno.com"
-TEST_PASSWORD = "Test1234!"
+TEST_EMAIL = os.environ.get("TEST_USER_EMAIL", "newtest@bruno.com")
+TEST_PASSWORD = os.environ.get("TEST_USER_PASSWORD", "Test1234!")
 
 
 class TestAuthEndpoints:

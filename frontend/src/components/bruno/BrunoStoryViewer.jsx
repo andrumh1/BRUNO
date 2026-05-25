@@ -316,9 +316,9 @@ export default function BrunoStoryViewer({
 
           {/* Progress bars */}
           <div className="absolute top-2 left-2 right-2 z-20 flex gap-1 pointer-events-none">
-            {stories.map((_, idx) => (
+            {stories.map((s, idx) => (
               <div
-                key={idx}
+                key={s?.id || `story-bar-${idx}`}
                 className="flex-1 h-[3px] bg-white/25 rounded-full overflow-hidden"
               >
                 <div

@@ -1053,12 +1053,12 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                             if (part.startsWith("@")) {
                               const uname = part.slice(1);
                               return (
-                                <Link key={pi} to={`/profile/${uname}`} className={`font-semibold underline decoration-1 underline-offset-2 ${isOwn ? "text-primary-foreground" : "text-primary"}`}>
+                                <Link key={`m-${pi}-${uname}`} to={`/profile/${uname}`} className={`font-semibold underline decoration-1 underline-offset-2 ${isOwn ? "text-primary-foreground" : "text-primary"}`}>
                                   {part}
                                 </Link>
                               );
                             }
-                            return <span key={pi}>{part}</span>;
+                            return <span key={`t-${pi}`}>{part}</span>;
                           })}
                         </p>
                       )}

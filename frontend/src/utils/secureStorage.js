@@ -62,7 +62,13 @@ export const secureStorage = {
         localStorage.setItem(`${STORAGE_PREFIX}${key}`, encrypted);
         return;
       }
-    } catch { /* fallback */ }
+    } catch (err) {
+      // crypto unavailable → fallback to in-memory store. Logged so devs can spot
+      // browsers that disabled Web Crypto (private mode, old browsers).
+      if (typeof console !== "undefined" && console.warn) {
+        console.warn("[secureStorage] setItem encrypt failed, using memory fallback", err?.message);
+      }
+    }
     memoryStore[key] = value;
   },
 
@@ -72,7 +78,12 @@ export const secureStorage = {
       if (stored) {
         return await decrypt(stored);
       }
-    } catch { /* fallback */ }
+    } catch (err) {
+      // decryption failed (key changed, tampered, or crypto unavailable)
+      if (typeof console !== "undefined" && console.warn) {
+        console.warn("[secureStorage] getItem decrypt failed, using memory fallback", err?.message);
+      }
+    }
     return memoryStore[key] || null;
   },
 

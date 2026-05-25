@@ -59,41 +59,12 @@ api_router = APIRouter(prefix="/api")
 # WEBSOCKET CONNECTION MANAGER
 # ============================================================================
 
-class ConnectionManager:
-    def __init__(self):
-        # Map user_id -> list of WebSocket connections
-        self.active_connections: Dict[str, List[WebSocket]] = {}
-    
-    async def connect(self, websocket: WebSocket, user_id: str):
-        await websocket.accept()
-        if user_id not in self.active_connections:
-            self.active_connections[user_id] = []
-        self.active_connections[user_id].append(websocket)
-    
-    def disconnect(self, websocket: WebSocket, user_id: str):
-        if user_id in self.active_connections:
-            if websocket in self.active_connections[user_id]:
-                self.active_connections[user_id].remove(websocket)
-            if not self.active_connections[user_id]:
-                del self.active_connections[user_id]
-    
-    async def send_personal_message(self, message: dict, user_id: str):
-        if user_id in self.active_connections:
-            disconnected = []
-            for connection in self.active_connections[user_id]:
-                try:
-                    await connection.send_json(message)
-                except Exception:
-                    disconnected.append(connection)
-            # Clean up disconnected
-            for conn in disconnected:
-                self.disconnect(conn, user_id)
-    
-    async def broadcast_to_users(self, message: dict, user_ids: List[str]):
-        for user_id in user_ids:
-            await self.send_personal_message(message, user_id)
+# WebSocket connection manager (extracted to utils to break circular imports)
+from utils.ws_manager import ConnectionManager, ws_manager  # noqa: F401
 
-ws_manager = ConnectionManager()
+# AI chat sessions cache (session_id -> LlmChat instance). Module-level so
+# multiple requests for the same session reuse the same context.
+ai_chat_sessions: dict = {}
 
 # ============================================================================
 # MODELS
@@ -155,24 +126,8 @@ class ContactInfo(BaseModel):
     city: Optional[str] = None
     country: Optional[str] = None
 
-class UserProfile(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    
-    user_id: str
-    social_links: List[SocialLink] = []
-    contact_info: Optional[ContactInfo] = None
-    bio: Optional[str] = None
-    website: Optional[str] = None
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class UserProfileUpdate(BaseModel):
-    social_links: Optional[List[SocialLink]] = None
-    contact_info: Optional[ContactInfo] = None
-    bio: Optional[str] = None
-    website: Optional[str] = None
-    contact_info: Optional[ContactInfo] = None
-    bio: Optional[str] = None
-    website: Optional[str] = None
+# NOTE: UserProfile / UserProfileUpdate are defined further below (line ~583).
+# The earlier minimal versions were dead code (redefined immediately).
 
 # Album Models
 class Photo(BaseModel):
@@ -2720,9 +2675,11 @@ async def chat_with_bruno_ai(
     current_user: User = Depends(get_current_user)
 ):
     """Chat with BRUNO AI assistant - with public card knowledge and action buttons"""
+    # Lazy import keeps boot resilient even if EmergentLLM SDK isn't ready
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
     try:
         session_id = input_data.session_id or f"bruno_ai_{current_user.id}_{str(uuid.uuid4())[:8]}"
-        
+
         if session_id not in ai_chat_sessions:
             api_key = os.environ.get("EMERGENT_LLM_KEY")
             if not api_key:
@@ -3502,7 +3459,7 @@ class MapConnectionManager:
                         "type": "user_location_update",
                         "user": user_info
                     })
-                except:
+                except Exception:
                     pass
 
 map_manager = MapConnectionManager()
@@ -3583,7 +3540,7 @@ async def map_websocket(websocket: WebSocket, token: str):
                     "type": "user_disconnected",
                     "user_id": user.id
                 })
-            except:
+            except Exception:
                 pass
     except Exception as e:
         logging.error(f"Map WebSocket error: {str(e)}")

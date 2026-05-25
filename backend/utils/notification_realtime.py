@@ -12,7 +12,7 @@ async def emit_notification_ws(notif_doc: dict, user_id: Optional[str] = None) -
         target = user_id or notif_doc.get("user_id")
         if not target:
             return
-        from server import ws_manager  # local import to avoid cycle
+        from utils.ws_manager import ws_manager
         payload = {
             "type": "notification",
             "notification": notif_doc,

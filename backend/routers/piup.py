@@ -305,7 +305,7 @@ async def my_piup_orders(current_user: User = Depends(get_current_user)):
 async def _broadcast_activation(user_id: str, payload: dict) -> None:
     """Best-effort WS broadcast so the manager UI updates in real-time."""
     try:
-        from server import ws_manager  # local import to avoid cycle
+        from utils.ws_manager import ws_manager
         await ws_manager.send_personal_message({"type": "piup_activated", **payload}, user_id)
     except Exception:
         pass
@@ -622,7 +622,7 @@ async def piup_stripe_webhook(request: Request):
     # Fire a realtime notification to the buyer so PIUPManager refreshes
     if new_payment_status == "paid":
         try:
-            from server import ws_manager
+            from utils.ws_manager import ws_manager
             await ws_manager.send_personal_message({
                 "type": "piup_payment_received",
                 "order_id": order["id"],

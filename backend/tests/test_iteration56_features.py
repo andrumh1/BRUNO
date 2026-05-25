@@ -9,9 +9,9 @@ import pytest
 import requests
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://premium-launch-13.preview.emergentagent.com').rstrip('/')
-EMAIL = "newtest@bruno.com"
-PASSWORD = "Test1234!"
-TEST_CARD_ID = "d16c2745-e082-4b22-84f8-749beb5e33fd"
+EMAIL = os.environ.get("TEST_USER_EMAIL", "newtest@bruno.com")
+PASSWORD = os.environ.get("TEST_USER_PASSWORD", "Test1234!")
+TEST_CARD_ID = os.environ.get("TEST_CARD_ID", "d16c2745-e082-4b22-84f8-749beb5e33fd")
 
 
 @pytest.fixture(scope="module")

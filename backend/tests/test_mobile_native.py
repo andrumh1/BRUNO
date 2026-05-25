@@ -28,8 +28,8 @@ with open(ENV_PATH, "r", encoding="utf-8") as f:
             API_URL = line.split("=", 1)[1].strip()
             break
 
-EMAIL = "newtest@bruno.com"
-PASSWORD = "Test1234!"
+EMAIL = os.environ.get("TEST_USER_EMAIL", "newtest@bruno.com")
+PASSWORD = os.environ.get("TEST_USER_PASSWORD", "Test1234!")
 DEVICE_ID = f"test-device-{uuid.uuid4()}"
 
 PASS = []

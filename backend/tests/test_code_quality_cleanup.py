@@ -16,8 +16,8 @@ BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 API_URL = f"{BASE_URL}/api"
 
 # Test credentials
-TEST_EMAIL = "newtest@bruno.com"
-TEST_PASSWORD = "Test1234!"
+TEST_EMAIL = os.environ.get("TEST_USER_EMAIL", "newtest@bruno.com")
+TEST_PASSWORD = os.environ.get("TEST_USER_PASSWORD", "Test1234!")
 
 
 class TestBackendHealth:
