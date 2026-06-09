@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import SocialLinkButton from "@/components/SocialLinkButton";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import BannerCarousel from "@/components/bruno/BannerCarousel";
 import { 
   ExternalLink, 
   MapPin, 
@@ -71,15 +72,27 @@ const BeaconsStyleCard = ({
       style={{ backgroundColor: bg }}
       data-testid={`beacons-card-${card.id}`}
     >
-      {/* Background */}
-      {card.banner_url ? (
-        <div className="absolute inset-0 overflow-hidden rounded-3xl">
-          <img src={card.banner_url} alt="" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/80" />
-        </div>
-      ) : (
-        <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, ${bg}ee, ${bg})` }} />
-      )}
+      {/* Background — multi-image carousel from banner_url + gallery_photos */}
+      {(() => {
+        const slides = [card.banner_url, ...(Array.isArray(card.gallery_photos) ? card.gallery_photos : [])]
+          .filter(Boolean)
+          .filter((url, i, arr) => arr.indexOf(url) === i);
+        if (slides.length === 0) {
+          return (
+            <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, ${bg}ee, ${bg})` }} />
+          );
+        }
+        return (
+          <div className="absolute inset-0 overflow-hidden rounded-3xl">
+            <BannerCarousel
+              images={slides}
+              height="h-full"
+              overlay={<div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/80 z-10 pointer-events-none" />}
+              testIdPrefix={`beacons-banner-${card.id}`}
+            />
+          </div>
+        );
+      })()}
 
       {/* Top badges */}
       <div className="relative z-10 flex items-center justify-between px-4 pt-4">

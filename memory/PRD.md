@@ -351,9 +351,63 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 **Real-time:** `activate-by-qr` dispara WS event `piup_activated`. QR + NFC ambos resuelven a `/c/{card_id}` (unificado).
 
-## Phase 63: Chat Bugs + Nav Hairline Bar (2026-05-25)
+## Phase 64: 7-fix Batch — Audio, Video Notes, Mapa, Galería, Llamadas (2026-05-25)
 
-**🐛 Bug 1: Chat no abría al primer click**
+**🐛 Bug 1: Audio notes no reproducían**
+- **Causa raíz**: `audio.play()` no awaited; Cloudinary servía `.webm` que Safari/iOS no reproducen
+- **Fix**: `AudioPlayer` ahora:
+  - Inyecta transformación Cloudinary `f_mp3` para servir MP3 cross-browser
+  - Fallback automático al webm original si MP3 falla
+  - `await audio.play()` con try/catch
+  - Muestra "No se pudo reproducir" si todas las fuentes fallan
+  - `data-testid="audio-player"` + `audio-player-play` para testing
+
+**✨ Feature 2: Video Notes circulares (estilo Telegram)**
+- Nuevo `VideoNoteRecorder.jsx`: preview circular 260px con anillo de progreso, máx 30s, hold-to-record
+- Trigger: **long-press 600ms en el botón cámara del pill input** → abre el grabador
+- Renderiza vía componente existente `CircularVideoMessage.jsx` (180px bubble)
+- Upload via `/api/upload/chat-file`, mensaje con `message_type="video_note"`
+
+**🐛 Bug 3: Mapa no se movía**
+- **Causa raíz**: `<Map>` recibía `center={center}` (controlado) + el `setCenter` por geolocalización snap-back constantemente
+- **Fix**: usar SOLO `defaultCenter` + `mapRef` capturado via `MapInstanceCapture` + `map.panTo()` programático para recenter/geolocalización
+- Plus: `clickableIcons={false}` para que clicks no se los robe Google POIs nativos
+
+**🎯 Feature 4: Filtro mapa solo items con dirección**
+- `MapProfilesBar` ahora aplica `hasLocation(it)` — solo entran items con `lat+lng` válidos (number, no NaN)
+- Aplica a users, PIUPs, cards y stories: si no tiene coordenadas, NO aparece en la barra inferior
+
+**🐛 Bug 5: Icono Galería en cámara no funcionaba**
+- El `<button>` no tenía `onClick`. Ahora abre `InternalGalleryPicker`
+- `data-testid="camera-gallery-btn"`
+
+**✨ Feature 6: Galería interna animada**
+- Nuevo `InternalGalleryPicker.jsx`: 
+  - Auto-abre el file picker nativo al montarse
+  - Después muestra grid animado 3 cols con thumbnails, video detection, badge de orden, botón eliminar
+  - "Añadir más" tile siempre visible
+  - Multi-select, confirma con botón "Usar selección"
+  - Object URLs liberadas al cerrar (no memory leak)
+- Integrado en BrunoCameraPage; reemplaza el opener nativo crudo
+
+**✨ Feature 7: Llamadas / Videollamadas funcionales**
+- **Antes**: backend usaba `https://bruno-demo.daily.co/{room}` (dominio ficticio → llamadas rotas)
+- **Ahora**: `https://meet.jit.si/{room}` — Jitsi Meet público y gratuito con STUN+TURN incluidos
+- `VideoCallModal` completamente reescrito:
+  - Pantalla "Llamando…" para outgoing (avatar + Loader + cancelar)
+  - Pantalla "{name} te está llamando" para incoming (rings pulsantes, accept/decline)
+  - In-call: iframe Jitsi con `allow="camera; microphone; ..."` + hangup button
+- Funciona sin API keys ni configuración adicional ✅
+
+**Mejoras adicionales del batch**
+- `FloatingChatBubble` ahora se oculta cuando el nav está minimizado (chats se minimizan junto con la nav)
+- Reels feed ahora detecta video URLs por extensión + `media[]` array (no solo `media_url`)
+- PWA install prompt con detección iOS + persistencia de dismissal
+- Manifest enhanced con shortcuts (Feed, Mapa, Chats, Perfil), `display_override`, screenshots, lang=es
+
+**Verificado E2E**: chat opens at first click ✅, map renders + draggable ✅, video call btn present ✅, pill-camera-btn supports long-press ✅, audio player has fallback URL ✅
+
+## Phase 63: Chat Bugs + Nav Hairline Bar (2026-05-25)**🐛 Bug 1: Chat no abría al primer click**
 - **Causa raíz**: el avatar del chat-item era un `<Link to="/profile/...">` con `stopPropagation`. El click de Playwright/usuario caía sobre el Link (centro del row), navegaba al perfil, y el `onClick` del row nunca disparaba
 - **Fix**: avatar y nombre del usuario ahora son `<div>`/`<span>` sin navegación. Cualquier tap en el row abre el chat. La navegación al perfil queda accesible desde el header de `ChatView`
 - **Bonus fix**: `fetchChats` ya no depende de `chatId` (eliminada race condition que re-fetcheaba en cada cambio de URL). Un `useEffect` separado sincroniza `selectedChat` desde el URL param

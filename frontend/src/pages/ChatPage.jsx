@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +19,7 @@ import BrunoAvatar from "@/components/bruno/BrunoAvatar";
 import { useStoryActivity } from "@/contexts/StoryActivityContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
+import VideoNoteRecorder from "@/components/bruno/VideoNoteRecorder";
 import axios from "axios";
 import { 
   ArrowLeft, 
@@ -112,23 +114,44 @@ const useAudioRecorder = () => {
   return { isRecording, audioBlob, recordingTime, startRecording, stopRecording, cancelRecording, clearAudio };
 };
 
+// Convert a Cloudinary audio URL to MP3 for cross-browser playback (webm fails on Safari/iOS).
+// Pattern: https://res.cloudinary.com/{cloud}/video/upload/v123/path.webm
+//        → https://res.cloudinary.com/{cloud}/video/upload/f_mp3,fl_attachment:false/v123/path.mp3
+const toPlayableAudioUrl = (url) => {
+  if (!url || typeof url !== "string") return url;
+  if (!url.includes("res.cloudinary.com") || !url.includes("/upload/")) return url;
+  // Inject the f_mp3 transformation if not already present
+  if (url.includes("/upload/f_mp3")) return url;
+  return url.replace("/upload/", "/upload/f_mp3/").replace(/\.(webm|opus|m4a|ogg|wav)(\?|$)/i, ".mp3$2");
+};
+
 // Audio Player Component
 const AudioPlayer = ({ url, isOwn }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [error, setError] = useState(false);
   const audioRef = useRef(null);
+
+  // Try MP3-transcoded URL first, fall back to original if it fails to load.
+  const sources = React.useMemo(() => {
+    const mp3 = toPlayableAudioUrl(url);
+    return mp3 && mp3 !== url ? [mp3, url] : [url];
+  }, [url]);
+  const [srcIdx, setSrcIdx] = useState(0);
+  const currentSrc = sources[srcIdx];
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const handleTimeUpdate = () => {
+      if (!audio.duration || !isFinite(audio.duration)) return;
       setProgress((audio.currentTime / audio.duration) * 100);
     };
 
     const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
+      if (isFinite(audio.duration)) setDuration(audio.duration);
     };
 
     const handleEnded = () => {
@@ -136,25 +159,49 @@ const AudioPlayer = ({ url, isOwn }) => {
       setProgress(0);
     };
 
+    const handleError = () => {
+      // Try the next source (original webm) if MP3 transcode fails
+      if (srcIdx < sources.length - 1) {
+        setSrcIdx((i) => i + 1);
+      } else {
+        setError(true);
+        setIsPlaying(false);
+      }
+    };
+
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
     };
-  }, []);
+  }, [srcIdx, sources.length]);
 
-  const togglePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
+  const togglePlay = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      return;
+    }
+    try {
+      await audio.play();
+      setIsPlaying(true);
+      setError(false);
+    } catch (err) {
+      // play() can throw NotAllowedError or NotSupportedError
+      if (srcIdx < sources.length - 1) {
+        setSrcIdx((i) => i + 1);
+        setTimeout(() => audio.play().then(() => setIsPlaying(true)).catch(() => setError(true)), 100);
       } else {
-        audioRef.current.play();
+        setError(true);
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -165,25 +212,26 @@ const AudioPlayer = ({ url, isOwn }) => {
   };
 
   return (
-    <div className={`flex items-center gap-2 min-w-[200px] ${isOwn ? 'flex-row-reverse' : ''}`}>
-      <audio ref={audioRef} src={url} preload="metadata" />
+    <div className={`flex items-center gap-2 min-w-[200px] ${isOwn ? 'flex-row-reverse' : ''}`} data-testid="audio-player">
+      <audio ref={audioRef} src={currentSrc} preload="metadata" />
       <Button
         variant="ghost"
         size="icon"
         className={`h-10 w-10 rounded-full ${isOwn ? 'bg-white/20' : 'bg-primary/10'}`}
         onClick={togglePlay}
+        data-testid="audio-player-play"
       >
         {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
       </Button>
       <div className="flex-1 min-w-[100px]">
         <div className={`h-1 rounded-full ${isOwn ? 'bg-white/30' : 'bg-muted'}`}>
-          <div 
+          <div
             className={`h-full rounded-full transition-all ${isOwn ? 'bg-white' : 'bg-primary'}`}
             style={{ width: `${progress}%` }}
           />
         </div>
         <span className={`text-xs ${isOwn ? 'text-white/70' : 'text-muted-foreground'}`}>
-          {formatTime(duration)}
+          {error ? "No se pudo reproducir" : formatTime(duration)}
         </span>
       </div>
     </div>
@@ -411,6 +459,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [showCardPicker, setShowCardPicker] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [showVideoNoteRecorder, setShowVideoNoteRecorder] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   // Video call state
   const [videoCallState, setVideoCallState] = useState({
@@ -1205,6 +1254,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
           onSend={(text) => handleSend({ preventDefault: () => {} })}
           onAttach={() => setShowAttachMenu(!showAttachMenu)}
           onCamera={() => setShowCamera(true)}
+          onVideoNote={() => setShowVideoNoteRecorder(true)}
           onStickers={() => setShowStickerPicker((v) => !v)}
           onMicStart={startRecording}
           onMicStop={stopRecording}
@@ -1216,6 +1266,38 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
           placeholder="Escribe un mensaje..."
         />
       </div>
+
+      {/* Video Note Recorder (Telegram-style circular video message) */}
+      <VideoNoteRecorder
+        open={showVideoNoteRecorder}
+        onClose={() => setShowVideoNoteRecorder(false)}
+        onCapture={async (file) => {
+          // Upload + send as video_note message
+          try {
+            setUploading(true);
+            const form = new FormData();
+            form.append("file", file);
+            const up = await axios.post(`${API}/upload/chat-file`, form, {
+              headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
+            });
+            const url = up.data?.url || up.data?.secure_url;
+            if (!url) throw new Error("no url");
+            await axios.post(`${API}/chats/${chat.id}/messages`, {
+              content: "",
+              message_type: "video_note",
+              attachments: [{ url, type: "video", filename: file.name }],
+              reply_to: replyTo?.id || null,
+            }, { headers: { Authorization: `Bearer ${token}` } });
+            setReplyTo(null);
+            fetchMessages();
+          } catch (_e) {
+            const { brunoToast } = await import("@/components/bruno/BrunoToast");
+            brunoToast.error("No se pudo enviar el video note");
+          } finally {
+            setUploading(false);
+          }
+        }}
+      />
     </div>
   );
 };

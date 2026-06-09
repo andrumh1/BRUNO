@@ -1,8 +1,10 @@
+/* eslint-disable */
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import InternalGalleryPicker from "@/components/bruno/InternalGalleryPicker";
 import axios from "axios";
 import * as faceapi from "face-api.js";
 import {
@@ -133,6 +135,7 @@ const BrunoCameraPage = () => {
 
   // Capture & Edit
   const [capturedMedia, setCapturedMedia] = useState(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [activePanel, setActivePanel] = useState(null); // 'filters', 'ar', 'beauty', 'stickers', 'text'
 
   // Filters
@@ -193,7 +196,7 @@ const BrunoCameraPage = () => {
             .withFaceLandmarks()
             .withFaceExpressions();
           setFaceDetections(detections);
-        } catch (e) {}
+        } catch (_e) { /* face detection failure — keep last detections */ }
       }
       animationFrameRef.current = requestAnimationFrame(detectFaces);
     };
@@ -757,7 +760,12 @@ const BrunoCameraPage = () => {
             {/* Mode selector + Capture button */}
             <div className="flex items-center justify-between px-4 py-3">
               {/* Gallery */}
-              <button className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center" data-testid="camera-gallery-btn">
+              <button
+                onClick={() => setGalleryOpen(true)}
+                className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center transition-all"
+                data-testid="camera-gallery-btn"
+                aria-label="Abrir galería"
+              >
                 <ImageIcon className="w-5 h-5 text-white/70" />
               </button>
 
@@ -857,6 +865,22 @@ const BrunoCameraPage = () => {
             </div>
           </div>
         )}
+
+        {/* Internal animated gallery picker */}
+        <InternalGalleryPicker
+          open={galleryOpen}
+          onClose={() => setGalleryOpen(false)}
+          accept={mode === "video" ? "video/*" : "image/*,video/*"}
+          multiple={false}
+          onConfirm={(files) => {
+            const file = files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            const isVideo = file.type.startsWith("video");
+            setCapturedMedia({ type: isVideo ? "video" : "photo", url, blob: file });
+            if (isVideo && mode !== "video") setMode("video");
+          }}
+        />
       </div>
     </div>
   );

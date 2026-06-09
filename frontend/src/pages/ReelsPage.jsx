@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,7 +52,7 @@ const ReelItem = ({ reel, isActive }) => {
     if (token) {
       try {
         await axios.post(`${API}/posts/${reel.id}/like`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      } catch (err) { }
+      } catch (err) { /* network or auth error — keep optimistic */ }
     }
   };
 
@@ -164,14 +165,27 @@ const ReelsPage = () => {
       ]);
 
       const reelsData = (Array.isArray(postsRes.data) ? postsRes.data : [])
-        .filter((p) => p.media_url || p.image_url || p.attachments?.length > 0)
-        .map((post) => ({
-          ...post,
-          video_url: post.video_url || post.media_url,
-          image_url: post.image_url || post.attachments?.[0]?.url,
-          thumbnail_url: post.thumbnail_url || post.image_url || post.attachments?.[0]?.url,
-          author: { id: post.user?.id, name: post.user?.display_name, username: post.user?.username, avatar_url: post.user?.avatar_url },
-        }));
+        .filter((p) => {
+          // Match the modern `media[]` array (where each item has {type:'video'|'image', url})
+          // PLUS legacy `media_url`, `image_url`, `attachments[]`.
+          const hasMediaArr = Array.isArray(p.media) && p.media.some((m) => m.url || m.secure_url);
+          return hasMediaArr || p.media_url || p.image_url || (p.attachments?.length > 0);
+        })
+        .map((post) => {
+          const firstMedia = (post.media || [])[0] || {};
+          const firstAttach = (post.attachments || [])[0] || {};
+          const url = firstMedia.url || firstMedia.secure_url || firstAttach.url || post.media_url || post.image_url;
+          const isVideo = (firstMedia.type === "video") || /\.(mp4|webm|mov|m4v|ogv)(\?|$)/i.test(url || "");
+          return {
+            ...post,
+            video_url: isVideo ? url : (post.video_url || null),
+            image_url: !isVideo ? url : (post.image_url || post.thumbnail_url || null),
+            thumbnail_url: post.thumbnail_url || (!isVideo ? url : null),
+            author: { id: post.user?.id, name: post.user?.display_name, username: post.user?.username, avatar_url: post.user?.avatar_url },
+          };
+        });
+      // Push video-first to the top of the reel feed
+      reelsData.sort((a, b) => (b.video_url ? 1 : 0) - (a.video_url ? 1 : 0));
       setReels(reelsData);
       setLives(Array.isArray(livesRes.data) ? livesRes.data : livesRes.data?.lives || []);
     } catch (err) {

@@ -36,6 +36,7 @@ export const BrunoPillInput = forwardRef(function BrunoPillInput(
     onStickers,
     onMicStart,
     onMicStop,
+    onVideoNote,   // long-press on camera button opens video note recorder
     isRecording = false,
     sending = false,
     uploading = false,
@@ -48,6 +49,8 @@ export const BrunoPillInput = forwardRef(function BrunoPillInput(
   ref
 ) {
   const textareaRef = useRef(null);
+  const cameraTimerRef = useRef(null);
+  const longPressFiredRef = useRef(false);
   const [focused, setFocused] = useState(false);
 
   // Auto-resize textarea
@@ -188,9 +191,25 @@ export const BrunoPillInput = forwardRef(function BrunoPillInput(
           whileTap={{ scale: 0.88 }}
           whileHover={{ scale: 1.05 }}
           transition={{ type: "spring", stiffness: 380, damping: 20 }}
-          onClick={onCamera}
+          onClick={(e) => {
+            if (longPressFiredRef.current) {
+              longPressFiredRef.current = false;
+              return;
+            }
+            onCamera?.();
+          }}
+          onPointerDown={() => {
+            longPressFiredRef.current = false;
+            if (cameraTimerRef.current) clearTimeout(cameraTimerRef.current);
+            cameraTimerRef.current = setTimeout(() => {
+              longPressFiredRef.current = true;
+              onVideoNote?.();
+            }, 600);
+          }}
+          onPointerUp={() => { if (cameraTimerRef.current) clearTimeout(cameraTimerRef.current); }}
+          onPointerLeave={() => { if (cameraTimerRef.current) clearTimeout(cameraTimerRef.current); }}
           disabled={isRecording}
-          aria-label="Cámara"
+          aria-label="Cámara — mantén pulsado para video note"
           data-testid="pill-camera-btn"
           className="shrink-0 grid place-items-center h-11 w-11 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-orange-500/15 hover:text-orange-500 transition-colors relative"
         >

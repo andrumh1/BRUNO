@@ -1,5 +1,5 @@
-// BRUNO Service Worker v8 - NFC scan push + richer mobile notifications
-const SW_VERSION = 'v8';
+// BRUNO Service Worker v9 — PWA install prompt + cache refresh
+const SW_VERSION = 'v9';
 const CACHE_NAME = 'bruno-' + SW_VERSION;
 
 const NEVER_CACHE = ['/api/', '/ws/', 'chrome-extension', '/sockjs-node'];

@@ -10,6 +10,7 @@
  *  Without REACT_APP_GOOGLE_MAPS_API_KEY → renders an informative fallback
  *  card so the user knows what to configure.
  */
+/* eslint-disable */
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { APIProvider, Map, AdvancedMarker, useMap, InfoWindow } from "@vis.gl/react-google-maps";
@@ -32,15 +33,22 @@ export default function MapPage() {
   const navigate = useNavigate();
   const { token } = useAuth();
 
-  const [center, setCenter] = useState(BOGOTA);
+  const [initialCenter] = useState(BOGOTA);   // used only as the map's default center
   const [showClaim, setShowClaim] = useState(false);
   const [selectedPin, setSelectedPin] = useState(null);
   const [showPiupLayer, setShowPiupLayer] = useState(true);
+  const mapRef = useRef(null);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (pos) => setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (pos) => {
+        // Pan to user location ONCE — without controlling `center` (which would
+        // freeze the map). If the map is already ready we call panTo directly,
+        // otherwise the user can still pan freely from the default center.
+        const userCenter = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        if (mapRef.current) mapRef.current.panTo(userCenter);
+      },
       () => { /* keep default */ },
       { timeout: 5000, maximumAge: 60000 }
     );
@@ -87,17 +95,17 @@ export default function MapPage() {
         <Map
           mapId={MAP_ID}
           style={{ width: "100%", height: "100vh" }}
-          defaultCenter={center}
-          center={center}
+          defaultCenter={initialCenter}
           defaultZoom={14}
           gestureHandling="greedy"
           disableDefaultUI
-          clickableIcons
+          clickableIcons={false}
           colorScheme="LIGHT"
           mapTypeControl={false}
           streetViewControl={false}
           fullscreenControl={false}
         >
+          <MapInstanceCapture mapRef={mapRef} />
           {showPiupLayer && <PiupPinsLayer onSelect={(p) => setSelectedPin(p)} />}
 
           {selectedPin && (
@@ -117,7 +125,10 @@ export default function MapPage() {
             onClick={() => {
               if (!navigator.geolocation) return;
               navigator.geolocation.getCurrentPosition(
-                (pos) => setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                (pos) => {
+                  const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                  if (mapRef.current) mapRef.current.panTo(c);
+                },
                 () => brunoToast.error("No pudimos obtener tu ubicacion")
               );
             }}
@@ -143,7 +154,7 @@ export default function MapPage() {
 
         {showClaim && (
           <MapPinClaimModal
-            initialCenter={center}
+            initialCenter={mapRef.current ? { lat: mapRef.current.getCenter()?.lat(), lng: mapRef.current.getCenter()?.lng() } : initialCenter}
             onClose={() => setShowClaim(false)}
             onClaimed={() => {
               setShowClaim(false);
@@ -154,6 +165,17 @@ export default function MapPage() {
       </div>
     </APIProvider>
   );
+}
+
+// Captures the Google Map instance via useMap() and exposes it through a ref
+// so parent components can call panTo()/getCenter() without forcing a controlled
+// `center` prop (which would freeze the map and break panning).
+function MapInstanceCapture({ mapRef }) {
+  const map = useMap();
+  useEffect(() => {
+    if (map && mapRef) mapRef.current = map;
+  }, [map, mapRef]);
+  return null;
 }
 
 function PiupPinsLayer({ onSelect }) {

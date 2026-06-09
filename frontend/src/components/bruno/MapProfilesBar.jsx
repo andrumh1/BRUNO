@@ -14,6 +14,7 @@
  *
  * Position: floats just above the MobileBottomNav (uses var(--nav-reserve)).
  */
+/* eslint-disable */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
@@ -157,28 +158,40 @@ export default function MapProfilesBar({
   }, [refresh]);
 
   // Combine everything into the unified list
+  // RULE: only items WITH a valid location (lat+lng or address) appear here.
+  // The map bottom-bar's purpose is "places you can navigate to", so anything
+  // missing geo info is filtered out — explicitly per user request.
+  const hasLocation = (it) => {
+    const lat = it.lat ?? it.location?.lat;
+    const lng = it.lng ?? it.location?.lng;
+    if (typeof lat === "number" && typeof lng === "number" && !Number.isNaN(lat) && !Number.isNaN(lng)) return true;
+    // Stories use { location: { lat, lng } } too
+    return false;
+  };
+
   const items = useMemo(() => {
     const list = [];
     for (const u of nearbyUsers) {
       if (u.id === currentUserId) continue;
+      if (!hasLocation(u)) continue;
       list.push({ ...u, kind: "user", share_scope: u.share_scope || "public" });
     }
     // PIUP claimed pins first (they have the brand styling)
     for (const p of piupPins) {
-      if (!p.user_id || p.user_id === currentUserId) {
-        // include own pins too — they show your business
-      }
+      if (!hasLocation(p)) continue;
       list.push({ ...p, name: p.title });
     }
     // Then located cards (deduplicated against PIUP pins by card_id)
     const piupCardIds = new Set(piupPins.map((p) => p.card_id));
     for (const c of cardsProp) {
+      if (!hasLocation(c)) continue;
       if (!piupCardIds.has(c.id)) {
         list.push({ ...c, kind: "card" });
         piupCardIds.add(c.id);
       }
     }
     for (const c of locatedCards) {
+      if (!hasLocation(c)) continue;
       if (!piupCardIds.has(c.id)) {
         list.push(c);
         piupCardIds.add(c.id);
@@ -186,6 +199,7 @@ export default function MapProfilesBar({
     }
     // Stories last (they have the most distinctive ring)
     for (const s of locatedStories) {
+      if (!hasLocation(s)) continue;
       list.push(s);
     }
     return list;

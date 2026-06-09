@@ -3089,9 +3089,11 @@ async def start_video_call(
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
     
-    # Generate unique room name
-    room_name = f"bruno-call-{request.chat_id}-{str(uuid.uuid4())[:8]}"
-    room_url = f"{DAILY_DEMO_DOMAIN}/{room_name}"
+    # Jitsi Meet (public free service) — works without an account, includes
+    # STUN+TURN for NAT traversal so calls function end-to-end out of the box.
+    # If you want a custom backend later, swap to Daily.co/LiveKit/Twilio here.
+    room_name = f"bruno-{request.chat_id}-{str(uuid.uuid4())[:8]}"
+    room_url = f"https://meet.jit.si/{room_name}#config.prejoinPageEnabled=false&config.startWithVideoMuted={'true' if request.call_type == 'audio' else 'false'}"
     call_id = str(uuid.uuid4())
     
     # Store call record

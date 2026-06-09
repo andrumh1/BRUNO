@@ -14,6 +14,7 @@ import StoryActivityProvider from "@/contexts/StoryActivityContext";
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
 import FloatingChatBubble from "@/components/FloatingChatBubble";
+import PWAInstallPrompt from "@/components/bruno/PWAInstallPrompt";
 import PictureInPicture from "@/components/PictureInPicture";
 import CameraFloatingButton from "@/components/CameraFloatingButton";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -188,6 +189,7 @@ function App() {
                 <CameraFloatingButton />
                 <MobileBottomNav />
                 <TourOverlay />
+                <PWAInstallPrompt />
                 <Toaster
                   position="top-center"
                   expand
