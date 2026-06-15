@@ -80,16 +80,29 @@ async def upload_audio(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ):
-    """Upload an audio file to Cloudinary."""
+    """Upload an audio file to Cloudinary.
+
+    Cloudinary performs server-side transcoding to MP3 via `eager` so the
+    front-end can serve a wide-compat MP3 source AND the original (webm/opus)
+    via `<source>` tags. Combined this fixes audio playback across:
+      - Chrome / Edge   (webm + mp3)
+      - Safari / iOS    (mp3)
+      - Firefox         (ogg/webm + mp3)
+    """
     try:
         contents = await file.read()
         result = cloudinary.uploader.upload(
             contents,
             folder=f"bruno/audio/{current_user.id}",
             resource_type="video",  # Cloudinary uses 'video' for audio
+            eager=[{"format": "mp3", "audio_codec": "mp3"}],
+            eager_async=False,
         )
+        eager = (result.get("eager") or [])
+        mp3_url = eager[0].get("secure_url") if eager else None
         return {
             "url": result['secure_url'],
+            "mp3_url": mp3_url,
             "public_id": result['public_id'],
             "duration": result.get('duration'),
             "format": result.get('format'),

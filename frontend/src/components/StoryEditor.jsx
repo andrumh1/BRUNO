@@ -6,7 +6,7 @@ import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Type, Sticker, Palette, Download, Send, Loader2, 
-  Camera, Image as ImageIcon, Undo2, Trash2, Plus,
+  Camera, Image as ImageIcon, Undo2, Trash2, Plus, Check,
   AlignCenter, AlignLeft, AlignRight, Bold, Italic,
   Sparkles, BarChart3, Music2, Layers, Move, RotateCcw
 } from "lucide-react";
@@ -178,8 +178,10 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
   // Media state
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaType, setMediaType] = useState("image");
+  const [extraSlides, setExtraSlides] = useState([]); // [{url,type}] for multi-image stories
   const [bgGradient, setBgGradient] = useState(BG_GRADIENTS[0]);
   const [mode, setMode] = useState("select"); // select, media, text, sticker, poll, bg
+  const [publishAnimation, setPublishAnimation] = useState(null); // 'uploading' | 'success' | null
   
   // Overlays
   const [textOverlays, setTextOverlays] = useState([]);
@@ -209,20 +211,29 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
   const getId = () => nextId.current++;
 
   const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const response = await axios.post(`${API}/upload/image`, formData, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-      });
-      setMediaUrl(response.data.url);
-      setMediaType(file.type.startsWith("video") ? "video" : "image");
-    } catch {
-      setMediaUrl(URL.createObjectURL(file));
-      setMediaType(file.type.startsWith("video") ? "video" : "image");
-    }
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Upload all files in parallel. The first becomes the main media; the
+    // rest become queued slides published as sequential stories.
+    const uploads = await Promise.allSettled(files.map(async (file) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      try {
+        const r = await axios.post(`${API}/upload/image`, fd, {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+        });
+        return { url: r.data.url, type: file.type.startsWith("video") ? "video" : "image" };
+      } catch (_err) {
+        // local-only fallback
+        return { url: URL.createObjectURL(file), type: file.type.startsWith("video") ? "video" : "image" };
+      }
+    }));
+    const ok = uploads.filter((u) => u.status === "fulfilled").map((u) => u.value);
+    if (ok.length === 0) return;
+    setMediaUrl(ok[0].url);
+    setMediaType(ok[0].type);
+    setExtraSlides(ok.slice(1));
     setMode("select");
   };
 
@@ -273,6 +284,7 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
   const handlePublish = async () => {
     if (!token) return;
     setLoading(true);
+    setPublishAnimation("uploading");
     try {
       // Build story data with overlays metadata
       const overlaysMeta = {
@@ -281,45 +293,47 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
         bgGradient: !mediaUrl ? bgGradient : null,
       };
 
+      const slides = [
+        { url: mediaUrl || "", type: mediaUrl ? mediaType : "text" },
+        ...extraSlides,
+      ];
+
+      let pollId = null;
       if (pollQuestion.trim() && pollOptions.filter((o) => o.trim()).length >= 2) {
-        // Create poll first
         const pollRes = await axios.post(
           `${API}/social/polls`,
           { question: pollQuestion, options: pollOptions.filter((o) => o.trim()), duration_hours: 24 },
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        pollId = pollRes.data?.id || null;
+      }
+
+      // Publish slides sequentially — overlays are kept on the FIRST slide only
+      for (let i = 0; i < slides.length; i++) {
+        const s = slides[i];
         await axios.post(
           `${API}/stories`,
           {
-            media_url: mediaUrl || "",
-            media_type: mediaUrl ? mediaType : "poll",
-            caption: caption || pollQuestion,
+            media_url: s.url || "",
+            media_type: s.url ? s.type : (pollId && i === 0 ? "poll" : "text"),
+            caption: i === 0 ? (caption || pollQuestion || "") : "",
             visibility,
-            duration: 15,
-            poll_id: pollRes.data.id,
-            overlays: overlaysMeta,
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        await axios.post(
-          `${API}/stories`,
-          {
-            media_url: mediaUrl || "",
-            media_type: mediaUrl ? mediaType : "text",
-            caption,
-            visibility,
-            duration: mediaType === "video" ? 15 : 5,
-            overlays: overlaysMeta,
+            duration: s.type === "video" ? 15 : 5,
+            ...(i === 0 ? { poll_id: pollId, overlays: overlaysMeta } : {}),
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
       }
 
+      setPublishAnimation("success");
       onCreated?.();
-      handleReset();
-      onClose();
+      // Hold success animation briefly, then close
+      setTimeout(() => {
+        handleReset();
+        onClose();
+      }, 1100);
     } catch (err) {
+      setPublishAnimation(null);
       // error handled
     } finally {
       setLoading(false);
@@ -329,6 +343,7 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
   const handleReset = () => {
     setMediaUrl("");
     setMediaType("image");
+    setExtraSlides([]);
     setTextOverlays([]);
     setStickerOverlays([]);
     setEditingText("");
@@ -338,6 +353,7 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
     setMode("select");
     setShowPublish(false);
     setBgGradient(BG_GRADIENTS[0]);
+    setPublishAnimation(null);
   };
 
   if (!isOpen) return null;
@@ -432,7 +448,48 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
           </div>
         )}
 
-        <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileSelect} data-testid="story-file-input" />
+        <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFileSelect} data-testid="story-file-input" />
+
+        {/* Multi-slide thumbnail strip — visible when there's more than 1 slide queued */}
+        {(mediaUrl && extraSlides.length > 0) && (
+          <div className="absolute left-2 right-2 bottom-3 z-20 flex items-center gap-1.5 overflow-x-auto scrollbar-hide" data-testid="story-slides-strip">
+            <div className="flex items-center gap-1.5 bg-black/50 backdrop-blur-md rounded-full px-2 py-1.5">
+              {/* Main slide */}
+              <button className="relative w-9 h-12 rounded-md overflow-hidden ring-2 ring-white shrink-0">
+                {mediaType === "video" ? (
+                  <video src={mediaUrl} className="w-full h-full object-cover" muted />
+                ) : (
+                  <img src={mediaUrl} alt="" className="w-full h-full object-cover" />
+                )}
+              </button>
+              {extraSlides.map((s, i) => (
+                <button
+                  key={`slide-${i}`}
+                  className="relative w-9 h-12 rounded-md overflow-hidden ring-1 ring-white/30 shrink-0 group"
+                  onClick={() => setExtraSlides((prev) => prev.filter((_, idx) => idx !== i))}
+                  data-testid={`story-slide-${i}`}
+                >
+                  {s.type === "video" ? (
+                    <video src={s.url} className="w-full h-full object-cover" muted />
+                  ) : (
+                    <img src={s.url} alt="" className="w-full h-full object-cover" />
+                  )}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <Trash2 className="w-3 h-3 text-white" />
+                  </div>
+                </button>
+              ))}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-9 h-12 rounded-md border-2 border-dashed border-white/30 grid place-items-center text-white/60 hover:text-white shrink-0"
+                data-testid="story-add-more-slides"
+                aria-label="Agregar más imágenes"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom panels */}
@@ -650,8 +707,65 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
               </div>
               <Button className="w-full" onClick={handlePublish} disabled={loading} data-testid="story-publish-confirm">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-                Publicar ahora
+                {extraSlides.length > 0 ? `Publicar ${extraSlides.length + 1} historias` : "Publicar ahora"}
               </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Publish animation overlay — covers screen with progress + success */}
+      <AnimatePresence>
+        {publishAnimation && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="absolute inset-0 z-40 bg-black/90 backdrop-blur-xl flex items-center justify-center"
+            data-testid="story-publish-animation"
+          >
+            <motion.div
+              key={publishAnimation}
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 320, damping: 22 }}
+              className="flex flex-col items-center gap-4"
+            >
+              {publishAnimation === "uploading" ? (
+                <>
+                  <div className="relative w-20 h-20">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                      className="absolute inset-0 rounded-full border-4 border-orange-500/30 border-t-orange-500"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Send className="w-7 h-7 text-orange-500" />
+                    </div>
+                  </div>
+                  <p className="text-white font-semibold text-sm">Publicando…</p>
+                  {extraSlides.length > 0 && (
+                    <p className="text-white/60 text-xs">{extraSlides.length + 1} slides en cola</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: [0, 1.2, 1] }}
+                    transition={{ duration: 0.45 }}
+                    className="w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/50"
+                  >
+                    <Check className="w-10 h-10 text-white" strokeWidth={3} />
+                  </motion.div>
+                  <motion.p
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="text-white font-bold text-lg"
+                  >
+                    ¡Historia publicada!
+                  </motion.p>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}

@@ -159,6 +159,55 @@ const BrunoCameraPage = () => {
   const [caption, setCaption] = useState("");
   const [showCaption, setShowCaption] = useState(false);
 
+  // Permission state for the in-app gallery
+  const [galleryPermission, setGalleryPermission] = useState(() => {
+    try { return localStorage.getItem("bruno-gallery-granted") === "1"; } catch { return false; }
+  });
+
+  // Interactive elements panel (swipe-up): stickers/emojis/questions/polls
+  const [interactivePanel, setInteractivePanel] = useState(null); // null | 'stickers' | 'emojis' | 'questions' | 'polls'
+  const [questionText, setQuestionText] = useState("");
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState(["", ""]);
+
+  // Helper: open gallery with first-time permission framing
+  const openGallery = () => {
+    if (!galleryPermission) {
+      try { localStorage.setItem("bruno-gallery-granted", "1"); } catch (_e) { /* ignore */ }
+      setGalleryPermission(true);
+    }
+    setGalleryOpen(true);
+  };
+
+  // Swipe-up handler over the whole viewfinder → opens gallery (when not capturing)
+  const swipeRef = useRef({ startY: 0, startX: 0, target: null, time: 0 });
+  const handleTouchStart = (e) => {
+    const t = e.touches?.[0];
+    if (!t) return;
+    swipeRef.current = { startY: t.clientY, startX: t.clientX, target: e.target, time: Date.now() };
+  };
+  const handleTouchEnd = (e) => {
+    const t = e.changedTouches?.[0];
+    if (!t) return;
+    const dy = swipeRef.current.startY - t.clientY;
+    const dx = Math.abs(swipeRef.current.startX - t.clientX);
+    const dur = Date.now() - swipeRef.current.time;
+    // Threshold: vertical swipe-up at least 70px, mostly vertical, under 600ms
+    if (dy > 70 && dx < 60 && dur < 600 && !capturedMedia && !isRecording) {
+      const targetEl = swipeRef.current.target;
+      const fromEmoji = targetEl?.closest?.("[data-swipe-zone='emoji']");
+      const fromGallery = targetEl?.closest?.("[data-swipe-zone='gallery']");
+      if (fromEmoji) {
+        setInteractivePanel("stickers");
+      } else if (fromGallery) {
+        openGallery();
+      } else {
+        // Default: swipe up anywhere on the viewfinder opens the in-app gallery
+        openGallery();
+      }
+    }
+  };
+
   // Load Face-API models
   useEffect(() => {
     const loadModels = async () => {
@@ -375,10 +424,35 @@ const BrunoCameraPage = () => {
   const startCamera = async () => {
     try {
       if (stream) stream.getTracks().forEach((t) => t.stop());
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1080 }, height: { ideal: 1920 } },
+      // Use device-native aspect ratio so the preview is NOT digitally zoomed.
+      // Forcing 1080x1920 makes the browser crop the wider sensor → false zoom.
+      // Letting the device pick its sensor resolution keeps the field of view natural.
+      const constraints = {
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1280 },
+          aspectRatio: { ideal: 16 / 9 },
+        },
         audio: mode !== "photo",
-      });
+      };
+      let s;
+      try {
+        s = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (_inner) {
+        // Fallback: completely permissive — lets the browser pick the best track
+        s = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode },
+          audio: mode !== "photo",
+        });
+      }
+      // Try to apply zoom=1 explicitly (some Android Chrome builds default to zoom>1)
+      try {
+        const track = s.getVideoTracks()[0];
+        const caps = track?.getCapabilities?.();
+        if (caps && caps.zoom && typeof caps.zoom.min === "number") {
+          await track.applyConstraints({ advanced: [{ zoom: caps.zoom.min }] });
+        }
+      } catch (_zoomErr) { /* ignore — not all devices expose zoom */ }
       setStream(s);
       if (videoRef.current) videoRef.current.srcObject = s;
     } catch (err) {
@@ -465,16 +539,47 @@ const BrunoCameraPage = () => {
       });
       const mediaUrl = uploadRes.data.url;
 
-      // Step 2: Create post with uploaded media URL
-      await axios.post(`${API}/posts`, {
-        content: caption,
-        media: [{ type: capturedMedia.type === "photo" ? "image" : "video", url: mediaUrl }],
-        post_type: capturedMedia.type === "photo" ? "image" : "video",
-        visibility: "public",
-      }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      navigate("/feed");
+      // Step 2: If there's an embedded poll sticker, create the poll first so the story can link it.
+      const pollSticker = stickers.find((s) => s.kind === "poll");
+      let pollId = null;
+      if (pollSticker) {
+        try {
+          const pollRes = await axios.post(`${API}/social/polls`, {
+            question: pollSticker.question,
+            options: pollSticker.options,
+            duration_hours: 24,
+          }, { headers: { Authorization: `Bearer ${token}` } });
+          pollId = pollRes.data?.id || null;
+        } catch (_e) { /* non-fatal */ }
+      }
+
+      const overlaysMeta = {
+        texts: texts.map(({ id, ...rest }) => rest),
+        stickers: stickers.map(({ id, ...rest }) => rest),
+      };
+
+      // Step 3: Create post (for feed) OR a Story when there's interactive content
+      const isInteractive = !!pollSticker || stickers.some((s) => s.kind === "question");
+      if (isInteractive) {
+        await axios.post(`${API}/stories`, {
+          media_url: mediaUrl,
+          media_type: capturedMedia.type === "photo" ? "image" : "video",
+          caption,
+          visibility: "public",
+          duration: capturedMedia.type === "photo" ? 5 : 15,
+          poll_id: pollId,
+          overlays: overlaysMeta,
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        navigate("/feed");
+      } else {
+        await axios.post(`${API}/posts`, {
+          content: caption,
+          media: [{ type: capturedMedia.type === "photo" ? "image" : "video", url: mediaUrl }],
+          post_type: capturedMedia.type === "photo" ? "image" : "video",
+          visibility: "public",
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        navigate("/feed");
+      }
     } catch (err) {
       // error handled
     } finally {
@@ -504,7 +609,11 @@ const BrunoCameraPage = () => {
   return (
     <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 50, paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom, 0px))" }} data-testid="camera-page">
       {/* ====== CAMERA VIEWFINDER ====== */}
-      <div className="relative flex-1 overflow-hidden rounded-b-3xl">
+      <div
+        className="relative flex-1 overflow-hidden rounded-b-3xl"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {!capturedMedia ? (
           <>
             <video
@@ -550,6 +659,7 @@ const BrunoCameraPage = () => {
             <SideBtn icon={FlipHorizontal} label="Voltear" onClick={flipCamera} testId="camera-flip-btn" />
             <SideBtn icon={Wand2} label="Belleza" onClick={() => togglePanel("beauty")} active={activePanel === "beauty" || beautyLevel > 0} testId="camera-beauty-btn" />
             <SideBtn icon={Smile} label="Efectos" onClick={() => togglePanel("ar")} active={activePanel === "ar" || arFilter !== "none"} testId="camera-ar-btn" />
+            <SideBtn icon={Sticker} label="Stickers" onClick={() => setInteractivePanel("stickers")} active={!!interactivePanel} testId="camera-interactive-btn" swipeZone="emoji" />
             <SideBtn icon={Timer} label="Timer" testId="camera-timer-btn" />
             {!modelsLoaded && <Loader2 className="w-5 h-5 text-white/60 animate-spin" />}
           </div>
@@ -564,17 +674,56 @@ const BrunoCameraPage = () => {
           </div>
         )}
 
-        {/* ---- STICKERS OVERLAY ---- */}
-        {stickers.map((s) => (
-          <div
-            key={s.id}
-            className="absolute cursor-pointer select-none"
-            style={{ left: `${s.x}%`, top: `${s.y}%`, transform: `translate(-50%, -50%) scale(${s.scale})`, fontSize: "2.5rem" }}
-            onClick={() => removeSticker(s.id)}
-          >
-            {s.emoji}
-          </div>
-        ))}
+        {/* ---- STICKERS / QUESTIONS / POLLS OVERLAY ---- */}
+        {stickers.map((s) => {
+          if (s.kind === "question") {
+            return (
+              <div
+                key={s.id}
+                className="absolute cursor-pointer select-none px-4 py-3 rounded-2xl bg-white/95 text-stone-900 shadow-lg shadow-black/30 max-w-[80%]"
+                style={{ left: `${s.x}%`, top: `${s.y}%`, transform: `translate(-50%, -50%) scale(${s.scale})` }}
+                onClick={() => removeSticker(s.id)}
+                data-testid={`overlay-question-${s.id}`}
+              >
+                <p className="text-[10px] uppercase tracking-wider font-bold text-orange-500 mb-1">Pregunta</p>
+                <p className="text-sm font-semibold">{s.text}</p>
+                <div className="mt-2 h-7 rounded-full bg-stone-100 flex items-center px-3 text-[11px] text-stone-400">
+                  Tu respuesta…
+                </div>
+              </div>
+            );
+          }
+          if (s.kind === "poll") {
+            return (
+              <div
+                key={s.id}
+                className="absolute cursor-pointer select-none px-3 py-2 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 text-white shadow-lg shadow-black/40 max-w-[80%]"
+                style={{ left: `${s.x}%`, top: `${s.y}%`, transform: `translate(-50%, -50%) scale(${s.scale})` }}
+                onClick={() => removeSticker(s.id)}
+                data-testid={`overlay-poll-${s.id}`}
+              >
+                <p className="text-sm font-bold mb-2 text-center">{s.question}</p>
+                <div className="flex flex-col gap-1.5">
+                  {(s.options || []).map((opt, i) => (
+                    <div key={`pop-${i}`} className="px-3 py-1.5 rounded-lg bg-white/20 text-xs font-medium text-center backdrop-blur-sm">
+                      {opt}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div
+              key={s.id}
+              className="absolute cursor-pointer select-none"
+              style={{ left: `${s.x}%`, top: `${s.y}%`, transform: `translate(-50%, -50%) scale(${s.scale})`, fontSize: "2.5rem" }}
+              onClick={() => removeSticker(s.id)}
+            >
+              {s.emoji}
+            </div>
+          );
+        })}
 
         {/* ---- TEXT OVERLAY ---- */}
         {texts.map((t) => {
@@ -761,12 +910,17 @@ const BrunoCameraPage = () => {
             <div className="flex items-center justify-between px-4 py-3">
               {/* Gallery */}
               <button
-                onClick={() => setGalleryOpen(true)}
-                className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center transition-all"
+                onClick={openGallery}
+                data-swipe-zone="gallery"
+                className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center transition-all relative"
                 data-testid="camera-gallery-btn"
-                aria-label="Abrir galería"
+                aria-label="Abrir galería (desliza hacia arriba)"
+                title="Toca o desliza hacia arriba"
               >
                 <ImageIcon className="w-5 h-5 text-white/70" />
+                {!galleryPermission && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full animate-pulse" />
+                )}
               </button>
 
               {/* Center: Mode tabs + Capture */}
@@ -877,10 +1031,179 @@ const BrunoCameraPage = () => {
             if (!file) return;
             const url = URL.createObjectURL(file);
             const isVideo = file.type.startsWith("video");
-            setCapturedMedia({ type: isVideo ? "video" : "photo", url, blob: file });
-            if (isVideo && mode !== "video") setMode("video");
+            setCapturedMedia({ type: isVideo ? "video" : "photo", data: url, blob: file });
+            if (isVideo && mode !== "video15" && mode !== "video60") setMode("video15");
           }}
         />
+
+        {/* ====== INTERACTIVE PANEL (Stickers / Emojis / Questions / Polls) ====== */}
+        {interactivePanel && (
+          <div className="fixed inset-0 z-[130] bg-black/70 backdrop-blur-md flex items-end" onClick={() => setInteractivePanel(null)}>
+            <div
+              className="w-full bg-stone-950 rounded-t-3xl border-t border-white/10 max-h-[70vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-200"
+              onClick={(e) => e.stopPropagation()}
+              data-testid="camera-interactive-panel"
+            >
+              {/* Grabber */}
+              <div className="flex justify-center pt-2.5">
+                <div className="h-1.5 w-12 rounded-full bg-white/20" />
+              </div>
+              {/* Tabs */}
+              <div className="flex items-center gap-1 px-3 py-2.5 border-b border-white/10">
+                {[
+                  { id: "stickers", label: "Stickers" },
+                  { id: "emojis", label: "Emojis" },
+                  { id: "questions", label: "Pregunta" },
+                  { id: "polls", label: "Encuesta" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setInteractivePanel(tab.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${interactivePanel === tab.id ? "bg-white text-black" : "bg-white/10 text-white/60"}`}
+                    data-testid={`interactive-tab-${tab.id}`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+                <button onClick={() => setInteractivePanel(null)} className="ml-auto text-white/60 hover:text-white" data-testid="interactive-panel-close">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-4">
+                {interactivePanel === "stickers" && (
+                  <div className="grid grid-cols-8 gap-2" data-testid="interactive-stickers">
+                    {STICKERS.map((emoji, i) => (
+                      <button
+                        key={`isticker-${i}`}
+                        onClick={() => { addSticker(emoji); setInteractivePanel(null); }}
+                        className="text-3xl hover:scale-125 active:scale-90 transition-transform"
+                        data-testid={`interactive-sticker-${i}`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {interactivePanel === "emojis" && (
+                  <div className="grid grid-cols-8 gap-2" data-testid="interactive-emojis">
+                    {["😀","😂","😍","😎","🤩","😭","😡","🤔","🥳","🤯","😴","🤮","👍","👎","🙏","👏","💪","🎉","🔥","💯","❤️","💔","💖","✨","⭐","🌟","🌈","🎵","🎶","🍕","🍔","🍻"].map((emoji, i) => (
+                      <button
+                        key={`iemoji-${i}`}
+                        onClick={() => { addSticker(emoji); setInteractivePanel(null); }}
+                        className="text-3xl hover:scale-125 active:scale-90 transition-transform"
+                        data-testid={`interactive-emoji-${i}`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {interactivePanel === "questions" && (
+                  <div className="space-y-3" data-testid="interactive-questions">
+                    <p className="text-white text-sm font-semibold">Hazle una pregunta a tu audiencia</p>
+                    <Input
+                      value={questionText}
+                      onChange={(e) => setQuestionText(e.target.value)}
+                      placeholder="Ej. ¿Cuál es tu canción favorita?"
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      data-testid="interactive-question-input"
+                    />
+                    <Button
+                      disabled={!questionText.trim()}
+                      onClick={() => {
+                        setStickers((p) => [...p, {
+                          id: Date.now(),
+                          emoji: null,
+                          kind: "question",
+                          text: questionText.trim(),
+                          x: 50, y: 40, scale: 1,
+                        }]);
+                        setQuestionText("");
+                        setInteractivePanel(null);
+                      }}
+                      className="w-full"
+                      data-testid="interactive-question-add"
+                    >
+                      Agregar pregunta
+                    </Button>
+                  </div>
+                )}
+
+                {interactivePanel === "polls" && (
+                  <div className="space-y-3" data-testid="interactive-polls">
+                    <p className="text-white text-sm font-semibold">Crea una encuesta</p>
+                    <Input
+                      value={pollQuestion}
+                      onChange={(e) => setPollQuestion(e.target.value)}
+                      placeholder="Tu pregunta…"
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                      data-testid="interactive-poll-question"
+                    />
+                    {pollOptions.map((opt, idx) => (
+                      <div key={`pop-${idx}`} className="flex items-center gap-2">
+                        <Input
+                          value={opt}
+                          onChange={(e) => {
+                            const next = [...pollOptions];
+                            next[idx] = e.target.value;
+                            setPollOptions(next);
+                          }}
+                          placeholder={`Opción ${idx + 1}`}
+                          className="bg-white/10 border-white/20 text-white placeholder:text-white/40 flex-1"
+                          data-testid={`interactive-poll-option-${idx}`}
+                        />
+                        {pollOptions.length > 2 && (
+                          <button
+                            onClick={() => setPollOptions(pollOptions.filter((_, i) => i !== idx))}
+                            className="text-white/50 hover:text-red-400"
+                            data-testid={`interactive-poll-remove-${idx}`}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {pollOptions.length < 4 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPollOptions([...pollOptions, ""])}
+                        className="w-full border-white/20 text-white"
+                        data-testid="interactive-poll-add-option"
+                      >
+                        + Agregar opción
+                      </Button>
+                    )}
+                    <Button
+                      disabled={!pollQuestion.trim() || pollOptions.filter((o) => o.trim()).length < 2}
+                      onClick={() => {
+                        const validOpts = pollOptions.filter((o) => o.trim());
+                        setStickers((p) => [...p, {
+                          id: Date.now(),
+                          emoji: null,
+                          kind: "poll",
+                          question: pollQuestion.trim(),
+                          options: validOpts,
+                          x: 50, y: 50, scale: 1,
+                        }]);
+                        setPollQuestion("");
+                        setPollOptions(["", ""]);
+                        setInteractivePanel(null);
+                      }}
+                      className="w-full"
+                      data-testid="interactive-poll-add"
+                    >
+                      Agregar encuesta
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -888,9 +1211,10 @@ const BrunoCameraPage = () => {
 
 // ==================== HELPER COMPONENTS ====================
 
-const SideBtn = ({ icon: Icon, label, onClick, active, testId }) => (
+const SideBtn = ({ icon: Icon, label, onClick, active, testId, swipeZone }) => (
   <button
     onClick={onClick}
+    data-swipe-zone={swipeZone}
     className="flex flex-col items-center gap-0.5 group"
     data-testid={testId}
   >

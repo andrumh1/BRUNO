@@ -15,11 +15,31 @@ import { Play, Pause } from "lucide-react";
  *   isOwn    — adjusts color palette for own bubble
  *   testId
  */
-export default function BrunoAudioWaveform({ url, isOwn = false, testId = "audio-wave" }) {
+export default function BrunoAudioWaveform({ url, mp3Url, isOwn = false, testId = "audio-wave" }) {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  // Build prioritized source list: MP3 (broadest support) → original webm/ogg/mp4 → cloudinary f_mp3 fallback
+  const sources = useMemo(() => {
+    const list = [];
+    if (mp3Url) list.push({ src: mp3Url, type: "audio/mpeg" });
+    if (url && url !== mp3Url) {
+      const isWebm = /\.webm(\?|$)/i.test(url);
+      const isOgg = /\.ogg(\?|$)/i.test(url);
+      const isM4a = /\.(m4a|mp4)(\?|$)/i.test(url);
+      list.push({ src: url, type: isWebm ? "audio/webm" : isOgg ? "audio/ogg" : isM4a ? "audio/mp4" : "audio/mpeg" });
+    }
+    // Last-resort on-the-fly Cloudinary mp3 transform
+    if (url && url.includes("res.cloudinary.com") && url.includes("/upload/") && !url.includes("/upload/f_mp3")) {
+      const transformed = url.replace("/upload/", "/upload/f_mp3/").replace(/\.(webm|opus|m4a|ogg|wav)(\?|$)/i, ".mp3$2");
+      if (transformed !== url && transformed !== mp3Url) {
+        list.push({ src: transformed, type: "audio/mpeg" });
+      }
+    }
+    return list;
+  }, [url, mp3Url]);
 
   // Stable pseudo-random heights from the url
   const bars = useMemo(() => {
@@ -33,6 +53,13 @@ export default function BrunoAudioWaveform({ url, isOwn = false, testId = "audio
     }
     return out;
   }, [url]);
+
+  // Force-reload when sources change (Chrome requires explicit load() after src swap)
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    try { a.load(); } catch (_e) { /* ignore */ }
+  }, [sources]);
 
   useEffect(() => {
     const a = audioRef.current;
@@ -53,11 +80,15 @@ export default function BrunoAudioWaveform({ url, isOwn = false, testId = "audio
     };
   }, []);
 
-  const toggle = () => {
+  const toggle = async () => {
     const a = audioRef.current;
     if (!a) return;
     if (a.paused) {
-      a.play().then(() => setPlaying(true)).catch(() => {});
+      try {
+        if (a.ended || (duration && current >= duration - 0.05)) a.currentTime = 0;
+        await a.play();
+        setPlaying(true);
+      } catch (_e) { /* Autoplay blocked or unsupported codec */ }
     } else {
       a.pause();
       setPlaying(false);
@@ -91,7 +122,11 @@ export default function BrunoAudioWaveform({ url, isOwn = false, testId = "audio
       }`}
       data-testid={testId}
     >
-      <audio ref={audioRef} src={url} preload="metadata" />
+      <audio ref={audioRef} preload="metadata">
+        {sources.map((s) => (
+          <source key={s.src} src={s.src} type={s.type} />
+        ))}
+      </audio>
 
       <motion.button
         whileTap={{ scale: 0.92 }}

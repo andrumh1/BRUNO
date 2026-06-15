@@ -62,8 +62,25 @@ const useAudioRecorder = () => {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      // Pick a mimeType the current browser actually supports. Chrome defaults
+      // to webm/opus (works in Chrome) but a few mobile Chromes mis-tag and
+      // refuse to play back later — explicit selection avoids ambiguity.
+      const candidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4;codecs=mp4a.40.2",
+        "audio/mp4",
+        "audio/ogg;codecs=opus",
+        "audio/ogg",
+      ];
+      let mimeType = "";
+      for (const c of candidates) {
+        if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c)) { mimeType = c; break; }
+      }
+      const opts = mimeType ? { mimeType } : {};
+      mediaRecorderRef.current = new MediaRecorder(stream, opts);
       chunksRef.current = [];
+      const usedType = mediaRecorderRef.current.mimeType || mimeType || "audio/webm";
       
       mediaRecorderRef.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -72,7 +89,9 @@ const useAudioRecorder = () => {
       };
       
       mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: usedType });
+        // Attach mimeType info onto the blob so upload code can preserve it
+        blob.__mime = usedType;
         setAudioBlob(blob);
         stream.getTracks().forEach(track => track.stop());
       };
@@ -125,21 +144,41 @@ const toPlayableAudioUrl = (url) => {
   return url.replace("/upload/", "/upload/f_mp3/").replace(/\.(webm|opus|m4a|ogg|wav)(\?|$)/i, ".mp3$2");
 };
 
-// Audio Player Component
-const AudioPlayer = ({ url, isOwn }) => {
+// Audio Player Component — uses multi-source so the browser auto-picks the format it supports
+const AudioPlayer = ({ url, mp3Url, isOwn }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState(false);
   const audioRef = useRef(null);
 
-  // Try MP3-transcoded URL first, fall back to original if it fails to load.
+  // Build prioritized list of sources: MP3 first (broadest support),
+  // then original Cloudinary URL, then on-the-fly f_mp3 transform as a
+  // last-resort fallback.
   const sources = React.useMemo(() => {
-    const mp3 = toPlayableAudioUrl(url);
-    return mp3 && mp3 !== url ? [mp3, url] : [url];
-  }, [url]);
-  const [srcIdx, setSrcIdx] = useState(0);
-  const currentSrc = sources[srcIdx];
+    const list = [];
+    if (mp3Url) list.push({ src: mp3Url, type: "audio/mpeg" });
+    if (url && url !== mp3Url) {
+      const isWebm = /\.webm(\?|$)/i.test(url);
+      const isOgg = /\.ogg(\?|$)/i.test(url);
+      list.push({ src: url, type: isWebm ? "audio/webm" : isOgg ? "audio/ogg" : "audio/mp4" });
+    }
+    if (url) {
+      const transformed = toPlayableAudioUrl(url);
+      if (transformed !== url && transformed !== mp3Url) {
+        list.push({ src: transformed, type: "audio/mpeg" });
+      }
+    }
+    return list;
+  }, [url, mp3Url]);
+
+  // Force-reload when sources change (Chrome requires explicit load() after src swap)
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    try { audio.load(); } catch (_e) { /* ignore */ }
+    setError(false);
+  }, [sources]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -160,13 +199,8 @@ const AudioPlayer = ({ url, isOwn }) => {
     };
 
     const handleError = () => {
-      // Try the next source (original webm) if MP3 transcode fails
-      if (srcIdx < sources.length - 1) {
-        setSrcIdx((i) => i + 1);
-      } else {
-        setError(true);
-        setIsPlaying(false);
-      }
+      setError(true);
+      setIsPlaying(false);
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -180,7 +214,7 @@ const AudioPlayer = ({ url, isOwn }) => {
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('error', handleError);
     };
-  }, [srcIdx, sources.length]);
+  }, []);
 
   const togglePlay = async () => {
     const audio = audioRef.current;
@@ -191,17 +225,12 @@ const AudioPlayer = ({ url, isOwn }) => {
       return;
     }
     try {
+      if (audio.ended || progress >= 99) audio.currentTime = 0;
       await audio.play();
       setIsPlaying(true);
       setError(false);
-    } catch (err) {
-      // play() can throw NotAllowedError or NotSupportedError
-      if (srcIdx < sources.length - 1) {
-        setSrcIdx((i) => i + 1);
-        setTimeout(() => audio.play().then(() => setIsPlaying(true)).catch(() => setError(true)), 100);
-      } else {
-        setError(true);
-      }
+    } catch (_e) {
+      setError(true);
     }
   };
 
@@ -213,7 +242,11 @@ const AudioPlayer = ({ url, isOwn }) => {
 
   return (
     <div className={`flex items-center gap-2 min-w-[200px] ${isOwn ? 'flex-row-reverse' : ''}`} data-testid="audio-player">
-      <audio ref={audioRef} src={currentSrc} preload="metadata" />
+      <audio ref={audioRef} preload="metadata">
+        {sources.map((s) => (
+          <source key={s.src} src={s.src} type={s.type} />
+        ))}
+      </audio>
       <Button
         variant="ghost"
         size="icon"
@@ -263,7 +296,7 @@ const FileAttachment = ({ file, isOwn }) => {
   }
 
   if (file.type?.startsWith('audio')) {
-    return <BrunoAudioWaveform url={file.url} isOwn={isOwn} />;
+    return <BrunoAudioWaveform url={file.url} mp3Url={file.mp3_url} isOwn={isOwn} />;
   }
 
   return (
@@ -641,7 +674,9 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append("file", audioBlob, "audio.webm");
+      const mime = (audioBlob.__mime || audioBlob.type || "audio/webm").toLowerCase();
+      const ext = mime.includes("mp4") ? "m4a" : mime.includes("ogg") ? "ogg" : "webm";
+      formData.append("file", audioBlob, `audio.${ext}`);
       
       const uploadResponse = await axios.post(`${API}/upload/audio`, formData, {
         headers: { 
@@ -651,11 +686,12 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       });
 
       const audioUrl = uploadResponse.data.url;
+      const audioMp3 = uploadResponse.data.mp3_url || null;
       
       const messageData = {
         content: "🎤 Nota de voz",
         message_type: "audio",
-        attachments: [{ url: audioUrl, type: "audio/webm", filename: "audio.webm" }]
+        attachments: [{ url: audioUrl, mp3_url: audioMp3, type: mime, filename: `audio.${ext}` }]
       };
 
       if (ws && ws.readyState === WebSocket.OPEN) {

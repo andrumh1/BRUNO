@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 57: frontend-only verification of P0 bug fixes + new in-app gallery/swipe + interactive panel (stickers/emojis/questions/polls) + StoryEditor multi-slide + Chrome audio fallback. Most checks pass at code+DOM level. One real UX issue found: in mobile viewport (390x844) the camera interactive panel's submit buttons ('Agregar pregunta' / 'Agregar encuesta') sit at y=788-828 — behind/overlapping the fixed bottom-nav (top:~744). Real touch input may miss them; Playwright force-click via center-coordinate also failed, but JS .click() worked, confirming the handler is correct but the button is partly occluded by MobileBottomNav.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "BrunoCameraPage interactive panel",
+        "issue": "On 390x844 viewport, the 'Agregar pregunta' (data-testid=interactive-question-add) and 'Agregar encuesta' (data-testid=interactive-poll-add) buttons render at bottom y≈788-828 px. MobileBottomNav is fixed at bottom (~3rem) and overlaps/covers the bottom of the panel sheet. Playwright force-click at element center fails because the click is intercepted by the nav; only window.click() on the element triggers state. Real users on small phones will likely struggle to tap the submit button.",
+        "selector": "[data-testid=interactive-question-add], [data-testid=interactive-poll-add]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "/camera (interactive panel)",
+        "issues": [
+          "Interactive panel max-height should reserve safe-area + bottom-nav (≈80-100px) so the primary CTA stays above the nav.",
+          "Consider hiding MobileBottomNav while /camera or any full-screen sheet is open, OR adding pb-[calc(3.5rem+env(safe-area-inset-bottom))] to the panel."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix /camera interactive panel: increase bottom padding (or panel max-height) so 'Agregar pregunta' and 'Agregar encuesta' buttons are not covered by the fixed MobileBottomNav. Suggested patch: in BrunoCameraPage.jsx around the data-testid=camera-interactive-panel container, add style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }} on the outer panel OR hide MobileBottomNav while interactivePanel is non-null."
+  ],
+  "critical_code_review_comments": [
+    "BrunoCameraPage.handlePublish (line 528-588) correctly branches: when stickers contains kind=question or kind=poll, posts to /api/stories (with poll_id link and overlays meta); else posts to /api/posts. Good.",
+    "openGallery() at line 174 sets localStorage 'bruno-gallery-granted'='1' on first call (verified in-browser: pre-click=null, post-click=1). InternalGalleryPicker mounts in-app (data-testid='gallery-picker', verified).",
+    "Swipe handler handleTouchEnd (line 189-209) correctly thresholds dy>70, dx<60, dur<600ms and routes to openGallery() (gallery zone) or setInteractivePanel('stickers') (emoji zone). Default fallthrough also opens gallery. Implementation looks correct; couldn't programmatically dispatch TouchEvent reliably from Playwright but code path is sound.",
+    "Orange dot on gallery btn (line 921-923) renders only when !galleryPermission — present in DOM until first click sets localStorage. Verified via outerHTML inspection.",
+    "Interactive tabs (line 1053-1067): IDs are 'stickers'|'emojis'|'questions'|'polls'. NOTE: review request mentions 'pregunta'/'encuesta' as testids — they are actually labels; testIds use the English keys. data-testid values are interactive-tab-stickers, interactive-tab-emojis, interactive-tab-questions, interactive-tab-polls.",
+    "Question overlay (line 679-694) and Poll overlay (line 696-714) render with data-testid='overlay-question-<id>' / 'overlay-poll-<id>' as spec'd. Confirmed live: after JS-click of interactive-question-add, overlay-question-<id> element appears on viewfinder.",
+    "StoryEditor: file input has multiple attribute (line 451), accept='image/*,video/*'. extraSlides + publishAnimation states present. Multi-slide strip rendered conditionally (line 454-465). Publish animation overlay with data-testid='story-publish-animation' (line 723). Publish label uses 'Publicar N historias' when extraSlides.length>0 (line 710).",
+    "BrunoAudioWaveform: builds prioritized <source> list — mp3Url first (audio/mpeg), then original codec, then Cloudinary f_mp3 fallback transform (line 35-39). audio.load() called when sources change (line 57-62). ChatPage FileAttachment passes mp3Url prop (per review notes). Implementation is sound for Chrome reliability; could not exercise live playback because test account has no existing audio messages."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "skipped per request", "frontend": "85% (1 HIGH UX issue: panel CTA occlusion)"},
+  "test_credentials": {"email": "newtest@bruno.com", "password": "Test1234!"},
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Verified live on 390x844: /camera page mounts with data-testid='camera-page'; camera-interactive-btn opens the bottom-sheet panel; 4 tabs (stickers/emojis/questions/polls). Question overlay DOES get added (verified via JS click; Playwright force-click failed because btn rect was top:788/bottom:828 in 844px tall viewport — overlapped by MobileBottomNav). camera-gallery-btn opens in-app InternalGalleryPicker (data-testid='gallery-picker'); localStorage 'bruno-gallery-granted' transitions null → '1' on first click. Story create flow: feed page has data-testid='story-create-btn' which opens StoryEditor (data-testid='story-editor'); file input multiple attribute IS present. Audio playback could not be live-tested (no pre-existing audio messages in test account). Recommend main agent (a) bumps panel bottom padding to keep CTA above MobileBottomNav, (b) seeds an audio message for chat playback retest, (c) updates review request spec to use English tab IDs (questions/polls not pregunta/encuesta).",
+  "rca_of_issue": "BrunoCameraPage interactive panel uses fixed positioning with overflow-y-auto but lacks bottom padding to clear the global MobileBottomNav (fixed bottom-3, ~64-80px tall). On 390x844 the panel CTA renders at y=788-828, overlapping nav at y≈744-816. Click at center y≈808 hits nav, not CTA. Fix: add pb-[calc(4.5rem+env(safe-area-inset-bottom))] to the panel content scroll container OR conditionally hide MobileBottomNav while interactivePanel || galleryOpen is truthy. Functional behaviour (handler logic) is correct — confirmed by direct el.click() producing the expected overlay-question-<id> overlay."
+}
