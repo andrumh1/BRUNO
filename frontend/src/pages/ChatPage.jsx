@@ -25,6 +25,7 @@ import AudioPlayer from "@/components/chat/AudioPlayer";
 import FileAttachment from "@/components/chat/FileAttachment";
 import ChatList from "@/components/chat/ChatList";
 import NewChatModal from "@/components/chat/NewChatModal";
+import LocationMessagePreview from "@/components/chat/LocationMessagePreview";
 import axios from "axios";
 import { 
   ArrowLeft, 
@@ -707,9 +708,14 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                           onClick={() => navigate(`/c/${message.attachments[0].card_id}`)}
                         />
                       )}
+
+                      {/* Location share messages */}
+                      {message.message_type === 'location_share' && message.attachments?.[0] && (
+                        <LocationMessagePreview attachment={message.attachments[0]} isOwn={isOwn} />
+                      )}
                       
                       {/* Text content with @mention parsing */}
-                      {message.content && message.message_type !== 'audio' && message.message_type !== 'sticker' && message.message_type !== 'card' && (
+                      {message.content && message.message_type !== 'audio' && message.message_type !== 'sticker' && message.message_type !== 'card' && message.message_type !== 'location_share' && (
                         <p className="text-sm whitespace-pre-wrap break-words">
                           {message.content.split(/(@\w+)/g).map((part, pi) => {
                             if (part.startsWith("@")) {

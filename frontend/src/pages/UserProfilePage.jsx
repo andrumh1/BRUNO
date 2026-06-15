@@ -26,9 +26,12 @@ import {
   X,
   CreditCard,
   Eye,
-  Minimize2
+  Minimize2,
+  Phone,
+  Video
 } from "lucide-react";
 import { useNavScroll } from "@/contexts/NavScrollContext";
+import LocationShareSheet from "@/components/bruno/LocationShareSheet";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -47,6 +50,7 @@ const UserProfilePage = () => {
   const [isBlocked, setIsBlocked] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
+  const [locShareOpen, setLocShareOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showFollowers, setShowFollowers] = useState(null); // 'followers' | 'following' | null
   const [followersList, setFollowersList] = useState([]);
@@ -313,6 +317,15 @@ const UserProfilePage = () => {
                 <Button variant="ghost" size="icon" onClick={handleStartChat} title="Mensaje" data-testid="profile-chat-btn">
                   <Mail className="w-5 h-5" />
                 </Button>
+                <Button variant="ghost" size="icon" onClick={() => setLocShareOpen(true)} title="Compartir ubicación" data-testid="profile-share-location-btn">
+                  <MapPin className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => window.dispatchEvent(new CustomEvent("bruno:start-call", { detail: { user_id: userId, type: "audio", peer_name: profile.display_name || profile.name, peer_avatar: profile.avatar_url } }))} title="Llamar" data-testid="profile-call-audio-btn">
+                  <Phone className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => window.dispatchEvent(new CustomEvent("bruno:start-call", { detail: { user_id: userId, type: "video", peer_name: profile.display_name || profile.name, peer_avatar: profile.avatar_url } }))} title="Videollamada" data-testid="profile-call-video-btn">
+                  <Video className="w-5 h-5" />
+                </Button>
                 <Button
                   variant={isFollowing ? "outline" : "default"}
                   size="sm"
@@ -509,6 +522,16 @@ const UserProfilePage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Location share sheet */}
+      {profile && !isOwnProfile && (
+        <LocationShareSheet
+          open={locShareOpen}
+          onClose={() => setLocShareOpen(false)}
+          toUserId={userId}
+          peerName={profile.display_name || profile.name}
+        />
       )}
     </div>
   );
