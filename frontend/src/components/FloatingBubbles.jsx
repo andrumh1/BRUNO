@@ -414,7 +414,7 @@ const FloatingBubbles = () => {
             </div>
           )}
 
-          {/* AI pill */}
+          {/* AI pill — circular bubble matching the other minimized items */}
           <div className="fixed z-[10000] bottom-[18px] transition-all duration-300 ease-out"
             style={{ right: 'calc(50% + 60px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <button
@@ -423,11 +423,16 @@ const FloatingBubbles = () => {
               className="relative group transition-all duration-300"
               data-testid="floating-ai-btn"
             >
-              <div className={`flex items-center gap-1 px-3 py-2 rounded-full bg-background/90 backdrop-blur-2xl border border-border/50 shadow-xl shadow-black/10 hover:shadow-black/20 transition-all duration-300 active:scale-95 ${
-                showAIChat ? 'ring-2 ring-violet-400 ring-offset-1 ring-offset-background' : ''
+              <div className={`w-7 h-7 rounded-full bg-background/90 backdrop-blur-2xl border shadow-lg overflow-hidden grid place-items-center transition-all hover:scale-110 active:scale-90 ${
+                showAIChat ? 'border-violet-400 ring-2 ring-violet-400/40' : 'border-border/50'
               }`}>
                 <Sparkles className="w-3.5 h-3.5 text-violet-500" />
               </div>
+              {/* Type badge identical to other minimized items */}
+              <div
+                className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-[1.5px] border-background shadow-sm bg-gradient-to-br from-violet-500 to-fuchsia-500"
+                data-testid="item-badge-ai"
+              />
             </button>
           </div>
         </>

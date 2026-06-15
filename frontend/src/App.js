@@ -10,6 +10,7 @@ import { Toaster } from "sonner";
 import { BrunoCameraProvider } from "@/contexts/BrunoCameraContext";
 import RealtimeNotificationProvider from "@/contexts/RealtimeNotificationContext";
 import StoryActivityProvider from "@/contexts/StoryActivityContext";
+import { I18nProvider } from "@/contexts/I18nContext";
 
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
@@ -176,6 +177,7 @@ function App() {
     <ThemeProvider>
       <LanguageProvider>
         <AuthProvider>
+          <I18nProvider>
           <NotificationProvider>
             <BrowserRouter>
               <NavScrollProvider>
@@ -208,6 +210,7 @@ function App() {
               </NavScrollProvider>
             </BrowserRouter>
           </NotificationProvider>
+          </I18nProvider>
         </AuthProvider>
       </LanguageProvider>
     </ThemeProvider>

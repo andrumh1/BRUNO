@@ -1049,6 +1049,29 @@ async def create_checkout_session(payload: CheckoutSessionCreate, request: Reque
         currency = plan["currency"]
         payment_type = PaymentType.SUBSCRIPTION
 
+    # ─── Multi-currency: convert to the user's preferred currency ───────────
+    # Stripe natively supports 135+ currencies. We pick the user's currency
+    # (profile preference → IP fallback) and convert from USD base via the FX
+    # cache from routers/i18n.
+    try:
+        from routers.i18n import _ensure_fx_rates, _request_country, SUPPORTED_COUNTRIES
+        target_currency = currency.upper()
+        profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0}) or {}
+        target_currency = (profile.get("preferred_currency") or "").upper() or target_currency
+        if target_currency == currency.upper() and not profile.get("preferred_currency"):
+            # Fall back to IP-detected country's currency
+            cc = _request_country(request) or ""
+            target_currency = SUPPORTED_COUNTRIES.get(cc.upper(), {}).get("currency", target_currency)
+        if target_currency != currency.upper():
+            fx = await _ensure_fx_rates(currency.upper())
+            rate = (fx.get("rates") or {}).get(target_currency)
+            if rate and rate > 0:
+                amount = round(amount * rate, 2 if target_currency not in ("COP", "CLP", "HUF", "JPY") else 0)
+                currency = target_currency.lower()
+    except Exception as _conv_err:
+        # Conversion failure → keep original USD price, never block checkout
+        pass
+
     origin = payload.origin.rstrip("/")
     success_url = f"{origin}/pricing?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{origin}/pricing"
@@ -3103,6 +3126,8 @@ from routers.ai import router as ai_router
 api_router.include_router(ai_router)
 from routers.location_share import router as location_share_router
 api_router.include_router(location_share_router)
+from routers.i18n import router as i18n_router
+api_router.include_router(i18n_router)
 
 # Share / OG meta-cards
 from routers.share_og import router as share_og_router

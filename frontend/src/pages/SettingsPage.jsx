@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import CurrencySelector from "@/components/i18n/CurrencySelector";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -246,16 +247,20 @@ const SettingsPage = () => {
                 <div className="py-3">
                   <span className="text-sm block mb-2">Idioma</span>
                   <div className="flex gap-2">
-                    {["es", "en", "pt"].map((opt) => (
+                    {["es", "en", "pt", "fr", "de", "it"].map((opt) => (
                       <button
                         key={opt}
                         onClick={() => savePrefs({ language: opt })}
                         className={`flex-1 py-2.5 rounded-xl text-xs font-medium transition-all ${prefs.language === opt ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
                       >
-                        {opt === "es" ? "Espanol" : opt === "en" ? "English" : "Portugues"}
+                        {opt === "es" ? "ES" : opt === "en" ? "EN" : opt === "pt" ? "PT" : opt === "fr" ? "FR" : opt === "de" ? "DE" : "IT"}
                       </button>
                     ))}
                   </div>
+                </div>
+                <div className="py-3" data-testid="settings-region-row">
+                  <span className="text-sm block mb-2">Región y moneda</span>
+                  <CurrencySelector />
                 </div>
                 <div className="py-3">
                   <span className="text-sm block mb-2">Feed por defecto</span>

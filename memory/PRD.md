@@ -915,3 +915,38 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 
 
+### Phase 60: Global expansion · Multi-currency · Regional Compliance · Pre-deploy (2026-02-15)
+
+**Closing-up of previous phase**
+- `LocationMessagePreview.jsx` — chat bubble renders interactive Google-static-map snippet for `location_share` messages, with live countdown for live shares.
+- `UserProfilePage` action bar gains MapPin (compartir ubicación), Phone, Video buttons next to Mail. Mounts `<LocationShareSheet>` inline. Calls dispatch `bruno:start-call`.
+- `FloatingBubbles` AI minimize pill is now a **circular 28×28 button** matching the other minimized tray items (was a wider rounded-pill).
+
+**🌍 New: Global Multi-Currency + Regional i18n** *(Fase A — Deploy-ready)*
+- Backend `routers/i18n.py` — 35 countries (27 EU + 8 others) with currency/locale/tax-kind/default-rate metadata.
+  - `GET /api/i18n/detect` → user-profile → CF-IPCountry header → X-Country-Code → Accept-Language → US fallback.
+  - `GET /api/i18n/countries` — exhaustive list with `eu_codes` array.
+  - `GET /api/i18n/currencies` — primary list + FX rates (USD as base).
+  - `GET /api/i18n/rates?base=...` — full FX matrix (refreshed daily from exchangerate.host, fallback table on failure).
+  - `POST /api/i18n/preference` — saves preferred_currency/country/locale onto user_profile.
+  - `GET /api/i18n/compliance?country=XX` — returns the legal framework (RGPD/CCPA/Ley 1581/UK GDPR/generic).
+- `utils/fx.py`-style helper inline: 24-hour FX cache in collection `fx_rates`.
+- **EU coverage**: AT, BE, BG, HR, CY, CZ, DK, EE, FI, FR, DE, GR, HU, IE, IT, LV, LT, LU, MT, NL, PL, PT, RO, SK, SI, ES, SE — each with its native locale (`de-AT`, `fi-FI`, `pl-PL`, ...). Compliance auto-routes to GDPR for the 27.
+- **USA**: CCPA/CPRA framework. **Colombia**: Ley 1581 (Habeas Data).
+- **Stripe checkout**: now converts USD-base prices to user's currency at session creation. Falls back gracefully if FX call fails.
+
+**Frontend i18n**
+- `I18nProvider.jsx` — global context. Auto-detects on boot, caches in `localStorage["bruno-i18n"]`. Exposes `formatPrice(amount, fromCurrency?)`, `convert()`, `setPreference()`, `compliance`, `isEU`.
+- `CurrencySelector.jsx` — dropdown with two tabs (País / Moneda). Lists EU + Otros separately. Live FX rate display.
+- Mounted in `App.js` (wraps everything except AuthProvider).
+- Added to `SettingsPage` under "Región y moneda" + expanded language buttons (ES/EN/PT/FR/DE/IT).
+
+**Pending — Fase B (next session)**
+- 🛡️ Cookie consent banner with framework-specific text (GDPR vs CCPA vs Ley 1581)
+- 🛡️ Versioned T&C / Privacy per jurisdiction
+- 💰 Stripe Tax integration (auto-VAT/sales-tax/IVA on checkout sessions)
+- 🇨🇴 DIAN electronic invoicing (Siigo/Alegra)
+- 🌐 Full UI translation (currently UI is ES-only; only the locale string flips for number/currency formatting)
+
+
+
