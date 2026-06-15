@@ -1,0 +1,72 @@
+{
+  "summary": "Phase 59 multi-feature rollout tested (location sharing backend + map filter + calls + chat UI minimize/share/call). 10/11 backend tests pass; all critical frontend UI flows verified (chat bubble, call buttons, location share sheet, circular minimized bubble, map page load).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/location/share (chat message side-effect)",
+        "issue": "When chat_id is provided, the system-message inserted in db.messages (message_type='location_share') omits the `is_deleted: false` field. The chat fetch endpoint `/api/chats/{id}/messages` filters with `is_deleted: False`, so the location-share message is NEVER returned to clients. Users will not see the location-share bubble in their chat thread. Fix: add `\"is_deleted\": False` to the msg dict in /app/backend/routers/location_share.py (around line 121)."
+      },
+      {
+        "endpoint": "GET /api/map-pins/cards-located",
+        "issue": "Could not strongly assert opt-in filter in DB because endpoint does not return card_type fully for verification of opt-in flag. Spot check passed (no curriculum/cv types leaked)."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "FloatingChatBubble — minimize button",
+        "issue": "Header Minimize2 button had NO data-testid, making it untestable. Added `data-testid=\"floating-chat-minimize\"` (line ~254).",
+        "selector": "[data-testid=floating-chat-minimize]",
+        "priority": "LOW"
+      },
+      {
+        "component": "useDragToMinimize hook on chat header",
+        "issue": "Playwright mouse drag (>120px down) on the chat header is tracked by the drag library (header visually translates) but DOES NOT trigger onMinimize on release in headless browser. May work with real touch events / mobile but couldn't validate gesture via Playwright. Recommend manual smoke test on a real device, or expose a velocity-based or threshold-based minimize callback that fires on the synthetic mouseup pattern Playwright produces.",
+        "selector": "chat header bar",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Map page (Google Maps)",
+        "issue": "Google Maps prints `BillingNotEnabledMapError` and overlays 'For development purposes only' — map IS interactive, tiles load, but warning is highly visible. Verify production API key has billing enabled.",
+        "affected_selectors": ["/map page"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Floating chat header",
+        "issues": ["Header bar packs 6 icons in narrow mobile width; on iPhone-SE width (390px) they fit but are very close — consider reducing icon padding or hiding share/call behind a kebab menu when width<360px."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase59_location_calls.py",
+    "/app/test_reports/pytest/phase59_results.xml"
+  ],
+  "action_items": [
+    "Fix /app/backend/routers/location_share.py msg insertion: add `\"is_deleted\": False` so the chat message becomes visible in /chats/{id}/messages.",
+    "Investigate useDragToMinimize gesture — fires while dragging but does not trigger minimize on synthetic mouse release.",
+    "Enable Google Maps billing for production API key (or switch to dev key with billing).",
+    "Optionally add a UI trigger (button) somewhere for BrunoMascot so the IA chat is reachable end-to-end."
+  ],
+  "critical_code_review_comments": [
+    "location_share.py inserts a chat message without `is_deleted`, breaking the chat thread visibility (real bug).",
+    "FloatingChatBubble.jsx: minimize button had no data-testid (added during testing).",
+    "VideoCallModal opens the Jitsi iframe instantly on call start; consider gating media join until callee answers, otherwise the caller burns bandwidth + risks 'requested device not found' noise on headless preview environments.",
+    "CallOrchestrator: WS reconnection logic not present — if WS drops, incoming_call notifications are missed silently."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase59_location_calls.py",
+    "/app/frontend/src/components/FloatingChatBubble.jsx (added data-testid=floating-chat-minimize)"
+  ],
+  "success_rate": {"backend": "91%", "frontend": "85%"},
+  "test_credentials": "newtest@bruno.com / Test1234! (verified). Secondary test user TEST_phase59_* registered during test run.",
+  "seed_data_creation": "Created 1 secondary user, 1 direct chat between primary↔secondary, 1 live + 1 fixed location_share doc, multiple video_calls docs.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Phase 59 frontend mostly works. Confirm the location-share msg appears in /api/chats/{chat_id}/messages after fix (is_deleted field). Drag-to-minimize is hard to validate via Playwright — prefer mobile-real device for that gesture. BrunoMascot UI trigger is not exposed in the current pages (BrunoMascotTrigger import not used anywhere visible). /api/ai/chat itself was validated in iter_58. Map BillingNotEnabledMapError is environmental.",
+  "rca_of_the_issue": "test_start_live_share_with_chat: location_share router inserts msg without is_deleted; /chats/{id}/messages requires is_deleted:false so message hides. Reproduction: POST /api/location/share with chat_id, then GET /api/chats/{chat_id}/messages — message_type=location_share missing. Fix: add `\"is_deleted\": False` to the msg dict in routers/location_share.py."
+}

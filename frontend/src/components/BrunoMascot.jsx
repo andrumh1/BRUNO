@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
-import { X, Send, Loader2, Sparkles, HelpCircle, Lightbulb, MessageCircle } from "lucide-react";
+import { X, Send, Loader2, Sparkles, HelpCircle, Lightbulb, MessageCircle, Minimize2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import useDragToMinimize from "@/hooks/useDragToMinimize";
 
 /**
  * BRUNO Mascot Component
@@ -229,16 +232,32 @@ const BrunoMascot = ({
   context = {} 
 }) => {
   const navigate = useNavigate();
+  const { token } = useAuth();
+  const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
   const [messages, setMessages] = useState([
     {
       id: 1,
       from: "bruno",
-      text: "¡Hola! 👋 Soy BRUNO, tu asistente personal. ¿En qué puedo ayudarte hoy?",
+      text: "¡Hola! 👋 Soy BRUNO IA. ¿En qué te ayudo hoy?",
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState(initialMessage);
   const [isTyping, setIsTyping] = useState(false);
+  const [minimized, setMinimized] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const scrollRef = useRef(null);
+
+  // Drag-down to minimize from the title bar
+  const { bind: dragBind, dragY, dragging } = useDragToMinimize({
+    onMinimize: () => setMinimized(true),
+    threshold: 55,
+  });
+
+  // Auto-scroll on new messages
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, isTyping]);
 
   const quickReplies = [
     "Crear una tarjeta",
@@ -247,62 +266,121 @@ const BrunoMascot = ({
     "Buscar profesionales"
   ];
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
-    
-    const userMessage = {
-      id: Date.now(),
-      from: "user",
-      text: input,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
+  // Render BRUNO IA action buttons & card chips embedded in the response.
+  // Tokens: [ACTION:route:/feed|Ir al Feed], [ACTION:search:query|Label], [CARD:id|Title|type|city]
+  const parseBrunoResponse = (raw) => {
+    if (!raw) return { text: "", actions: [], cards: [] };
+    const actions = [];
+    const cards = [];
+    let text = raw.replace(/\[ACTION:([^:\]]+):([^|\]]+)\|([^\]]+)\]/g, (_m, kind, value, label) => {
+      actions.push({ kind, value, label });
+      return "";
+    }).replace(/\[CARD:([^|\]]+)\|([^|\]]+)\|([^|\]]+)\|([^\]]+)\]/g, (_m, id, title, type, city) => {
+      cards.push({ id, title, type, city });
+      return "";
+    });
+    return { text: text.trim(), actions, cards };
+  };
+
+  const handleAction = (a) => {
+    if (a.kind === "route") navigate(a.value);
+    else if (a.kind === "search") navigate(`/search?q=${encodeURIComponent(a.value)}`);
+    onClose?.();
+  };
+
+  const handleSend = async (overrideText) => {
+    const msg = (overrideText ?? input).trim();
+    if (!msg) return;
+    const userMessage = { id: Date.now(), from: "user", text: msg, timestamp: new Date() };
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsTyping(true);
-    
-    // Simulate AI response (in real app, call API)
-    setTimeout(() => {
-      const responses = [
-        "¡Excelente pregunta! Déjame ayudarte con eso...",
-        "Entiendo lo que necesitas. Te explico...",
-        "¡Claro! Puedo ayudarte con eso. Mira...",
-        "Perfecto, te guío paso a paso..."
-      ];
-      
-      setMessages(prev => [...prev, {
-        id: Date.now(),
+
+    try {
+      const r = await axios.post(
+        `${API}/ai/chat`,
+        { message: msg, session_id: sessionId },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      const parsed = parseBrunoResponse(r.data?.response || "");
+      if (r.data?.session_id) setSessionId(r.data.session_id);
+      setMessages((prev) => [...prev, {
+        id: Date.now() + 1,
         from: "bruno",
-        text: responses[Math.floor(Math.random() * responses.length)],
-        timestamp: new Date()
+        text: parsed.text || "OK",
+        actions: parsed.actions,
+        cards: parsed.cards,
+        timestamp: new Date(),
       }]);
+    } catch (_e) {
+      setMessages((prev) => [...prev, {
+        id: Date.now() + 2,
+        from: "bruno",
+        text: "Tuve un problema procesando tu mensaje. Intenta otra vez.",
+        timestamp: new Date(),
+      }]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleQuickReply = (reply) => {
-    setInput(reply);
-    handleSend();
+    handleSend(reply);
   };
 
   if (!isOpen) return null;
 
+  // ── Circular minimized state ──
+  if (minimized) {
+    return (
+      <button
+        onClick={() => setMinimized(false)}
+        className="fixed bottom-24 left-4 z-50 group transition-transform active:scale-90"
+        data-testid="bruno-ia-minimized"
+        title="Abrir BRUNO IA"
+      >
+        <span className="absolute inset-[-3px] rounded-full bg-gradient-to-br from-primary/45 to-orange-500/45 blur-md opacity-80 group-hover:opacity-100" />
+        <span className="relative block w-12 h-12 rounded-full ring-2 ring-background shadow-lg overflow-hidden bg-gradient-to-br from-primary to-orange-500">
+          <img src="/bruno-mascot.png?v=8" alt="BRUNO IA" className="w-full h-full object-cover" />
+        </span>
+        <span
+          onClick={(e) => { e.stopPropagation(); onClose?.(); }}
+          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+        >
+          <X className="w-2.5 h-2.5" strokeWidth={3} />
+        </span>
+      </button>
+    );
+  }
+
   return (
-    <div className="fixed bottom-24 left-4 w-80 max-h-[500px] bg-card rounded-2xl shadow-2xl border z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4">
-      {/* Header */}
-      <div className="p-3 bg-gradient-to-r from-primary to-orange-500 flex items-center gap-3">
+    <div
+      className="fixed bottom-24 left-4 w-80 max-h-[500px] bg-card rounded-2xl shadow-2xl border z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4"
+      style={{
+        transform: `translateY(${dragY}px)`,
+        transition: dragging ? "none" : "transform 200ms cubic-bezier(.2,.8,.2,1)",
+        opacity: dragY > 0 ? Math.max(0.55, 1 - dragY / 220) : 1,
+      }}
+      data-testid="bruno-ia-window"
+    >
+      {/* Header — drag handle */}
+      <div {...dragBind} className="relative p-3 bg-gradient-to-r from-primary to-orange-500 flex items-center gap-3 cursor-grab active:cursor-grabbing select-none touch-none">
+        <span className="absolute top-1 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-white/30" />
         <img src="/mascots/bruno-icon.png?v=8" alt="BRUNO" className="w-10 h-10 rounded-full object-cover border-2 border-white/30" />
         <div className="flex-1">
           <h3 className="font-bold text-white">BRUNO IA</h3>
           <p className="text-xs text-white/80">Tu asistente personal</p>
         </div>
-        <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-full">
+        <button onClick={(e) => { e.stopPropagation(); setMinimized(true); }} className="p-1 hover:bg-white/20 rounded-full" data-testid="bruno-ia-minimize">
+          <Minimize2 className="w-4 h-4 text-white" />
+        </button>
+        <button onClick={(e) => { e.stopPropagation(); onClose?.(); }} className="p-1 hover:bg-white/20 rounded-full" data-testid="bruno-ia-close">
           <X className="w-5 h-5 text-white" />
         </button>
       </div>
       
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 max-h-64">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 max-h-64">
         {messages.map(msg => (
           <div 
             key={msg.id}
@@ -311,12 +389,39 @@ const BrunoMascot = ({
             {msg.from === "bruno" && (
               <img src="/bruno-mascot.png?v=8" alt="" className="w-6 h-6 rounded-full mr-2 flex-shrink-0" />
             )}
-            <div className={`max-w-[80%] px-3 py-2 rounded-2xl ${
+            <div className={`max-w-[85%] px-3 py-2 rounded-2xl ${
               msg.from === "user" 
                 ? "bg-primary text-white rounded-br-sm"
                 : "bg-muted rounded-bl-sm"
             }`}>
-              <p className="text-sm">{msg.text}</p>
+              {msg.text && <p className="text-sm whitespace-pre-wrap">{msg.text}</p>}
+              {msg.cards?.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  {msg.cards.map((c, i) => (
+                    <button
+                      key={`c-${msg.id}-${i}`}
+                      onClick={() => { navigate(`/c/${c.id}`); onClose?.(); }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg bg-background/70 border text-foreground text-xs hover:bg-background transition-colors"
+                    >
+                      <p className="font-semibold truncate">{c.title}</p>
+                      <p className="text-[10px] text-muted-foreground">{c.type}{c.city ? ` · ${c.city}` : ""}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {msg.actions?.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {msg.actions.map((a, i) => (
+                    <button
+                      key={`a-${msg.id}-${i}`}
+                      onClick={() => handleAction(a)}
+                      className="px-2.5 py-1 rounded-full bg-orange-500 text-white text-[11px] font-semibold hover:bg-orange-600"
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -356,9 +461,10 @@ const BrunoMascot = ({
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="Escribe tu mensaje..."
           className="flex-1 px-3 py-2 bg-muted rounded-full text-sm outline-none"
+          data-testid="bruno-ia-input"
         />
-        <Button size="icon" className="rounded-full" onClick={handleSend} disabled={!input.trim()}>
-          <Send className="w-4 h-4" />
+        <Button size="icon" className="rounded-full" onClick={() => handleSend()} disabled={!input.trim() || isTyping} data-testid="bruno-ia-send">
+          {isTyping ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </Button>
       </div>
     </div>

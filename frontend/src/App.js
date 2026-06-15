@@ -14,6 +14,7 @@ import StoryActivityProvider from "@/contexts/StoryActivityContext";
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
 import FloatingChatBubble from "@/components/FloatingChatBubble";
+import CallOrchestrator from "@/components/CallOrchestrator";
 import PWAInstallPrompt from "@/components/bruno/PWAInstallPrompt";
 import PictureInPicture from "@/components/PictureInPicture";
 import CameraFloatingButton from "@/components/CameraFloatingButton";
@@ -185,6 +186,7 @@ function App() {
                 <AppRouter />
                 <FloatingBubbles />
                 <FloatingChatBubble />
+                <CallOrchestrator />
                 <PictureInPicture />
                 <CameraFloatingButton />
                 <MobileBottomNav />

@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import MapProfilesBar from "@/components/bruno/MapProfilesBar";
 import MapPinClaimModal from "@/components/bruno/MapPinClaimModal";
 import MapStyleSocial from "@/components/bruno/MapStyleSocial";
+import SharedLocationsLayer from "@/components/bruno/SharedLocationsLayer";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { ArrowLeft, MapPin as MapPinIcon, Plus, Layers, Crosshair, ExternalLink, KeyRound } from "lucide-react";
@@ -38,19 +39,20 @@ export default function MapPage() {
   const [selectedPin, setSelectedPin] = useState(null);
   const [showPiupLayer, setShowPiupLayer] = useState(true);
   const mapRef = useRef(null);
+  const pendingUserCenterRef = useRef(null);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         // Pan to user location ONCE — without controlling `center` (which would
-        // freeze the map). If the map is already ready we call panTo directly,
-        // otherwise the user can still pan freely from the default center.
+        // freeze the map). If the map isn't ready yet, queue it.
         const userCenter = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         if (mapRef.current) mapRef.current.panTo(userCenter);
+        else pendingUserCenterRef.current = userCenter;
       },
       () => { /* keep default */ },
-      { timeout: 5000, maximumAge: 60000 }
+      { timeout: 5000, maximumAge: 60000, enableHighAccuracy: false }
     );
   }, []);
 
@@ -105,8 +107,9 @@ export default function MapPage() {
           streetViewControl={false}
           fullscreenControl={false}
         >
-          <MapInstanceCapture mapRef={mapRef} />
+          <MapInstanceCapture mapRef={mapRef} pendingUserCenterRef={pendingUserCenterRef} />
           {showPiupLayer && <PiupPinsLayer onSelect={(p) => setSelectedPin(p)} />}
+          <SharedLocationsLayer onSelect={(s) => mapRef.current?.panTo({ lat: s.last_lat, lng: s.last_lng })} />
 
           {selectedPin && (
             <InfoWindow
@@ -170,11 +173,17 @@ export default function MapPage() {
 // Captures the Google Map instance via useMap() and exposes it through a ref
 // so parent components can call panTo()/getCenter() without forcing a controlled
 // `center` prop (which would freeze the map and break panning).
-function MapInstanceCapture({ mapRef }) {
+function MapInstanceCapture({ mapRef, pendingUserCenterRef }) {
   const map = useMap();
   useEffect(() => {
-    if (map && mapRef) mapRef.current = map;
-  }, [map, mapRef]);
+    if (map && mapRef) {
+      mapRef.current = map;
+      if (pendingUserCenterRef?.current) {
+        try { map.panTo(pendingUserCenterRef.current); } catch (_e) { /* ignore */ }
+        pendingUserCenterRef.current = null;
+      }
+    }
+  }, [map, mapRef, pendingUserCenterRef]);
   return null;
 }
 

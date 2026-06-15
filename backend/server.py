@@ -3101,6 +3101,8 @@ from routers.piup import router as piup_router
 api_router.include_router(piup_router)
 from routers.ai import router as ai_router
 api_router.include_router(ai_router)
+from routers.location_share import router as location_share_router
+api_router.include_router(location_share_router)
 
 # Share / OG meta-cards
 from routers.share_og import router as share_og_router

@@ -242,10 +242,22 @@ async def cards_with_location(
     `location` field has lat/lng. Useful for the pill bar to show "cards near
     you" alongside reclaimed PIUP pins.
     """
+    # Business-style card types reveal their address publicly by default.
+    # For personal/curriculum/etc cards we ONLY publish the address when the
+    # owner explicitly opted in via `location.is_public_address: true`.
+    PUBLIC_ADDRESS_TYPES = [
+        "business", "negocio", "empresarial", "empresa",
+        "lugares", "lugar", "servicios", "servicio",
+        "oferta_trabajo", "solicitud_servicio",
+    ]
     q: dict = {
         "is_public": {"$ne": False},
         "location.lat": {"$exists": True, "$ne": None},
         "location.lng": {"$exists": True, "$ne": None},
+        "$or": [
+            {"card_type": {"$in": PUBLIC_ADDRESS_TYPES}},
+            {"location.is_public_address": True},
+        ],
     }
     if None not in (min_lat, max_lat, min_lng, max_lng):
         q["location.lat"]["$gte"] = min_lat
