@@ -613,3 +613,181 @@ async def stories_with_location(
         })
 
     return {"stories": items, "count": len(items)}
+
+
+# ==================== INSIGHTS / RESPONSES (analytics) ====================
+
+class QuestionAnswerInput(BaseModel):
+    answer: str
+
+
+@router.post("/{story_id}/answer")
+async def answer_story_question(
+    story_id: str,
+    payload: QuestionAnswerInput,
+    current_user: User = Depends(get_current_user),
+):
+    """Submit a free-text answer to a story's overlay question.
+
+    Stored on the story doc under `question_responses`. One answer per user
+    (subsequent answers from the same user update the previous one).
+    """
+    text = (payload.answer or "").strip()[:280]
+    if not text:
+        raise HTTPException(status_code=400, detail="Empty answer")
+
+    story = await db.stories.find_one({"id": story_id}, {"_id": 0})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    # Replace any previous answer from this user
+    await db.stories.update_one(
+        {"id": story_id},
+        {"$pull": {"question_responses": {"user_id": current_user.id}}},
+    )
+    await db.stories.update_one(
+        {"id": story_id},
+        {"$push": {"question_responses": {
+            "user_id": current_user.id,
+            "user_name": current_user.name,
+            "answer": text,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }}},
+    )
+
+    # Best-effort notify the story owner
+    if story.get("user_id") and story["user_id"] != current_user.id:
+        import asyncio
+        async def _notify():
+            try:
+                from utils.ws_manager import ws_manager
+                await ws_manager.send_personal_message(
+                    {
+                        "type": "story_answer",
+                        "kind": "story_answer",
+                        "story_id": story_id,
+                        "from_user": current_user.id,
+                        "from_name": current_user.name,
+                        "preview": text[:80],
+                    },
+                    story["user_id"],
+                )
+            except Exception:
+                pass
+        asyncio.create_task(_notify())
+
+    return {"status": "answered"}
+
+
+@router.get("/{story_id}/insights")
+async def get_story_insights(
+    story_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Return aggregate insights for a story: views, reactions, poll results,
+    and free-text question responses. Only the story owner can read this."""
+    story = await db.stories.find_one({"id": story_id}, {"_id": 0})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    if story.get("user_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the owner can view insights")
+
+    views = story.get("views", []) or []
+    reactions = story.get("reactions", []) or []
+    answers = story.get("question_responses", []) or []
+
+    # Reactions broken down by emoji
+    reaction_counts: dict = {}
+    for r in reactions:
+        em = r.get("reaction") or ""
+        if not em:
+            continue
+        reaction_counts[em] = reaction_counts.get(em, 0) + 1
+
+    # Poll results if there's a poll attached
+    poll_payload = None
+    if story.get("poll_id"):
+        poll = await db.polls.find_one({"id": story["poll_id"]}, {"_id": 0})
+        if poll:
+            total_votes = sum((o.get("votes", 0) or 0) for o in poll.get("options", []))
+            options = []
+            for o in poll.get("options", []):
+                v = o.get("votes", 0) or 0
+                pct = (v * 100 / total_votes) if total_votes else 0
+                options.append({"text": o.get("text", ""), "votes": v, "pct": round(pct, 1)})
+            poll_payload = {
+                "id": poll["id"],
+                "question": poll.get("question"),
+                "options": options,
+                "total_votes": total_votes,
+                "voters_count": len(poll.get("voters", []) or []),
+            }
+
+    # Sort answers most-recent first, hydrate avatar
+    user_ids = list({a.get("user_id") for a in answers if a.get("user_id")})
+    avatars: dict = {}
+    if user_ids:
+        async for u in db.users.find({"id": {"$in": user_ids}}, {"_id": 0, "id": 1, "avatar_url": 1, "name": 1}):
+            avatars[u["id"]] = {"avatar_url": u.get("avatar_url"), "name": u.get("name")}
+    answer_list = [
+        {
+            **a,
+            "avatar_url": avatars.get(a.get("user_id"), {}).get("avatar_url"),
+        }
+        for a in sorted(answers, key=lambda x: x.get("created_at", ""), reverse=True)
+    ]
+
+    return {
+        "story_id": story_id,
+        "views_count": len(views),
+        "reactions_count": len(reactions),
+        "reactions_by_emoji": reaction_counts,
+        "poll": poll_payload,
+        "answers_count": len(answers),
+        "answers": answer_list,
+    }
+
+
+@router.get("/{story_id}/public-insights")
+async def get_story_public_insights(
+    story_id: str,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """Return aggregate-only counters (no PII) viewers can see when tapping
+    'Ver resultados' on a poll/question. Does NOT expose individual answers."""
+    story = await db.stories.find_one({"id": story_id}, {"_id": 0})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    poll_payload = None
+    if story.get("poll_id"):
+        poll = await db.polls.find_one({"id": story["poll_id"]}, {"_id": 0})
+        if poll:
+            total_votes = sum((o.get("votes", 0) or 0) for o in poll.get("options", []))
+            voted_idx = None
+            if current_user:
+                # Detect which option the current user voted (poll docs already
+                # carry a `voters` array; option-level user lists aren't stored,
+                # so we just signal "has_voted").
+                voted_idx = -1 if current_user.id in (poll.get("voters") or []) else None
+            options = []
+            for o in poll.get("options", []):
+                v = o.get("votes", 0) or 0
+                pct = (v * 100 / total_votes) if total_votes else 0
+                options.append({"text": o.get("text", ""), "votes": v, "pct": round(pct, 1)})
+            poll_payload = {
+                "id": poll["id"],
+                "question": poll.get("question"),
+                "options": options,
+                "total_votes": total_votes,
+                "has_voted": voted_idx is not None,
+            }
+
+    answers_count = len(story.get("question_responses", []) or [])
+    return {
+        "story_id": story_id,
+        "answers_count": answers_count,
+        "poll": poll_payload,
+    }
+
+

@@ -5,10 +5,11 @@ import {
   useMotionValue,
   useTransform,
 } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, Eye, Send, Volume2, VolumeX } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Eye, Send, Volume2, VolumeX, BarChart3 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
+import StoryInsightsModal from "@/components/bruno/StoryInsightsModal";
 
 /**
  * BrunoStoryViewer — Instagram/TikTok-style story viewer with:
@@ -43,6 +44,8 @@ export default function BrunoStoryViewer({
   const [bursts, setBursts] = useState([]); // floating reaction emojis
   const [replyText, setReplyText] = useState("");
   const [showReply, setShowReply] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [answersCount, setAnswersCount] = useState(0);
 
   const videoRef = useRef(null);
   const rafRef = useRef(null);
@@ -67,6 +70,23 @@ export default function BrunoStoryViewer({
         { headers: { Authorization: `Bearer ${token}` } }
       )
       .catch(() => {});
+  }, [story?.id, token]);
+
+  // ─── Fetch answers count (for "X respuestas · Ver resultados" badge) ────
+  useEffect(() => {
+    if (!story) { setAnswersCount(0); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await axios.get(`${API}/stories/${story.id}/public-insights`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!cancelled) setAnswersCount(r.data?.answers_count || 0);
+      } catch (_e) {
+        if (!cancelled) setAnswersCount(0);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [story?.id, token]);
 
   // ─── Progress + auto-advance ────────────────────────────────────────────
@@ -451,6 +471,24 @@ export default function BrunoStoryViewer({
               )}
             </AnimatePresence>
 
+            {/* Insights link — shown when story has interactive content */}
+            {(story.poll_id || answersCount > 0 || story.user_id === user?.id) && (
+              <div className="px-4 mb-2 flex items-center justify-center">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setPaused(true); setInsightsOpen(true); }}
+                  data-testid="bruno-story-insights-btn"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur text-white text-xs font-semibold border border-white/15 hover:bg-white/20"
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  {story.user_id === user?.id
+                    ? "Insights"
+                    : answersCount > 0
+                      ? `${answersCount} ${answersCount === 1 ? "respuesta" : "respuestas"} · Ver resultados`
+                      : "Ver resultados"}
+                </button>
+              </div>
+            )}
+
             {/* Quick reactions row */}
             <div className="flex items-center justify-center gap-1.5 px-4">
               {QUICK_REACTIONS.map((e) => (
@@ -487,6 +525,14 @@ export default function BrunoStoryViewer({
           </div>
         </motion.div>
       </motion.div>
+
+      {/* Insights modal */}
+      <StoryInsightsModal
+        open={insightsOpen}
+        onClose={() => { setInsightsOpen(false); setPaused(false); }}
+        storyId={story?.id}
+        isOwner={story?.user_id === user?.id}
+      />
     </AnimatePresence>
   );
 }
