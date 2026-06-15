@@ -119,6 +119,7 @@ async def start_location_share(
                 "label": payload.label,
             }],
             "is_read": False,
+            "is_deleted": False,
             "read_by": [],
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),

@@ -47,8 +47,10 @@ export default function useDragToMinimize({
     const elapsed = Date.now() - startTime.current;
     const velocity = dy / Math.max(elapsed, 1); // px/ms
     setDragging(false);
-    // Trigger minimize if past the threshold OR fast flick down (>0.6 px/ms with ≥30px drag)
-    if (dy >= threshold || (velocity > 0.6 && dy > 30)) {
+    // Trigger minimize if past the threshold OR fast flick down (>0.6 px/ms with ≥30px drag).
+    // Also catch slow-but-significant drags (>120px) that Playwright generates as a single
+    // mouse release at the end with elapsed ~0 (velocity calc unreliable).
+    if (dy >= threshold || (velocity > 0.6 && dy > 30) || dy > 120) {
       onMinimize?.();
     }
     setDragY(0);

@@ -876,3 +876,42 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 - Non-blocking: pre-existing React duplicate-key warnings on /feed + empty `<img src>` warnings (orthogonal to this phase).
 
 
+### Phase 59: Circular minimize · Drag-to-minimize · Location sharing · Calls live (2026-02-15)
+
+**🎨 UX micro-changes**
+- Minimized chat bubbles ↦ **circular avatar only** (no label, hover-reveal ✕). Applied to FloatingChatBubble + BRUNO IA chat.
+- New `useDragToMinimize` hook (`/app/frontend/src/hooks/useDragToMinimize.js`) — wraps any element to support pull-down-to-minimize via touch *and* mouse. Spring transform with opacity fade.
+- Wired to: `FloatingChatBubble` header, `FloatingBubbles` AI chat (`AIChatWindow`), `BrunoMascot` header.
+
+**🤖 BRUNO IA**
+- `FloatingBubbles.AIChatWindow` extracted into its own subcomponent with Minimize2 button, circular minimized state and drag-to-minimize.
+- `BrunoMascot.jsx` (unused legacy) modernized too: hits real `/api/ai/chat`, parses `[ACTION:...]` and `[CARD:...]` tokens, minimize button.
+
+**🗺️ Map**
+- `/api/map-pins/cards-located` now filters cards: only `business/empresarial/empresa/negocio/lugares/servicios/oferta_trabajo/solicitud_servicio` OR cards with explicit `location.is_public_address=true`.
+- Fixed first-pan UX: when geolocation resolves before the map mounts, pan is queued via `pendingUserCenterRef` and applied as soon as `MapInstanceCapture` exposes the map.
+- New `SharedLocationsLayer` renders AdvancedMarkers for every active share, with speed-based icon (`<1 m/s` = standing dot, `<3 m/s` = 🚶, else 🚗) and live WS updates.
+
+**📍 Location sharing (NEW)**
+- Backend `routers/location_share.py` — collection `location_shares`:
+  - `POST /api/location/share` (start, fixed or live, configurable duration + interval)
+  - `POST /api/location/share/{id}/update` (sharer-only periodic ping)
+  - `POST /api/location/share/{id}/stop`
+  - `GET /api/location/shares/active`
+  - `GET /api/location/share/{id}`
+- WS broadcasts: `location_share_started`, `location_share_update`, `location_share_stopped`.
+- Frontend `LocationShareSheet.jsx` (bottom-sheet) with mode selector (fixed/live), duration grid `[5m, 15m, 1h, 4h, 12h]`, interval grid `[5s, 10s, 30s, 60s]`. Live mode spawns a `watchPosition` + interval ping (`startLiveTracker`).
+- Hook into `FloatingChatBubble` header (MapPin button → opens sheet) and a chat-system-message of `message_type='location_share'` shows in the conversation thread.
+
+**📞 Calls live**
+- New global `CallOrchestrator.jsx` mounted in `App.js`. Listens on WS `incoming_call` / `call_ended` events and the `window.bruno:start-call` custom event. Wires to `/api/calls/start|answer|decline|end` + renders the existing `VideoCallModal`.
+- Chat bubble header gains Phone + Video buttons that dispatch `bruno:start-call`.
+
+**Test status — `iteration_59.json`**
+- Backend: **10/11 pass** (91%). Minor: chat message inserted by location-share router missed `is_deleted: false` → would be hidden by `/chats/{id}/messages`. **Fixed**.
+- Frontend: critical UI flows all pass (chat bubble, call buttons exposed, location sheet renders, circular minimized).
+- Known limitation: Playwright synthetic mouse drag doesn't always fire `onMinimize` after release. Hook now also triggers on `dy>120` regardless of velocity to be friendly to slow drags.
+- Google Maps shows `BillingNotEnabledMapError` on the preview environment — environmental (production API key needs billing enabled), not a code issue.
+
+
+

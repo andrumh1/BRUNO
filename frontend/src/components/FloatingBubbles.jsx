@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavScroll } from "@/contexts/NavScrollContext";
-import { Sparkles, X, Send, Loader2, Trash2, Paperclip, FileText, Search, ArrowRight, ChevronRight } from "lucide-react";
+import { Sparkles, X, Send, Loader2, Trash2, Paperclip, FileText, Search, ArrowRight, ChevronRight, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import useDragToMinimize from "@/hooks/useDragToMinimize";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -118,12 +119,115 @@ const ITEM_TYPE_CONFIG = {
   live: { color: '#EF4444', icon: 'L' },
 };
 
+/**
+ * AIChatWindow — extracted to support drag-to-minimize + a Minimize2 button
+ * without bloating the parent FloatingBubbles render path.
+ */
+const AIChatWindow = ({
+  onClose, onMinimize, onClear,
+  aiMessages, aiLoading, aiInput, setAiInput,
+  sendAIMessage, messagesEndRef,
+  attachment, setAttachment,
+  fileInputRef, handleFileSelect, navigate,
+}) => {
+  const { bind: dragBind, dragY, dragging } = useDragToMinimize({ onMinimize, threshold: 55 });
+  return (
+    <div
+      className="fixed bottom-24 left-2 z-[10001] w-[calc(100vw-16px)] sm:w-[340px] h-[440px] bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-2 duration-200"
+      data-testid="ai-chat-window"
+      style={{
+        transform: `translateY(${dragY}px)`,
+        transition: dragging ? "none" : "transform 200ms cubic-bezier(.2,.8,.2,1)",
+        opacity: dragY > 0 ? Math.max(0.55, 1 - dragY / 220) : 1,
+      }}
+    >
+      {/* Header — drag handle */}
+      <div {...dragBind} className="relative flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-violet-600/10 to-fuchsia-600/10 cursor-grab active:cursor-grabbing select-none touch-none">
+        <span className="absolute top-1 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-foreground/15" />
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-full flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h4 className="font-semibold text-xs">BRUNO IA</h4>
+            <p className="text-[10px] text-muted-foreground">Agente inteligente</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-0.5">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onClear(); }} title="Limpiar">
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onMinimize(); }} title="Minimizar" data-testid="ai-chat-minimize">
+            <Minimize2 className="w-3.5 h-3.5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onClose(); }} data-testid="ai-chat-close">
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5 bg-gradient-to-b from-transparent to-muted/10">
+        {aiMessages.map((msg, i) => (
+          <MessageBubble key={`msg-${i}`} msg={msg} navigate={(path) => { navigate(path); onClose(); }} />
+        ))}
+        {aiLoading && (
+          <div className="flex justify-start">
+            <div className="bg-muted/80 px-3 py-2 rounded-2xl rounded-bl-md flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span className="text-[10px] text-muted-foreground">Pensando...</span>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Attachment Preview */}
+      {attachment && (
+        <div className="px-2 py-1.5 border-t bg-muted/30 flex items-center gap-2">
+          {attachment.type?.startsWith("image") ? (
+            <img src={attachment.url} alt="" className="w-10 h-10 rounded-lg object-cover" />
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+              <FileText className="w-4 h-4 text-muted-foreground" />
+            </div>
+          )}
+          <span className="text-[10px] flex-1 truncate">{attachment.name}</span>
+          <button onClick={() => setAttachment(null)} className="text-muted-foreground hover:text-foreground">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Input */}
+      <form onSubmit={sendAIMessage} className="p-2 border-t">
+        <div className="flex gap-1.5 items-center">
+          <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.txt,.csv" onChange={handleFileSelect} />
+          <button type="button" onClick={() => fileInputRef.current?.click()}
+            className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors shrink-0" data-testid="ai-attach-btn">
+            <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+          <Input value={aiInput} onChange={(e) => setAiInput(e.target.value)} placeholder="Escribe o adjunta..."
+            className="flex-1 h-7 text-xs rounded-full bg-muted/50 border-0 px-3" disabled={aiLoading} data-testid="ai-chat-input" />
+          <Button type="submit" size="sm"
+            disabled={(!aiInput.trim() && !attachment) || aiLoading}
+            className="h-7 w-7 p-0 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 shrink-0" data-testid="ai-send-btn">
+            <Send className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+
 const FloatingBubbles = () => {
   const { user, token } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { minimized, setMinimized, minimizedItems, removeMinimizedItem, touchHandlers } = useNavScroll();
   const [showAIChat, setShowAIChat] = useState(false);
+  const [aiMinimized, setAiMinimized] = useState(false);
   const [aiMessages, setAiMessages] = useState([]);
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -356,82 +460,40 @@ const FloatingBubbles = () => {
       )}
 
       {/* AI Chat Window - portal */}
-      {showAIChat && (
-        <div className="fixed bottom-24 left-2 z-[10001] w-[calc(100vw-16px)] sm:w-[340px] h-[440px] bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-2 duration-200"
-          data-testid="ai-chat-window"
+      {showAIChat && aiMinimized && (
+        <button
+          onClick={() => setAiMinimized(false)}
+          className="fixed bottom-24 left-3 z-[10001] group transition-transform active:scale-90"
+          data-testid="ai-chat-minimized"
+          title="Abrir BRUNO IA"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-violet-600/10 to-fuchsia-600/10">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-full flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-xs">BRUNO IA</h4>
-                <p className="text-[10px] text-muted-foreground">Agente inteligente</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-0.5">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); clearAIHistory(); }} title="Limpiar">
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setShowAIChat(false); }}>
-                <X className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5 bg-gradient-to-b from-transparent to-muted/10">
-            {aiMessages.map((msg, i) => (
-              <MessageBubble key={`msg-${i}`} msg={msg} navigate={(path) => { navigate(path); setShowAIChat(false); }} />
-            ))}
-            {aiLoading && (
-              <div className="flex justify-start">
-                <div className="bg-muted/80 px-3 py-2 rounded-2xl rounded-bl-md flex items-center gap-2">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span className="text-[10px] text-muted-foreground">Pensando...</span>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Attachment Preview */}
-          {attachment && (
-            <div className="px-2 py-1.5 border-t bg-muted/30 flex items-center gap-2">
-              {attachment.type?.startsWith('image') ? (
-                <img src={attachment.url} alt="" className="w-10 h-10 rounded-lg object-cover" />
-              ) : (
-                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                </div>
-              )}
-              <span className="text-[10px] flex-1 truncate">{attachment.name}</span>
-              <button onClick={() => setAttachment(null)} className="text-muted-foreground hover:text-foreground">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {/* Input */}
-          <form onSubmit={sendAIMessage} className="p-2 border-t">
-            <div className="flex gap-1.5 items-center">
-              <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.txt,.csv" onChange={handleFileSelect} />
-              <button type="button" onClick={() => fileInputRef.current?.click()}
-                className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors shrink-0" data-testid="ai-attach-btn">
-                <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
-              </button>
-              <Input value={aiInput} onChange={(e) => setAiInput(e.target.value)} placeholder="Escribe o adjunta..."
-                className="flex-1 h-7 text-xs rounded-full bg-muted/50 border-0 px-3" disabled={aiLoading} data-testid="ai-chat-input" />
-              <Button type="submit" size="sm"
-                disabled={(!aiInput.trim() && !attachment) || aiLoading}
-                className="h-7 w-7 p-0 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 shrink-0" data-testid="ai-send-btn">
-                <Send className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </form>
-        </div>
+          <span className="absolute inset-[-3px] rounded-full bg-gradient-to-br from-violet-500/45 to-fuchsia-500/45 blur-md opacity-80 group-hover:opacity-100" />
+          <span className="relative w-12 h-12 rounded-full ring-2 ring-background shadow-lg bg-gradient-to-br from-violet-600 to-fuchsia-600 grid place-items-center">
+            <Sparkles className="w-5 h-5 text-white" />
+          </span>
+          <span
+            onClick={(e) => { e.stopPropagation(); setShowAIChat(false); setAiMinimized(false); }}
+            className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          ><X className="w-2.5 h-2.5" strokeWidth={3} /></span>
+        </button>
+      )}
+      {showAIChat && !aiMinimized && (
+        <AIChatWindow
+          onClose={() => { setShowAIChat(false); setAiMinimized(false); }}
+          onMinimize={() => setAiMinimized(true)}
+          onClear={clearAIHistory}
+          aiMessages={aiMessages}
+          aiLoading={aiLoading}
+          aiInput={aiInput}
+          setAiInput={setAiInput}
+          sendAIMessage={sendAIMessage}
+          messagesEndRef={messagesEndRef}
+          attachment={attachment}
+          setAttachment={setAttachment}
+          fileInputRef={fileInputRef}
+          handleFileSelect={handleFileSelect}
+          navigate={navigate}
+        />
       )}
     </>
   );
