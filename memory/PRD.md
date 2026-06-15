@@ -804,6 +804,41 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 - Logs muestran que el push se dispara correctamente (410 Gone solo porque la sub de testing esta vencida — el código limpia automáticamente)
 
 
+### Phase 57: Camera/Audio/Stories Polish (2026-02-15)
+
+**P0 Bugfixes**
+- `BrunoCameraPage.startCamera()` no longer forces `1080×1920` — uses device-native sensor + applies `zoom:min` via `applyConstraints` when supported. Fixes "unnecessary zoom" reported by user.
+- Chrome voice-note playback: `useAudioRecorder` now picks a supported `MediaRecorder` mimeType (opus webm → mp4 → ogg) and tags the blob; `handleSendAudio` saves the correct file extension. `BrunoAudioWaveform` renders `<audio>` with a prioritized multi-`<source>` chain (mp3 → original codec → on-the-fly Cloudinary `f_mp3` transform) and calls `load()` on source change → Chrome plays reliably.
+
+**New: In-app Gallery permission + Swipe-up**
+- First-time tap on `camera-gallery-btn` shows an orange pulse dot and persists `localStorage["bruno-gallery-granted"]="1"`.
+- Vertical swipe-up gesture on the viewfinder (dy>70px, dx<60px, <600ms) opens `InternalGalleryPicker` (in-app). Swipe-up from the right-sidebar "Stickers" zone opens the interactive panel instead.
+
+**New: Camera Interactive Panel (live mode)**
+- Right-sidebar `Sticker` button + swipe-up gesture opens a bottom-sheet (`camera-interactive-panel`) with 4 tabs:
+  - **Stickers** (existing emoji presets)
+  - **Emojis** (32 common emojis)
+  - **Pregunta** — free-text question becomes an `overlay-question-<id>` on the viewfinder
+  - **Encuesta** — question + 2-4 options renders an `overlay-poll-<id>` overlay
+- Panel has `pb-[calc(5rem+safe-area)]` so CTAs clear the global MobileBottomNav on small viewports.
+- `handlePublish`: if any interactive sticker present, posts to `/api/stories` (with `poll_id` from `/api/social/polls` when applicable) instead of `/api/posts`.
+
+**Stories editor — multi-image + animated publish**
+- `StoryEditor` file input gains `multiple`. Selected files upload in parallel and queue as `extraSlides`.
+- Thumbnail strip (`story-slides-strip`) renders below the canvas with per-slide remove + "+" to add more.
+- Publish loops over slides and posts each as a sequential `/api/stories`. Overlays/poll attached to the FIRST slide only.
+- Animated overlay (`story-publish-animation`): spinning send icon during upload → green check + "¡Historia publicada!" → auto-closes.
+
+**Files touched**
+- `/app/frontend/src/pages/BrunoCameraPage.jsx`
+- `/app/frontend/src/pages/ChatPage.jsx`
+- `/app/frontend/src/components/bruno/BrunoAudioWaveform.jsx`
+- `/app/frontend/src/components/StoryEditor.jsx`
+
+**Test status**: `iteration_57.json` — 85% pass. Only HIGH issue (panel CTA occluded by bottom nav) fixed in same iteration via extra bottom padding. Live Chrome audio playback could not be exercised by the agent (no pre-existing audio messages in test account) — code path verified at static level.
+
+
+
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 (Emergent LLM Key), Stripe, Daily.co, Cloudinary, Leaflet
 - Emergent Google Auth, DEAL App (Hybrid API/Webhook)

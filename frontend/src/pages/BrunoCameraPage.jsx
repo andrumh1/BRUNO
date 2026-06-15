@@ -1070,7 +1070,7 @@ const BrunoCameraPage = () => {
                 </button>
               </div>
 
-              <div className="overflow-y-auto p-4">
+              <div className="overflow-y-auto p-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
                 {interactivePanel === "stickers" && (
                   <div className="grid grid-cols-8 gap-2" data-testid="interactive-stickers">
                     {STICKERS.map((emoji, i) => (
