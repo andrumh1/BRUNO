@@ -842,3 +842,37 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 ## 3rd Party Integrations
 - OpenAI GPT-5.2 (Emergent LLM Key), Stripe, Daily.co, Cloudinary, Leaflet
 - Emergent Google Auth, DEAL App (Hybrid API/Webhook)
+
+### Phase 58: Story Analytics + P2 Refactor (2026-02-15)
+
+**User-requested enhancement — Story Analytics**
+- New endpoints in `routers/stories.py`:
+  - `POST /api/stories/{id}/answer` — viewer submits a free-text answer to a story's question overlay; dedupes per user; notifies owner via WS `story_answer`.
+  - `GET /api/stories/{id}/insights` — owner-only: views_count, reactions_count, reactions_by_emoji, answers list (with name + avatar), poll results.
+  - `GET /api/stories/{id}/public-insights` — aggregate-only view for any user: answers_count, poll results, no PII.
+- New `StoryInsightsModal.jsx` — animated bottom-sheet with: 3-counter grid (Vistas/Reacciones/Respuestas) for owners, animated poll bars (% + votes), per-emoji reaction chips, answer list with avatars.
+- `BrunoStoryViewer` now fetches public-insights on story change and shows an `Insights` / `X respuestas · Ver resultados` button above the quick-reactions row that opens the modal (pausing the story timer).
+
+**P2 — Backend refactor: AI router extraction**
+- New `/app/backend/routers/ai.py` (~410 lines) containing:
+  - `BRUNO_SYSTEM_MESSAGE`, `ai_chat_sessions` cache, `_search_public_cards_for_ai` helper
+  - Routes: `POST /api/ai/chat`, `GET/DELETE /api/ai/history`, `POST /api/ai/generate-card`, `POST /api/ai/recommend`, `GET /api/ai/share-card/{id}`
+- `server.py` reduced **3663 → 3175** lines (-488).
+
+**P2 — Frontend refactor: ChatPage**
+- `ChatPage.jsx` reduced **1672 → 1161** lines (-511).
+- New modules:
+  - `/app/frontend/src/hooks/useAudioRecorder.js` (93 lines)
+  - `/app/frontend/src/components/chat/AudioPlayer.jsx` (137 lines, with multi-source mp3/webm/m4a fallback + Cloudinary `f_mp3` on-the-fly transform)
+  - `/app/frontend/src/components/chat/FileAttachment.jsx`
+  - `/app/frontend/src/components/chat/ChatList.jsx`
+  - `/app/frontend/src/components/chat/NewChatModal.jsx`
+- Behaviour preserved; no breaking testid changes.
+
+**Test status — `iteration_58.json`**
+- Backend: **13/13 pytest cases PASS** (creating both author + viewer, posting answers, querying insights, AI extraction).
+- Frontend: full smoke pass — Story insights button + modal, chat flows, camera interactive panel.
+- Phase 57 HIGH UX issue (camera panel CTA occlusion) confirmed FIXED (12px clearance from bottom nav).
+- Non-blocking: pre-existing React duplicate-key warnings on /feed + empty `<img src>` warnings (orthogonal to this phase).
+
+

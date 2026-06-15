@@ -764,12 +764,6 @@ async def get_story_public_insights(
         poll = await db.polls.find_one({"id": story["poll_id"]}, {"_id": 0})
         if poll:
             total_votes = sum((o.get("votes", 0) or 0) for o in poll.get("options", []))
-            voted_idx = None
-            if current_user:
-                # Detect which option the current user voted (poll docs already
-                # carry a `voters` array; option-level user lists aren't stored,
-                # so we just signal "has_voted").
-                voted_idx = -1 if current_user.id in (poll.get("voters") or []) else None
             options = []
             for o in poll.get("options", []):
                 v = o.get("votes", 0) or 0
@@ -780,7 +774,7 @@ async def get_story_public_insights(
                 "question": poll.get("question"),
                 "options": options,
                 "total_votes": total_votes,
-                "has_voted": voted_idx is not None,
+                "has_voted": bool(current_user and current_user.id in (poll.get("voters") or [])),
             }
 
     answers_count = len(story.get("question_responses", []) or [])
