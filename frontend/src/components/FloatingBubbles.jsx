@@ -246,20 +246,22 @@ const FloatingBubbles = () => {
   }, [aiMessages]);
 
   // Auto-minimize the AI chat window WHEN the whole navigation pill minimizes.
-  // The user expects the AI bubble to behave like any other minimized item.
+  // We CLOSE the chat (showAIChat=false) so only the tiny pill remains —
+  // otherwise the larger `ai-chat-minimized` bubble would coexist with the
+  // small pill, breaking the "one cohesive unit" UX the user asked for.
   useEffect(() => {
-    if (minimized && showAIChat && !aiMinimized) setAiMinimized(true);
-  }, [minimized, showAIChat, aiMinimized]);
+    if (minimized) { setShowAIChat(false); setAiMinimized(false); }
+  }, [minimized]);
 
   // Also react to the global minimize-all broadcast.
   useEffect(() => {
-    const onAll = () => { if (showAIChat) setAiMinimized(true); };
+    const onAll = () => { setShowAIChat(false); setAiMinimized(false); };
     window.addEventListener("bruno:minimize-all", onAll);
     return () => window.removeEventListener("bruno:minimize-all", onAll);
-  }, [showAIChat]);
+  }, []);
 
-  // When the user manually minimizes the AI chat, ping the global so the
-  // nav pill (and the floating chat) follow suit.
+  // When the user manually minimizes the AI chat (from inside the window),
+  // ping the global so the nav pill (and the floating chat) follow suit.
   useEffect(() => {
     if (aiMinimized && showAIChat) {
       try { window.dispatchEvent(new CustomEvent("bruno:child-minimized")); } catch (_e) { /* ignore */ }
@@ -439,10 +441,11 @@ const FloatingBubbles = () => {
           <div className="fixed z-[10000] bottom-[18px] transition-all duration-300 ease-out"
             style={{ right: 'calc(50% + 60px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <button
-              onClick={() => setShowAIChat(!showAIChat)}
+              onClick={() => { setMinimized(false); setShowAIChat(true); setAiMinimized(false); }}
               {...touchHandlers}
               className="relative group transition-all duration-300"
               data-testid="floating-ai-btn"
+              aria-label="Abrir BRUNO IA"
             >
               <div className={`w-7 h-7 rounded-full bg-background/90 backdrop-blur-2xl border shadow-lg overflow-hidden grid place-items-center transition-all hover:scale-110 active:scale-90 ${
                 showAIChat ? 'border-violet-400 ring-2 ring-violet-400/40' : 'border-border/50'

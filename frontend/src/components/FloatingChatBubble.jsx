@@ -504,14 +504,21 @@ const FloatingChatBubble = () => {
 
   // Auto-minimize all open chat windows when the nav minimizes.
   useEffect(() => {
-    if (minimized && openChats.some(c => !c.minimized)) {
+    if (minimized) {
+      // Close the chat-list popup AND collapse every open chat to mini.
+      setIsOpen(false);
+      setShowNewChat(false);
       setOpenChats(prev => prev.map(c => ({ ...c, minimized: true })));
     }
-  }, [minimized, openChats]);
+  }, [minimized]);
 
   // Listen for the global minimize-all broadcast (from nav or AI chat).
   useEffect(() => {
-    const onAll = () => setOpenChats(prev => prev.map(c => ({ ...c, minimized: true })));
+    const onAll = () => {
+      setIsOpen(false);
+      setShowNewChat(false);
+      setOpenChats(prev => prev.map(c => ({ ...c, minimized: true })));
+    };
     window.addEventListener("bruno:minimize-all", onAll);
     return () => window.removeEventListener("bruno:minimize-all", onAll);
   }, []);
@@ -520,45 +527,80 @@ const FloatingChatBubble = () => {
 
   return (
     <>
-      {/* === Floating chat bubble — sits just above the expanded nav === */}
-      <div className="fixed z-[10000] right-3 transition-all duration-300 ease-out"
-        style={{ bottom: 'calc(var(--nav-reserve, 88px) + 10px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="relative group transition-all duration-300"
-          data-testid="chat-bubble-btn"
+      {/* === Floating chat bubble — MINIMIZED state: tiny circle, symmetric to AI === */}
+      {minimized && (
+        <div
+          className="fixed z-[10000] bottom-[18px] transition-all duration-300 ease-out"
+          style={{ right: 'calc(50% - 60px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
-          <div className={`absolute inset-[-3px] bg-gradient-to-r from-primary/30 to-orange-500/30 rounded-full blur-md transition-all duration-300 ${
-            isOpen ? 'opacity-90' : 'opacity-0 group-hover:opacity-60'
-          }`} />
-          <div className={`relative w-10 h-10 rounded-full shadow-md flex items-center justify-center bg-gradient-to-br from-primary to-orange-600 transition-all duration-300 shadow-primary/25 hover:shadow-primary/40 hover:scale-110 active:scale-90 ${
-            isOpen ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
-          }`}>
-            <MessageCircle className="w-4 h-4 text-white" strokeWidth={2} />
-          </div>
-          {unreadTotal > 0 && (
-            <div className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-red-500 rounded-full text-white text-[8px] font-bold shadow flex items-center justify-center px-0.5">
-              {unreadTotal > 9 ? "9+" : unreadTotal}
+          <button
+            onClick={() => { setMinimized(false); setIsOpen(true); }}
+            className="relative group transition-all duration-300"
+            data-testid="chat-bubble-btn-minimized"
+            aria-label="Abrir mensajes"
+          >
+            <div className={`w-7 h-7 rounded-full shadow-lg flex items-center justify-center bg-gradient-to-br from-primary to-orange-600 transition-all hover:scale-110 active:scale-90 ${
+              isOpen ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
+            }`}>
+              <MessageCircle className="w-3.5 h-3.5 text-white" strokeWidth={2.5} />
             </div>
-          )}
-        </button>
-      </div>
+            {/* Type badge — matches the AI bubble pattern */}
+            <div
+              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-[1.5px] border-background shadow-sm bg-gradient-to-br from-primary to-orange-600"
+              data-testid="item-badge-chat"
+            />
+            {unreadTotal > 0 && (
+              <div className="absolute -top-1 -right-1 min-w-[14px] h-[14px] bg-red-500 rounded-full text-white text-[8px] font-bold shadow flex items-center justify-center px-0.5">
+                {unreadTotal > 9 ? "9+" : unreadTotal}
+              </div>
+            )}
+          </button>
+        </div>
+      )}
 
-      {/* Chat List Popup */}
-      {isOpen && !showNewChat && (
+      {/* === Floating chat bubble — EXPANDED state: full circle === */}
+      {!minimized && (
+        <div className="fixed z-[10000] right-3 transition-all duration-300 ease-out"
+          style={{ bottom: 'calc(var(--nav-reserve, 88px) + 10px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="relative group transition-all duration-300"
+            data-testid="chat-bubble-btn"
+          >
+            <div className={`absolute inset-[-3px] bg-gradient-to-r from-primary/30 to-orange-500/30 rounded-full blur-md transition-all duration-300 ${
+              isOpen ? 'opacity-90' : 'opacity-0 group-hover:opacity-60'
+            }`} />
+            <div className={`relative w-10 h-10 rounded-full shadow-md flex items-center justify-center bg-gradient-to-br from-primary to-orange-600 transition-all duration-300 shadow-primary/25 hover:shadow-primary/40 hover:scale-110 active:scale-90 ${
+              isOpen ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
+            }`}>
+              <MessageCircle className="w-4 h-4 text-white" strokeWidth={2} />
+            </div>
+            {unreadTotal > 0 && (
+              <div className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-red-500 rounded-full text-white text-[8px] font-bold shadow flex items-center justify-center px-0.5">
+                {unreadTotal > 9 ? "9+" : unreadTotal}
+              </div>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Chat List Popup — only when not minimized to keep the strip clean */}
+      {isOpen && !showNewChat && !minimized && (
         <div className="fixed bottom-24 right-2 z-[10001] animate-in slide-in-from-bottom-2">
           <ChatListPopup chats={chats} onSelectChat={handleSelectChat} onNewChat={() => setShowNewChat(true)} onClose={() => setIsOpen(false)} />
         </div>
       )}
 
       {/* New Chat Search */}
-      {showNewChat && (
+      {showNewChat && !minimized && (
         <div className="fixed bottom-24 right-2 z-[10001] animate-in slide-in-from-bottom-2">
           <NewChatModal isOpen={showNewChat} onClose={() => setShowNewChat(false)} onSelectUser={handleNewChatUser} token={token} />
         </div>
       )}
 
-      {/* Open Chat Windows — only when nav is expanded */}
+      {/* Open Chat Windows — only when nav is expanded. When the nav minimizes,
+          all open chat windows are forced into `minimized` state by the
+          useEffect above, becoming circular bubbles managed by ChatWindow. */}
       <div className="fixed bottom-24 right-14 z-[10000] flex items-end gap-2">
         {openChats.map((chat, index) => (
           <div key={chat.id} className="animate-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms` }}>
@@ -566,8 +608,6 @@ const FloatingChatBubble = () => {
               onClose={() => { setOpenChats(prev => prev.filter(c => c.id !== chat.id)); }}
               onMinimize={() => { 
                 setOpenChats(prev => prev.map(c => c.id === chat.id ? { ...c, minimized: !c.minimized } : c));
-                // When user minimizes a chat, also minimize the nav pill so
-                // chat/AI/nav share the same compact state.
                 if (!chat.minimized) {
                   try { window.dispatchEvent(new CustomEvent("bruno:child-minimized")); } catch (_e) { /* ignore */ }
                 }

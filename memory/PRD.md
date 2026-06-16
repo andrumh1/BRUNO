@@ -1022,3 +1022,40 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 
 
+### Phase 63: Unified Minimize — Pill + Normal Chat + Bruno IA as ONE unit (2026-02-15) 🔴 PRIORITY FIX
+
+**El problema reportado**
+- El chat normal (esquina inferior derecha) seguía siendo un círculo GRANDE (40×40) aunque el nav minimizara.
+- El AI chat aparecía como bubble pequeño pero "atascado" en su esquina del pill bar.
+- No había sincronización visual real entre los tres elementos.
+
+**La solución implementada**
+Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unidad cohesiva** que comparten el mismo estado `minimized` vía `NavScrollContext`:
+
+| Elemento | EXPANDED state | MINIMIZED state |
+|---|---|---|
+| Nav pill | Barra completa centrada | Hairline thin de 24×6 |
+| AI bubble | Botón violeta 40×40 en `left-3` arriba del pill | Círculo violeta **28×28** a 60px del centro (izquierda) |
+| Chat bubble | Botón naranja 40×40 en `right-3` arriba del pill | Círculo naranja **28×28** a 60px del centro (derecha) |
+
+**Cambios técnicos** (`FloatingChatBubble.jsx`, `FloatingBubbles.jsx`)
+- Chat bubble: nuevo render minimizado `chat-bubble-btn-minimized` (w-7 h-7) **simétrico** al AI bubble en `right: calc(50% - 60px)`.
+- Tap en cualquier bubble minimizado → expande TODO (`setMinimized(false)` + abre ese específico).
+- AI: cuando el nav minimiza, se fuerza `setShowAIChat(false)` + `setAiMinimized(false)` para que NO coexistan la bubble grande y la pequeña.
+- Chat: cuando el nav minimiza, se cierra `isOpen`, `showNewChat`, y se fuerza `openChats.minimized=true`.
+- Suprimimos popup de ChatList, modal NewChat y ChatListPopup mientras el nav esté minimizado.
+
+**Flujo de eventos sincronizado**
+- `nav scroll` → `setMinimized(true)` → emite `bruno:minimize-all` → AI + chat colapsan a tiny bubbles
+- `AI Minimize button` → emite `bruno:child-minimized` → nav minimiza → chat colapsa
+- `Chat Minimize button` → emite `bruno:child-minimized` → nav minimiza → AI colapsa
+- `Tap en cualquier mini bubble` → expande el nav + abre ese elemento (no fuerza expandir los otros — UX cómoda)
+
+**Verificación**
+- ✅ Backend health 200
+- ✅ Zero console errors
+- ✅ Lint clean (los warnings restantes son pre-existentes, no de esta fase)
+- ✅ Visualmente: las tres burbujas ahora viven en la misma fila a la altura del pill (28×28 cada una, simétricas)
+
+
+
