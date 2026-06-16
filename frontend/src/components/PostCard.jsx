@@ -369,7 +369,18 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
                   <img src={media.url} alt="" className="w-full h-full object-cover" loading="lazy" />
                 ) : media.type === "video" ? (
                   <div className="relative w-full h-full">
-                    <video src={media.url} className="w-full h-full object-cover" controls />
+                    <video
+                      className="w-full h-full object-cover"
+                      controls
+                      playsInline
+                      preload="metadata"
+                      poster={media.poster_url || undefined}
+                      crossOrigin="anonymous"
+                    >
+                      {media.mp4_url && <source src={media.mp4_url} type="video/mp4" />}
+                      {media.f_auto_url && <source src={media.f_auto_url} type="video/mp4" />}
+                      <source src={media.url} type={`video/${(media.url || "").split(".").pop()?.split("?")[0] || "mp4"}`} />
+                    </video>
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <Play className="w-12 h-12 text-white/80" />
                     </div>

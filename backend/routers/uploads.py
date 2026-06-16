@@ -43,26 +43,45 @@ async def upload_image(
     try:
         contents = await file.read()
         content_type = (file.content_type or "").lower()
-        is_video = content_type.startswith("video")
+        # Detect video by content-type OR by extension (mobile browsers sometimes
+        # mis-tag uploads as `application/octet-stream`).
+        ext = (file.filename or "").lower().rsplit(".", 1)[-1] if "." in (file.filename or "") else ""
+        VIDEO_EXTS = {"mp4", "mov", "webm", "m4v", "mkv", "avi", "ogv", "3gp", "qt", "hevc"}
+        is_video = content_type.startswith("video") or ext in VIDEO_EXTS
 
         if is_video:
-            # eager_transcoding: ALWAYS deliver a cross-platform-safe MP4
-            # (H.264 video + AAC audio) at moderate bitrate — iOS Safari
-            # rejects webm/opus, Windows defaults reject HEVC, etc.
-            result = cloudinary.uploader.upload(
+            # Eager async: return immediately so the request doesn't hang
+            # while Cloudinary transcodes (can take 30s-2min for big videos).
+            # The MP4 + poster derivatives are generated in the background;
+            # in the meantime the frontend can use `f_auto_url` which routes
+            # through Cloudinary's adaptive codec picker.
+            result = cloudinary.uploader.upload_large(
                 contents,
                 folder=f"{folder}/{current_user.id}",
                 resource_type="video",
-                # Cloudinary will store the original AND produce these derivatives
+                chunk_size=6_000_000,  # 6 MB chunks for big mobile videos
                 eager=[
                     {"format": "mp4", "video_codec": "h264", "audio_codec": "aac",
                      "bit_rate": "1500k", "width": 720, "crop": "limit"},
                     {"format": "jpg", "width": 720, "crop": "limit",
-                     "start_offset": "auto"},  # auto-poster
+                     "start_offset": "auto"},
                 ],
-                eager_async=False,
+                eager_async=True,
+            ) if len(contents) > 10_000_000 else cloudinary.uploader.upload(
+                contents,
+                folder=f"{folder}/{current_user.id}",
+                resource_type="video",
+                eager=[
+                    {"format": "mp4", "video_codec": "h264", "audio_codec": "aac",
+                     "bit_rate": "1500k", "width": 720, "crop": "limit"},
+                    {"format": "jpg", "width": 720, "crop": "limit",
+                     "start_offset": "auto"},
+                ],
+                eager_async=True,
             )
-            # Find the eager MP4 + poster
+            # eager_async=True means derivatives aren't ready immediately —
+            # we synthesize predictable URLs via Cloudinary's URL-transform API.
+            base_url = result.get("secure_url") or ""
             mp4_url = None
             poster_url = None
             for d in result.get("eager", []) or []:
@@ -70,10 +89,15 @@ async def upload_image(
                     mp4_url = d.get("secure_url")
                 elif d.get("format") == "jpg" and not poster_url:
                     poster_url = d.get("secure_url")
-            # Always expose a fallback `f_auto` URL that lets Cloudinary pick
-            # the best codec per device on the fly.
-            base_url = result.get("secure_url") or ""
-            f_auto_url = base_url.replace("/upload/", "/upload/f_auto,q_auto/") if "/upload/" in base_url else base_url
+            # Synth fallbacks while derivatives bake
+            if "/upload/" in base_url:
+                if not mp4_url:
+                    mp4_url = base_url.replace("/upload/", "/upload/f_mp4,vc_h264,ac_aac,br_1500k,w_720,c_limit/").rsplit(".", 1)[0] + ".mp4"
+                if not poster_url:
+                    poster_url = base_url.replace("/upload/", "/upload/so_auto,w_720,c_limit/").rsplit(".", 1)[0] + ".jpg"
+                f_auto_url = base_url.replace("/upload/", "/upload/f_auto,q_auto/")
+            else:
+                f_auto_url = base_url
         else:
             result = cloudinary.uploader.upload(
                 contents,
@@ -174,6 +198,13 @@ async def upload_chat_file(
     try:
         contents = await file.read()
         content_type = file.content_type or ""
+        ext = (file.filename or "").lower().rsplit(".", 1)[-1] if "." in (file.filename or "") else ""
+        VIDEO_EXTS = {"mp4", "mov", "webm", "m4v", "mkv", "avi", "ogv", "3gp", "qt", "hevc"}
+        is_video = content_type.startswith("video") or ext in VIDEO_EXTS
+
+        mp4_url = None
+        poster_url = None
+        f_auto_url = None
 
         if content_type.startswith("image"):
             result = cloudinary.uploader.upload(
@@ -185,7 +216,27 @@ async def upload_chat_file(
                     {'quality': 'auto:good'},
                 ],
             )
-        elif content_type.startswith("video") or content_type.startswith("audio"):
+        elif is_video:
+            uploader = cloudinary.uploader.upload_large if len(contents) > 10_000_000 else cloudinary.uploader.upload
+            kwargs = {
+                "folder": f"bruno/chat/{current_user.id}",
+                "resource_type": "video",
+                "eager": [
+                    {"format": "mp4", "video_codec": "h264", "audio_codec": "aac",
+                     "bit_rate": "1500k", "width": 720, "crop": "limit"},
+                    {"format": "jpg", "width": 720, "crop": "limit", "start_offset": "auto"},
+                ],
+                "eager_async": True,
+            }
+            if uploader is cloudinary.uploader.upload_large:
+                kwargs["chunk_size"] = 6_000_000
+            result = uploader(contents, **kwargs)
+            base_url = result.get("secure_url") or ""
+            if "/upload/" in base_url:
+                mp4_url = base_url.replace("/upload/", "/upload/f_mp4,vc_h264,ac_aac,br_1500k,w_720,c_limit/").rsplit(".", 1)[0] + ".mp4"
+                poster_url = base_url.replace("/upload/", "/upload/so_auto,w_720,c_limit/").rsplit(".", 1)[0] + ".jpg"
+                f_auto_url = base_url.replace("/upload/", "/upload/f_auto,q_auto/")
+        elif content_type.startswith("audio"):
             result = cloudinary.uploader.upload(
                 contents,
                 folder=f"bruno/chat/{current_user.id}",
@@ -199,12 +250,20 @@ async def upload_chat_file(
                 public_id=f"{uuid.uuid4()}_{file.filename}",
             )
 
+        # Effective URL the frontend should use: MP4 derivative for videos,
+        # original otherwise. Always fall back to original if mp4 unknown.
+        effective_url = (mp4_url if is_video and mp4_url else result['secure_url'])
         return {
-            "url": result['secure_url'],
+            "url": effective_url,
+            "original_url": result['secure_url'],
+            "mp4_url": mp4_url,
+            "f_auto_url": f_auto_url,
+            "poster_url": poster_url,
             "public_id": result['public_id'],
             "filename": file.filename,
-            "type": content_type,
+            "type": "video/mp4" if is_video else content_type,
             "size": len(contents),
+            "duration": result.get('duration'),
         }
     except Exception as e:
         logger.error(f"Error uploading chat file: {e}")

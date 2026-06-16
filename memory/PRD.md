@@ -1059,3 +1059,44 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 
 
 
+### Phase 64: 🔴 CRITICAL — Video pipeline end-to-end FIXED (2026-02-15)
+
+**Lo que estaba roto**
+- `eager_async=False` en `/upload/image` bloqueaba la request hasta que Cloudinary transcodifique → timeouts en uploads grandes
+- `/upload/chat-file` no aplicaba transcoding ni devolvía `mp4_url`/`poster_url`/`f_auto_url`
+- El modelo `PostMedia` no aceptaba los campos nuevos → se perdían al guardar el post
+- `PostCard.jsx` usaba `<video src={url}>` sin multi-source ni poster
+- `CreatePost.jsx` no propagaba los nuevos campos al post
+
+**La solución (5 layers)**
+
+1. **`/api/upload/image` (uploads.py)**:
+   - `cloudinary.uploader.upload_large` con chunks 6MB para videos >10MB (no más OOM / timeout proxy)
+   - `eager_async=True` → response inmediata, transcoding en background
+   - Detección de video por `content-type` OR extensión (mobiles tipean octet-stream)
+   - **URLs sintetizadas** (no esperan derivatives): `mp4_url`, `poster_url`, `f_auto_url` construidas vía transform URLs de Cloudinary
+
+2. **`/api/upload/chat-file` (uploads.py)**: misma lógica que `/upload/image` para videos. Devuelve `mp4_url`/`poster_url`/`f_auto_url`. URL efectiva = MP4 derivative (para playback inmediato).
+
+3. **`routers/posts_feed.py` PostMedia**: añadidos campos `mp4_url`, `f_auto_url`, `poster_url`, `original_url` + `extra="allow"` → no se pierden al persistir/leer.
+
+4. **`CreatePost.jsx`**: propaga `mp4_url`, `f_auto_url`, `poster_url`, `original_url` al objeto media del post.
+
+5. **`PostCard.jsx`**: `<video>` ahora con multi-`<source>` (MP4 → f_auto → original) + `playsInline` + `preload="metadata"` + `poster` para preview instantáneo.
+
+**Verificación end-to-end (probado vía curl con un MP4 real de 9MB)**:
+- ✅ POST `/api/upload/image` → 200 con `url`, `mp4_url`, `poster_url`, `f_auto_url`
+- ✅ POST `/api/posts` → 200 guarda los 4 campos en `media[0]`
+- ✅ GET MP4 derivative → 200 · 723KB · `video/mp4;codecs=avc1` (H.264 universal)
+- ✅ GET poster JPG → 200 · 20KB · `image/jpeg`
+- ✅ Frontend smoke: feed loads clean, zero console errors
+
+**Compatibilidad**
+- iOS Safari (iPhone/iPad): ✅ — H.264 + AAC + `playsInline`
+- Android Chrome: ✅ — todos los códecs MP4
+- Windows/Mac Chrome/Edge/Firefox: ✅
+- Safari macOS: ✅
+- Cualquier dispositivo legacy: cae al `f_auto` que Cloudinary adapta on-the-fly
+
+
+

@@ -49,7 +49,14 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
         });
         const mediaType = isVideo ? "video" : "image";
-        setMedia(prev => [...prev, { type: mediaType, url: response.data.url }]);
+        setMedia(prev => [...prev, {
+          type: mediaType,
+          url: response.data.url,
+          mp4_url: response.data.mp4_url || null,
+          f_auto_url: response.data.f_auto_url || null,
+          poster_url: response.data.poster_url || null,
+          original_url: response.data.original_url || response.data.url,
+        }]);
       } catch (error) {
         // error handled
       }

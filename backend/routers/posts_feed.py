@@ -29,10 +29,16 @@ class SocialLink(BaseModel):
     label: Optional[str] = None
 
 class PostMedia(BaseModel):
+    model_config = ConfigDict(extra="allow")
     type: str = "image"
     url: str
     thumbnail_url: Optional[str] = None
     duration: Optional[int] = None
+    # Video-specific extras — set by /api/upload/image|chat-file for videos
+    mp4_url: Optional[str] = None
+    f_auto_url: Optional[str] = None
+    poster_url: Optional[str] = None
+    original_url: Optional[str] = None
 
 class Post(BaseModel):
     model_config = ConfigDict(extra="ignore")
