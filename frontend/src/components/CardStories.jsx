@@ -31,6 +31,8 @@ const CardStoryItem = ({ story, onClick, isEditing, onEdit, onDelete }) => (
           src={story.media_url} 
           className="w-full h-full object-cover"
           muted
+          playsInline
+          preload="metadata"
         />
       ) : (
         <img 
@@ -307,6 +309,8 @@ const CardStoryViewer = ({ stories, initialIndex = 0, onClose }) => {
             className="max-h-[80vh] max-w-full object-contain rounded-lg"
             controls
             autoPlay
+            playsInline
+            preload="metadata"
           />
         ) : (
           <img 

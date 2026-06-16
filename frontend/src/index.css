@@ -1387,3 +1387,12 @@ select.bubble-native-select:focus {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
 }
+
+/* Reels heart-burst on double-tap */
+@keyframes pingOnce {
+  0%   { transform: scale(0.4); opacity: 0; }
+  30%  { transform: scale(1.2); opacity: 1; }
+  60%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.animate-ping-once { animation: pingOnce 700ms cubic-bezier(.2,.8,.2,1) forwards; }

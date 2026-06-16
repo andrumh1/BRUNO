@@ -56,9 +56,25 @@ export const NavScrollProvider = ({ children }) => {
   const setMinimized = useCallback((val) => {
     setMinimizedRaw(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
-      if (prev !== next) triggerHaptic(next ? 6 : 12);
+      if (prev !== next) {
+        triggerHaptic(next ? 6 : 12);
+        // Sync UX: when the nav minimizes, broadcast so chat/AI also minimize.
+        // When the nav re-expands, we do NOT force others to expand — the user
+        // may want to keep them small for visual breathing room.
+        if (next) {
+          try { window.dispatchEvent(new CustomEvent("bruno:minimize-all")); } catch (_e) { /* ignore */ }
+        }
+      }
       return next;
     });
+  }, []);
+
+  // Listen for child-initiated minimize requests (chat / AI). When any of
+  // those minimize, we also minimize the nav pill to keep things consistent.
+  useEffect(() => {
+    const onChildMin = () => setMinimizedRaw(true);
+    window.addEventListener("bruno:child-minimized", onChildMin);
+    return () => window.removeEventListener("bruno:child-minimized", onChildMin);
   }, []);
 
   useEffect(() => { prevMinimized.current = minimized; }, [minimized]);

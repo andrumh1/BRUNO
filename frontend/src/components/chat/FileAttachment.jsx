@@ -25,7 +25,7 @@ const FileAttachment = ({ file, isOwn }) => {
         {file.type?.startsWith("image") ? (
           <img src={file.url} alt={file.filename} className="w-full" />
         ) : (
-          <video src={file.url} controls className="w-full" />
+          <video src={file.url} controls className="w-full" playsInline preload="metadata" />
         )}
       </div>
     );

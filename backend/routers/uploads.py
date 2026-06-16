@@ -46,11 +46,34 @@ async def upload_image(
         is_video = content_type.startswith("video")
 
         if is_video:
+            # eager_transcoding: ALWAYS deliver a cross-platform-safe MP4
+            # (H.264 video + AAC audio) at moderate bitrate — iOS Safari
+            # rejects webm/opus, Windows defaults reject HEVC, etc.
             result = cloudinary.uploader.upload(
                 contents,
                 folder=f"{folder}/{current_user.id}",
                 resource_type="video",
+                # Cloudinary will store the original AND produce these derivatives
+                eager=[
+                    {"format": "mp4", "video_codec": "h264", "audio_codec": "aac",
+                     "bit_rate": "1500k", "width": 720, "crop": "limit"},
+                    {"format": "jpg", "width": 720, "crop": "limit",
+                     "start_offset": "auto"},  # auto-poster
+                ],
+                eager_async=False,
             )
+            # Find the eager MP4 + poster
+            mp4_url = None
+            poster_url = None
+            for d in result.get("eager", []) or []:
+                if d.get("format") == "mp4" and not mp4_url:
+                    mp4_url = d.get("secure_url")
+                elif d.get("format") == "jpg" and not poster_url:
+                    poster_url = d.get("secure_url")
+            # Always expose a fallback `f_auto` URL that lets Cloudinary pick
+            # the best codec per device on the fly.
+            base_url = result.get("secure_url") or ""
+            f_auto_url = base_url.replace("/upload/", "/upload/f_auto,q_auto/") if "/upload/" in base_url else base_url
         else:
             result = cloudinary.uploader.upload(
                 contents,
@@ -62,7 +85,11 @@ async def upload_image(
                 ],
             )
         return {
-            "url": result['secure_url'],
+            "url": (mp4_url if is_video else result['secure_url']) or result['secure_url'],
+            "original_url": result['secure_url'],
+            "mp4_url": mp4_url if is_video else None,
+            "f_auto_url": f_auto_url if is_video else None,
+            "poster_url": poster_url if is_video else None,
             "public_id": result['public_id'],
             "width": result.get('width'),
             "height": result.get('height'),

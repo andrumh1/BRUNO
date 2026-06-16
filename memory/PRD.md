@@ -950,3 +950,75 @@ DEAL_WEBHOOK_SECRET=  # HMAC-SHA256 shared secret
 
 
 
+### Phase 61: Cross-platform video + Reels modernos (2026-02-15)
+
+**🎬 Reels TikTok/Instagram-style** (`/app/frontend/src/pages/ReelsPage.jsx` rewrite)
+- **Auto-play** via `IntersectionObserver` (75% visible) — más confiable que onScroll
+- **Gestos completos**:
+  - Swipe ↑ / ↓ → siguiente / anterior (native scroll-snap)
+  - Swipe ← → ir al perfil del autor en `/profile/:id/reels`
+  - Swipe → → volver atrás
+  - **Doble-tap** → like con animación heart-burst (`@keyframes pingOnce`)
+  - **Long-press** → pausar mientras se mantiene
+  - Tap simple → play/pause toggle
+- **Modos**:
+  - `/reels` → orden aleatorio + video-first (algorítmico)
+  - `/profile/:userId/reels` → solo de ese usuario, cronológico desc
+- **Historial**: stack en `historyRef` de IDs vistos en la sesión, soporta deep-link `?id=`
+- **Mute global**: una sola toggle aplica a todos los reels (estado global)
+
+**📹 Compatibilidad cross-platform (P0)**
+- Backend `routers/uploads.py`: subidas de video ahora generan **eager derivatives**:
+  - MP4 H.264+AAC 720p 1500kbps (universal — iOS/Android/Windows/Mac)
+  - Poster JPG auto-generado en `start_offset:auto`
+  - URL `f_auto,q_auto` para que Cloudinary elija el codec por device
+- Frontend `<video>` ahora usa multi-`<source>`:
+  1. `mp4_url` explícito (Cloudinary eager)
+  2. `f_auto` (adaptativo)
+  3. URL original (fallback)
+- `playsInline` + `muted` + `preload="metadata"` aplicado globalmente (iOS Safari autoplay policy)
+- Retry mute-on-fail si autoplay falla (Chrome/Safari policy)
+- `poster` image para preview rápido sin descargar el video completo
+
+**🤖 BRUNO IA pill — minimiza con la barra**
+- Cuando el nav pill minimiza, el chat AI window también auto-minimiza (efecto reactivo en `FloatingBubbles`)
+- La burbuja queda circular 28×28 igual que los demás items
+
+**Verificación**
+- ✅ `/reels` monta limpio, zero console errors
+- ✅ Test cuenta sin reels muestra empty state correcto
+- ✅ Build webpack compila sin errores (después de quitar attrs JSX no-estándar `webkit-playsinline`/`x-webkit-airplay` que rompían el plugin `visual-edits`)
+
+**Listo para redeploy**
+
+
+
+### Phase 62: Sync minimize · PWA cross-device · Video migration (2026-02-15)
+
+**🔗 Minimize sincronizado**
+- `NavScrollContext` ahora emite `window.bruno:minimize-all` cuando el nav pill minimiza, y escucha `bruno:child-minimized` para reaccionar a minimizados iniciados por chat o AI.
+- `FloatingBubbles` (AI chat) — auto-minimiza al recibir el evento; emite `child-minimized` cuando el usuario lo minimiza manualmente.
+- `FloatingChatBubble` (chats de usuarios) — quitamos el `if (minimized) return null` que ocultaba todo. Ahora los chats abiertos se vuelven burbujas circulares cuando el nav minimiza, mismo behavior que el AI. Ping `child-minimized` cuando el usuario minimiza un chat.
+- Regla: minimizar uno → minimizan todos. Expandir uno → solo expande ese (UX-friendly como pidió el usuario).
+
+**📱 PWAInstallPrompt — funcional en iOS/Android/Windows**
+- Layout compacto de **una sola fila** en pantallas ≥360px (avatar + texto + botón + ✕). Cabe perfecto en iPhone SE / Android pequeño.
+- Posicionado en `bottom: calc(5.5rem + safe-area)` para no chocar con el bottom-nav.
+- **iOS Safari**: instrucciones step-by-step con el ícono real ▲-en-caja de Compartir + warning si el navegador es Chrome iOS (que no puede instalar PWA).
+- **Android Chrome**: usa `beforeinstallprompt`. Si no llega en 15s, muestra instrucciones manuales como fallback.
+- Botón "Cómo" expande/colapsa panel de instrucciones (no satura la UI).
+- Detecta y oculta automáticamente si la app ya está en modo standalone.
+
+**🎞️ Migración de videos existentes**
+- Nuevo router `/app/backend/routers/admin_maintenance.py`:
+  - `POST /api/admin/migrate-videos` (admin-only, background task) — itera todos los videos en Cloudinary y aplica el mismo eager-transcode (MP4 H.264+AAC 720p + poster JPG) que las nuevas subidas. Actualiza `posts.media.$.mp4_url` y `poster_url`.
+  - `GET /api/admin/jobs` — lista los jobs y su progreso.
+- Uso: `curl -X POST $API/api/admin/migrate-videos -H "Authorization: Bearer $ADMIN" -d 'prefix=bruno&limit=1000'`
+
+**Verificación**
+- ✅ Backend health 200, admin endpoint protegido (403 sin auth)
+- ✅ Frontend smoke clean, sin errores de consola
+- ✅ Nav pill + AI + chat se ven sincronizados en pantalla
+
+
+

@@ -502,11 +502,21 @@ const FloatingChatBubble = () => {
     } catch (e) { /* ignore */ }
   };
 
+  // Auto-minimize all open chat windows when the nav minimizes.
+  useEffect(() => {
+    if (minimized && openChats.some(c => !c.minimized)) {
+      setOpenChats(prev => prev.map(c => ({ ...c, minimized: true })));
+    }
+  }, [minimized, openChats]);
+
+  // Listen for the global minimize-all broadcast (from nav or AI chat).
+  useEffect(() => {
+    const onAll = () => setOpenChats(prev => prev.map(c => ({ ...c, minimized: true })));
+    window.addEventListener("bruno:minimize-all", onAll);
+    return () => window.removeEventListener("bruno:minimize-all", onAll);
+  }, []);
+
   if (!user || shouldHide) return null;
-  // When the nav is in hairline-minimized state, hide the chat bubble too —
-  // they should appear/disappear together. The chat reappears the moment the
-  // user expands the nav (tap hairline, swipe-up, or go to /feed).
-  if (minimized) return null;
 
   return (
     <>
@@ -553,8 +563,15 @@ const FloatingChatBubble = () => {
         {openChats.map((chat, index) => (
           <div key={chat.id} className="animate-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms` }}>
             <ChatWindow chat={chat}
-              onClose={() => setOpenChats(prev => prev.filter(c => c.id !== chat.id))}
-              onMinimize={() => setOpenChats(prev => prev.map(c => c.id === chat.id ? { ...c, minimized: !c.minimized } : c))}
+              onClose={() => { setOpenChats(prev => prev.filter(c => c.id !== chat.id)); }}
+              onMinimize={() => { 
+                setOpenChats(prev => prev.map(c => c.id === chat.id ? { ...c, minimized: !c.minimized } : c));
+                // When user minimizes a chat, also minimize the nav pill so
+                // chat/AI/nav share the same compact state.
+                if (!chat.minimized) {
+                  try { window.dispatchEvent(new CustomEvent("bruno:child-minimized")); } catch (_e) { /* ignore */ }
+                }
+              }}
               isMinimized={chat.minimized} currentUserId={user.id} ws={ws} token={token} />
           </div>
         ))}

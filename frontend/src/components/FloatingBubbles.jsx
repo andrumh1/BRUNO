@@ -245,6 +245,27 @@ const FloatingBubbles = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [aiMessages]);
 
+  // Auto-minimize the AI chat window WHEN the whole navigation pill minimizes.
+  // The user expects the AI bubble to behave like any other minimized item.
+  useEffect(() => {
+    if (minimized && showAIChat && !aiMinimized) setAiMinimized(true);
+  }, [minimized, showAIChat, aiMinimized]);
+
+  // Also react to the global minimize-all broadcast.
+  useEffect(() => {
+    const onAll = () => { if (showAIChat) setAiMinimized(true); };
+    window.addEventListener("bruno:minimize-all", onAll);
+    return () => window.removeEventListener("bruno:minimize-all", onAll);
+  }, [showAIChat]);
+
+  // When the user manually minimizes the AI chat, ping the global so the
+  // nav pill (and the floating chat) follow suit.
+  useEffect(() => {
+    if (aiMinimized && showAIChat) {
+      try { window.dispatchEvent(new CustomEvent("bruno:child-minimized")); } catch (_e) { /* ignore */ }
+    }
+  }, [aiMinimized, showAIChat]);
+
   useEffect(() => {
     if (showAIChat && token && aiMessages.length === 0) loadAIHistory();
   }, [showAIChat, token]);

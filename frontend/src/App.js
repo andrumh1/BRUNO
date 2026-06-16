@@ -162,6 +162,7 @@ function AppRouter() {
       <Route path="/payment/success" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
       <Route path="/payment/cancel" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
       <Route path="/reels" element={<ReelsPage />} />
+      <Route path="/profile/:userId/reels" element={<ReelsPage />} />
       <Route path="/lives" element={<ReelsPage />} />
       <Route path="/lives/start" element={<ProtectedRoute><StartLivePage /></ProtectedRoute>} />
       <Route path="/lives/:liveId" element={<LiveViewerPage />} />

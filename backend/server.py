@@ -3128,6 +3128,8 @@ from routers.location_share import router as location_share_router
 api_router.include_router(location_share_router)
 from routers.i18n import router as i18n_router
 api_router.include_router(i18n_router)
+from routers.admin_maintenance import router as admin_maintenance_router
+api_router.include_router(admin_maintenance_router)
 
 # Share / OG meta-cards
 from routers.share_og import router as share_og_router
