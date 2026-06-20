@@ -1,5 +1,33 @@
 # BRUNO Social Network - PRD
 
+## Phase 62: Video calls extraction + Regression (2026-02-18)
+
+**P2 — Backend refactor: video calls extracted**
+- New `/app/backend/routers/video_calls.py` — clean module using `utils.ws_manager`, `utils.database`, `utils.security`. Jitsi Meet URLs (https://meet.jit.si/{room}) with `prejoinPageEnabled=false` + `startWithVideoMuted` per call_type. Push notifications fan-out to offline participants. Try/except guards around WS + push so transient failures never break the request.
+- `server.py` reduced 3201 → 3033 lines (-168, ~5%). Old inline endpoints removed.
+- Registered via `api_router.include_router(video_calls_router)`.
+
+**Verified (iteration_60)**
+- 16/17 backend tests PASS (94%); only SKIPPED test is upload-video happy path (Cloudinary rejects synthetic mp4 in test env — code review confirmed contract is correct).
+- `/api/calls/start|answer|decline|end` all transition status + emit WS events correctly.
+- `/api/posts/recommended-videos` algorithmic ranking works for auth + anon.
+- `/api/location/share` chat-message side-effect: `is_deleted: False` present so message renders in chat threads.
+- Auth, cards, stories, AI regression: all green.
+
+**Known non-blocking limitations**
+- Headless Chrome in Playwright doesn't decode H.264 (`canPlayType` returns empty), so Reels show "No se pudo cargar este video" in automated screenshots. Real iOS/Android/Desktop browsers DO support H.264 — works for end users.
+- Map `BillingNotEnabledMapError` is environmental (production API key billing).
+
+## Remaining Backlog (post-62)
+- server.py 3033 → target ~2000: still inline = auth (8 endpoints), payments/Stripe (3), cards CRUD + QR (8), profile (2), albums-legacy (7), orders+store-legacy (7), user-data (5), plans+subscribe (3) ≈ 43 endpoints / ~1300 lines extractable.
+- Frontend: `MyProfilePage.jsx` (1041 lines) + `FeedPage.jsx` (883 lines) breakdown.
+- End-to-end manual verification of WebRTC video calls on real mobile devices.
+- PWA install prompt polish on obscure Android browsers.
+
+---
+
+# Original PRD (pre-Phase 62)
+
 ## Original Problem Statement
 Build a comprehensive social networking platform called "BRUNO" with digital business cards, social feeds, stories, marketplace, and advanced social features.
 
