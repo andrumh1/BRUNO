@@ -1,0 +1,48 @@
+{
+  "summary": "Phase 60 backend regression after video_calls refactor (server.py -> routers/video_calls.py). 16/17 tests PASS, 1 SKIPPED (video upload — Cloudinary rejects synthetic mp4 in env, not a code bug). The refactored /api/calls/* endpoints work correctly: Jitsi Meet URLs returned, prejoinPageEnabled=false present, startWithVideoMuted toggles correctly for audio vs video, status transitions ringing -> active/declined/ended verified end-to-end. Recommended-videos algorithmic feed works for both auth + anon. Location share -> chat message visibility (iter_59 fix) confirmed live. Cards, stories, AI chat all pass.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/upload/image (video path)",
+        "issue": "Could not be functionally validated in this run — Cloudinary rejected the synthetic mp4 payload used by the test (would need a real H.264-encoded mp4 sample, and ffmpeg is not installed in the test environment). Test is marked SKIPPED with a clear message. Code review of /app/backend/routers/uploads.py shows the video branch correctly detects video by content-type OR extension, calls cloudinary.uploader.upload[_large] with resource_type='video', eager_async=True, and synthesizes mp4_url / poster_url / f_auto_url from /upload/ URL transforms when eager derivatives aren't ready — contract looks correct.",
+        "priority": "LOW"
+      },
+      {
+        "endpoint": "POST /api/calls/start (push notification fan-out)",
+        "issue": "Module imports routers/push_notifications inside the try block on every call (lines 87-107) — minor perf nit only. Failures are already swallowed with warnings, so non-blocking."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase60_video_calls_refactor.py",
+    "/app/test_reports/pytest/phase60_results.xml"
+  ],
+  "action_items": [
+    "(Optional) If main agent wants 100% backend coverage for the video upload path, install ffmpeg (or include a tiny pre-baked H.264 mp4 fixture under /app/backend/tests/fixtures/tiny.mp4) so test_video_upload_returns_mp4_and_poster_fields can actually hit Cloudinary.",
+    "(Nit) routers/video_calls.py imports push_notifications lazily inside the request handler — could be hoisted to module top to save 1 import-cost per call, with try/except guarding the call itself."
+  ],
+  "critical_code_review_comments": [
+    "routers/video_calls.py: start_video_call passes chat['participants'] (which includes the caller) into the call_doc — that's fine because answer/end checks `participants: current_user.id`. ✅",
+    "routers/video_calls.py: answer/decline correctly filter by status='ringing' so a re-answer attempt 404s — good.",
+    "routers/video_calls.py: end_call does NOT filter on status, so a caller can re-end an already-ended call without error. Minor — idempotent but no-op. Acceptable.",
+    "routers/uploads.py video branch: synthesizes mp4_url by `base_url.replace('/upload/', '/upload/f_mp4,vc_h264.../')` then `.rsplit('.', 1)[0] + '.mp4'`. If Cloudinary ever returns a URL with multiple dots in the public_id (e.g. `my.video.mov`), the rsplit only strips the last extension — correct. ✅",
+    "routers/posts_feed.py get_recommended_videos: pool capped at 400, scoring is O(n) — performance OK. Anonymous path skips personal signals correctly. ✅",
+    "server.py still has 3033 lines — recommend continuing the extraction trend (cards, stories, ai/chat are next obvious candidates)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase60_video_calls_refactor.py"
+  ],
+  "success_rate": {"backend": "94%", "frontend": "N/A (not tested per request)"},
+  "test_credentials": "newtest@bruno.com / Test1234! (verified). Secondary test user TEST_p60_* registered during run.",
+  "seed_data_creation": "1 secondary user, 1 direct chat, 2-3 video_calls docs (start+answer+end+decline flows), 1 location_share doc with attached chat message.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Phase 60 video_calls refactor is verified — Jitsi URLs work, status transitions persist, WS broadcasts are fired (best-effort, swallowed if WS unavailable). iter_59 location_share is_deleted:false fix is now live and the location_share msg appears in /api/chats/{id}/messages. The only unvalidated path is /api/upload/image for videos (Cloudinary needs a real H.264 sample). Recommended-videos works without errors. /api/auth/me only accepts {name, plan} — other fields return 400 'No valid fields to update' (worth knowing for frontend bio updates — those go through /api/profile, not /api/auth/me).",
+  "rca_of_the_issue": "N/A — no functional issues found this iteration. Video upload test was skipped due to test-environment limitation (synthetic mp4 rejected by Cloudinary; would need a real encoded sample)."
+}

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import FeedVideo from "@/components/FeedVideo";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -368,23 +369,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
                 {media.type === "image" ? (
                   <img src={media.url} alt="" className="w-full h-full object-cover" loading="lazy" />
                 ) : media.type === "video" ? (
-                  <div className="relative w-full h-full">
-                    <video
-                      className="w-full h-full object-cover"
-                      controls
-                      playsInline
-                      preload="metadata"
-                      poster={media.poster_url || undefined}
-                      crossOrigin="anonymous"
-                    >
-                      {media.mp4_url && <source src={media.mp4_url} type="video/mp4" />}
-                      {media.f_auto_url && <source src={media.f_auto_url} type="video/mp4" />}
-                      <source src={media.url} type={`video/${(media.url || "").split(".").pop()?.split("?")[0] || "mp4"}`} />
-                    </video>
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <Play className="w-12 h-12 text-white/80" />
-                    </div>
-                  </div>
+                  <FeedVideo media={media} />
                 ) : null}
                 {i === 3 && post.media.length > 4 && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xl font-bold">+{post.media.length - 4}</div>

@@ -175,8 +175,14 @@ const ReelItem = ({ reel, isActive, globalMuted, onToggleMute, onLike, onSwipeLe
           playsInline
           preload="metadata"
           poster={reel.poster_url || reel.thumbnail_url || undefined}
-          onError={() => setError(true)}
-          crossOrigin="anonymous"
+          onError={(e) => {
+            // Only set error after EVERY <source> has failed AND the video
+            // hasn't successfully started. `e.currentTarget.networkState===3`
+            // means "NETWORK_NO_SOURCE" — all sources exhausted.
+            if (e.currentTarget?.networkState === 3 && e.currentTarget.readyState === 0) setError(true);
+          }}
+          onPlaying={() => setError(false)}
+          onLoadedData={() => setError(false)}
         >
           {/* Prefer the explicit MP4 (Cloudinary eager). Falls back to f_auto
               (Cloudinary picks codec per UA), then the original. */}
@@ -312,7 +318,7 @@ const ReelsPage = () => {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const postsUrl = profileMode
           ? `${API}/posts?user_id=${profileUserId}&media_only=true`
-          : `${API}/posts?media_only=true`;
+          : `${API}/posts/recommended-videos?limit=40`;
         const [postsRes, livesRes] = await Promise.all([
           axios.get(postsUrl, { headers }).catch(() => ({ data: [] })),
           profileMode ? Promise.resolve({ data: [] }) : axios.get(`${API}/lives`, { headers }).catch(() => ({ data: [] })),
@@ -385,6 +391,11 @@ const ReelsPage = () => {
             const id = reels[i]?.id;
             if (id && historyRef.current[historyRef.current.length - 1] !== id) {
               historyRef.current.push(id);
+              // Tell the algorithm we watched this so it's deprioritized later
+              try {
+                const headers = token ? { Authorization: `Bearer ${token}` } : {};
+                axios.post(`${API}/posts/${id}/view`, {}, { headers });
+              } catch (_e) { /* ignore */ }
             }
           }
         }
