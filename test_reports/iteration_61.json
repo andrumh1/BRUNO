@@ -1,0 +1,30 @@
+{
+  "summary": "Iteration 61 backend sanity gate for the two newly extracted routers (routers/cards.py, routers/user_data.py) plus regressions. Created /app/backend/tests/test_iteration61_cards_userdata.py with 25 pytest cases against the public preview URL. 24/25 passed. Cards CRUD (create 201, list, get-with-view-increment, update preserving unrelated fields, delete 204 + 404 after, 404s for unknown ids), PUT /api/cards/reorder (order verified reflected in GET /api/cards), public endpoints GET /api/public/cards and GET /api/cards/explore (no auth, is_public only, no _id leak), QR endpoint (valid PNG magic bytes, card_url ends with /c/{id} and is absolute, color echoed), user saved-data auto-create + PUT persistence, address create (first becomes default) + delete + persistence verification, social-links add, plans (free/pro/business), /api/user/subscription default free, POST /api/subscribe/free -> 400, /api/subscribe/unknown -> 404, and regressions: /api/calls/start 404 for bad chat_id, /api/posts/recommended-videos 200, /api/i18n/countries (ES+US present), /api/piup/catalog exactly 19 products, /api/auth/me with Bearer token, unauthenticated /api/cards -> 401/403. Route ordering in cards.py is correct (/explore and /reorder declared before /{card_id}). No MongoDB _id leaks found. Frontend not tested (backend-only request).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/user/addresses", "issue": "Returns 500 instead of 422 on invalid body. Handler signature is `address: dict` and ShippingAddress(**address) is constructed manually, so pydantic ValidationError escapes as unhandled 500 (confirmed in backend.err.log). Fix: type the parameter as ShippingAddress (or wrap in try/except -> HTTPException 422)."},
+      {"endpoint": "POST /api/user/social-links", "issue": "Same pattern: `link: dict` + SocialLink(**link) -> 500 on invalid payload (verified: 3 pydantic validation errors for SocialLink leaked as 500). Should be 422."},
+      {"endpoint": "PUT /api/user/saved-data", "issue": "Accepts an arbitrary raw dict and $sets it verbatim (no Pydantic model, no field whitelist). A client could overwrite user_id or inject unexpected keys. Recommend a typed partial-update model."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_iteration61_cards_userdata.py", "/app/test_reports/pytest/it61.xml"],
+  "action_items": [
+    "Type POST /api/user/addresses body as ShippingAddress and POST /api/user/social-links body as SocialLink so FastAPI returns 422 instead of 500 on invalid payloads.",
+    "Optional hardening: replace the raw-dict body of PUT /api/user/saved-data with a typed partial model / field whitelist (prevent user_id overwrite)."
+  ],
+  "critical_code_review_comments": [
+    "routers/cards.py and routers/user_data.py duplicate SocialLink/ContactInfo/ShippingAddress models that also exist in server.py — extract into models/ to avoid schema drift (DRY).",
+    "cards.py get_card_qr and user_data.py create_subscription_checkout read os.environ.get('FRONTEND_URL') with no fallback; if the env var were missing the URLs would silently become 'None/c/{id}'. It is set correctly today (verified absolute URL), but an explicit fail-fast check is safer.",
+    "Unvalidated dict bodies in user_data.py cause 500s (see backend_issues) — all endpoints should validate via Pydantic per project guidelines."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration61_cards_userdata.py"],
+  "success_rate": {"backend": "96% (24/25)", "frontend": "not tested"},
+  "seed_data_creation": "Created and then deleted 4 temporary cards (TEST_card_it61, TEST_reorder_0/1, TEST_qr_card) and one TEST_Home address + TEST_ig social link for user newtest@bruno.com. All cleaned up. Note: saved-data bio/profession for the test user were set to 'TEST_bio_it61'/'QA Engineer' by the persistence test and were not reverted.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "newtest@bruno.com / Test1234! (from /app/memory/test_credentials.md) — valid, login returns access_token",
+  "context_for_next_testing_agent": "Reusable suite: /app/backend/tests/test_iteration61_cards_userdata.py (run with -p no:randomly). Only known failure is test_address_invalid_payload (500 instead of 422). Cards + user_data router extraction is functionally sound; no regressions detected in video_calls/posts/i18n/piup/auth.",
+  "rca_of_the_issue": "500 on invalid address/social-link payloads: the handlers declare the request body as a plain `dict`, bypassing FastAPI request validation, then instantiate the Pydantic model inside the function body. The resulting ValidationError is not caught, so Starlette converts it into a 500 Internal Server Error. Reproduce: POST /api/user/social-links with {\"bogus\":1} and a valid Bearer token."
+}

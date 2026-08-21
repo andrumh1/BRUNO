@@ -1,0 +1,27 @@
+{
+  "summary": "Iteration 62 — retest dirigido de los 3 fixes en /app/backend/routers/user_data.py reportados en iteration_61. Creado /app/backend/tests/test_iteration62_userdata_fixes.py con 18 casos pytest contra la URL pública (REACT_APP_BACKEND_URL). 18/18 PASSED. Además se re-ejecutó la suite completa de iteration_61 (25 casos) como regresión: 25/25 PASSED (incluido test_address_invalid_payload que antes fallaba). Verificado: (1) POST /api/user/addresses devuelve 422 con body inválido en 4 variantes ({}, solo label, campos faltantes, sin country) y sigue devolviendo 200 con {'message':'Address added','address':{...}} marcando is_default=true en la primera dirección; (2) POST /api/user/social-links devuelve 422 en 4 variantes inválidas y 200 con {'message':'Social link saved'} en el caso válido (persistencia verificada vía GET y limpieza posterior); (3) PUT /api/user/saved-data ignora user_id ('evil' NO se aplica — GET posterior devuelve el user_id original) y descarta claves desconocidas (evil_key); updated_fields solo contiene {bio, updated_at} y con todos los campos conocidos (full_name, phone, bio, profession) devuelve exactamente esos + updated_at, todos persistidos. Regresiones OK: GET /api/plans (free/pro/business), GET /api/user/subscription (free/active), POST /api/subscribe/free -> 400, GET /api/user/saved-data sin auth -> 401/403, DELETE /api/user/addresses/{id} inexistente -> 200 idempotente. Sin _id de MongoDB en ninguna respuesta. backend.err.log limpio (ningún traceback de ValidationError durante la corrida; solo el warning benigno de passlib/bcrypt __about__). Frontend no probado (solicitud backend-only).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration62_userdata_fixes.py",
+    "/app/backend/tests/test_iteration61_cards_userdata.py",
+    "/app/test_reports/pytest/it62.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Los 3 fixes están correctos. Observación no bloqueante (ya reportada en it61): SocialLink/ShippingAddress siguen duplicados entre server.py, routers/cards.py y routers/user_data.py — mover a models/ para evitar deriva de esquema.",
+    "PUT /api/user/saved-data sigue aceptando dict crudo: la whitelist protege las claves, pero no valida los TIPOS (p.ej. {'social_links': 'no-es-lista'} se guardaría como string y podría romper el GET/Pydantic del cliente). Opcional: modelo parcial tipado con extra='ignore'.",
+    "DELETE /api/user/addresses/{id} devuelve 200 aunque no exista la dirección (matched_count no se revisa). Comportamiento idempotente aceptable, pero un 404 sería más correcto."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration62_userdata_fixes.py"],
+  "success_rate": {"backend": "100% (43/43: 18 nuevos + 25 regresión it61)", "frontend": "not tested"},
+  "seed_data_creation": "Dirección TEST_it62 y social link TEST_X_it62 creados y eliminados. NOTA: los campos saved-data del usuario newtest@bruno.com quedaron con valores de prueba: full_name='QA It62', phone='+34611111162', bio='TEST_bio_final62', profession='QA Engineer'. Limpiar antes del redeploy si importa el perfil demo.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "test_credentials": "newtest@bruno.com / Test1234! — válidas, login devuelve access_token",
+  "context_for_next_testing_agent": "Suites reutilizables: tests/test_iteration62_userdata_fixes.py y tests/test_iteration61_cards_userdata.py (ejecutar con -p no:randomly). Los 3 hallazgos de it61 en user_data.py están cerrados. Router user_data.py apto para redeploy.",
+  "rca_of_the_issue": "N/A — los fixes resuelven la causa raíz de it61: los bodies ahora se declaran como modelos Pydantic (ShippingAddress / SocialLink) por lo que FastAPI valida antes del handler y devuelve 422; y update_user_saved_data filtra las claves con un set ALLOWED antes del $set, impidiendo la sobrescritura de user_id."
+}

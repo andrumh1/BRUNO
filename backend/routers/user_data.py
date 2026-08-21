@@ -173,22 +173,29 @@ async def update_user_saved_data(
     updates: dict,
     current_user: User = Depends(get_current_user),
 ):
-    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    # Whitelist the fields users may write; ignore anything else (esp. user_id).
+    ALLOWED = {
+        "full_name", "phone", "email", "avatar_url", "banner_url",
+        "bio", "profession", "company", "website",
+        "social_links", "addresses", "photos",
+        "work_references", "custom_fields",
+    }
+    safe = {k: v for k, v in updates.items() if k in ALLOWED}
+    safe["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.user_saved_data.update_one(
         {"user_id": current_user.id},
-        {"$set": updates},
+        {"$set": safe},
         upsert=True,
     )
-    return {"message": "Data saved successfully"}
+    return {"message": "Data saved successfully", "updated_fields": list(safe.keys())}
 
 
 @router.post("/user/addresses")
 async def add_user_address(
-    address: dict,
+    address: ShippingAddress,
     current_user: User = Depends(get_current_user),
 ):
-    address_obj = ShippingAddress(**address)
-    address_dict = address_obj.model_dump()
+    address_dict = address.model_dump()
 
     existing = await db.user_saved_data.find_one({"user_id": current_user.id}, {"_id": 0})
     if not existing or not existing.get("addresses"):
@@ -222,14 +229,13 @@ async def delete_user_address(
 
 @router.post("/user/social-links")
 async def add_saved_social_link(
-    link: dict,
+    link: SocialLink,
     current_user: User = Depends(get_current_user),
 ):
-    social_link = SocialLink(**link)
     await db.user_saved_data.update_one(
         {"user_id": current_user.id},
         {
-            "$push": {"social_links": social_link.model_dump()},
+            "$push": {"social_links": link.model_dump()},
             "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
         },
         upsert=True,
