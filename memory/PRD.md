@@ -1,11 +1,35 @@
 # BRUNO Social Network - PRD
 
+## Phase 63: Cards + user-data + subscriptions extraction (2026-02-18)
+
+**P2 — Backend refactor: three more routers extracted**
+- `routers/cards.py` (NEW, ~290 lines): all 9 endpoints of `/api/cards/*` + `/api/public/cards` + `/api/cards/{id}/qr` (branded QR generation via PIL). Uses `utils.database`, `utils.security`, `models.user`. Models `Card/CardCreate/CardUpdate/SocialLink/ContactInfo/ReorderRequest` self-contained.
+- `routers/user_data.py` (NEW, ~275 lines): `/api/user/saved-data` GET+PUT, `/api/user/addresses` POST+DELETE, `/api/user/social-links` POST, `/api/plans` GET, `/api/user/subscription` GET, `/api/subscribe/{plan_id}` POST (Stripe subscription checkout). Includes `seed_subscription_plans()` helper.
+- Also removed `seed_subscription_plans()` dead-code block from `server.py` (moved to router).
+
+**server.py progression (this session):**
+- Phase 62: 3201 → 3033 (-168, video_calls extracted)
+- Phase 63: 3033 → 2552 (-481, cards + user_data + subscriptions + dead-code cleanup)
+- Total this session: **-649 lines (-20%)**
+
+**Regression verified via curl:**
+```
+auth/me: 200          profile: 200          cards: 200
+public/cards: 200     cards/explore: 200    feed/for-you: 200
+recommended-videos: 200  stories/located: 200  notifications: 200
+chats: 200            i18n/countries: 200   piup/catalog: 200
+plans: 200            user/saved-data: 200  user/subscription: 200
+subscribe/free: 400 (expected — free plan rejected)
+calls/start: 404 (expected — bad chat_id)
+POST user/addresses: 200 with new address returned
+GET/POST/PUT/DELETE cards: all working incl. QR generation
+```
+
 ## Phase 62: Video calls extraction + Regression (2026-02-18)
 
-**P2 — Backend refactor: video calls extracted**
+**Backend refactor: video calls extracted**
 - New `/app/backend/routers/video_calls.py` — clean module using `utils.ws_manager`, `utils.database`, `utils.security`. Jitsi Meet URLs (https://meet.jit.si/{room}) with `prejoinPageEnabled=false` + `startWithVideoMuted` per call_type. Push notifications fan-out to offline participants. Try/except guards around WS + push so transient failures never break the request.
 - `server.py` reduced 3201 → 3033 lines (-168, ~5%). Old inline endpoints removed.
-- Registered via `api_router.include_router(video_calls_router)`.
 
 **Verified (iteration_60)**
 - 16/17 backend tests PASS (94%); only SKIPPED test is upload-video happy path (Cloudinary rejects synthetic mp4 in test env — code review confirmed contract is correct).
@@ -18,8 +42,8 @@
 - Headless Chrome in Playwright doesn't decode H.264 (`canPlayType` returns empty), so Reels show "No se pudo cargar este video" in automated screenshots. Real iOS/Android/Desktop browsers DO support H.264 — works for end users.
 - Map `BillingNotEnabledMapError` is environmental (production API key billing).
 
-## Remaining Backlog (post-62)
-- server.py 3033 → target ~2000: still inline = auth (8 endpoints), payments/Stripe (3), cards CRUD + QR (8), profile (2), albums-legacy (7), orders+store-legacy (7), user-data (5), plans+subscribe (3) ≈ 43 endpoints / ~1300 lines extractable.
+## Remaining Backlog (post-63)
+- `server.py` 2552 → target ~1800: still inline = auth (~120 lines: register/login/me/refresh/logout/google), payments/Stripe checkout (~110 lines), profile GET+PUT + change-password (~65 lines), albums-legacy (~90 lines), orders+store-legacy (~200 lines), seed_store_products (~330 lines big function). Next candidates: auth (safer via `integration_playbook_expert_v2`), store products/orders (isolated).
 - Frontend: `MyProfilePage.jsx` (1041 lines) + `FeedPage.jsx` (883 lines) breakdown.
 - End-to-end manual verification of WebRTC video calls on real mobile devices.
 - PWA install prompt polish on obscure Android browsers.
