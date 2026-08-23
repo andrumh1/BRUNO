@@ -49,8 +49,7 @@ export default function LocationMessagePreview({ attachment, isOwn }) {
     >
       <div className="relative h-[120px] bg-muted">
         {mapSrc ? (
-          // eslint-disable-next-line jsx-a11y/img-redundant-alt
-          <img src={mapSrc} alt="map preview" className="w-full h-full object-cover" />
+          <img src={mapSrc} alt="Ubicación en el mapa" className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full grid place-items-center text-muted-foreground">
             <MapPin className="w-7 h-7" />

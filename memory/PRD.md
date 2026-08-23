@@ -1,5 +1,56 @@
 # BRUNO Social Network - PRD
 
+## Phase 64: Conversión a app NATIVA (Capacitor 7 + FCM/APNs) (2026-02-23)
+
+**Alcance:** convertir la web app en aplicación nativa iOS + Android para
+publicar en App Store y Google Play, manteniendo un único codebase.
+
+**Frontend — Capacitor 7 integrado:**
+- Instalados: `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/android`
+- 11 plugins nativos: camera, geolocation, push-notifications, share,
+  splash-screen, status-bar, haptics, app, filesystem, preferences, network
+- `capacitor.config.ts` con bundle id `com.brunocard.app`, splash naranja BRUNO
+- Nueva carpeta `/app/frontend/src/native/`:
+  - `capacitor.js` — detección de plataforma (isNative/isIOS/isAndroid)
+  - `useNativePush.js` — solicita permiso, registra FCM/APNs, POSTea el token a `/api/mobile/devices/register`, escucha `pushNotificationReceived` + `pushNotificationActionPerformed`
+  - `nativeApis.js` — takePhoto/getCurrentLocation/shareContent/triggerHaptic con fallback web-safe
+  - `NativeBootstrap.jsx` — montado en App.js, integra push + status-bar + splash-hide
+
+**Backend — envío nativo (FCM + APNs via Firebase):**
+- Nuevo `/app/backend/utils/native_push.py` (~130 líneas):
+  - Inicialización lazy de firebase-admin con cache tri-estado
+  - Lee `FIREBASE_SERVICE_ACCOUNT_JSON` (path o JSON inline)
+  - **Fallback graceful:** si no está configurada, log warning y no crashea
+  - Envía `messaging.Message` con `AndroidNotification` + `APNSPayload`
+  - Prune automático de tokens UNREGISTERED / INVALID_ARGUMENT
+- `routers/push_notifications.py` — `send_push_notification()` ahora llama `send_native_push()` tras web push
+- Añadido `firebase-admin==6.5.0` a requirements.txt
+
+**Documentación:**
+- `/app/NATIVE_BUILD_GUIDE.md` — guía exhaustiva de 12 secciones:
+  1. Estado actual del código  2. Crear cuentas ($99 Apple + $25 Google)
+  3. Descargar código  4. Setup Mac/Xcode/Android Studio
+  5. `cap add ios/android`  6. Iconos + splash automáticos
+  7. Firebase Cloud Messaging setup (google-services.json, GoogleService-Info.plist, service account backend)
+  8. APNs (.p8 key + Firebase upload)
+  9. Compilar iOS/Android en dispositivo real
+  10. Publicar en App Store  11. Publicar en Google Play  12. Troubleshooting
+
+**Bug fix colateral:**
+- `LocationMessagePreview.jsx` — eliminado `eslint-disable jsx-a11y/img-redundant-alt` inválido y cambiado alt="map preview" → "Ubicación en el mapa" (era bloqueador de compilación tras `yarn add`)
+
+**Verificado (iteration_63):**
+- **100% (30/30 nuevos + 53 regresión)**
+- `/api/mobile/devices/register`: 200 con token/platform correctos, valida `platform in {ios,android,expo,huawei}` (400 en inválido)
+- `/api/mobile/devices` list: token redactado, ordenado por last_used_at
+- `/api/push/test`: 200 SIN Firebase configurado (fallback graceful confirmado)
+- Regresión de cards, user_data, calls, feed, stories, i18n, piup, plans: intacta
+
+**Estado tras Phase 64:**
+- Frontend: web app + native scaffolding listo, requiere `yarn cap:add:ios` + `yarn cap:add:android` en Mac del usuario
+- Backend: envía a web push + native FCM/APNs desde el mismo endpoint
+- User necesita: Apple Developer ($99), Google Play ($25), Firebase project (gratis), Xcode + Android Studio en su Mac. Guía lo lleva paso a paso.
+
 ## Phase 63: Cards + user-data + subscriptions extraction (2026-02-18)
 
 **P2 — Backend refactor: three more routers extracted**

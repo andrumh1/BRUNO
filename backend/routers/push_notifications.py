@@ -226,6 +226,20 @@ async def send_push_notification(user_id: str, notification: NotificationPayload
             "endpoint": {"$in": failed_endpoints}
         })
 
+    # ── Native push (FCM/APNs) for iOS + Android devices ─────────────────
+    try:
+        from utils.native_push import send_native_push
+        native_payload = {
+            "title": notification.title,
+            "body": notification.body,
+            "image": notification.image,
+            "url": notification.url,
+            "data": notification.data or {},
+        }
+        await send_native_push(_db, user_id, native_payload)
+    except Exception as e:
+        logging.warning(f"Native push failed for {user_id}: {e}")
+
 
 @router.post("/test")
 async def send_test_notification(

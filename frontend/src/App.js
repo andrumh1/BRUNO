@@ -11,6 +11,7 @@ import { BrunoCameraProvider } from "@/contexts/BrunoCameraContext";
 import RealtimeNotificationProvider from "@/contexts/RealtimeNotificationContext";
 import StoryActivityProvider from "@/contexts/StoryActivityContext";
 import { I18nProvider } from "@/contexts/I18nContext";
+import NativeBootstrap from "@/native/NativeBootstrap";
 
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
@@ -187,6 +188,7 @@ function App() {
                 <RealtimeNotificationProvider>
                 <StoryActivityProvider>
                 <AppRouter />
+                <NativeBootstrap />
                 <FloatingBubbles />
                 <FloatingChatBubble />
                 <CallOrchestrator />

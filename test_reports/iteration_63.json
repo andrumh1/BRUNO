@@ -1,0 +1,34 @@
+{
+  "summary": "Iteración 63 — regresión backend tras la conversión a app nativa (Capacitor 7 + firebase-admin 6.5.0 + utils/native_push.py). Creado /app/backend/tests/test_iteration63_native_push.py con 30 casos pytest contra la URL pública: 30/30 PASSED. Verificado: (1) backend arranca sin errores tras añadir firebase-admin y el módulo native_push (import directo de send_native_push OK, _init_firebase() devuelve False sin lanzar excepción al no existir FIREBASE_SERVICE_ACCOUNT_JSON); (2) POST /api/mobile/devices/register con {device_token, platform:'android', app_version, locale} -> 200 con platform/app_version/locale correctos, id UUID, sin device_token ni _id en la respuesta, y persistido (verificado vía GET /api/mobile/devices); upsert por (user_id, device_token) confirmado (re-registro devuelve el mismo id y actualiza platform/app_version); (3) platform inválida 'macos' -> 400 con detail mencionando platform; device_token ausente -> 422; device_token corto (<8) -> 422; sin auth -> 401/403; (4) GET /api/mobile/devices lista solo los activos del usuario con el token redactado (proyección device_token:0) y sin _id; DELETE de device inexistente -> 404, DELETE válido -> 200 {'status':'unregistered'} y desaparece del listado; (5) POST /api/push/test -> 200 SIN Firebase configurado, tanto sin device nativo como con un device android registrado: el log muestra 'FIREBASE_SERVICE_ACCOUNT_JSON not set — native push disabled (web push still works)' y el request no crashea (fallback graceful CONFIRMADO); (6) GET /api/mobile/config -> 200 con vapid_public_key, supports.fcm/apns=true y endpoints.device_register correcto; GET /api/mobile/sync/manifest -> 200. Regresión de routers extraídos: cards CRUD completo (POST 201 -> GET 200 -> PUT persiste -> DELETE 204 -> GET 404), GET /api/cards, /api/cards/explore, /api/user/saved-data, /api/plans (incluye 'free'), /api/user/subscription, validación 422 de addresses/social-links, POST /api/calls/start con chat inexistente -> 404, /api/posts/recommended-videos 200, /api/i18n/countries|currencies|detect 200, /api/piup/catalog 200. Suites previas reejecutadas como regresión: test_mobile_native.py + test_iteration61 + test_iteration62 (43 passed) y test_push_notifications_iteration26.py (10 passed, 2 skipped). Variables .env intactas (MONGO_URL, DB_NAME, REACT_APP_BACKEND_URL). Frontend NO probado (petición backend-only).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/push/test", "issue": "Log ruidoso: en cada llamada aparecen 2x 'WebPushException: Push failed: 410 Gone' de suscripciones web caducadas. El endpoint devuelve 200 (no bloqueante), pero la limpieza de failed_endpoints solo borra suscripciones cuyo user_id coincide; parecen quedar suscripciones stale que se reintentan en cada envío. Revisar si el delete_many efectivamente las elimina."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration63_native_push.py",
+    "/app/test_reports/pytest/it63.xml"
+  ],
+  "action_items": [
+    "Opcional (no bloqueante): depurar la limpieza de suscripciones web push caducadas (410 Gone) en push_notifications.send_push_notification para reducir ruido en logs.",
+    "Antes del redeploy con Firebase real: probar send_native_push con FIREBASE_SERVICE_ACCOUNT_JSON configurado — en preview solo se validó la rama de fallback."
+  ],
+  "critical_code_review_comments": [
+    "utils/native_push.py: `_messaging` se asigna en _init_firebase pero nunca se usa (send_native_push reimporta messaging localmente) — variable global muerta, eliminar para evitar confusión.",
+    "utils/native_push.py: messaging.send(msg) es una llamada SÍNCRONA/bloqueante del SDK de Firebase dentro de una corrutina async y en bucle por dispositivo; con varios devices bloqueará el event loop. Recomendado usar messaging.send_each (batch) envuelto en asyncio.to_thread / run_in_executor.",
+    "utils/native_push.py: _firebase_ready se cachea a nivel de módulo, así que si se añade FIREBASE_SERVICE_ACCOUNT_JSON habrá que reiniciar el backend (esperado, pero documentarlo).",
+    "utils/native_push.py: la detección de tokens muertos compara e.code contra 'unregistered'/'invalid-argument'; firebase-admin lanza messaging.UnregisteredError / SenderIdMismatchError — mejor capturar esas clases explícitamente para no perder tokens muertos.",
+    "routers/mobile_native.py: el modelo DeviceRegisterRequest usa el campo `device_id` y también existe `id` interno; la respuesta DeviceOut.id es el id del documento y device_id el del hardware — es correcto pero fácil de confundir en el cliente nativo, conviene documentarlo.",
+    "routers/mobile_native.py: la validación de platform se hace a mano en el handler (400) en lugar de con Literal/Enum en Pydantic (422). Funciona y el 400 es intencional, pero un Enum daría el contrato en el OpenAPI."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration63_native_push.py"],
+  "success_rate": {"backend": "100% (30/30 nuevos; 53 adicionales de regresión passed)", "frontend": "not tested"},
+  "seed_data_creation": "Devices de prueba con device_token prefijado 'TEST_' registrados y desregistrados (is_active=false) en la colección mobile_devices para newtest@bruno.com. Card 'TEST_it63 Card' creada y eliminada. Nota: register pone users.push_notifications_enabled=true para el usuario de prueba.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "newtest@bruno.com / Test1234! — válidas",
+  "context_for_next_testing_agent": "Suite reutilizable: /app/backend/tests/test_iteration63_native_push.py (ejecutar con -p no:randomly). Cubre mobile_native devices, push/test fallback, mobile/config y regresión de cards/user_data/calls/posts/i18n/piup. OJO: los tests legacy tests/test_push_notifications_iteration26.py requieren exportar REACT_APP_BACKEND_URL en el entorno del shell (si no, URLs relativas -> MissingSchema); no es un bug de la app. Firebase sigue deliberadamente sin configurar: solo se validó la rama de fallback de send_native_push.",
+  "rca_of_the_issue": "N/A — no se detectaron regresiones. El fallback graceful funciona porque _init_firebase() devuelve False cuando FIREBASE_SERVICE_ACCOUNT_JSON está vacío y send_native_push retorna 0 antes de tocar el SDK; además la llamada está envuelta en try/except en send_push_notification."
+}
