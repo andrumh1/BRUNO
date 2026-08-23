@@ -196,7 +196,7 @@ const StoryPoll = ({ pollId, token }) => {
         
         return (
           <motion.button
-            key={idx}
+            key={`poll-opt-${option.id || option.text || idx}-${idx}`}
             onClick={(e) => { e.stopPropagation(); handleVote(idx); }}
             disabled={voted}
             className="w-full relative overflow-hidden rounded-xl border border-white/30 backdrop-blur-md transition-all"

@@ -67,7 +67,7 @@ const UserProfilePage = () => {
       setIsFollowing(response.data.is_following || false);
       setIsBlocked(response.data.is_blocked_by_me || false);
     } catch (error) {
-      // error handled
+      console.warn("UserProfilePage: fetchProfile failed", error);
     }
   }, [userId, token]);
 
@@ -77,7 +77,7 @@ const UserProfilePage = () => {
       const response = await axios.get(`${API}/users/${userId}/posts`, { headers });
       setPosts(response.data);
     } catch (error) {
-      // error handled
+      console.warn("UserProfilePage: fetchUserPosts failed", error);
     }
   }, [userId, token]);
 
@@ -117,7 +117,7 @@ const UserProfilePage = () => {
         followers_count: res.data.following ? prev.followers_count + 1 : prev.followers_count - 1
       }));
     } catch (error) {
-      // error handled
+      console.warn("UserProfilePage: follow failed", error);
     } finally {
       setFollowLoading(false);
     }
@@ -134,7 +134,7 @@ const UserProfilePage = () => {
       if (res.data.blocked) setIsFollowing(false);
       setShowMenu(false);
     } catch (error) {
-      // error handled
+      console.warn("UserProfilePage: block failed", error);
     } finally {
       setBlockLoading(false);
     }
@@ -148,7 +148,7 @@ const UserProfilePage = () => {
       });
       navigate(`/chat/${response.data.id}`);
     } catch (error) {
-      // error handled
+      console.warn("UserProfilePage: start chat failed", error);
     }
   };
 
@@ -166,7 +166,7 @@ const UserProfilePage = () => {
       if (type === "followers") setFollowersList(res.data);
       else setFollowingList(res.data);
     } catch (e) {
-      // error handled
+      console.warn("UserProfilePage: load followers list failed", e);
     } finally {
       setListLoading(false);
     }

@@ -1,0 +1,56 @@
+{
+  "summary": "Iteration 64 - Validacion de los fixes post code-review (console.warn en catches vacios, keys compuestas, passwords via env var). Los 5 archivos frontend editados compilan sin errores y todos los flujos pedidos funcionan end-to-end: login -> my-profile -> ViewCardPage (/c/{id}) -> perfil de otro usuario (follow/unfollow/chat/followers modal) -> /store (36 productos) -> /welcome (4 pasos, next/prev). Backend: 25/25 pytest passed (12 regresion nueva + 13 test_phase58_story_analytics_ai.py con TEST_USER_PASSWORD env fallback). Se encontraron 3 bugs PREEXISTENTES no relacionados con estos fixes: (1) AnimatePresence en BrunoStoryViewer con 2 hijos sin key -> 300+ errores React 'two children with the same key ``' por cada apertura de story viewer; (2) GET /api/cards?user_id=X ignora user_id y exige auth -> 403 y tab 'Tarjetas' de otros perfiles siempre vacio; (3) las stories tipo poll no renderizan ninguna UI de encuesta en el viewer real. Ademas: StoryPoll/StoryViewer en Stories.jsx son CODIGO MUERTO, por lo que la key compuesta de la linea 199 no se ejecuta nunca en runtime.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/cards?user_id={other_id}", "issue": "El endpoint (get_my_cards) ignora por completo el query param user_id y solo devuelve las tarjetas del usuario autenticado; sin token responde 403. UserProfilePage.fetchUserCards lo llama SIN Authorization header -> 403 en cada carga de perfil ajeno y el tab 'Tarjetas' queda siempre vacio. Verificado con curl: noauth=403; auth con user_id ajeno devuelve 3 tarjetas del propio usuario."},
+      {"endpoint": "POST /api/stories", "issue": "Devuelve 307 redirect (solo /api/stories/ con slash final responde 200). Axios sigue el redirect, pero clientes que no lo hacen pierden el body -> 422. Registrar la ruta sin slash o con redirect_slashes consistente."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BrunoStoryViewer.jsx", "issue": "PREEXISTENTE / ALTA PRIORIDAD: el <AnimatePresence> raiz (linea 236) tiene DOS hijos sin key: el motion.div principal (linea 237, data-testid=bruno-story-viewer) y <StoryInsightsModal/> (linea 530). Framer-motion asigna key '' a ambos -> React loguea 'Encountered two children with the same key, ``' en CADA frame de animacion: 361 errores en 5s medidos con fiber-walk (parentChain: AnimatePresence < BrunoStoryViewer < StoriesRow < FeedPage). Fix: key=\"story-viewer\" y key=\"story-insights\", o mover StoryInsightsModal fuera del AnimatePresence.", "selector": "[data-testid='bruno-story-viewer']", "priority": "HIGH"},
+      {"component": "BrunoStoryViewer.jsx (stories tipo poll)", "issue": "Una story con media_type='poll' renderiza pantalla negra: no muestra pregunta ni opciones (story-poll / poll-option-N = 0 elementos en DOM). Ademas renderiza <img src=\"\"> -> error de consola 'An empty string was passed to the src attribute'. Solo aparece el boton Insights.", "selector": "[data-testid='bruno-story-stage']", "priority": "HIGH"},
+      {"component": "Stories.jsx", "issue": "CODIGO MUERTO: solo StoriesRow se importa (FeedPage). StoryViewer (linea 238) y StoryPoll (linea 133) no se usan en ningun sitio -> la key compuesta `poll-opt-${option.id||option.text||idx}-${idx}` de la linea 199 es correcta pero INVERIFICABLE en runtime. El viewer real es BrunoStoryViewer. ~230 lineas muertas a eliminar o el poll debe portarse a BrunoStoryViewer.", "selector": "n/a", "priority": "MEDIUM"},
+      {"component": "ViewCardPage.jsx copyLink", "issue": "copyLink() llama navigator.clipboard.writeText sin try/catch -> unhandled rejection 'Failed to execute writeText on Clipboard: Write permission denied' (pageerror capturado). handleShare si esta protegido; copyLink no. Tampoco muestra feedback de error al usuario.", "selector": "[data-testid='card-copy-link']", "priority": "MEDIUM"},
+      {"component": "UserProfilePage.jsx fetchUserCards (lineas 84-91)", "issue": "Inconsistencia con el fix aplicado: los otros 6 catches ya loguean con console.warn pero este sigue silencioso (solo setCards([])), justo el que esta fallando con 403. Agregar console.warn para no ocultar el error.", "selector": "n/a", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Carga de perfil ajeno", "issue": "GET /api/cards?user_id=X se dispara 3 VECES por cada carga de perfil (useEffect con deps que cambian por el token), las 3 con 403. Memoizar/deduplicar.", "affected_selectors": ["[data-testid='tab-cards']"]},
+      {"flow": "/profile/{ownId}", "issue": "Comportamiento correcto pero a documentar: al abrir el propio id redirige a MyProfilePage, por lo que profile-name / profile-follow-btn no existen en ese caso (no es bug)."}
+    ],
+    "design_issues": [
+      {"screen": "Story viewer (mobile 390x844)", "issues": ["La barra de reacciones rapidas y el boton 'Responder' quedan tapados por la bottom-nav flotante (los emojis se solapan con Inicio/Tienda/Reels); el boton 'Responder' aparece cortado en el borde derecho"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration64_codereview_regression.py",
+    "/app/backend/tests/test_phase58_story_analytics_ai.py",
+    "/app/test_reports/pytest/pytest_results_it64.xml"
+  ],
+  "action_items": [
+    "BrunoStoryViewer.jsx: agregar key a los 2 hijos del <AnimatePresence> raiz (motion.div + StoryInsightsModal) o mover el modal fuera -> elimina 300+ errores React por apertura de story",
+    "BrunoStoryViewer.jsx: renderizar la UI de encuesta para stories media_type='poll' (portar StoryPoll) y no renderizar <img> cuando media_url esta vacio",
+    "Backend cards router: soportar ?user_id= publico (solo tarjetas is_public) o cambiar UserProfilePage a un endpoint publico; hoy da 403 y el tab Tarjetas de perfiles ajenos siempre esta vacio",
+    "UserProfilePage: enviar Authorization header en fetchUserCards, agregar console.warn en su catch y deduplicar la llamada (se dispara 3x)",
+    "ViewCardPage: envolver copyLink en try/catch (clipboard puede lanzar permission denied)",
+    "Stories.jsx: borrar StoryViewer/StoryPoll (codigo muerto) o migrar el poll al viewer real",
+    "POST /api/stories: eliminar el 307 (registrar ruta sin slash final)"
+  ],
+  "critical_code_review_comments": [
+    "Los fixes solicitados estan TODOS aplicados y verificados en codigo: ViewCardPage (3 console.warn), UserProfilePage (6 console.warn), StorePage (3 console.warn), WelcomePage key=`step-dot-${s.key||i}`, Stories.jsx key=`poll-opt-...`, test_phase58 usa TEST_USER_EMAIL/TEST_USER_PASSWORD con fallback.",
+    "El fix de key en Stories.jsx no aporta valor real porque el componente es codigo muerto; el problema de keys duplicadas EN RUNTIME esta en BrunoStoryViewer (AnimatePresence con hijos sin key).",
+    "Los catches con console.warn son correctos pero no muestran feedback al usuario (sin toast/estado de error): el 403 de /api/cards pasa totalmente desapercibido en la UI."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/StorePage.jsx (solo data-testid: store-page y store-product-{id}; ningun cambio de logica)",
+    "/app/backend/tests/test_iteration64_codereview_regression.py (nuevo)"
+  ],
+  "success_rate": {"backend": "100% (25/25 pytest)", "frontend": "90% (todos los flujos pedidos OK; 2 bugs preexistentes en story viewer + 1 tab vacio)"},
+  "seed_data_creation": "Se creo 1 poll (TEST_it64) + 1 story tipo poll para probar el render de encuestas; la story fue eliminada al final (DELETE 200). Se hizo follow/unfollow a demo@bruno.com (a075b8c0-9d5f-49db-b670-a4cef7348231) dejando el estado original (Seguir).",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "newtest@bruno.com / Test1234! (de /app/memory/test_credentials.md). Otro usuario para probar perfiles ajenos: demo@bruno.com id a075b8c0-9d5f-49db-b670-a4cef7348231",
+  "context_for_next_testing_agent": "La regresion de los fixes de code-review esta VERDE (no hace falta re-testear console.warn/keys/env-var). Pendiente re-testear: (1) keys del AnimatePresence en BrunoStoryViewer -> abrir /feed, click en [data-testid^='story-circle-'] y contar console.error con 'same key' (debe ser 0); (2) render de poll en el story viewer (esperar [data-testid='story-poll'] o equivalente); (3) GET /api/cards?user_id= debe devolver las tarjetas publicas del usuario indicado sin 403; (4) tab 'Tarjetas' en /profile/{otroId} con contenido. Para crear una story de poll: POST /api/stories/ (CON slash) con media_type='poll' y poll_id de POST /api/social/polls. Usa /app/backend/tests/test_iteration64_codereview_regression.py como regresion base.",
+  "rca_of_the_issue": "Keys duplicadas: fiber-walk en runtime mostro parentChain 'AnimatePresence < BrunoStoryViewer < StoriesRow < FeedPage' con dupKey='' y count=2 (hijos: bruno-story-viewer + StoryInsightsModal). AnimatePresence exige key en cada hijo; al no tenerla framer-motion usa '' para ambos y React reconcilia con key duplicada en cada frame de la animacion de progreso -> 361 console.error en 5s. Tab Tarjetas vacio: routers/cards.py linea 151 @router.get('') = get_my_cards(current_user=Depends(get_current_user)) filtra por {user_id: current_user.id} y no lee el query param user_id; UserProfilePage.jsx linea 86 lo llama sin header -> 403 -> catch silencioso -> setCards([])."
+}

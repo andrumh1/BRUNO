@@ -10,8 +10,8 @@ import requests
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://premium-launch-13.preview.emergentagent.com").rstrip("/")
 API = f"{BASE_URL}/api"
 
-EMAIL = "newtest@bruno.com"
-PASSWORD = "Test1234!"
+EMAIL = os.environ.get("TEST_USER_EMAIL", "newtest@bruno.com")
+PASSWORD = os.environ.get("TEST_USER_PASSWORD", "Test1234!")
 
 # ---------- Fixtures ----------
 
@@ -38,7 +38,7 @@ def auth_headers(auth_token):
 def secondary_user(session):
     """Create a second account to test 403 + answer-as-other-user."""
     email = f"TEST_phase58_{int(time.time())}@bruno.com"
-    password = "Test1234!"
+    password = os.environ.get("TEST_USER_PASSWORD", "Test1234!")
     payload = {"email": email, "password": password, "name": "TEST Phase58"}
     r = session.post(f"{API}/auth/register", json=payload, timeout=20)
     if r.status_code not in (200, 201):

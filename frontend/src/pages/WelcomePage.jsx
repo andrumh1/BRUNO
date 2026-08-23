@@ -377,9 +377,9 @@ export default function WelcomePage() {
               </motion.button>
 
               <div className="flex items-center gap-2">
-                {STEPS.map((_, i) => (
+                {STEPS.map((s, i) => (
                   <motion.span
-                    key={i}
+                    key={`step-dot-${s.key || i}`}
                     layout
                     animate={{
                       width: i === step ? 24 : 8,

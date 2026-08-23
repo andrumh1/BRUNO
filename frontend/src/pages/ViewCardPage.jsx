@@ -42,7 +42,9 @@ const ViewCardPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       navigate(`/chat/${response.data.id}`);
-    } catch (e) { }
+    } catch (e) {
+      console.warn("ViewCardPage: could not start chat", e);
+    }
   };
 
   useEffect(() => { fetchCard(); }, [fetchCard]);
@@ -61,14 +63,17 @@ const ViewCardPage = () => {
       const response = await axios.get(`${API}/cards/${cardId}/qr`);
       setQrData(response.data);
       setShowQR(true);
-    } catch (e) { }
+    } catch (e) {
+      console.warn("ViewCardPage: could not fetch QR", e);
+    }
   };
 
   const handleShare = async () => {
     const url = window.location.href;
     if (navigator.share) {
       try { await navigator.share({ title: card.title, text: card.subtitle || "", url }); } catch (e) {
- }
+        console.warn("ViewCardPage: share cancelled", e);
+      }
     } else {
       navigator.clipboard.writeText(url);
       setCopied(true);
@@ -339,7 +344,7 @@ const ViewCardPage = () => {
                       {/* Additional locations */}
                       {card.locations?.length > 0 && card.locations.map((loc, idx) => (
                         loc.address && (
-                          <div key={idx} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                          <div key={`loc-${loc.address}-${idx}`} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
                             onClick={() => loc.lat && loc.lng && window.open(`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`, '_blank')}
                             data-testid={`card-location-${idx}`}>
                             <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${fg}10` }}>

@@ -76,7 +76,7 @@ const StorePage = () => {
       const response = await axios.get(`${API}/store/products`);
       setProducts(response.data);
     } catch (error) {
-      // fetch failed
+      console.warn("StorePage: fetchProducts failed", error);
     } finally {
       setLoading(false);
     }
@@ -91,7 +91,7 @@ const StorePage = () => {
       const defaultAddr = response.data.addresses?.find(a => a.is_default);
       if (defaultAddr) setSelectedAddress(defaultAddr.id);
     } catch (error) {
-      // fetch failed
+      console.warn("StorePage: fetchUserData failed", error);
     }
   }, [token]);
 
@@ -199,7 +199,7 @@ const StorePage = () => {
         country: ""
       });
     } catch (error) {
-      // error handled
+      console.warn("StorePage: address action failed", error);
     }
   };
 
@@ -244,7 +244,7 @@ const StorePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5" data-testid="store-page">
       {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/80 border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -297,6 +297,7 @@ const StorePage = () => {
           {filteredProducts.map((product, index) => (
             <Card 
               key={product.id} 
+              data-testid={`store-product-${product.id}`}
               className="glass-card spring-card spring-item overflow-hidden"
               style={{ animationDelay: `${index * 0.05}s` }}
             >
