@@ -225,7 +225,7 @@ const FloatingBubbles = () => {
   const { user, token } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { minimized, setMinimized, minimizedItems, removeMinimizedItem, touchHandlers } = useNavScroll();
+  const { minimized, setMinimized, minimizedItems, removeMinimizedItem, touchHandlers, idle, bumpIdle } = useNavScroll();
   const [showAIChat, setShowAIChat] = useState(false);
   const [aiMinimized, setAiMinimized] = useState(false);
   const [aiMessages, setAiMessages] = useState([]);
@@ -365,11 +365,13 @@ const FloatingBubbles = () => {
           {/* Minimized items tray — universal: cards, profiles, posts, reels, lives */}
           {minimizedItems.length > 0 && (
             <div
-              className="fixed z-[10000] bottom-[19px] overflow-x-auto scrollbar-hide transition-all duration-300 flex justify-end"
+              className={`fixed z-[10000] overflow-x-auto scrollbar-hide flex justify-end transition-opacity duration-300 ${
+                idle ? 'opacity-40' : 'opacity-100'
+              }`}
               style={{
-                right: 'calc(50% + 96px)',
-                maxWidth: 'calc(50% - 96px)',
-                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+                right: 'calc(50% + 108px)',
+                maxWidth: 'calc(50% - 108px)',
               }}
               data-testid="minimized-items-tray"
             >
@@ -437,13 +439,21 @@ const FloatingBubbles = () => {
             </div>
           )}
 
-          {/* AI pill — circular bubble matching the other minimized items */}
-          <div className="fixed z-[10000] bottom-[18px] transition-all duration-300 ease-out"
-            style={{ right: 'calc(50% + 60px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          {/* AI pill — circular bubble aligned to LEFT of the nav pill.
+              Gap of 12px between AI bubble edge and pill edge for breathing room. */}
+          <div className={`fixed z-[10000] transition-opacity duration-300 ease-out ${
+            idle ? 'opacity-40' : 'opacity-100'
+          }`}
+            style={{
+              bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+              right: 'calc(50% + 76px)',
+            }}>
             <button
-              onClick={() => { setMinimized(false); setShowAIChat(true); setAiMinimized(false); }}
-              {...touchHandlers}
-              className="relative group transition-all duration-300"
+              onClick={(e) => { e.stopPropagation(); bumpIdle(); setMinimized(false); setShowAIChat(true); setAiMinimized(false); }}
+              onTouchStart={(e) => { touchHandlers.onTouchStart(e); bumpIdle(); }}
+              onTouchEnd={touchHandlers.onTouchEnd}
+              className="relative group transition-transform duration-200 active:scale-90"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
               data-testid="floating-ai-btn"
               aria-label="Abrir BRUNO IA"
             >
@@ -464,8 +474,8 @@ const FloatingBubbles = () => {
 
       {/* === EXPANDED STATE: Colored circle above nav bar === */}
       {!minimized && (
-        <div className="fixed z-[10000] bottom-[74px] left-3 transition-all duration-300 ease-out"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div className="fixed z-[10000] left-3 transition-all duration-300 ease-out"
+          style={{ bottom: 'calc(var(--nav-reserve, 88px) + 10px)' }}>
           <button
             onClick={() => setShowAIChat(!showAIChat)}
             className="relative group transition-all duration-300"

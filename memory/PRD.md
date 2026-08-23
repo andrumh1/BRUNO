@@ -1,5 +1,32 @@
 # BRUNO Social Network - PRD
 
+## Phase 65: Nav pill + burbujas AI/Chat rediseño touch-first (2026-02-23)
+
+**Bug reportado por el usuario (español):** el pill de navegación se minimizaba solo, dejando las burbujas AI + Chat flotando desalineadas; estaba muy pegado al borde inferior del móvil (interferencia con el gesture home del OS); no ofrecía descanso visual (no se opacaba en idle); el flujo touch se sentía anticuado.
+
+**Fixes aplicados (5 archivos):**
+- `contexts/NavScrollContext.jsx` — nuevo estado compartido `idle` + `bumpIdle()` con timer de 2.5s. Callback estable (dep=[], usa setIdle(false) sin leer state para evitar loop). Threshold touch bajado 35→22px. **Eliminado listener `bruno:child-minimized`** para que minimizar AI o chat individual NO fuerce al pill a minimizarse (coordinación one-way: pill→hijos).
+- `components/MobileBottomNav.jsx` — pill minimizado subido a `bottom: env(safe-area) + 12px`; expanded a `+ 20px`; hitbox invisible 10x20px de padding; idle-fade con `opacity-40 + blur-[0.5px]`; `WebkitTapHighlightColor: transparent`.
+- `components/FloatingBubbles.jsx` — AI bubble reposicionada a `right: calc(50% + 76px)` y `bottom: env(safe-area) + 8px` (mismo nivel visual que el pill); active:scale-90 en tap; idle-fade coordinado.
+- `components/FloatingChatBubble.jsx` — Chat bubble simétrica: `left: calc(50% + 76px)`; idle-fade coordinado.
+
+**Resultado visual** (viewport 390x844, iPhone 12/13/14):
+```
+                    ─── ─── ───    ← todos en y=808 (a 8px del borde)
+       (·)    ‖═══════════‖    (·)
+      AI 28   nav-pill 128    Chat 28
+   right +76px  centered    left +76px
+        gap 12          gap 12
+```
+
+**Verificado por testing_agent (iteration_66):**
+- **5/5 fixes PASS** + regresión 100%
+- Idle-fade: opacity-40 sostenida 10 muestras × 500ms (sin loop)
+- Minimización individual AI/Chat NO afecta el pill
+- Regresión completa de navegación (5 tabs), chat individual, BRUNO IA
+
+**Iteración previa (65):** 3/5 → identificó 2 bugs corregidos en iter_66.
+
 ## Phase 64: Conversión a app NATIVA (Capacitor 7 + FCM/APNs) (2026-02-23)
 
 **Alcance:** convertir la web app en aplicación nativa iOS + Android para

@@ -424,7 +424,7 @@ const NewChatModal = ({ isOpen, onClose, onSelectUser, token }) => {
 const FloatingChatBubble = () => {
   const { user, token } = useAuth();
   const location = useLocation();
-  const { minimized, setMinimized, touchHandlers } = useNavScroll();
+  const { minimized, setMinimized, touchHandlers, idle, bumpIdle } = useNavScroll();
   const [isOpen, setIsOpen] = useState(false);
   const [chats, setChats] = useState([]);
   const [openChats, setOpenChats] = useState([]);
@@ -527,15 +527,24 @@ const FloatingChatBubble = () => {
 
   return (
     <>
-      {/* === Floating chat bubble — MINIMIZED state: tiny circle, symmetric to AI === */}
+      {/* === Floating chat bubble — MINIMIZED state: symmetric to AI, on the
+          RIGHT side of the nav pill with the same 12px gap. */}
       {minimized && (
         <div
-          className="fixed z-[10000] bottom-[18px] transition-all duration-300 ease-out"
-          style={{ right: 'calc(50% - 60px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          className={`fixed z-[10000] transition-opacity duration-300 ease-out ${
+            idle ? 'opacity-40' : 'opacity-100'
+          }`}
+          style={{
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+            left: 'calc(50% + 76px)',
+          }}
         >
           <button
-            onClick={() => { setMinimized(false); setIsOpen(true); }}
-            className="relative group transition-all duration-300"
+            onClick={(e) => { e.stopPropagation(); bumpIdle(); setMinimized(false); setIsOpen(true); }}
+            onTouchStart={(e) => { touchHandlers.onTouchStart(e); bumpIdle(); }}
+            onTouchEnd={touchHandlers.onTouchEnd}
+            className="relative group transition-transform duration-200 active:scale-90"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
             data-testid="chat-bubble-btn-minimized"
             aria-label="Abrir mensajes"
           >
@@ -561,7 +570,7 @@ const FloatingChatBubble = () => {
       {/* === Floating chat bubble — EXPANDED state: full circle === */}
       {!minimized && (
         <div className="fixed z-[10000] right-3 transition-all duration-300 ease-out"
-          style={{ bottom: 'calc(var(--nav-reserve, 88px) + 10px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          style={{ bottom: 'calc(var(--nav-reserve, 88px) + 10px)' }}>
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="relative group transition-all duration-300"

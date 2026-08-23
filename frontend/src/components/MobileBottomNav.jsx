@@ -16,7 +16,7 @@ const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, token } = useAuth();
-  const { minimized, setMinimized, touchHandlers } = useNavScroll();
+  const { minimized, setMinimized, touchHandlers, idle, bumpIdle } = useNavScroll();
   const { open: openCamera, isOpen: cameraOpen } = useBrunoCamera();
   const [publishMenuOpen, setPublishMenuOpen] = useState(false);
   
@@ -69,26 +69,39 @@ const MobileBottomNav = () => {
     return location.pathname === item.path;
   };
 
-  // MINIMIZED STATE — thin hairline bar flush against the bottom edge.
-  // Designed to disappear from the user's mental UI while remaining one
-  // tap away (or a swipe-up from the bottom edge — handled globally).
+  // MINIMIZED STATE — floating hairline pill lifted OFF the bottom edge
+  // (safe-area + 12px) so it doesn't fight with the OS home-swipe gesture.
+  // Fades to 40% opacity + heavy blur when idle, snaps back on any touch.
   if (minimized) {
     return (
       <>
         <div className="h-3" />
         <div
-          className={`fixed inset-x-0 bottom-0 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
-          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          className={`fixed left-0 right-0 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
+          style={{
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
+            pointerEvents: 'none', // container passes-through, only button captures
+          }}
           data-testid="mobile-bottom-nav"
         >
           <button
-            onClick={() => setMinimized(false)}
-            {...touchHandlers}
-            className="group block w-full py-1.5 px-4 outline-none focus:outline-none"
+            onClick={(e) => { e.stopPropagation(); bumpIdle(); setMinimized(false); }}
+            onTouchStart={(e) => { touchHandlers.onTouchStart(e); bumpIdle(); }}
+            onTouchEnd={touchHandlers.onTouchEnd}
+            className={`group block mx-auto outline-none focus:outline-none transition-all duration-300 ease-out ${
+              idle ? 'opacity-40' : 'opacity-100'
+            }`}
+            style={{
+              pointerEvents: 'auto',
+              padding: '10px 20px', // generous invisible hitbox
+              WebkitTapHighlightColor: 'transparent',
+            }}
             aria-label="Mostrar barra de navegación"
             data-testid="nav-expand-btn"
           >
-            <div className="mx-auto flex items-center justify-center gap-1.5 w-32 max-w-[40vw]">
+            <div className={`flex items-center justify-center gap-1.5 w-32 max-w-[40vw] transition-all duration-300 ${
+              idle ? 'blur-[0.5px]' : ''
+            }`}>
               <span className="h-1 w-1 rounded-full bg-orange-500/80 animate-pulse" />
               <span
                 className="h-[3px] flex-1 rounded-full bg-foreground/25 group-hover:bg-foreground/40 group-active:bg-primary transition-colors"
@@ -101,13 +114,14 @@ const MobileBottomNav = () => {
     );
   }
 
-  // FULL STATE - floating bubble bar
+  // FULL STATE - floating bubble bar (lifted 24px from bottom to clear
+  // the OS home indicator on iOS + Android).
   return (
     <>
       <div className="h-20" />
       <nav 
-        className={`fixed bottom-3 left-3 right-3 animate-in slide-in-from-bottom-4 duration-300 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className={`fixed left-3 right-3 animate-in slide-in-from-bottom-4 duration-300 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}
         data-testid="mobile-bottom-nav"
         {...touchHandlers}
       >

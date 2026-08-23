@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 66 - SEGUNDA RONDA (frontend only, 390x844 iPhone 12/13/14, cuenta newtest@bruno.com). Retest de los 2 fixes que fallaron en iteration_65 + regresion de los 3 que pasaron. RESULTADO: LOS 5 FIXES PASAN. Fix#3 (idle fade) ahora funciona: tras ~2s sin interaccion las 3 zonas (nav-expand-btn, floating-ai-btn, chat-bubble-btn-minimized) toman la clase 'opacity-40' y la MANTIENEN de forma sostenida durante 10 muestras consecutivas cada 500ms (no hay loop de toggle); al emitir un pointerdown la opacidad vuelve a 'opacity-100' inmediatamente y tras 3.2s sin tocar vuelve a 'opacity-40'. Fix#4b ahora funciona: minimizar la ventana de BRUNO IA (ai-chat-minimize) deja el pill EXPANDIDO (nav-expand-btn ausente, 8 botones/5 pestanas visibles) y solo la AI pasa a ai-chat-minimized; idem con la ventana de chat individual (floating-chat-minimize -> floating-chat-minimized, pill intacto). Regresion: Fix#1 los 3 elementos con top=808 identico; Fix#2 gaps 12/8/8 px (>=6); Fix#4a con AI abierta o chat abierto, minimizar el pill minimiza a los hijos; Fix#4c al maximizar el pill nada se auto-expande; Fix#5 hitbox del pill = 168x24 px exacto y threshold 22px en codigo. Regresion de navegacion: login OK, las 7 acciones del nav (Inicio/Tienda/Reels/+/Mapa/Alertas/Perfil) navegan correctamente, scroll-down auto-minimiza, lista de 6 chats abre y ChatWindow abre.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "NavScrollProvider / FloatingBubbles", "issue": "PERSISTE (ya reportado en it.65): console error de React 'Cannot update a component while rendering a different component' (setState en render) al cargar la app. No rompe funcionalidad pero indica un setState dentro del render de NavScrollProvider/FloatingBubbles.", "selector": "n/a", "priority": "MEDIUM"},
+      {"component": "MobileBottomNav.jsx l.82 vs burbujas", "issue": "PERSISTE (cosmetico): el pill minimizado usa bottom = safe-area+12px (bottom 832) mientras las burbujas usan +8px (bottom 836); los bordes inferiores no coinciden aunque el top si (808).", "selector": "[data-testid='mobile-bottom-nav']", "priority": "LOW"},
+      {"component": "FloatingBubbles - ai-chat-window", "issue": "Menor/UX: mientras la ventana AI esta abierta (fixed bottom-24 left-2, ancho casi full) tapa el chat-bubble-btn e intercepta los clicks sobre el (Playwright reporta 'subtree intercepts pointer events'). Es esperado por el layout pero impide abrir chats sin cerrar/minimizar la AI.", "selector": "[data-testid='chat-bubble-btn']", "priority": "LOW"},
+      {"component": "FloatingBubbles - minimize-all", "issue": "Observacion: al minimizar el pill con la ventana AI abierta, la AI se CIERRA por completo (no queda ai-chat-minimized) mientras el chat individual si conserva su barra minimizada. Comportamiento asimetrico; confirmar si es el deseado.", "selector": "[data-testid='ai-chat-minimized']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Feed/Marketplace (390x844, nav minimizado)", "issues": ["PERSISTE de it.65: FABs propios de pagina (ej. FAB naranja de marketplace) quedan muy cerca de la burbuja de chat minimizada (<10px de separacion tactil)"]}
+    ]
+  },
+  "measurements": {
+    "minimized_390x844": {
+      "nav-expand-btn": {"top": 808, "bottom": 832, "left": 111, "right": 279, "w": 168, "h": 24, "bottomGap": 12},
+      "floating-ai-btn": {"top": 808, "bottom": 836, "w": 28, "h": 28, "bottomGap": 8},
+      "chat-bubble-btn-minimized": {"top": 808, "bottom": 836, "w": 28, "h": 28, "bottomGap": 8}
+    },
+    "expanded": {"mobile-bottom-nav": {"top": 768, "bottom": 824, "h": 56, "bottomGap": 20}},
+    "idle_samples_500ms": "500-1500ms: opacity-100 | 2000-6000ms (10 muestras): opacity-40 sostenido en los 3 elementos (computed opacity 0.4 en el contenedor)"
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Resolver el console error de setState-en-render entre NavScrollProvider y FloatingBubbles (unico issue funcionalmente relevante pendiente).",
+    "Opcional/cosmetico: unificar bottom del pill minimizado a safe-area+8px para igualar los bordes inferiores de las 3 zonas.",
+    "Opcional: decidir si al minimizar el pill la ventana AI debe quedar como burbuja minimizada (hoy se cierra) para simetria con el chat individual.",
+    "Limpiar los dispatch muertos de 'bruno:child-minimized' en FloatingBubbles.jsx (l.267) y FloatingChatBubble.jsx (l.621) - ya no hay listeners."
+  ],
+  "critical_code_review_comments": [
+    "NavScrollContext: el fix de bumpIdle (setIdle(false) incondicional + deps []) elimina el ciclo de re-registro; verificado en runtime, el fade es estable.",
+    "La eliminacion del listener 'bruno:child-minimized' logra la minimizacion independiente esperada; conviene borrar tambien los emits para evitar confusion futura."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (out of scope)", "frontend": "5 de 5 fixes PASS (Fix#1, #2, #3, #4a, #4b, #4c, #5); regresion de navegacion 100%"},
+  "seed_data_creation": "Ninguna. Solo se abrio un chat existente y se minimizo; no se enviaron mensajes nuevos.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "newtest@bruno.com / Test1234!",
+  "context_for_next_testing_agent": "Script util: login via [data-testid=login-email-input/login-password-input/login-submit] -> goto /feed. Los tabs del nav son BUTTONS (nav-home, nav-marketplace, nav-reels, nav-create, nav-map, nav-notifications, nav-profile, nav-minimize-btn), no <a>. Estado minimizado: nav-expand-btn + floating-ai-btn + chat-bubble-btn-minimized. Idle: muestrear className 'opacity-40' en el elemento y hasta 5 ancestros; para bumpear sin mover el mouse usar window.dispatchEvent(new Event('pointerdown')). Ojo: la ventana AI abierta intercepta clicks sobre chat-bubble-btn; cerrarla con ai-chat-close antes de probar el chat.",
+  "rca_of_the_issue": "Ambos bugs de it.65 quedaron resueltos en NavScrollContext.jsx: (1) bumpIdle ya no depende de 'idle' y el effect de listeners no se re-registra en cada flip -> no hay reset inmediato del timer (fade sostenido); (2) se elimino el listener de 'bruno:child-minimized' que forzaba setMinimizedRaw(true) -> minimizar AI o un chat ya no arrastra al pill. Unico defecto abierto: setState durante render (console error) entre NavScrollProvider y FloatingBubbles."
+}
