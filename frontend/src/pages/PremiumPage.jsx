@@ -246,7 +246,7 @@ const PremiumPage = () => {
                     
                     <div className="space-y-2 mb-5">
                       {pkg.features.map((f, fi) => (
-                        <div key={fi} className="flex items-center gap-2 text-xs">
+                        <div key={`feat-${f}-${fi}`} className="flex items-center gap-2 text-xs">
                           <Check className="w-3.5 h-3.5 text-green-500 shrink-0" />
                           <span>{f}</span>
                         </div>

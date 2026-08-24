@@ -1,0 +1,48 @@
+{
+  "summary": "Iteracion 71 - Frontend only (390x844, newtest@bruno.com). Verificados los 4 fixes de index-as-key del code-review sprint #2 + regresion de iterations 65-70. FIX#1 (PremiumPage features) PASS: /premium carga 3 planes con sus features (11 checks renderizados), 0 console errors, 0 warnings de key. FIX#2 (CardAnalytics device_breakdown) PASS: la ruta real es /analytics/:cardId (NO /cards/{id}/analytics, que cae en el fallback y pinta el /feed). Tras click en [analytics-card-d16c2745...] se renderiza la seccion 'Dispositivos' (Desktop 100%) sin errores ni key warnings; el paywall 'Desbloquea Analytics Pro' no bloquea esta seccion. FIX#3 (BrunoAudioWaveform) PASS: sembrado un mensaje TEST_audio (message_type=audio) en el chat 15b10266-08d2-4284-8c47-ab586fba191e; /chat/{id} renderiza [audio-wave] con 32 bars (keys compuestas bar-i-h), [audio-wave-toggle] responde (play->paused=false, pause->paused=true), 0 console errors. FIX#4 (BannerCarousel dots) PASS: BannerCarousel NO se usa en posts del feed, solo en BeaconsStyleCard (cards de tipo empleo). Se sembro una card 'oferta_trabajo' con banner + 2 gallery_photos: se renderizaron 3 slides y 3 dots con testids unicos; click real (sin force) en dot-1 y dot-2 cambia el slide activo (opacities ['0','1','0']) y la clase w-5, 0 key warnings. REGRESION: (a) login OK -> /my-profile; (b) nav pill centrado (centro de nav-create x=194.98 == vw/2), rect 12,772 366x56, z=9999, isolation=isolate, gap inferior 16px; (c) idle-fade sostenido: tras minimizar, [nav-expand-btn] pasa a opacity 0.2 + blur(1px) a los ~5s y se mantiene a los 10s (OJO: effectiveIdle = minimized && idle, expandido NUNCA se atenua, es por diseno); (d) minimizar/expandir coordinado OK; (e) publish menu iOS-26: los 4 tipos presentes y con hit-test correcto (elementFromPoint devuelve su propio testid), story -> step 2 con 3 fuentes (Camara Bruno/Galeria/Carpeta privada), cierre por [publish-menu-close] OK; (f) camara: se abre BRUNO Camera con stream fake (no se pudo forzar el banner de error porque el navegador de test concede camara); (g) safe-area header /feed: [feed-header] sticky, top=0, paddingTop=8px, z=50. Sin backend testing (fuera de alcance).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/chats/{chat_id}/messages", "issue": "El modelo Attachment descarta el campo 'mp3_url' que ChatPage.jsx (l.274) si envia. La respuesta solo devuelve type/url/filename/size/duration/sticker_id/emoji/is_emoji, por lo que el fallback MP3 de BrunoAudioWaveform (prop mp3Url) nunca llega desde el backend."},
+      {"endpoint": "N/A", "issue": "No existe endpoint para borrar un mensaje de chat, por lo que el mensaje de seed TEST_audio no se pudo limpiar (queda en el chat 15b10266-08d2-4284-8c47-ab586fba191e)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "BrunoAudioWaveform / ChatPage (390x844)", "issue": "La burbuja de audio propia desborda el viewport: rect de [audio-wave] = x197 w220 -> right=417 con vw=390, y [audio-wave-toggle] ocupa x=377..417, es decir el boton play/pause queda ~50% fuera de pantalla (recortado, no visible en screenshot). Causa: min-w-[220px] + flex-row-reverse + padding de la burbuja. Sugerido bajar el min-w o usar w-full/max-w basado en el ancho de la burbuja.", "selector": "[data-testid='audio-wave-toggle']", "priority": "HIGH"},
+      {"component": "FeedPage tabs row", "issue": "Persiste el overflow horizontal del row de tabs: [cards-tab-btn] ('Explore') tiene right=405 con vw=390, queda cortado en el borde derecho (pre-existente desde iteration 68).", "selector": "[data-testid='cards-tab-btn']", "priority": "MEDIUM"},
+      {"component": "Router fallback (App.js)", "issue": "Rutas inexistentes (ej. /cards/{id}/analytics, /chats) no muestran 404 ni redirigen: renderizan el /feed manteniendo la URL invalida. Confunde y oculta enlaces roto.", "selector": "N/A", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "React setState-in-render", "issue": "Persiste (iteration 68-70): 'Cannot update a component (FloatingChatBubble / FloatingBubbles) while rendering a different component (NavScrollProvider)'. Reproducido en /feed y en la vista de cards. No rompe la UI pero contamina la consola.", "affected_selectors": []}
+    ],
+    "design_issues": [
+      {"screen": "/feed -> Explore -> filtro Empleos (vista Compacto)", "issues": ["BeaconsStyleCard dentro del grid de 3 columnas queda con ~115px de ancho y altura desproporcionada (~230px+), el contenido (badge 'Oferta de Trabajo', avatar, boton Detalles) se apila y se corta. BeaconsStyleCard no esta pensada para la vista 'Compacto'; deberia usar un layout compacto o forzar col-span."]},
+      {"screen": "Chat individual (audio)", "issues": ["El boton play del mensaje de voz propio queda fuera del viewport (ver ui_bugs) y el tiempo restante se muestra como '-00:26' cuando aun no hay metadata cargada."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/seed_job_card.py", "/app/backend/tests/seed_audio_message.py"],
+  "action_items": [
+    "Ninguna accion sobre los 4 fixes: los 4 PASS (0 warnings de key duplicada en las 4 rutas).",
+    "Corregir el overflow de la burbuja de audio en chat a 390px (boton play/pause recortado fuera del viewport).",
+    "Corregir el overflow del row de tabs en /feed ('Explore' cortada).",
+    "Anadir ruta 404/redirect en App.js para paths invalidos (hoy renderizan el feed).",
+    "Corregir el warning setState-durante-render (FloatingChatBubble/FloatingBubbles vs NavScrollProvider).",
+    "Persistir 'mp3_url' en el modelo Attachment del backend para que el fallback MP3 del waveform funcione.",
+    "Adaptar BeaconsStyleCard a la vista 'Compacto' del explore (hoy se deforma en 3 columnas)."
+  ],
+  "critical_code_review_comments": [
+    "BannerCarousel.jsx l.94: la key `dot-${s?.url || s?.id || i}-${i}` asume objetos, pero los slides son strings (BeaconsStyleCard pasa un array de URLs), asi que s?.url es undefined y siempre cae al indice. Usar `dot-${typeof s === 'string' ? s : (s?.url || s?.id || i)}-${i}` o simplemente el propio valor.",
+    "BrunoAudioWaveform.jsx l.161: incluir la altura en la key (`bar-${i}-${h}`) fuerza el remount de los 32 spans si cambia la url; el indice ya es suficiente porque el array es estable y derivado de la url (useMemo). Es correcto pero innecesario.",
+    "CardAnalyticsPage.jsx l.330: `device-${d.device || i}` sigue pudiendo colisionar si el backend devuelve dos entradas con el mismo 'device'; usar `device-${d.device || 'unknown'}-${i}`.",
+    "CardAnalyticsPage.jsx l.111-121: los catch de fetchOverview/fetchSubscription estan vacios ('// error handled') sin estado de error en UI: si /analytics/overview falla el usuario ve la pagina vacia sin feedback."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (out of scope)", "frontend": "4/4 fixes PASS + 7/7 regresiones PASS"},
+  "seed_data_creation": "1) Card 'TEST_JOB Carousel Card' (card_type=oferta_trabajo, banner + 2 gallery_photos) creada y BORRADA tras el test (script /app/backend/tests/seed_job_card.py, soporta 'cleanup'). 2) Mensaje 'TEST_audio' (message_type=audio, mp3 externo) en el chat 15b10266-08d2-4284-8c47-ab586fba191e: NO borrable (no hay endpoint DELETE de mensajes); sirve para retests del waveform.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "newtest@bruno.com / Test1234!",
+  "context_for_next_testing_agent": "Rutas reales: analytics = /analytics/:cardId (NO /cards/{id}/analytics); chat = /chat/:chatId (NO /chats). Rutas invalidas renderizan el feed sin cambiar la URL -> no asumir que 'cargo' por el testid del feed. BannerCarousel solo aparece en BeaconsStyleCard (card_type oferta_trabajo/busqueda_personal/solicitud_servicio) y los dots solo si hay >1 imagen (banner_url + gallery_photos): usar /app/backend/tests/seed_job_card.py para sembrar y luego 'python seed_job_card.py cleanup'. Para el waveform ya hay un mensaje TEST_audio en el chat 15b10266-08d2-4284-8c47-ab586fba191e (el audio externo no carga metadata en el contenedor: duration=NaN, readyState=0, pero el toggle si cambia paused). idle-fade solo aplica cuando el nav esta MINIMIZADO (effectiveIdle = minimized && idle) y la clase opacity-20/blur va en [nav-expand-btn], no en [mobile-bottom-nav]; esperar >=5s. La camara del navegador de test se concede automaticamente, por eso no se puede ver el banner de error de camara.",
+  "rca_of_the_issue": "Los 4 fixes son sustituciones de key por indice por keys compuestas; verificados en runtime con console listener filtrando warnings de 'unique key/duplicate key': cero ocurrencias en /premium, /analytics/:id, /chat/:id y el carrusel de BeaconsStyleCard. El unico error de consola persistente es el setState-durante-render de FloatingChatBubble/FloatingBubbles dentro de NavScrollProvider, ajeno a estos fixes."
+}

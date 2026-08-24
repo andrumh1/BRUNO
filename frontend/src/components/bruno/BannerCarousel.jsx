@@ -89,9 +89,9 @@ export default function BannerCarousel({
 
       {/* Dot indicators */}
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
-        {slides.map((_, i) => (
+        {slides.map((s, i) => (
           <button
-            key={i}
+            key={`dot-${s?.url || s?.id || i}-${i}`}
             type="button"
             onClick={(e) => { e.stopPropagation(); goTo(i); }}
             aria-label={`Imagen ${i + 1}`}

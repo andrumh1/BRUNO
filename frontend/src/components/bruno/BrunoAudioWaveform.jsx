@@ -158,7 +158,7 @@ export default function BrunoAudioWaveform({ url, mp3Url, isOwn = false, testId 
             const isActive = i <= progressBarIdx;
             return (
               <motion.span
-                key={i}
+                key={`bar-${i}-${h}`}
                 animate={{
                   scaleY: playing && i === progressBarIdx ? [1, 1.6, 1] : 1,
                 }}

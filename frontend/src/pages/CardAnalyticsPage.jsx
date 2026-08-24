@@ -327,7 +327,7 @@ const CardAnalyticsPage = () => {
                           const total = cardAnalytics.total_views || 1;
                           const pct = Math.round((d.count / total) * 100);
                           return (
-                            <div key={i} className="flex items-center gap-3">
+                            <div key={`device-${d.device || i}`} className="flex items-center gap-3">
                               <DeviceIcon device={d.device} />
                               <span className="text-sm capitalize flex-1">{d.device}</span>
                               <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
