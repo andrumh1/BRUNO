@@ -343,8 +343,16 @@ const FeedPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header - Simplified for mobile */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
+      {/* Header - Simplified for mobile.
+          Explicit safe-area top so notched devices (iPhone X+, Android with
+          punch-hole/curved-cutout) never let the status-bar icons overlap
+          BRUNO's own header row. `max()` guarantees a minimum breathing
+          room even when env() returns 0. */}
+      <header
+        className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50"
+        style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top, 8px))" }}
+        data-testid="feed-header"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <Link to="/">

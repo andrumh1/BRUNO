@@ -1,0 +1,33 @@
+{
+  "summary": "Iteracion 68 - FRONTEND ONLY (390x844 iPhone 12/13/14, cuenta newtest@bruno.com). Objetivo: validar el refuerzo INLINE de safe-area en el <header> de FeedPage (linea 347-355). RESULTADO: 4/4 criterios PASS. Detalle: (1) [data-testid=feed-header] existe, position=sticky, top=0, atributo inline exacto `padding-top: max(0.5rem, env(safe-area-inset-top, 8px));` y computed paddingTop = 8px en el navegador preview (env()=0) => el minimo de 8px SIEMPRE se aplica (antes era 0px por la regla global). (2) Los hijos visibles del row `.flex.items-center.gap-1` (logo/Store/Bell/LanguageSwitcher/avatar-grid) arrancan en top=20px del viewport (min visible top = 20px >= 8px) y el row completo en top=20px => ningun icono queda a 0px del borde. (3) Simulacion de notch: no se puede sobreescribir env() desde CSS, asi que se valido la semantica del max() forzando el valor efectivo a 44px (`padding-top: max(0.5rem, 44px)`) => computed = 44px, y al restaurar el inline original vuelve a 8px. Conclusion: en un dispositivo con notch (env=44px) el header ADAPTA su padding a 44px; sin notch cae al fallback de 8px. (4) Regresion: login OK (redirige a /my-profile); /feed carga sin errores de consola (0 console errors en 3 corridas); iconos del header clickeables: Store -> navega a /store OK, NotificationBell (data-testid=notification-bell-btn) abre el panel OK, LanguageSwitcher (boton ES) alterna ES -> EN y vuelve OK; burbuja AI (floating-ai-btn 40x40 top=701/bottom=741) y chat (chat-bubble-btn 40x40 top=706/bottom=746) siguen ancladas sobre la nav inferior (nav top=768, vh=844); /camera renderiza con data-no-safe-top=true y paddingTop=0px (sin doble padding, sin conflicto con el fix del header). Headers de otras rutas (muestreo /store, /search, /my-profile) siguen matcheando la regla global de index.css: /search HEADER paddingTop=8px (tiene su propio minimo), /store HEADER sticky paddingTop=0px, /my-profile DIV sticky paddingTop=0px (0px = esperado porque env()=0 en el preview browser). /chat (listado) sigue sin ningun contenedor sticky/fixed top-0 (igual que it.67).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "FeedPage header - LanguageSwitcher", "issue": "El boton del LanguageSwitcher (variant=minimal, texto ES/EN) NO tiene data-testid; hubo que localizarlo por texto. Agregar data-testid=\"language-switcher-btn\" para tests robustos.", "selector": "[data-testid='feed-header'] button:has-text('ES')", "priority": "LOW"},
+      {"component": "FeedPage header - link a /my-profile", "issue": "Existen DOS <a href='/my-profile'> (uno hidden sm:block con texto, otro sm:hidden con icono Grid3X3). El primero del DOM esta oculto en mobile, lo que rompe selectores genericos. Sugerido: data-testid distintos (my-panel-link-desktop / my-panel-link-mobile). Funcionalmente el icono visible se renderiza correcto.", "selector": "[data-testid='feed-header'] a[href='/my-profile']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/feed 390x844 (logueado)", "issues": ["El row de tabs con 4 pestanas (Para Ti / Feed / Reels / Explorar) se desborda: 'Explorar' queda cortada en el borde derecho del viewport a 390px (con usuario anonimo, 3 tabs, si entra). Pre-existente, no relacionado al fix del header. Sugerido: overflow-x-auto + scrollbar-hide o reducir padding/texto."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Opcional) Aplicar el mismo minimo de 8px a los otros headers stickies (StorePage, MyProfilePage, ChatWindow): hoy la regla global usa `max(var(--sticky-header-pt,0px), env(safe-area-inset-top,0px))` y computa 0px cuando el WebView no propaga env(); FeedPage y SearchPage ya tienen fallback de 8px. Si el reporte del usuario es por env() no propagado en Capacitor, esos headers seguiran pegados al notch.",
+    "Agregar data-testid al LanguageSwitcher y diferenciar los dos links a /my-profile del header.",
+    "Corregir el desborde horizontal del row de 4 tabs en /feed a 390px ('Explorar' cortada)."
+  ],
+  "critical_code_review_comments": [
+    "index.css l.63-68: la regla global usa env(safe-area-inset-top, 0px) sin minimo; el fallback de 0px es exactamente lo que causo el reporte original del usuario en WebViews que no propagan env(). Homogeneizar a `max(0.5rem, env(safe-area-inset-top, 8px))` (o definir --sticky-header-pt: 8px en :root) para que TODOS los headers stickies tengan el mismo colchon minimo que FeedPage.",
+    "El estilo inline de FeedPage duplica logica que ya vive en index.css; si en el futuro se cambia el valor hay dos fuentes de verdad. Preferible una utility class (.safe-top-header) usada por todos los headers.",
+    "BrunoCameraPage usa `fixed inset-0` (no `.fixed.top-0`), por lo que ni la regla global ni el opt-out [data-no-safe-top] la alcanzan realmente; el data-no-safe-top es hoy decorativo (funciona por casualidad). Documentarlo o cambiar el selector."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (out of scope)", "frontend": "4/4 criterios del request PASS (header inline padding >=8px, iconos a >=8px, max() adapta a notch=44px, regresion login/feed/iconos/burbujas/camara/otros headers)"},
+  "seed_data_creation": "Ninguno nuevo (solo login y navegacion con newtest@bruno.com; se alterno idioma ES->EN->ES).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "newtest@bruno.com / Test1234!",
+  "context_for_next_testing_agent": "env(safe-area-inset-top) es SIEMPRE 0 en el navegador preview: no se puede simular el notch inyectando CSS (env() no es sobreescribible). La forma valida de verificar la adaptacion al notch es reemplazar temporalmente el paddingTop inline por `max(0.5rem, 44px)` y comprobar computed=44px, luego restaurar. Para /feed con sesion hay que loguear explicitamente: /feed renderiza tambien para anonimos (header muestra 'Iniciar Sesion' y desaparecen foryou-tab-btn y el link a /my-profile), asi que un script que asuma sesion falla silenciosamente. El LanguageSwitcher minimal es un TOGGLE directo (ES<->EN), no abre menu.",
+  "rca_of_the_issue": "El reporte del usuario se explica por el fallback 0px de la regla global de index.css (env(safe-area-inset-top, 0px)): en WebViews donde env() no se propaga el padding computado era 0 y los iconos del header quedaban bajo la barra de estado. El fix inline en FeedPage introduce `max(0.5rem, env(safe-area-inset-top, 8px))`, garantizando >=8px siempre (verificado: computed 8px sin notch, 44px con valor efectivo 44px). Riesgo residual: los demas headers stickies (store, my-profile, chat window) mantienen el fallback 0px."
+}

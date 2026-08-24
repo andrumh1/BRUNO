@@ -11,15 +11,15 @@
 import React, { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, Camera, Image as ImageIcon, FolderLock, Sparkles, Video,
+  X, Camera, Image as ImageIcon, FolderLock, Sparkles,
   MessageSquare, Clapperboard, Lock, ChevronLeft,
 } from "lucide-react";
 
 const TYPES = [
-  { id: "story",  label: "Historia",  hint: "Visible 24h",                 Icon: Sparkles,      tint: "from-orange-500 to-pink-500" },
-  { id: "reel",   label: "Reel",      hint: "Video corto · Para Ti",       Icon: Clapperboard,  tint: "from-fuchsia-500 to-purple-500" },
-  { id: "post",   label: "Publicación", hint: "Aparece en el muro",        Icon: MessageSquare, tint: "from-blue-500 to-cyan-500" },
-  { id: "status", label: "Estado",    hint: "Texto o estado rápido",       Icon: Lock,          tint: "from-emerald-500 to-teal-500" },
+  { id: "story",  label: "Historia",    hint: "Visible 24h",              Icon: Sparkles },
+  { id: "reel",   label: "Reel",        hint: "Video corto",              Icon: Clapperboard },
+  { id: "post",   label: "Publicación", hint: "Aparece en el muro",       Icon: MessageSquare },
+  { id: "status", label: "Estado",      hint: "Estado rápido",            Icon: Lock },
 ];
 
 const SOURCES = [
@@ -87,82 +87,85 @@ export default function BrunoPublishMenu({ open, onClose, onPick }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[120] bg-black/55 backdrop-blur-sm"
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-[10500] bg-black/25 backdrop-blur-[6px]"
           onClick={onClose}
           data-testid="publish-menu-backdrop"
         >
           <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 380, damping: 32 }}
-            className="absolute inset-x-0 bottom-0 rounded-t-3xl overflow-hidden"
+            initial={{ y: "100%", opacity: 0.6 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
+            transition={{ type: "spring", stiffness: 420, damping: 34 }}
+            className="absolute inset-x-3 bottom-3 rounded-[28px] overflow-hidden border border-white/20 dark:border-white/10"
             style={{
-              background: "linear-gradient(180deg,#FFFCF6 0%,#FFF1DF 100%)",
-              boxShadow: "0 -20px 50px -10px rgba(255,107,53,0.35)",
-              paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)",
+              // iOS-26 style translucent glass, respects dark mode.
+              background: "color-mix(in oklab, var(--card, #fff) 60%, transparent)",
+              backdropFilter: "blur(28px) saturate(180%)",
+              WebkitBackdropFilter: "blur(28px) saturate(180%)",
+              boxShadow: "0 12px 40px -8px rgba(0,0,0,0.25), inset 0 1px 0 0 rgba(255,255,255,0.4)",
+              paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+              maxWidth: "480px",
+              marginInline: "auto",
+              left: 12, right: 12,
             }}
             onClick={(e) => e.stopPropagation()}
             data-testid="publish-menu-sheet"
           >
             {/* Grabber */}
-            <div className="flex justify-center pt-2.5 pb-1.5">
-              <div className="h-1.5 w-12 rounded-full bg-orange-300/70" />
+            <div className="flex justify-center pt-2 pb-1">
+              <div className="h-1 w-9 rounded-full bg-foreground/20" />
             </div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pb-2">
+            {/* Header — tighter, iOS-like */}
+            <div className="flex items-center justify-between px-4 pb-1">
               {step === 2 ? (
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="grid place-items-center w-9 h-9 rounded-full bg-white/70 border border-orange-200 text-orange-700"
+                  className="grid place-items-center w-8 h-8 rounded-full bg-foreground/[0.06] text-foreground/70 active:scale-90 transition-transform"
                   data-testid="publish-menu-back"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
               ) : (
-                <div className="w-9 h-9" />
+                <div className="w-8 h-8" />
               )}
 
               <div className="text-center">
-                <h2 className="text-base font-bold text-stone-900 tracking-tight">
-                  {step === 1 ? "¿Qué quieres publicar?" : "Elige el origen"}
+                <h2 className="text-[15px] font-semibold text-foreground tracking-tight">
+                  {step === 1 ? "Publicar" : type?.label}
                 </h2>
-                <p className="text-[11px] text-stone-500">
-                  {step === 1 ? "Selecciona el formato" : `Crearás un ${type?.label.toLowerCase()}`}
-                </p>
               </div>
 
               <button
                 type="button"
                 onClick={onClose}
-                className="grid place-items-center w-9 h-9 rounded-full bg-white/70 border border-orange-200 text-orange-700"
+                className="grid place-items-center w-8 h-8 rounded-full bg-foreground/[0.06] text-foreground/70 active:scale-90 transition-transform"
                 data-testid="publish-menu-close"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Body */}
-            <div className="px-4 pt-3 pb-6">
+            {/* Body — condensed */}
+            <div className="px-3 pt-2 pb-3">
               {step === 1 && (
-                <div className="grid grid-cols-2 gap-3" data-testid="publish-menu-types">
+                <div className="grid grid-cols-2 gap-2" data-testid="publish-menu-types">
                   {TYPES.map((t) => (
                     <motion.button
                       key={t.id}
-                      whileTap={{ scale: 0.95 }}
+                      whileTap={{ scale: 0.96 }}
                       onClick={() => handleTypeSelect(t)}
                       data-testid={`publish-menu-type-${t.id}`}
-                      className="relative rounded-2xl p-3 text-left overflow-hidden bg-white/80 border border-orange-100 shadow-sm"
+                      className="flex items-center gap-2.5 rounded-2xl p-2.5 bg-foreground/[0.04] hover:bg-foreground/[0.07] transition-colors text-left"
                     >
-                      <div className={`absolute -right-6 -top-6 h-20 w-20 rounded-full bg-gradient-to-br ${t.tint} opacity-90`} />
-                      <div className="relative grid place-items-center w-10 h-10 rounded-xl bg-white shadow-sm">
-                        <t.Icon className="w-5 h-5 text-orange-600" />
+                      <div className="grid place-items-center w-8 h-8 rounded-xl bg-foreground/[0.06]">
+                        <t.Icon className="w-4 h-4 text-foreground/80" strokeWidth={1.8} />
                       </div>
-                      <div className="relative mt-3">
-                        <div className="text-sm font-bold text-stone-900">{t.label}</div>
-                        <div className="text-[11px] text-stone-500">{t.hint}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-medium text-foreground truncate">{t.label}</div>
+                        <div className="text-[10px] text-muted-foreground truncate">{t.hint}</div>
                       </div>
                     </motion.button>
                   ))}
@@ -170,23 +173,22 @@ export default function BrunoPublishMenu({ open, onClose, onPick }) {
               )}
 
               {step === 2 && (
-                <div className="space-y-2.5" data-testid="publish-menu-sources">
+                <div className="space-y-1.5" data-testid="publish-menu-sources">
                   {SOURCES.map((s) => (
                     <motion.button
                       key={s.id}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleSourceSelect(s)}
                       data-testid={`publish-menu-source-${s.id}`}
-                      className="w-full flex items-center gap-3 rounded-2xl p-3 bg-white/85 border border-orange-100 shadow-sm hover:bg-white"
+                      className="w-full flex items-center gap-3 rounded-2xl p-2.5 bg-foreground/[0.04] hover:bg-foreground/[0.07] transition-colors"
                     >
-                      <div className="grid place-items-center w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500 to-pink-500 text-white shadow shadow-orange-500/30">
-                        <s.Icon className="w-5 h-5" />
+                      <div className="grid place-items-center w-9 h-9 rounded-xl bg-foreground/[0.06]">
+                        <s.Icon className="w-4 h-4 text-foreground/80" strokeWidth={1.8} />
                       </div>
-                      <div className="flex-1 text-left">
-                        <div className="text-sm font-bold text-stone-900">{s.label}</div>
-                        <div className="text-[11px] text-stone-500">{s.hint}</div>
+                      <div className="flex-1 text-left min-w-0">
+                        <div className="text-[13px] font-medium text-foreground">{s.label}</div>
+                        <div className="text-[10px] text-muted-foreground truncate">{s.hint}</div>
                       </div>
-                      <Video className="w-3.5 h-3.5 text-orange-300" />
                     </motion.button>
                   ))}
                 </div>

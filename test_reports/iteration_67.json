@@ -1,0 +1,40 @@
+{
+  "summary": "Iteracion 67 - FRONTEND ONLY (390x844 iPhone 12/13/14, cuenta newtest@bruno.com). Validados los 2 bugs de BRUNO: safe-area del header y subida de video/camara. RESULTADO: 7 de 7 items verificados PASS con 1 GAP de cobertura en BUG#1a. Detalle: (1a) la regla global existe en el CSS servido y matchea los headers stickies reales: `header.sticky.top-0, header.fixed, .sticky.top-0, .fixed.top-0 { padding-top: max(var(--sticky-header-pt,0px), env(safe-area-inset-top,0px)) }` verificada via document.styleSheets; en /feed (HEADER sticky), /my-profile (DIV sticky top-0) y /store (HEADER sticky top-0) el elemento top-anchored matchea la regla y computa paddingTop=0px porque en el navegador preview env(safe-area-inset-top)=0 (esperado). En /reels y /chat NO existe ningun elemento sticky.top-0/fixed.top-0 (ver GAP abajo). (1b) /camera renderiza con data-no-safe-top=true y paddingTop=0px (sin doble padding); su top bar interno aplica su propio `max(0.75rem, env(safe-area-inset-top,12px))`. (2a) MIME fallback OK: matriz de soporte en Chromium = webm/vp9 true, webm/vp8 true, webm true, mp4+h264 false, mp4 true; al entrar en modo 15s y tocar capture EMPIEZA a grabar (contador visible 3.0s/3.5s), sin crash ni banner de error. (2b) Grabacion completa end-to-end: record 3.5s -> stop -> preview de video -> Publicar -> POST /api/upload/image => 200 y el post creado tiene media.url = https://res.cloudinary.com/.../video/upload/f_mp4,vc_h264.../xxx.mp4 (resource_type=video correcto, la extension webm fue aceptada y transcodificada). (2c) Alternar Foto <-> 15s <-> 60s reinicializa el stream y el preview sigue vivo en los 3 modos (video.readyState=4, srcObject presente, 1280x720, paused=false) - sin pantalla negra. (2d) Bloqueando getUserMedia con NotAllowedError aparece [data-testid=camera-error-banner] con 'Permiso denegado. Activa el acceso a la camara desde los ajustes del navegador.' y el boton X (camera-error-dismiss) lo cierra; tocar capture sin stream NO crashea (reaparece el banner). (2e) accept filter correcto: modo Foto => accept='image/*,video/*', modo 15s => accept='video/*'. Regresion: login OK; navegacion nav-marketplace/reels/map/notifications/home OK (5 tabs); captura de FOTO sigue funcionando (aparece camera-publish-btn) y Repetir/retake OK; BRUNO IA abre su ventana; geometria coordinada del pill/burbujas identica a it.66 (top=808 en los 3; pill 168x24 bottom 832, burbujas 28x28 bottom 836).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/upload/image", "issue": "En backend.out.log hay 4 respuestas 500 historicas (de sesiones anteriores, IPs distintas). En esta iteracion todas mis subidas (foto y video webm) devolvieron 200. No reproducible; solo dejar constancia."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ReelsPage.jsx l.439 (y StartLivePage l.360, LiveViewerPage l.254, MapPageLegacy l.381)", "issue": "GAP de BUG#1a: estos headers overlay usan `absolute top-0` y por lo tanto NO son alcanzados por la regla global (que solo cubre header.sticky.top-0, header.fixed, .sticky.top-0, .fixed.top-0). En /reels el header medido tiene paddingTop=12px fijo y top=0 => en dispositivos con notch los iconos superiores (back / tabs Para ti-Siguiendo) seguiran chocando con la barra de estado. Solucion: agregar `.absolute.top-0` al selector global o aplicar `paddingTop: max(0.75rem, env(safe-area-inset-top))` en esos 4 overlays.", "selector": "[data-testid='reels-page'] > div.absolute.top-0", "priority": "MEDIUM"},
+      {"component": "BrunoCameraPage - error banner", "issue": "El banner rojo de error se dibuja sobre el TOP BAR y tapa el boton camera-close-btn (en el screenshot los controles superiores quedan detras del banner); el usuario debe cerrar el banner antes de poder volver atras. Sugerido: desplazar el top bar hacia abajo cuando cameraError esta activo o dar al banner un ancho/posicion que no cubra el back button.", "selector": "[data-testid='camera-error-banner']", "priority": "LOW"},
+      {"component": "/chat", "issue": "Observacion: /chat (lista) no tiene ningun contenedor top-anchored sticky/fixed, por lo que no recibe el safe-area (el header sticky top-0 solo existe dentro de ChatWindow al abrir una conversacion). Confirmar si el listado necesita offset de notch.", "selector": "n/a", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Camera (390x844)", "issues": ["Banner de error solapa los controles del top bar (back / Agregar sonido)"]},
+      {"screen": "Reels (390x844)", "issues": ["Header overlay sin offset de safe-area (padding-top fijo 12px)"]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Extender el safe-area global a los overlays con `absolute top-0` (ReelsPage l.439, StartLivePage l.360, LiveViewerPage l.254, MapPageLegacy l.381) - es el unico gap real del BUG#1.",
+    "Evitar que el camera-error-banner tape el boton de cerrar la camara.",
+    "Decidir si /chat (lista) necesita offset de notch (hoy no matchea ninguna regla)."
+  ],
+  "critical_code_review_comments": [
+    "BrunoCameraPage useEffect l.235-241: las deps son [facingMode, mode === 'photo'] pero el cleanup usa la variable de estado `stream` capturada en el render, no la actual. En la practica funciono (startCamera detiene el stream previo), pero conviene usar un ref (streamRef) para el cleanup y evitar detener/filtrar el track equivocado en dispositivos lentos.",
+    "startRecording: bien la lista CANDIDATES + isTypeSupported; nota que en Chromium 'video/mp4' reporta true pero 'video/mp4;codecs=h264,aac' false, el orden actual (webm primero) es el correcto.",
+    "handlePublish: el catch esta vacio ('error handled') -> si el upload o la creacion del post falla el usuario no ve nada. Deberia setear cameraError o un toast."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (out of scope); /api/upload/image verificado indirectamente 200 con video webm", "frontend": "7/7 items verificados PASS (1a, 1b, 2a, 2b, 2c, 2d, 2e) + regresion login/nav/foto/IA/pill OK; 1 gap de cobertura en 1a (overlays absolute top-0)"},
+  "seed_data_creation": "Se publico 1 post de video de prueba (3.5s webm -> Cloudinary mp4) y se capturaron fotos sin publicar, con la cuenta newtest@bruno.com.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "newtest@bruno.com / Test1234!",
+  "context_for_next_testing_agent": "Para verificar la regla CSS usar page.evaluate sobre document.styleSheets buscando 'safe-area-inset-top'; en el preview env()=0 asi que paddingTop computado es 0px (esperado). Para probar el banner de error usar page.add_init_script sobreescribiendo navigator.mediaDevices.getUserMedia para rechazar con NotAllowedError. Para el accept del gallery picker hay que ABRIR el picker (camera-gallery-btn) porque el input[type=file] solo existe con el modal abierto, y el modal (gallery-picker-backdrop, z-140) bloquea los botones de modo: recargar /camera antes de probar otro modo. La grabacion SI funciona en Chromium headless (webm/vp9); el ciclo capture->capture (start/stop) usa el mismo data-testid camera-capture-btn.",
+  "rca_of_the_issue": "BUG#2 estaba causado por (a) mimeType hardcodeado en MediaRecorder y (b) extension .webm fija en el upload; ambos resueltos y verificados end-to-end (Cloudinary devuelve /video/upload). BUG#1 resuelto para headers sticky/fixed via regla global + opt-out data-no-safe-top en la camara, pero los headers overlay declarados como `absolute top-0` (reels/lives/map legacy) quedan fuera del selector y siguen expuestos al notch."
+}

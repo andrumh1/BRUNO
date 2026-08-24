@@ -54,6 +54,28 @@ select {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/* ============================================================
+   Global safe-area for top-anchored bars.
+   Any element that acts as a page header (sticky/fixed at top-0)
+   automatically gets the notch/status-bar offset so device icons
+   (battery/wifi/signal) never overlap the app UI.
+   ============================================================ */
+header.sticky.top-0,
+header.fixed,
+.sticky.top-0,
+.fixed.top-0 {
+  padding-top: max(var(--sticky-header-pt, 0px), env(safe-area-inset-top, 0px));
+}
+
+/* Opt-out for elements that manage their own safe area (like the
+   camera page, story viewer, and reels) — they set data-no-safe-top */
+[data-no-safe-top].sticky.top-0,
+[data-no-safe-top].fixed.top-0,
+header.sticky.top-0[data-no-safe-top],
+header.fixed[data-no-safe-top] {
+  padding-top: 0;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }

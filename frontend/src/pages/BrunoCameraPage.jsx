@@ -38,7 +38,8 @@ import {
   Bolt,
   Send,
   ArrowLeft,
-  Music2
+  Music2,
+  AlertCircle,
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
@@ -159,6 +160,9 @@ const BrunoCameraPage = () => {
   const [caption, setCaption] = useState("");
   const [showCaption, setShowCaption] = useState(false);
 
+  // Actionable camera/recording errors (permission denied, unsupported codec, ...)
+  const [cameraError, setCameraError] = useState(null);
+
   // Permission state for the in-app gallery
   const [galleryPermission, setGalleryPermission] = useState(() => {
     try { return localStorage.getItem("bruno-gallery-granted") === "1"; } catch { return false; }
@@ -225,14 +229,16 @@ const BrunoCameraPage = () => {
     loadModels();
   }, []);
 
-  // Initialize camera
+  // Initialize camera — restart when facing OR mode changes so recording
+  // modes correctly acquire the audio track (photo mode intentionally
+  // skips audio to avoid unnecessary permission prompts).
   useEffect(() => {
     startCamera();
     return () => {
       if (stream) stream.getTracks().forEach((t) => t.stop());
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [facingMode]);
+  }, [facingMode, mode === "photo"]);
 
   // Face detection loop
   useEffect(() => {
@@ -455,8 +461,20 @@ const BrunoCameraPage = () => {
       } catch (_zoomErr) { /* ignore — not all devices expose zoom */ }
       setStream(s);
       if (videoRef.current) videoRef.current.srcObject = s;
+      setCameraError(null);
     } catch (err) {
-      // error handled
+      // Show a user-friendly error explaining what to do.
+      console.error("Camera init failed:", err);
+      const name = err?.name || "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        setCameraError("Permiso denegado. Activa el acceso a la cámara desde los ajustes del navegador.");
+      } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+        setCameraError("No se encontró una cámara compatible en este dispositivo.");
+      } else if (name === "NotReadableError") {
+        setCameraError("La cámara está siendo usada por otra app. Ciérrala e intenta de nuevo.");
+      } else {
+        setCameraError("No pudimos iniciar la cámara. Recarga la página.");
+      }
     }
   };
 
@@ -482,13 +500,40 @@ const BrunoCameraPage = () => {
     setRecordTime(0);
     setRecordProgress(0);
     const chunks = [];
-    const mr = new MediaRecorder(stream, { mimeType: "video/webm" });
+    // Pick the first mime type the browser can actually record.
+    // Safari iOS < 17 can't record webm — it needs mp4. Chrome/Android prefer webm.
+    const CANDIDATES = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+      "video/mp4;codecs=h264,aac",
+      "video/mp4",
+    ];
+    const supported = CANDIDATES.find((t) =>
+      typeof MediaRecorder !== "undefined" &&
+      typeof MediaRecorder.isTypeSupported === "function" &&
+      MediaRecorder.isTypeSupported(t)
+    );
+    if (!supported) {
+      setCameraError("Este navegador no soporta grabación de video. Prueba Chrome, Safari o la app nativa.");
+      return;
+    }
+    let mr;
+    try {
+      mr = new MediaRecorder(stream, { mimeType: supported });
+    } catch (err) {
+      console.error("MediaRecorder init failed:", err);
+      setCameraError("No pudimos iniciar la grabación. Intenta cambiar el modo o reiniciar la app.");
+      return;
+    }
+    const ext = supported.startsWith("video/mp4") ? "mp4" : "webm";
+    mediaRecorderRef.current = mr;
+    mediaRecorderRef.current._ext = ext; // remembered for the upload step
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
     mr.onstop = () => {
-      const blob = new Blob(chunks, { type: "video/webm" });
-      setCapturedMedia({ type: "video", data: URL.createObjectURL(blob) });
+      const blob = new Blob(chunks, { type: supported.split(";")[0] });
+      setCapturedMedia({ type: "video", data: URL.createObjectURL(blob), ext });
     };
-    mediaRecorderRef.current = mr;
     mr.start();
     setIsRecording(true);
   };
@@ -533,7 +578,10 @@ const BrunoCameraPage = () => {
       const formData = new FormData();
       const resp = await fetch(capturedMedia.data);
       const blob = await resp.blob();
-      formData.append("file", blob, `bruno_${Date.now()}.${capturedMedia.type === "photo" ? "jpg" : "webm"}`);
+      const ext = capturedMedia.type === "photo"
+        ? "jpg"
+        : (capturedMedia.ext || (blob.type.includes("mp4") ? "mp4" : "webm"));
+      formData.append("file", blob, `bruno_${Date.now()}.${ext}`);
       const uploadRes = await axios.post(`${API}/upload/image`, formData, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       });
@@ -607,7 +655,27 @@ const BrunoCameraPage = () => {
   // ==================== RENDER ====================
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 50, paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom, 0px))" }} data-testid="camera-page">
+    <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 50, paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom, 0px))" }} data-testid="camera-page" data-no-safe-top>
+      {/* Camera / recording error overlay — dismissible, non-blocking */}
+      {cameraError && (
+        <div
+          className="absolute left-3 right-3 z-[60] rounded-xl bg-red-500/95 text-white px-4 py-3 shadow-2xl flex items-start gap-3 backdrop-blur-md"
+          style={{ top: "calc(env(safe-area-inset-top, 12px) + 12px)" }}
+          data-testid="camera-error-banner"
+        >
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm leading-snug">{cameraError}</div>
+          <button
+            onClick={() => setCameraError(null)}
+            className="text-white/80 hover:text-white shrink-0"
+            data-testid="camera-error-dismiss"
+            aria-label="Cerrar"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* ====== CAMERA VIEWFINDER ====== */}
       <div
         className="relative flex-1 overflow-hidden rounded-b-3xl"
@@ -1024,7 +1092,7 @@ const BrunoCameraPage = () => {
         <InternalGalleryPicker
           open={galleryOpen}
           onClose={() => setGalleryOpen(false)}
-          accept={mode === "video" ? "video/*" : "image/*,video/*"}
+          accept={mode !== "photo" ? "video/*" : "image/*,video/*"}
           multiple={false}
           onConfirm={(files) => {
             const file = files[0];

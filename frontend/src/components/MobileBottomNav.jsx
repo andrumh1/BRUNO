@@ -69,9 +69,10 @@ const MobileBottomNav = () => {
     return location.pathname === item.path;
   };
 
-  // MINIMIZED STATE — floating hairline pill lifted OFF the bottom edge
-  // (safe-area + 12px) so it doesn't fight with the OS home-swipe gesture.
-  // Fades to 40% opacity + heavy blur when idle, snaps back on any touch.
+  // MINIMIZED STATE — floating hairline pill at a comfortable middle
+  // height: high enough to avoid the OS home-swipe zone, low enough that
+  // the user still perceives it as "the bottom bar". Fades to 20% opacity
+  // + blur when idle so it visually disappears without leaving the DOM.
   if (minimized) {
     return (
       <>
@@ -79,8 +80,9 @@ const MobileBottomNav = () => {
         <div
           className={`fixed left-0 right-0 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
           style={{
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
-            pointerEvents: 'none', // container passes-through, only button captures
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 6px)',
+            pointerEvents: 'none',
+            isolation: 'isolate', // prevents Google Maps stacking-context bleed
           }}
           data-testid="mobile-bottom-nav"
         >
@@ -88,25 +90,26 @@ const MobileBottomNav = () => {
             onClick={(e) => { e.stopPropagation(); bumpIdle(); setMinimized(false); }}
             onTouchStart={(e) => { touchHandlers.onTouchStart(e); bumpIdle(); }}
             onTouchEnd={touchHandlers.onTouchEnd}
-            className={`group block mx-auto outline-none focus:outline-none transition-all duration-300 ease-out ${
-              idle ? 'opacity-40' : 'opacity-100'
+            className={`group block mx-auto outline-none focus:outline-none transition-all duration-500 ease-out ${
+              idle ? 'opacity-20' : 'opacity-90'
             }`}
             style={{
               pointerEvents: 'auto',
-              padding: '10px 20px', // generous invisible hitbox
+              padding: '10px 20px',
               WebkitTapHighlightColor: 'transparent',
+              willChange: 'opacity, transform',
             }}
             aria-label="Mostrar barra de navegación"
             data-testid="nav-expand-btn"
           >
-            <div className={`flex items-center justify-center gap-1.5 w-32 max-w-[40vw] transition-all duration-300 ${
-              idle ? 'blur-[0.5px]' : ''
+            <div className={`flex items-center justify-center gap-1.5 w-32 max-w-[40vw] transition-all duration-500 ${
+              idle ? 'blur-[1px]' : ''
             }`}>
-              <span className="h-1 w-1 rounded-full bg-orange-500/80 animate-pulse" />
+              <span className={`h-1 w-1 rounded-full transition-colors ${idle ? 'bg-foreground/30' : 'bg-orange-500/80 animate-pulse'}`} />
               <span
                 className="h-[3px] flex-1 rounded-full bg-foreground/25 group-hover:bg-foreground/40 group-active:bg-primary transition-colors"
               />
-              <span className="h-1 w-1 rounded-full bg-orange-500/80 animate-pulse" />
+              <span className={`h-1 w-1 rounded-full transition-colors ${idle ? 'bg-foreground/30' : 'bg-orange-500/80 animate-pulse'}`} />
             </div>
           </button>
         </div>
@@ -121,7 +124,7 @@ const MobileBottomNav = () => {
       <div className="h-20" />
       <nav 
         className={`fixed left-3 right-3 animate-in slide-in-from-bottom-4 duration-300 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
-        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)' }}
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)', isolation: 'isolate' }}
         data-testid="mobile-bottom-nav"
         {...touchHandlers}
       >
@@ -148,12 +151,20 @@ const MobileBottomNav = () => {
                   <button
                     key={item.id}
                     onClick={() => setPublishMenuOpen(true)}
-                    className="relative flex items-center justify-center w-11 h-11 -mt-4"
+                    className="relative flex flex-col items-center justify-center w-10 h-11 rounded-xl transition-all duration-200 hover:scale-105 active:scale-90"
                     data-testid={`nav-${item.id}`}
+                    aria-label="Publicar"
                   >
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-primary to-orange-500 shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-all hover:scale-110 active:scale-95">
-                      <Icon className="w-5 h-5 text-white" strokeWidth={2.5} />
+                    {/* Subtle contour ring — hints at "action" without shouting orange */}
+                    <div className="relative w-7 h-7 rounded-full border border-foreground/25 flex items-center justify-center bg-foreground/[0.03] group-active:bg-primary/10 transition-colors">
+                      <Icon
+                        className="w-4 h-4 text-foreground/70"
+                        strokeWidth={2}
+                      />
                     </div>
+                    <span className="text-[8px] mt-0.5 font-medium text-muted-foreground/70">
+                      Crear
+                    </span>
                   </button>
                 );
               }

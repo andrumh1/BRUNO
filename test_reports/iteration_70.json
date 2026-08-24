@@ -1,0 +1,38 @@
+{
+  "summary": "Iteracion 70 - RETEST DIRIGIDO frontend only (390x844, newtest@bruno.com). FIX#3d ahora PASS: backdrop del publish menu computa zIndex=10500 vs nav zIndex=9999. document.elementFromPoint en el centro de las 4 cards devuelve el propio testid (story/reel y=694-749; post/status y=757-811 -> ya NO 'nav-marketplace'/'nav-notifications'). Los 4 taps reales pasan sin interceptacion: story -> step 2 con [publish-menu-sources] (Camara Bruno, Galeria, Carpeta privada); reel -> step 2 igual; post -> fast-path (cierra menu y navega a /feed?compose=1); status -> fast-path (navega a /my-profile?status=1). Cierre por [publish-menu-close] y por [publish-menu-backdrop] funcionan; 0 console errors en /feed. REGRESION TODA PASS: FIX#1a (wrapper bottom=6px, gap real vh-rect.bottom=6px, iso=isolate, z=9999), FIX#1b (tras 5s idle: className opacity-20, computed opacity=0.2, inner filter=blur(1px), 3 spans con animationName='none'; a los 8.5s sigue 0.2 => sostenido; expandir de nuevo funciona), FIX#2 (/map: nav visible z=9999 isolation=isolate rect y=772 h=56, elementFromPoint devuelve nav-create => nav por encima del mapa; nav-home navega a /feed), FIX#3a (nav-create sin gradientes, border 1px solid rgba(43,43,38,0.25), radius 9999px, label 'Crear'), FIX#3b (sheet backdropFilter blur(28px) saturate(1.8), radius 28px, bg transparente, bgImage none, maxWidth 480px, rect x=12 w=366 y=633 h=199), FIX#3c (grid '166px 166px', cards 166x55, 0 gradientes internos).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Publish menu -> post/status", "issue": "ACLARACION (no es bug de codigo): el review request esperaba que POST y STATUS avanzaran a step 2 con [publish-menu-sources]. El codigo (BrunoPublishMenu.jsx l.48-53) tiene un fast-path deliberado: post/status llaman onPick y cierran el sheet, navegando a /feed?compose=1 y /my-profile?status=1. Verificado que ambas navegaciones ocurren correctamente. Si el comportamiento esperado es mostrar fuentes tambien para post/status, hay que cambiar la logica; hoy funciona segun el codigo.", "affected_selectors": ["[data-testid='publish-menu-type-post']", "[data-testid='publish-menu-type-status']"]},
+      {"flow": "React setState-in-render", "issue": "Persiste (ahora desde FloatingChatBubble): 'Cannot update a component (FloatingChatBubble) while rendering a different component (NavScrollProvider)'. No rompe UI, pero debe moverse el setState a useEffect.", "affected_selectors": []},
+      {"flow": "Google Maps /map", "issue": "Persiste BillingNotEnabledMapError (API key/billing del entorno). El nav si se pinta por encima del mapa.", "affected_selectors": []}
+    ],
+    "design_issues": [
+      {"screen": "Publish menu (390x844)", "issues": ["Las burbujas flotantes [floating-ai-btn] (y=701) y [chat-bubble-btn] (y=706) tienen zIndex='auto' pero se ven encima/al lado del sheet (y=633-832), ensuciando el look 'iOS 26'. Sugerido ocultarlas/atenuarlas mientras publishMenuOpen=true."]},
+      {"screen": "/feed tabs", "issues": ["Persiste el desborde horizontal del row de tabs: 'Explorar' cortada en el borde derecho (pre-existente desde iteration 68)."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Ninguna accion critica: FIX#3d confirmado resuelto y los 6 fixes previos siguen passing.",
+    "Confirmar si POST/STATUS deben mostrar step 2 (hoy fast-path por diseño en el codigo).",
+    "Ocultar/atenuar floating-ai-btn y chat-bubble-btn mientras el publish menu esta abierto (cosmetico).",
+    "Corregir el warning setState-durante-render (FloatingChatBubble / NavScrollProvider).",
+    "Arreglar el overflow del row de tabs en /feed ('Explorar' cortada)."
+  ],
+  "critical_code_review_comments": [
+    "Los z-index siguen siendo ad-hoc (nav 9999/125, backdrop 10500). Centralizar una escala de z-index (tokens) para evitar futuras carreras de stacking.",
+    "MobileBottomNav.jsx l.59: item 'create' con label:'' pero el JSX hardcodea 'Crear' (dos fuentes de verdad).",
+    "MobileBottomNav.jsx l.159: 'group-active:bg-primary/10' sin clase 'group' en el padre => nunca se aplica.",
+    "BrunoPublishMenu.jsx l.100-111: posicionamiento duplicado (clases inset-x-3/bottom-3 + left/right inline + marginInline auto)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (out of scope)", "frontend": "7/7 fixes PASS (FIX#1a, #1b, #2, #3a, #3b, #3c, #3d)"},
+  "seed_data_creation": "Ninguno (solo login/navegacion).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "newtest@bruno.com / Test1234!",
+  "context_for_next_testing_agent": "z-index actuales verificados en runtime: publish-menu-backdrop=10500, nav=9999 (125 con camara abierta). Los 4 tipos son clickables; post/status cierran el sheet y navegan (fast-path), story/reel abren step 2 con 3 fuentes (camera/gallery/private) — no existen fuentes 'Files' ni 'Bruno IA'. idle se activa <5s: esperar >=5s para medir opacity 0.2 + blur(1px). Usar [data-testid=nav-minimize-btn] / [nav-expand-btn] para togglear. Pendientes cosmeticos: burbujas flotantes sobre el sheet, tabs de /feed con overflow, warning setState-in-render, Google Maps billing.",
+  "rca_of_the_issue": "El bug original era stacking: overlay del sheet z-[120] bajo el nav z-[9999]. Subir el backdrop a z-[10500] lo coloca por encima del nav, por lo que el nav ya no captura los pointer events en la banda y=772-828 y las cards 'Publicacion'/'Estado' reciben el click. Confirmado con document.elementFromPoint + clicks reales sin force."
+}

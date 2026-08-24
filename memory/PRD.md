@@ -1,5 +1,32 @@
 # BRUNO Social Network - PRD
 
+## Phase 66: Nav pill middle position + Publish menu iOS-26 + Camera video fixes (2026-02-23)
+
+**Bugs reportados por el usuario (español):**
+1. Header FeedPage interfería con notch del dispositivo (batería, wifi, señal)
+2. Cámara: no permite subir videos, accesos incompletos
+3. Pill de navegación quedó demasiado alto tras phase 65 — buscar punto medio + más transparente en idle
+4. Botón `+` central muy pronunciado (naranja fuerte) → estilo elegante como otros iconos
+5. Menú de publicación gordo/naranja → minimalista, translúcido, estilo iOS 26
+
+**Fixes verificados (iteration_66 → 70, todo 100%):**
+
+- **Safe-area global (index.css)** — regla `header.sticky.top-0, header.fixed, .sticky.top-0, .fixed.top-0` recibe `padding-top: max(var(--sticky-header-pt, 0px), env(safe-area-inset-top, 0px))`. Opt-out con `data-no-safe-top`. FeedPage `<header>` con inline reforzado.
+- **Cámara video** (BrunoCameraPage): `startRecording` prueba 5 mime types (webm/vp9, vp8, webm, mp4/h264, mp4) — fallback iOS/Safari; `handlePublish` usa la extensión correcta; `useEffect` reinicia stream al cambiar mode; error banner amigable con estados NotAllowed/NotFound/NotReadable; accept filter corregido (`mode !== "photo"` en lugar del bug `mode === "video"` que nunca matcheaba).
+- **Pill posición media** (MobileBottomNav): bottom pasó de +12px → +6px minimizado; +20px → +16px expandido.
+- **Idle más transparente**: opacity-40 → **opacity-20** + blur-[0.5px] → **blur-[1px]**; puntos naranja también se atenúan (`bg-foreground/30`, sin pulse en idle).
+- **Google Maps compat**: `isolation: isolate` en el `<nav>` y el div minimizado — previene stacking-context bleed cuando la nav coexiste con el mapa (z-9999 sostenido).
+- **Create button rediseñado**: sin gradient, contorno sutil `border-foreground/25`, icon en `text-foreground/70`, label "Crear" al mismo tamaño que otros items. Ya NO destaca visualmente sobre los demás.
+- **BrunoPublishMenu iOS-26**: backdrop-filter `blur(28px) saturate(180%)`, borderRadius 28px, background translucent (`color-mix(in oklab, var(--card) 60%, transparent)`), inset x-3 bottom-3, maxWidth 480px centrado. Tipos en grid 2col compacto sin blobs decorativos, iconos monocromo. z-index 10500 (por encima del nav 9999) para tapability completa.
+
+**Testing agent progression:**
+- iter_65: 3/5 → 2 bugs (idle loop + child-minimize sync)
+- iter_66: 5/5 fixed
+- iter_67: 7/7 (safe-area + camera fixes) — solo warning cosmético sobre absolute.top-0 (fuera del selector, ok)
+- iter_68: 100% (header inline explícito)
+- iter_69: 6.5/7 (publish menu z-index bug)
+- iter_70: **7/7 PASS** — z-index 10500 resuelve todo
+
 ## Phase 65: Nav pill + burbujas AI/Chat rediseño touch-first (2026-02-23)
 
 **Bug reportado por el usuario (español):** el pill de navegación se minimizaba solo, dejando las burbujas AI + Chat flotando desalineadas; estaba muy pegado al borde inferior del móvil (interferencia con el gesture home del OS); no ofrecía descanso visual (no se opacaba en idle); el flujo touch se sentía anticuado.
