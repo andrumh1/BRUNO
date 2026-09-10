@@ -225,7 +225,7 @@ export const RealtimeNotificationProvider = ({ children }) => {
 
   const handleClick = (notif) => {
     dismiss(notif.__bannerId);
-    const url = notif.action_url || notif.url || "/notifications";
+    const url = notif.url || notif.action_url || (notif.target_type === "post" && notif.target_id ? `/post/${notif.target_id}` : "/notifications");
     navigate(url);
   };
 

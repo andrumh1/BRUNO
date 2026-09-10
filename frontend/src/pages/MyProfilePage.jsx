@@ -137,10 +137,23 @@ const MyProfilePage = () => {
   const fetchPosts = useCallback(async () => {
     if (!token || !user) return;
     try {
-      const response = await axios.get(`${API}/users/${user.id}/posts`, {
+      const response = await axios.get(`${API}/users/${user.id}/posts?limit=500`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setPosts(response.data);
+      // Normalize every media shape (media[], attachments[], legacy image_url/video_url)
+      setPosts((response.data || []).map((p) => {
+        const m = (p.media || [])[0] || {};
+        const a = (p.attachments || [])[0] || {};
+        const url = m.url || m.secure_url || a.url || p.media_url || p.image_url || p.video_url || null;
+        const isVideo = m.type === "video" || a.type === "video" || p.post_type === "video" || !!p.video_url || /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url || "");
+        return {
+          ...p,
+          video_url: isVideo ? (p.video_url || url) : null,
+          image_url: !isVideo ? (p.image_url || url) : p.image_url || null,
+          thumbnail_url: p.thumbnail_url || m.poster_url || a.poster_url || (!isVideo ? url : null),
+          media_count: (p.media || p.attachments || []).length,
+        };
+      }));
     } catch (error) {
       // error handled
     }
@@ -300,7 +313,7 @@ const MyProfilePage = () => {
     );
   }
 
-  const reels = posts.filter(p => p.video_url || p.media_type === 'video');
+  const reels = posts.filter(p => p.video_url || p.media_type === 'video' || p.post_type === 'video');
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -619,18 +632,21 @@ const MyProfilePage = () => {
           ) : (
             <div className="grid grid-cols-3 gap-1">
               {posts.map(post => (
-                <Link key={post.id} to={`/feed?post=${post.id}`}>
-                  <div className="aspect-square bg-muted rounded-lg overflow-hidden">
-                    {post.image_url || post.attachments?.[0]?.url ? (
-                      <img 
-                        src={post.image_url || post.attachments?.[0]?.url} 
-                        alt="" 
-                        className="w-full h-full object-cover"
-                      />
+                <Link key={post.id} to={post.video_url ? `/reels?id=${post.id}` : `/post/${post.id}`} data-testid={`profile-post-${post.id}`}>
+                  <div className="aspect-square bg-muted rounded-lg overflow-hidden relative no-glass">
+                    {post.thumbnail_url || post.image_url ? (
+                      <img src={post.thumbnail_url || post.image_url} alt="" className="w-full h-full object-cover" />
+                    ) : post.video_url ? (
+                      <video src={post.video_url} muted playsInline preload="metadata" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center p-2 bg-gradient-to-br from-primary/10 to-primary/5">
                         <p className="text-xs line-clamp-4 text-center">{post.content}</p>
                       </div>
+                    )}
+                    {post.video_url && <Film className="absolute top-1 right-1 w-3.5 h-3.5 text-white drop-shadow" />}
+                    {post.media_count > 1 && <Grid3X3 className="absolute top-1 right-1 w-3.5 h-3.5 text-white drop-shadow" />}
+                    {post.visibility && post.visibility !== "public" && (
+                      <span className="absolute bottom-1 left-1 text-[9px] px-1.5 py-0.5 rounded-full bg-black/60 text-white">{post.visibility === "followers" ? "Seguidores" : "Privado"}</span>
                     )}
                   </div>
                 </Link>
@@ -645,18 +661,21 @@ const MyProfilePage = () => {
             <div className="text-center py-12">
               <Film className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground">No hay reels aún</p>
-              <Button className="mt-4">Crear reel</Button>
+              <Button className="mt-4" onClick={() => navigate("/camera")} data-testid="profile-create-reel">Crear reel</Button>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-1">
               {reels.map(reel => (
                 <Link key={reel.id} to={`/reels?id=${reel.id}`}>
                   <div className="aspect-[9/16] bg-black rounded-lg overflow-hidden relative">
-                    <img 
-                      src={reel.thumbnail_url || reel.image_url} 
-                      alt="" 
-                      className="w-full h-full object-cover"
-                    />
+                    {reel.thumbnail_url ? (
+                      <img src={reel.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <video src={reel.video_url} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+                    )}
+                    {reel.visibility && reel.visibility !== "public" && (
+                      <span className="absolute top-1 left-1 text-[9px] px-1.5 py-0.5 rounded-full bg-black/60 text-white">{reel.visibility === "followers" ? "Seguidores" : "Privado"}</span>
+                    )}
                     <div className="absolute bottom-1 left-1 flex items-center gap-1 text-white text-xs">
                       <Film className="w-3 h-3" />
                       {reel.views_count || 0}

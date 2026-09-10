@@ -91,7 +91,7 @@ const NFCWritePage = () => {
     setStatusMessage("Solicitando permisos NFC...");
     
     try {
-      const ndef = new NDEFReader();
+      const ndef = new window.NDEFReader();
       // This will trigger the permission prompt
       await ndef.scan();
       setNfcPermission("granted");
@@ -137,7 +137,7 @@ const NFCWritePage = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const ndef = new NDEFReader();
+      const ndef = new window.NDEFReader();
       
       // Use the backend direct redirect endpoint for instant NFC resolution
       // This does HTTP 302 redirect server-side without loading the React SPA

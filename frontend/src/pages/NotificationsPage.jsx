@@ -33,6 +33,12 @@ import { brunoToast } from "@/components/bruno/BrunoToast";
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
 const NOTIFICATION_ICONS = {
+  like: Heart,
+  comment: MessageCircle,
+  follow: UserPlus,
+  repost: Sparkles,
+  remix: Sparkles,
+  moderation_warning: Bell,
   incoming_call: Phone,
   new_message: MessageCircle,
   new_follower: UserPlus,
@@ -48,6 +54,12 @@ const NOTIFICATION_ICONS = {
 };
 
 const NOTIFICATION_COLORS = {
+  like: "text-pink-500 bg-pink-500/10",
+  comment: "text-blue-500 bg-blue-500/10",
+  follow: "text-purple-500 bg-purple-500/10",
+  repost: "text-orange-500 bg-orange-500/10",
+  remix: "text-orange-500 bg-orange-500/10",
+  moderation_warning: "text-red-500 bg-red-500/10",
   incoming_call: "text-emerald-500 bg-emerald-500/10",
   new_message: "text-blue-500 bg-blue-500/10",
   new_follower: "text-purple-500 bg-purple-500/10",
@@ -76,7 +88,7 @@ const FILTERS = [
   { id: "all", label: "Todas" },
   { id: "unread", label: "No leídas" },
   { id: "mentions", label: "Menciones", types: ["mention"] },
-  { id: "social", label: "Social", types: ["post_like", "post_comment", "new_follower", "new_story"] },
+  { id: "social", label: "Social", types: ["like", "comment", "follow", "repost", "remix", "post_like", "post_comment", "new_follower", "new_story"] },
   { id: "deal", label: "DEAL", types: ["deal_commission", "order_update", "product_favorited", "product_cart_added"] },
 ];
 
@@ -116,6 +128,9 @@ function NotificationRow({ notif, onMark, onClick }) {
         </p>
         <p className="text-[10px] text-muted-foreground/70 mt-0.5">{timeAgo(notif.created_at)}</p>
       </div>
+      {notif.preview_url && (
+        <img src={notif.preview_url} alt="" className="shrink-0 w-12 h-12 rounded-lg object-cover bg-muted" data-testid={`notif-preview-${notif.id}`} />
+      )}
     </motion.button>
   );
 }
@@ -191,7 +206,7 @@ export default function NotificationsPage() {
   };
 
   const handleClick = (n) => {
-    const url = n.action_url || n.url;
+    const url = n.url || n.action_url || (n.target_type === "post" && n.target_id ? `/post/${n.target_id}` : n.target_type === "user" && n.target_id ? `/profile/${n.target_id}` : null);
     if (url) navigate(url);
   };
 

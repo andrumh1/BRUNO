@@ -41,6 +41,7 @@ import ContactPage from "@/pages/ContactPage";
 import HelpPage from "@/pages/HelpPage";
 import PricingPage from "@/pages/PricingPage";
 import FeedPage from "@/pages/FeedPage";
+import PostDetailPage from "@/pages/PostDetailPage";
 import MapPage from "@/pages/MapPage";
 import EditCardPage from "@/pages/EditCardPage";
 import StorePage from "@/pages/StorePage";
@@ -98,6 +99,7 @@ function AppRouter() {
       {/* Public routes */}
       <Route path="/" element={<FeedPage />} />
       <Route path="/feed" element={<FeedPage />} />
+      <Route path="/post/:postId" element={<PostDetailPage />} />
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/website" element={<BrunoWebsite />} />
       <Route path="/bruno" element={<BrunoWebsite />} />

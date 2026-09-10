@@ -1152,14 +1152,14 @@ async def get_user_public_profile(user_id: str, request: Request = None, current
 async def get_user_posts(
     user_id: str,
     skip: int = 0,
-    limit: int = 20,
+    limit: int = 500,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Get posts from a specific user"""
-    posts = await db.posts.find(
-        {"user_id": user_id, "is_deleted": False},
-        {"_id": 0}
-    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    """Get posts from a specific user (owner sees everything incl. private/followers-only)"""
+    q = {"user_id": user_id, "is_deleted": {"$ne": True}}
+    if not current_user or current_user.id != user_id:
+        q["visibility"] = "public"
+    posts = await db.posts.find(q, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     # Get user info
     user = await db.users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
@@ -1668,6 +1668,10 @@ async def get_notifications(
                 "username": "Sistema",
                 "avatar_url": None
             }
+        try:
+            await enrich_notification(notif)
+        except Exception:
+            notif.setdefault("url", "/notifications")
     
     return notifications
 
@@ -1693,7 +1697,7 @@ async def get_unread_count(current_user: User = Depends(get_current_user)):
 # BRUNO AI ASSISTANT
 # ============================================================================
 
-from utils.notification_realtime import emit_notification_ws
+from utils.notification_realtime import emit_notification_ws, enrich_notification
 
 # Store active AI chat sessions
 ai_chat_sessions = {}

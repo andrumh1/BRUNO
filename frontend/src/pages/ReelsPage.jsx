@@ -69,6 +69,14 @@ export default function ReelsPage() {
 
   useEffect(() => { setActiveIndex(0); if (containerRef.current) containerRef.current.scrollTop = 0; }, [tab]);
 
+  /* Deep-link from notifications: /reels?id=X&comments=1 opens the comments sheet */
+  const openedCommentsRef = useRef(false);
+  useEffect(() => {
+    if (openedCommentsRef.current || loading || !initialReelId || searchParams.get("comments") !== "1") return;
+    const r = reels.find((x) => x.id === initialReelId);
+    if (r) { openedCommentsRef.current = true; setCommentsFor(r); }
+  }, [loading, reels, initialReelId]);
+
   /* Keyboard for desktop */
   useEffect(() => {
     const onKey = (e) => {

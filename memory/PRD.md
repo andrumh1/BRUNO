@@ -1,5 +1,11 @@
 # BRUNO Social Network - PRD
 
+## Phase 69: Perfil muestra TODO + Notificaciones con deep-link (2026-06)
+- **Perfil (`MyProfilePage`)**: `GET /users/{id}/posts` ahora usa `is_deleted: {$ne: true}` (los posts nuevos no tenían el campo y se ocultaban), límite 500, y el dueño ve todas las visibilidades (público/seguidores/privado; otros solo público). Frontend normaliza `media[]/attachments[]/legacy` → tiles con poster de video, icono Film/galería y badge de visibilidad. Tab Posts = todo (videos, imágenes, texto); tab Reels = videos (filtro incluye `post_type === "video"`). "Crear reel" → /camera.
+- **Notificaciones**: `utils/notification_realtime.enrich_notification()` añade `url`, `preview_url`, `target_label` y `message` humano a cada notificación (GET /notifications y evento WS). Reglas: post con video → `/reels?id=X` (+`&comments=1` si es comentario/mención); post normal → `/post/X` (nueva `PostDetailPage`, abre comentarios con `?comments=1`); user → `/profile/X`; chat → `/chat/X`; live → `/lives/X`. `NotificationsPage` mapea iconos/colores/filtros a los tipos reales (like, comment, follow, repost, remix, moderation_warning), muestra miniatura y navega al `url`. Banner realtime también navega al `url`. `ReelsPage` abre el sheet de comentarios al llegar con `comments=1`.
+- Verificado con screenshots: 42 posts visibles en perfil; clic en "comentó tu reel" → reel + comentarios abiertos; clic en "le gustó tu publicación" → detalle del post.
+
+
 ## Phase 68: Dúo & Stitch + Live WebRTC verificado end-to-end + fix WebSockets realtime (2026-06)
 
 **Implementado:**

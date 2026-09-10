@@ -76,7 +76,7 @@ const ReactionParticle = ({ emoji }) => (
   </motion.div>
 );
 
-const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarClick }) => {
+const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarClick, defaultShowComments = false }) => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const { addMinimizedItem } = useNavScroll();
@@ -214,6 +214,10 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
       setShowComments(true);
     } catch (e) { } finally { setLoadingComments(false); }
   };
+
+  useEffect(() => {
+    if (defaultShowComments && comments.length === 0) loadComments();
+  }, [defaultShowComments]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleComment = async (e) => {
     e.preventDefault();
