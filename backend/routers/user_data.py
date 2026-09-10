@@ -164,7 +164,7 @@ async def get_user_saved_data(current_user: User = Depends(get_current_user)):
         data = UserSavedData(user_id=current_user.id).model_dump()
         data['created_at'] = data['created_at'].isoformat()
         data['updated_at'] = data['updated_at'].isoformat()
-        await db.user_saved_data.insert_one(data)
+        await db.user_saved_data.insert_one(dict(data))
     return data
 
 

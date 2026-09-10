@@ -20,6 +20,7 @@ import MapProfilesBar from "@/components/bruno/MapProfilesBar";
 import MapPinClaimModal from "@/components/bruno/MapPinClaimModal";
 import MapStyleSocial from "@/components/bruno/MapStyleSocial";
 import SharedLocationsLayer from "@/components/bruno/SharedLocationsLayer";
+import OsmFallbackMap from "@/components/bruno/OsmFallbackMap";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { ArrowLeft, MapPin as MapPinIcon, Plus, Layers, Crosshair, ExternalLink, KeyRound } from "lucide-react";
@@ -40,6 +41,23 @@ export default function MapPage() {
   const [showPiupLayer, setShowPiupLayer] = useState(true);
   const mapRef = useRef(null);
   const pendingUserCenterRef = useRef(null);
+  // Google failed (billing / key / network) → switch to free OSM layer automatically
+  const [googleFailed, setGoogleFailed] = useState(() => sessionStorage.getItem("bruno-map-osm") === "1");
+  const tilesOkRef = useRef(false);
+
+  useEffect(() => {
+    if (!GOOGLE_KEY || googleFailed) return;
+    const fail = () => { sessionStorage.setItem("bruno-map-osm", "1"); setGoogleFailed(true); };
+    window.gm_authFailure = fail;
+    const origErr = console.error;
+    console.error = (...args) => {
+      const msg = args.map((a) => (typeof a === "string" ? a : a?.message || "")).join(" ");
+      if (/Google Maps JavaScript API error|BillingNotEnabled|InvalidKey|RefererNotAllowed|ApiNotActivated/i.test(msg)) fail();
+      origErr(...args);
+    };
+    const t = setTimeout(() => { if (!tilesOkRef.current) fail(); }, 9000);
+    return () => { console.error = origErr; clearTimeout(t); delete window.gm_authFailure; };
+  }, [googleFailed]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -60,6 +78,8 @@ export default function MapPage() {
     return <NoApiKeyFallback />;
   }
 
+  const useOsm = googleFailed;
+
   return (
     <APIProvider apiKey={GOOGLE_KEY} libraries={["places"]}>
       <div className="fixed inset-0 z-0 bg-background" data-testid="map-page-google">
@@ -76,8 +96,8 @@ export default function MapPage() {
             <div className="flex-1 h-10 rounded-full bg-background/90 backdrop-blur-md shadow flex items-center px-4 gap-2">
               <MapPinIcon className="w-4 h-4 text-primary" />
               <span className="text-sm font-semibold truncate">Mapa social BRUNO</span>
-              <span className="ml-auto text-[10px] text-muted-foreground hidden sm:block">
-                Google Maps + PIUP
+              <span className="ml-auto text-[10px] text-muted-foreground hidden sm:block" data-testid="map-engine-label">
+                {useOsm ? "Mapa libre + PIUP" : "Google Maps + PIUP"}
               </span>
             </div>
             <button
@@ -94,6 +114,9 @@ export default function MapPage() {
           </div>
         </div>
 
+        {useOsm ? (
+          <OsmFallbackMap center={initialCenter} mapRef={mapRef} pendingRef={pendingUserCenterRef} showPins={showPiupLayer} navigate={navigate} />
+        ) : (
         <Map
           mapId={MAP_ID}
           style={{ width: "100%", height: "100vh" }}
@@ -106,6 +129,7 @@ export default function MapPage() {
           mapTypeControl={false}
           streetViewControl={false}
           fullscreenControl={false}
+          onTilesLoaded={() => { tilesOkRef.current = true; }}
         >
           <MapInstanceCapture mapRef={mapRef} pendingUserCenterRef={pendingUserCenterRef} />
           {showPiupLayer && <PiupPinsLayer onSelect={(p) => setSelectedPin(p)} />}
@@ -122,6 +146,7 @@ export default function MapPage() {
 
           <MapStyleSocial />
         </Map>
+        )}
 
         <div className="absolute right-3 flex flex-col gap-2 z-[60]" style={{ bottom: "calc(var(--nav-reserve, 96px) + 200px)" }}>
           <button

@@ -134,14 +134,14 @@ self.addEventListener('notificationclick', (event) => {
   else if (event.action === 'view_analytics') url = data.url || (data.card_id ? `/c/${data.card_id}/analytics` : '/nfc-cards');
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const c of list) {
         if (c.url.includes(self.location.origin) && 'focus' in c) {
           c.navigate(url);
           return c.focus();
         }
       }
-      if (clients.openWindow) return clients.openWindow(url);
+      if (self.clients.openWindow) return self.clients.openWindow(url);
     })
   );
 });

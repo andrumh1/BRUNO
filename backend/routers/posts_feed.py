@@ -1,7 +1,7 @@
 """Posts, Feed, Chat, Users, Notifications, and Settings routes.
 Extracted from server.py to reduce monolith size.
 """
-from fastapi import APIRouter, HTTPException, Depends, status, Request
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
@@ -240,64 +240,106 @@ async def create_post(
 
 # ─── Reels feed: algorithmic video recommendations ──────────────────────────
 
+async def _hydrate_video_posts(posts: list, user_id: Optional[str]):
+    """Attach author info + per-viewer flags (is_liked / is_bookmarked / is_following)."""
+    author_ids = list({p.get("user_id") for p in posts if p.get("user_id")})
+    profiles: dict = {}
+    if author_ids:
+        async for pr in db.user_profiles.find({"user_id": {"$in": author_ids}}, {"_id": 0}):
+            profiles[pr["user_id"]] = pr
+        async for u in db.users.find({"id": {"$in": author_ids}}, {"_id": 0, "id": 1, "name": 1, "avatar_url": 1, "username": 1}):
+            cur = profiles.setdefault(u["id"], {})
+            cur.update({"name": u.get("name"), "avatar_url": cur.get("avatar_url") or u.get("avatar_url"), "username": u.get("username")})
+
+    liked: set = set()
+    saved: set = set()
+    following: set = set()
+    if user_id:
+        ids = [p.get("id") for p in posts]
+        async for lk in db.post_likes.find({"user_id": user_id, "post_id": {"$in": ids}}, {"_id": 0, "post_id": 1}):
+            liked.add(lk["post_id"])
+        async for bk in db.bookmarks.find({"user_id": user_id, "post_id": {"$in": ids}}, {"_id": 0, "post_id": 1}):
+            saved.add(bk["post_id"])
+        async for f in db.follows.find({"follower_id": user_id, "following_id": {"$in": author_ids}}, {"_id": 0, "following_id": 1}):
+            following.add(f["following_id"])
+
+    for p in posts:
+        prof = profiles.get(p.get("user_id"), {})
+        p["user"] = {
+            "id": p.get("user_id"),
+            "name": prof.get("name") or prof.get("display_name") or "Usuario",
+            "display_name": prof.get("display_name") or prof.get("name"),
+            "avatar_url": prof.get("avatar_url"),
+            "username": prof.get("username"),
+            "followers_count": prof.get("followers_count", 0),
+        }
+        p["is_liked"] = p.get("id") in liked
+        p["is_bookmarked"] = p.get("id") in saved
+        p["is_following"] = p.get("user_id") in following
+    return posts
+
+
+VIDEO_QUERY = {"$or": [{"media.type": "video"}, {"post_type": "video"}, {"video_url": {"$exists": True, "$ne": None}}]}
+
+
 @router.get("/posts/recommended-videos")
 async def get_recommended_videos(
     skip: int = 0,
     limit: int = 30,
+    mode: str = "for_you",
+    exclude: Optional[str] = None,
+    seed: Optional[int] = None,
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
-    """Algorithmic video feed for /reels.
+    """Algorithmic video feed for /reels (TikTok-style fair distribution).
 
-    Ranking signals (in order of weight):
-      1. NOT yet viewed by this user        (×5 boost)
-      2. From accounts the user follows     (×3 boost)
-      3. From accounts with similar likes   (collaborative-filtering proxy via shared liked-posts authors)
-      4. Recency                            (last 14 days strong, decays)
-      5. Total engagement (likes + comments) (mild boost)
-
-    Anonymous users get a recency+engagement mix (skip personal signals).
+    Signals: unseen ×5 · followed ×3 · affinity ×2 · recency · engagement ·
+    UNDER-EXPOSED boost (few views) · SMALL-CREATOR boost (few followers) ·
+    seeded jitter for diversity · no two consecutive reels from the same author.
+    mode=following limits to accounts the viewer follows.
     """
+    import random as _random
     user_id = current_user.id if current_user else None
+    exclude_ids = set([x for x in (exclude or "").split(",") if x])
 
-    # Per-user state — recently viewed IDs + follows + liked-authors set
     viewed_ids: set = set()
     follow_ids: set = set()
     affinity_authors: set = set()
     if user_id:
-        async for v in db.video_views.find({"user_id": user_id}, {"_id": 0, "post_id": 1}).sort("created_at", -1).limit(200):
+        async for v in db.video_views.find({"user_id": user_id}, {"_id": 0, "post_id": 1}).sort("created_at", -1).limit(500):
             viewed_ids.add(v["post_id"])
         async for f in db.follows.find({"follower_id": user_id}, {"_id": 0, "following_id": 1}):
             follow_ids.add(f["following_id"])
-        # Collaborative-filtering proxy: people whose posts I've liked
-        async for lk in db.post_likes.find({"user_id": user_id}, {"_id": 0, "post_id": 1}).sort("created_at", -1).limit(100):
-            p = await db.posts.find_one({"id": lk["post_id"]}, {"_id": 0, "user_id": 1})
-            if p and p.get("user_id"): affinity_authors.add(p["user_id"])
+        liked_ids = [lk["post_id"] async for lk in db.post_likes.find({"user_id": user_id}, {"_id": 0, "post_id": 1}).sort("created_at", -1).limit(100)]
+        if liked_ids:
+            async for p in db.posts.find({"id": {"$in": liked_ids}}, {"_id": 0, "user_id": 1}):
+                if p.get("user_id"): affinity_authors.add(p["user_id"])
 
-    # Pull a candidate pool — video-bearing public posts from the last 30 days
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    base_q = {"visibility": "public", **VIDEO_QUERY}
+    if mode == "following":
+        if not follow_ids:
+            return []
+        base_q["user_id"] = {"$in": list(follow_ids)}
+
     pool: list = []
-    cursor = db.posts.find(
-        {
-            "visibility": "public",
-            "created_at": {"$gte": cutoff},
-            "$or": [
-                {"media.type": "video"},
-                {"post_type": "video"},
-                {"video_url": {"$exists": True, "$ne": None}},
-            ],
-        },
-        {"_id": 0},
-    ).sort("created_at", -1).limit(400)
-    async for p in cursor:
-        pool.append(p)
+    async for p in db.posts.find(base_q, {"_id": 0}).sort("created_at", -1).limit(600):
+        if p.get("id") not in exclude_ids:
+            pool.append(p)
 
-    if not pool:
-        # Fallback: any recent post with media — keeps the feed alive even on cold start
-        cursor = db.posts.find({"visibility": "public", "media": {"$ne": []}}, {"_id": 0}).sort("created_at", -1).limit(100)
-        async for p in cursor: pool.append(p)
+    if not pool and mode != "following":
+        async for p in db.posts.find({"visibility": "public", "media": {"$ne": []}}, {"_id": 0}).sort("created_at", -1).limit(100):
+            if p.get("id") not in exclude_ids: pool.append(p)
 
-    # Score each candidate
+    # Follower counts for small-creator boost
+    author_ids = list({p.get("user_id") for p in pool if p.get("user_id")})
+    followers: dict = {}
+    if author_ids:
+        async for pr in db.user_profiles.find({"user_id": {"$in": author_ids}}, {"_id": 0, "user_id": 1, "followers_count": 1}):
+            followers[pr["user_id"]] = pr.get("followers_count", 0) or 0
+
+    rng = _random.Random(seed if seed is not None else (hash(user_id or "anon") ^ skip))
     now = datetime.now(timezone.utc)
+
     def score(p):
         s = 1.0
         if user_id and p.get("id") not in viewed_ids: s *= 5.0
@@ -306,38 +348,58 @@ async def get_recommended_videos(
         try:
             created = datetime.fromisoformat((p.get("created_at") or "").replace("Z", "+00:00"))
             age_h = max(1, (now - created).total_seconds() / 3600)
-            s *= (1.0 + 24.0 / age_h)  # heavy boost for past 24h, decays
+            s *= (1.0 + 24.0 / age_h)
         except Exception:
             pass
         s *= (1.0 + 0.02 * (p.get("likes_count", 0) or 0))
         s *= (1.0 + 0.03 * (p.get("comments_count", 0) or 0))
+        # Fair distribution: give under-exposed videos and small creators a real chance
+        s *= (1.0 + 3.0 / (1.0 + (p.get("views_count", 0) or 0) / 20.0))
+        s *= (1.0 + 1.0 / (1.0 + followers.get(p.get("user_id"), 0) / 50.0))
+        s *= rng.uniform(0.85, 1.15)
         return s
 
     pool.sort(key=score, reverse=True)
-    sliced = pool[skip: skip + limit]
 
-    # Hydrate author info (display_name / avatar)
+    # Author diversity: avoid consecutive reels from the same creator
+    ordered: list = []
+    deferred: list = []
+    last_author = None
+    for p in pool:
+        if p.get("user_id") == last_author and len(pool) > 3:
+            deferred.append(p)
+            continue
+        ordered.append(p)
+        last_author = p.get("user_id")
+        if deferred and deferred[0].get("user_id") != last_author:
+            d = deferred.pop(0)
+            ordered.append(d)
+            last_author = d.get("user_id")
+    ordered.extend(deferred)
+
+    sliced = ordered[skip: skip + limit]
+    return await _hydrate_video_posts(sliced, user_id)
+
+
+@router.get("/posts/history/videos")
+async def get_video_history(
+    limit: int = 60,
+    current_user: User = Depends(get_current_user),
+):
+    """Videos the current user has watched, most recent first."""
+    views = [v async for v in db.video_views.find({"user_id": current_user.id}, {"_id": 0}).sort("created_at", -1).limit(limit)]
+    ids = [v["post_id"] for v in views]
+    if not ids:
+        return []
+    posts = {p["id"]: p async for p in db.posts.find({"id": {"$in": ids}}, {"_id": 0})}
     out = []
-    author_ids = list({p.get("user_id") for p in sliced if p.get("user_id")})
-    profiles = {}
-    if author_ids:
-        async for pr in db.user_profiles.find({"user_id": {"$in": author_ids}}, {"_id": 0}):
-            profiles[pr["user_id"]] = pr
-        async for u in db.users.find({"id": {"$in": author_ids}}, {"_id": 0, "id": 1, "name": 1, "avatar_url": 1, "username": 1}):
-            profiles.setdefault(u["id"], {}).update({"name": u.get("name"), "avatar_url": profiles.get(u["id"], {}).get("avatar_url") or u.get("avatar_url"), "username": u.get("username")})
-
-    for p in sliced:
-        prof = profiles.get(p.get("user_id"), {})
-        p["user"] = {
-            "id": p.get("user_id"),
-            "name": prof.get("name") or prof.get("display_name") or "Usuario",
-            "display_name": prof.get("display_name") or prof.get("name"),
-            "avatar_url": prof.get("avatar_url"),
-            "username": prof.get("username"),
-        }
-        out.append(p)
-
-    return out
+    for v in views:
+        p = posts.get(v["post_id"])
+        if p:
+            p["watched_at"] = v.get("created_at")
+            p["watch_count"] = v.get("watch_count", 1)
+            out.append(p)
+    return await _hydrate_video_posts(out, current_user.id)
 
 
 @router.post("/posts/{post_id}/view")
@@ -1600,7 +1662,6 @@ async def get_unread_count(current_user: User = Depends(get_current_user)):
 # BRUNO AI ASSISTANT
 # ============================================================================
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
 from utils.notification_realtime import emit_notification_ws
 
 # Store active AI chat sessions

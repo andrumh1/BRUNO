@@ -1,5 +1,26 @@
 # BRUNO Social Network - PRD
 
+## Phase 67: Glass global + Mapa OSM fallback + Reels TikTok-class + Lives WebRTC (privados anti-captura) + Cámara Pro (2026-06)
+
+**Pedido del usuario (español):** (A) efecto translúcido del menú "Crear" aplicado a TODA la app; (B) el mapa falla al conectar con Google; (C) Reels fluidos, modernos, swipe vertical, historial, algoritmo justo + funciones TikTok incluyendo lives; (D) lives PRIVADOS con código que solo comparte el dueño, protegidos contra capturas; (E) filtros profesionales.
+
+**Implementado:**
+- **Glass global** (`index.css` sección "BRUNO GLASS"): variables `--glass-*`; selectores aplican `hsl(var(--card)/.58)` + `blur(28px) saturate(180%)` a headers sticky/fixed, `bg-background/xx`, `bg-card/xx`, `.glass-card`, dialogs/sheets/drawer, popover/menus, `.bg-card` sólido (blur suave 18px), pill input. Backdrops → veil frosted. Excluidos: `.reels-stage`, `.live-stage`, video/img/canvas, `.no-glass`. `BrunoPublishMenu` corregido a `hsl(var(--card)/0.6)` (color-mix con HSL era inválido).
+- **Mapa**: causa raíz = `BillingNotEnabledMapError` (proyecto Google sin facturación — acción del usuario). `MapPage` detecta fallo (gm_authFailure + hook console.error + timeout 9s sin tiles) y cambia a `OsmFallbackMap.jsx` (react-leaflet, tiles OSM tintados a paleta BRUNO, pins PIUP con popup "Ver tarjeta", recenter, mismo header). Persistido en sessionStorage. Label `map-engine-label` = "Mapa libre + PIUP".
+- **Reels** (`pages/ReelsPage.jsx` reescrito + `components/reels/{useReelsFeed.js, ReelItem.jsx, ReelSheets.jsx}`): tabs Siguiendo/Para ti/En vivo; scroll snap con IntersectionObserver; render ventana ±2 (solo cercanos montan `<video>`, preload auto para vecinos); feed infinito con `exclude` + `seed`; gestos tap/doble-tap like/long-press/swipe L→perfil R→back; barra de progreso con seek; like/follow/save optimistas; comentarios, compartir (nativo/copiar/WhatsApp) e historial en bottom-sheets glass; teclado ↑↓/m en desktop.
+- **Algoritmo** (`posts_feed.py` `get_recommended_videos`): +boost videos sub-expuestos `1+3/(1+views/20)`, +boost creadores pequeños `1+1/(1+followers/50)`, jitter con seed, sin dos reels consecutivos del mismo autor, `mode=following`, `exclude=`, hydrate con `is_liked/is_bookmarked/is_following`. Nuevo `GET /api/posts/history/videos`.
+- **Lives WebRTC** (`routers/lives.py` reescrito): `POST /api/lives` acepta `is_private` + `anti_capture` → genera `access_code` (6 chars); `GET /lives/{id}` oculta el código salvo host y expone `requires_code/is_host`; `join` exige código (403); `by-code/{code}`; `rotate-code` (host); `mine/active`; `heart`. **WS `/api/lives/{id}/ws?token&code`**: welcome/viewer_joined/left/host_online/offline, relay offer/answer/ice, comentarios/regalos/corazones en tiempo real; código incorrecto → `{type:error,code:4003}` + close 4003.
+  Frontend: `components/live/useLiveRTC.js` (host: 1 RTCPeerConnection por espectador; viewer: recibe offer), `LiveOverlay.jsx` (chat flotante, corazones, regalos, top bar), `StartLivePage.jsx` (setup → EN VIVO, panel de código copiar/compartir/renovar, flip/mute), `LiveViewerPage.jsx` (gate de código, `/lives/join?code=`, video remoto, tap para sonido).
+- **Anti-captura** (`components/live/PrivacyShield.jsx` + `native/privacyScreen.js` + `@capacitor-community/privacy-screen@6.1.0`): nativo Android FLAG_SECURE (bloquea capturas/grabación), iOS oculta al ir a background; web: marca de agua forense móvil con identidad del espectador, blackout al perder foco/visibilidad, PrintScreen/⌘⇧3-5 → blackout + clipboard sobrescrito, sin PiP/descarga/contextmenu/selección. **Límite honesto:** navegadores web no pueden bloquear capturas del SO al 100%; la marca de agua hace trazable cualquier filtración. En app nativa Android sí se bloquea.
+- **Cámara Pro** (`BrunoQuickCamera.jsx`): 22 filtros (+Teal&Orange, Golden Hour, Pastel, Cyberpunk, Retro VHS, Frost, Mono Azul, Film 35mm), slider Beauty (suavizado), Timer 3s/10s con cuenta regresiva, cuadrícula, linterna (si el hardware lo soporta). **Filtros/beauty/espejo ahora se hornean en el VIDEO grabado** vía canvas.captureStream (antes solo se veían en preview). Bitrate 6 Mbps.
+
+**Testing (iteration_72):** backend 16/16 PASS (`backend/tests/test_iteration72_reels_lives.py`), frontend todos los flujos críticos PASS en 390x844 y 1920x800. Limitaciones de entorno: Chrome headless no decodifica H.264 (botón Reintentar), Google Maps sin billing (→ OSM siempre). **Pendiente de verificación en dispositivos reales:** flujo WebRTC host→viewer con cámara real (2 dispositivos), bloqueo FLAG_SECURE en build Android.
+
+**Pasos para el usuario (Google Maps):** Google Cloud Console → Facturación → vincular cuenta al proyecto de la key → habilitar "Maps JavaScript API". Hay US$200/mes gratis. Mientras tanto la app usa OSM automáticamente.
+
+**Backlog derivado:** SFU (LiveKit) si un live supera ~15 espectadores simultáneos (mesh P2P actual); TURN server para redes restrictivas; "Usar este sonido" desde reel → cámara; dúo/stitch; velocidad de grabación.
+
+
 ## Phase 66: Nav pill middle position + Publish menu iOS-26 + Camera video fixes (2026-02-23)
 
 **Bugs reportados por el usuario (español):**

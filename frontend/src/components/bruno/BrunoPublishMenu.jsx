@@ -100,7 +100,7 @@ export default function BrunoPublishMenu({ open, onClose, onPick }) {
             className="absolute inset-x-3 bottom-3 rounded-[28px] overflow-hidden border border-white/20 dark:border-white/10"
             style={{
               // iOS-26 style translucent glass, respects dark mode.
-              background: "color-mix(in oklab, var(--card, #fff) 60%, transparent)",
+              background: "hsl(var(--card) / 0.6)",
               backdropFilter: "blur(28px) saturate(180%)",
               WebkitBackdropFilter: "blur(28px) saturate(180%)",
               boxShadow: "0 12px 40px -8px rgba(0,0,0,0.25), inset 0 1px 0 0 rgba(255,255,255,0.4)",

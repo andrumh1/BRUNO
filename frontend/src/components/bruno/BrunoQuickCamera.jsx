@@ -14,6 +14,10 @@ import {
   Zap,
   Music2,
   ZoomIn,
+  Timer,
+  Grid3X3,
+  Wand2,
+  Flashlight,
 } from "lucide-react";
 import MusicPicker from "./MusicPicker";
 
@@ -50,7 +54,18 @@ const FILTERS = [
   { id: "dreamy", name: "Dreamy", filter: "brightness(1.2) contrast(0.8) saturate(1.3)" },
   { id: "noir", name: "Noir", filter: "grayscale(0.8) contrast(1.5) brightness(0.85)" },
   { id: "fade", name: "Fade", filter: "brightness(1.1) contrast(0.85) saturate(0.75)" },
+  { id: "tealorange", name: "Teal&Orange", filter: "contrast(1.15) saturate(1.35) sepia(0.2) hue-rotate(-8deg)" },
+  { id: "golden", name: "Golden Hour", filter: "sepia(0.35) saturate(1.5) brightness(1.08) contrast(1.05) hue-rotate(-6deg)" },
+  { id: "pastel", name: "Pastel", filter: "brightness(1.12) contrast(0.82) saturate(0.9) sepia(0.08)" },
+  { id: "cyber", name: "Cyberpunk", filter: "contrast(1.3) saturate(1.8) hue-rotate(25deg) brightness(0.95)" },
+  { id: "vhs", name: "Retro VHS", filter: "contrast(1.1) saturate(1.3) sepia(0.3) blur(0.35px) brightness(1.02)" },
+  { id: "frost", name: "Frost", filter: "brightness(1.1) saturate(0.7) hue-rotate(180deg) contrast(1.05)" },
+  { id: "monoblue", name: "Mono Azul", filter: "grayscale(1) sepia(0.4) hue-rotate(180deg) saturate(1.6) contrast(1.15)" },
+  { id: "film", name: "Film 35mm", filter: "contrast(1.08) saturate(0.9) sepia(0.22) brightness(0.97)" },
 ];
+
+const TIMERS = [0, 3, 10];
+const beautyFilter = (b) => (b > 0 ? `brightness(${(1 + b * 0.06).toFixed(3)}) contrast(${(1 - b * 0.08).toFixed(3)}) saturate(${(1 + b * 0.12).toFixed(3)}) blur(${(b * 0.7).toFixed(2)}px)` : "");
 
 const QUICK_ICONS = [Sparkles, Sun, Zap, Moon];
 
@@ -94,6 +109,17 @@ export default function BrunoQuickCamera({
   // Music
   const [showMusic, setShowMusic] = useState(false);
   const [music, setMusic] = useState(null); // {track, volume, start, end}
+  // Pro tools
+  const [beauty, setBeauty] = useState(0);        // 0..1 smoothing intensity
+  const [showBeauty, setShowBeauty] = useState(false);
+  const [timer, setTimer] = useState(0);          // 0 | 3 | 10 seconds
+  const [countdown, setCountdown] = useState(0);
+  const [grid, setGrid] = useState(false);
+  const [torch, setTorch] = useState(false);
+  const [torchCaps, setTorchCaps] = useState(false);
+  const renderLoopRef = useRef(null);
+  const recordCanvasRef = useRef(null);
+  const effectiveFilter = [filter.filter, beautyFilter(beauty)].filter(Boolean).join(" ");
 
   // ─── Stream lifecycle ────────────────────────────────────────────────────
   useEffect(() => {
@@ -225,7 +251,7 @@ export default function BrunoQuickCamera({
       ctx.translate(w, 0);
       ctx.scale(-1, 1);
     }
-    ctx.filter = filter.filter || "none";
+    ctx.filter = effectiveFilter || "none";
     ctx.drawImage(video, 0, 0, w, h);
     if (mirrored && facing === "user") ctx.restore();
     return canvas;
@@ -264,12 +290,36 @@ export default function BrunoQuickCamera({
       "video/webm",
       "video/mp4",
     ].find((m) => MediaRecorder.isTypeSupported(m));
-    const recorder = new MediaRecorder(streamRef.current, mimePref ? { mimeType: mimePref } : undefined);
+    // Bake filters/beauty/mirror into the recording via a canvas pipeline
+    let recStream = streamRef.current;
+    const video = videoRef.current;
+    if ((effectiveFilter || (mirrored && facing === "user")) && video?.videoWidth && typeof HTMLCanvasElement.prototype.captureStream === "function") {
+      const c = document.createElement("canvas");
+      c.width = video.videoWidth; c.height = video.videoHeight;
+      const ctx = c.getContext("2d");
+      const mirror = mirrored && facing === "user";
+      const draw = () => {
+        ctx.save();
+        if (mirror) { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
+        ctx.filter = effectiveFilter || "none";
+        ctx.drawImage(video, 0, 0, c.width, c.height);
+        ctx.restore();
+        renderLoopRef.current = requestAnimationFrame(draw);
+      };
+      draw();
+      recordCanvasRef.current = c;
+      const cs = c.captureStream(30);
+      streamRef.current.getAudioTracks().forEach((t) => cs.addTrack(t));
+      recStream = cs;
+    }
+    const recorder = new MediaRecorder(recStream, mimePref ? { mimeType: mimePref, videoBitsPerSecond: 6_000_000 } : { videoBitsPerSecond: 6_000_000 });
     recorderRef.current = recorder;
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunksRef.current.push(e.data);
     };
     recorder.onstop = () => {
+      if (renderLoopRef.current) { cancelAnimationFrame(renderLoopRef.current); renderLoopRef.current = null; }
+      recordCanvasRef.current = null;
       const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "video/webm" });
       const url = URL.createObjectURL(blob);
       setPreview({ url, blob, type: "video" });
@@ -294,11 +344,36 @@ export default function BrunoQuickCamera({
     }
   };
 
-  const handleShutter = () => {
+  const fire = () => {
     if (captureMode === "photo") snapPhoto();
     else if (recording) stopRecord();
     else startRecord();
   };
+
+  const handleShutter = () => {
+    if (countdown) return;
+    if (timer > 0 && !recording) {
+      let n = timer;
+      setCountdown(n);
+      const tick = setInterval(() => {
+        n -= 1;
+        if (n <= 0) { clearInterval(tick); setCountdown(0); fire(); } else setCountdown(n);
+      }, 1000);
+      return;
+    }
+    fire();
+  };
+
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks?.()[0];
+    if (!track) return;
+    try { await track.applyConstraints({ advanced: [{ torch: !torch }] }); setTorch((t) => !t); } catch (_) { /* unsupported */ }
+  };
+
+  useEffect(() => {
+    const track = streamRef.current?.getVideoTracks?.()[0];
+    try { setTorchCaps(!!track?.getCapabilities?.().torch); } catch (_) { setTorchCaps(false); }
+  }, [facing, streamError]);
 
   const handleSend = async () => {
     if (!preview) return;
@@ -314,6 +389,7 @@ export default function BrunoQuickCamera({
       await onCapture?.(file, {
         type: preview.type,
         filterId: filter.id,
+        beauty,
         resolution: resolutionLabel,
         aspectRatio,
         zoom,
@@ -422,7 +498,7 @@ export default function BrunoQuickCamera({
                   playsInline
                   muted
                   style={{
-                    filter: filter.filter,
+                    filter: effectiveFilter,
                     transform: mirrored && facing === "user" ? "scaleX(-1)" : undefined,
                   }}
                   className="h-full w-full object-contain"
@@ -431,6 +507,15 @@ export default function BrunoQuickCamera({
               )}
             </div>
             <canvas ref={canvasRef} className="hidden" />
+            {grid && !preview && (
+              <div className="pointer-events-none absolute inset-0 z-10" data-testid="quick-camera-grid"
+                style={{ backgroundImage: "linear-gradient(to right, rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.35) 1px, transparent 1px)", backgroundSize: "33.34% 33.34%" }} />
+            )}
+            {countdown > 0 && (
+              <motion.div key={countdown} initial={{ scale: 1.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="absolute inset-0 z-30 grid place-items-center pointer-events-none" data-testid="quick-camera-countdown">
+                <span className="text-white text-8xl font-black drop-shadow-2xl">{countdown}</span>
+              </motion.div>
+            )}
           </div>
 
           {/* Right-side vertical zoom slider — only if device supports zoom */}
@@ -516,6 +601,35 @@ export default function BrunoQuickCamera({
           >
             {!preview ? (
               <>
+                {/* Pro tools row */}
+                <div className="flex items-center justify-center gap-2 px-3 pb-2" data-testid="quick-camera-tools">
+                  <button onClick={() => setTimer(TIMERS[(TIMERS.indexOf(timer) + 1) % TIMERS.length])} data-testid="quick-camera-timer"
+                    className={`h-9 px-3 rounded-full text-xs font-semibold inline-flex items-center gap-1 border ${timer ? "bg-orange-500 border-orange-500 text-white" : "bg-white/10 border-white/20 text-white"}`}>
+                    <Timer className="h-3.5 w-3.5" /> {timer ? `${timer}s` : "Timer"}
+                  </button>
+                  <button onClick={() => setGrid((g) => !g)} data-testid="quick-camera-grid-toggle" aria-label="Cuadrícula"
+                    className={`h-9 w-9 rounded-full grid place-items-center border ${grid ? "bg-orange-500 border-orange-500 text-white" : "bg-white/10 border-white/20 text-white"}`}>
+                    <Grid3X3 className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => setShowBeauty((v) => !v)} data-testid="quick-camera-beauty-toggle"
+                    className={`h-9 px-3 rounded-full text-xs font-semibold inline-flex items-center gap-1 border ${beauty > 0 ? "bg-orange-500 border-orange-500 text-white" : "bg-white/10 border-white/20 text-white"}`}>
+                    <Wand2 className="h-3.5 w-3.5" /> Beauty{beauty > 0 ? ` ${Math.round(beauty * 100)}%` : ""}
+                  </button>
+                  {torchCaps && (
+                    <button onClick={toggleTorch} data-testid="quick-camera-torch" aria-label="Flash"
+                      className={`h-9 w-9 rounded-full grid place-items-center border ${torch ? "bg-yellow-400 border-yellow-400 text-black" : "bg-white/10 border-white/20 text-white"}`}>
+                      <Flashlight className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                {showBeauty && (
+                  <div className="px-6 pb-2 flex items-center gap-3" data-testid="quick-camera-beauty-slider-row">
+                    <span className="text-white/70 text-[10px]">Suavizado</span>
+                    <input type="range" min={0} max={1} step={0.05} value={beauty} onChange={(e) => setBeauty(Number(e.target.value))} className="flex-1 accent-orange-500" data-testid="quick-camera-beauty-slider" />
+                    <span className="text-white text-[10px] font-bold w-8 text-right">{Math.round(beauty * 100)}%</span>
+                  </div>
+                )}
+
                 {/* Filter strip */}
                 <div className="overflow-x-auto px-3 pb-3 scrollbar-none">
                   <div className="flex gap-2 w-max">

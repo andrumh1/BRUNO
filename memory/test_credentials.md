@@ -10,3 +10,6 @@
 ## App URLs
 - Frontend: https://premium-launch-13.preview.emergentagent.com
 - Backend API: https://premium-launch-13.preview.emergentagent.com/api
+
+## Viewer secundario (lives privados)
+- viewer2@bruno.com / Test1234!  (creado 2026-06, para probar entrar a un live privado con código)

@@ -1418,3 +1418,85 @@ select.bubble-native-select:focus {
   100% { transform: scale(1.6); opacity: 0; }
 }
 .animate-ping-once { animation: pingOnce 700ms cubic-bezier(.2,.8,.2,1) forwards; }
+
+/* ============================================================
+   BRUNO GLASS — iOS-26 translucent system (global)
+   Same recipe as the "Crear" publish menu, applied app-wide to
+   headers, nav, bubbles, cards, sheets, dialogs, menus, inputs.
+   ============================================================ */
+:root {
+  --glass-a: 0.58;
+  --glass-blur: blur(28px) saturate(180%);
+  --glass-blur-soft: blur(18px) saturate(160%);
+  --glass-edge: rgba(255, 255, 255, 0.45);
+  --glass-border: rgba(255, 255, 255, 0.35);
+  --glass-shadow: 0 12px 40px -12px rgba(44, 44, 39, 0.28);
+}
+.dark {
+  --glass-a: 0.55;
+  --glass-edge: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.6);
+}
+
+.bruno-glass,
+.glass-card,
+header.sticky.top-0:not([data-no-glass]),
+header.fixed:not([data-no-glass]),
+[class*="bg-background/7"], [class*="bg-background/8"], [class*="bg-background/9"],
+[class*="bg-card/7"], [class*="bg-card/8"], [class*="bg-card/9"],
+[role="dialog"].bg-background,
+[role="dialog"].bg-card,
+[vaul-drawer],
+.bg-popover,
+[role="menu"], [role="listbox"],
+[data-radix-popper-content-wrapper] > div {
+  background: hsl(var(--card) / var(--glass-a)) !important;
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 0 var(--glass-edge);
+}
+
+/* Solid cards → soft glass (lighter blur keeps long lists fluid) */
+.bg-card:not([class*="bg-card/"]):not(.no-glass),
+.bg-white.dark\:bg-zinc-900 {
+  background: hsl(var(--card) / 0.72) !important;
+  -webkit-backdrop-filter: var(--glass-blur-soft);
+  backdrop-filter: var(--glass-blur-soft);
+}
+.dark .bg-white.dark\:bg-zinc-900 { background: hsl(var(--card) / 0.72) !important; }
+
+/* Rounded corners like the publish menu on floating/overlay surfaces */
+[role="dialog"].bg-background, [vaul-drawer] { border-radius: 28px 28px 0 0; }
+@media (min-width: 640px) { [role="dialog"].bg-background { border-radius: 28px; } }
+
+/* Backdrops behind sheets/dialogs — light frosted veil instead of flat black */
+[data-radix-dialog-overlay], .fixed.inset-0.bg-black\/80, .fixed.inset-0.bg-black\/60 {
+  background: rgba(0, 0, 0, 0.22) !important;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* Media & immersive surfaces are never glassed */
+.reels-stage, .reels-stage *, .live-stage, .live-stage *,
+video, canvas, img, .no-glass, .no-glass * {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Reels helpers */
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+@keyframes reel-heart-pop { 0% { transform: scale(0) rotate(-12deg); opacity: 0 } 40% { transform: scale(1.15) rotate(4deg); opacity: 1 } 100% { transform: scale(1) rotate(0); opacity: 0 } }
+.animate-ping-once { animation: reel-heart-pop 0.7s ease-out forwards; }
+@keyframes disc-spin { to { transform: rotate(360deg) } }
+.reel-disc { animation: disc-spin 4s linear infinite; }
+@keyframes float-heart { 0% { transform: translate(0,0) scale(.6); opacity: 0 } 15% { opacity: 1 } 100% { transform: translate(var(--dx, 0px), -260px) scale(1.15); opacity: 0 } }
+.live-heart { animation: float-heart 2.4s ease-out forwards; }
+@keyframes wm-drift { 0% { transform: translate(0,0) } 25% { transform: translate(38vw, 22vh) } 50% { transform: translate(6vw, 58vh) } 75% { transform: translate(52vw, 70vh) } 100% { transform: translate(0,0) } }
+.live-watermark { animation: wm-drift 26s linear infinite; }
+.no-capture { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* OSM fallback tiles tinted to the BRUNO warm palette */
+.bruno-osm-tiles { filter: sepia(0.28) saturate(1.15) hue-rotate(-8deg) brightness(1.03); }
+.bruno-osm-pin { background: transparent; border: 0; }
