@@ -14,7 +14,7 @@ import { useNavScroll } from "@/contexts/NavScrollContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import ReelItem from "@/components/reels/ReelItem";
 import { useReelsFeed } from "@/components/reels/useReelsFeed";
-import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet } from "@/components/reels/ReelSheets";
+import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet } from "@/components/reels/ReelSheets";
 import RemixStudio from "@/components/reels/RemixStudio";
 import { AnimatePresence } from "framer-motion";
 
@@ -38,6 +38,8 @@ export default function ReelsPage() {
   const [remixFor, setRemixFor] = useState(null);      // reel → choose duet/stitch
   const [studio, setStudio] = useState(null);          // { reel, mode }
   const [remixesOf, setRemixesOf] = useState(null);    // source post id
+  const [soundFor, setSoundFor] = useState(null);      // reel → sound sheet
+  const highlightCommentId = searchParams.get("comment");
   const containerRef = useRef(null);
   const itemRefs = useRef([]);
 
@@ -72,7 +74,7 @@ export default function ReelsPage() {
   /* Deep-link from notifications: /reels?id=X&comments=1 opens the comments sheet */
   const openedCommentsRef = useRef(false);
   useEffect(() => {
-    if (openedCommentsRef.current || loading || !initialReelId || searchParams.get("comments") !== "1") return;
+    if (openedCommentsRef.current || loading || !initialReelId || (searchParams.get("comments") !== "1" && !highlightCommentId)) return;
     const r = reels.find((x) => x.id === initialReelId);
     if (r) { openedCommentsRef.current = true; setCommentsFor(r); }
   }, [loading, reels, initialReelId]);
@@ -165,7 +167,7 @@ export default function ReelsPage() {
                     globalMuted={globalMuted} onToggleMute={() => setGlobalMuted((m) => !m)}
                     onLike={handleLike} onFollow={handleFollow} onSave={handleSave}
                     onOpenComments={setCommentsFor} onOpenShare={setShareFor} onMinimize={handleMinimize}
-                    onOpenRemix={(r) => { if (requireAuth()) setRemixFor(r); }} onOpenRemixes={(r) => setRemixesOf(r.id)}
+                    onOpenRemix={(r) => { if (requireAuth()) setRemixFor(r); }} onOpenRemixes={(r) => setRemixesOf(r.id)} onOpenSound={setSoundFor}
                     onSwipeLeft={swipeLeft} onSwipeRight={swipeRight}
                   />
                 ) : (
@@ -180,7 +182,8 @@ export default function ReelsPage() {
         <LivesGrid token={token} navigate={navigate} />
       )}
 
-      <ReelCommentsSheet reel={commentsFor} token={token} onClose={() => setCommentsFor(null)} onPosted={(id) => patchReel(id, (r) => ({ comments_count: (r.comments_count || 0) + 1 }))} />
+      <ReelCommentsSheet reel={commentsFor} token={token} highlightId={commentsFor?.id === initialReelId ? highlightCommentId : null} onClose={() => setCommentsFor(null)} onPosted={(id) => patchReel(id, (r) => ({ comments_count: (r.comments_count || 0) + 1 }))} />
+      {soundFor && <ReelSoundSheet reel={soundFor} token={token} onClose={() => setSoundFor(null)} onPick={(r) => { setSoundFor(null); navigate(`/reels?id=${r.id}`); }} />}
       {shareFor && <ReelShareSheet reel={shareFor} onClose={() => setShareFor(null)} />}
       <ReelHistorySheet open={historyOpen} token={token} onClose={() => setHistoryOpen(false)} onPick={openFromHistory} />
       {remixFor && <ReelRemixSheet reel={remixFor} onClose={() => setRemixFor(null)} onPick={(m) => { const r = remixFor; setRemixFor(null); if (m === "list") setRemixesOf(r.id); else setStudio({ reel: r, mode: m }); }} />}

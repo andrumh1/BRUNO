@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,6 +115,22 @@ const MODES = [
 const BrunoCameraPage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
+  const [searchParams] = useSearchParams();
+  // "Usar este sonido": audio borrowed from another reel, mixed into the recording
+  const [sound, setSound] = useState(null); // {source_post_id, name, url, author}
+  const soundAudioRef = useRef(null);
+  const soundCtxRef = useRef(null);
+  useEffect(() => {
+    const sid = searchParams.get("sound");
+    if (!sid) return;
+    axios.get(`${API}/posts/sound/${sid}`).then((r) => { if (r.data?.sound?.url) setSound(r.data.sound); }).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const stopSound = () => {
+    try { soundAudioRef.current?.pause(); } catch (_) { /* ignore */ }
+    soundAudioRef.current = null;
+    try { soundCtxRef.current?.close(); } catch (_) { /* ignore */ }
+    soundCtxRef.current = null;
+  };
 
   // Refs
   const videoRef = useRef(null);
@@ -494,7 +510,7 @@ const BrunoCameraPage = () => {
     setCapturedMedia({ type: "photo", data: c.toDataURL("image/jpeg", 0.92) });
   };
 
-  const startRecording = () => {
+  const startRecording = async () => {
     if (!stream) return;
     setRecordedChunks([]);
     setRecordTime(0);
@@ -518,9 +534,30 @@ const BrunoCameraPage = () => {
       setCameraError("Este navegador no soporta grabación de video. Prueba Chrome, Safari o la app nativa.");
       return;
     }
+    // Mix borrowed sound + mic into one audio track (the recording carries the sound)
+    let recStream = stream;
+    if (sound?.url) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const dest = ctx.createMediaStreamDestination();
+        if (stream.getAudioTracks().length) ctx.createMediaStreamSource(stream).connect(dest);
+        const el = new Audio();
+        el.crossOrigin = "anonymous";
+        el.src = sound.url;
+        el.loop = true;
+        const node = ctx.createMediaElementSource(el);
+        node.connect(dest);
+        node.connect(ctx.destination);
+        await ctx.resume();
+        await el.play().catch(() => {});
+        soundAudioRef.current = el;
+        soundCtxRef.current = ctx;
+        recStream = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+      } catch (_) { recStream = stream; }
+    }
     let mr;
     try {
-      mr = new MediaRecorder(stream, { mimeType: supported });
+      mr = new MediaRecorder(recStream, { mimeType: supported });
     } catch (err) {
       console.error("MediaRecorder init failed:", err);
       setCameraError("No pudimos iniciar la grabación. Intenta cambiar el modo o reiniciar la app.");
@@ -539,6 +576,7 @@ const BrunoCameraPage = () => {
   };
 
   const stopRecording = () => {
+    stopSound();
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
@@ -586,6 +624,7 @@ const BrunoCameraPage = () => {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       });
       const mediaUrl = uploadRes.data.url;
+      const up = uploadRes.data || {};
 
       // Step 2: If there's an embedded poll sticker, create the poll first so the story can link it.
       const pollSticker = stickers.find((s) => s.kind === "poll");
@@ -620,13 +659,14 @@ const BrunoCameraPage = () => {
         }, { headers: { Authorization: `Bearer ${token}` } });
         navigate("/feed");
       } else {
-        await axios.post(`${API}/posts`, {
+        const created = await axios.post(`${API}/posts`, {
           content: caption,
-          media: [{ type: capturedMedia.type === "photo" ? "image" : "video", url: mediaUrl }],
+          media: [{ type: capturedMedia.type === "photo" ? "image" : "video", url: mediaUrl, mp4_url: up.mp4_url, poster_url: up.poster_url, f_auto_url: up.f_auto_url }],
           post_type: capturedMedia.type === "photo" ? "image" : "video",
           visibility: "public",
+          audio: sound && capturedMedia.type !== "photo" ? { source_post_id: sound.source_post_id, name: sound.name, url: sound.url } : null,
         }, { headers: { Authorization: `Bearer ${token}` } });
-        navigate("/feed");
+        navigate(capturedMedia.type === "photo" ? "/feed" : `/reels?id=${created.data?.id || ""}`);
       }
     } catch (err) {
       // error handled
@@ -712,11 +752,19 @@ const BrunoCameraPage = () => {
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
 
-          {/* Music placeholder */}
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm" data-testid="camera-music-btn">
-            <Music2 className="w-3.5 h-3.5 text-white" />
-            <span className="text-white text-xs font-medium">Agregar sonido</span>
-          </button>
+          {/* Sound chip ("Usar este sonido") */}
+          {sound ? (
+            <div className="flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-orange-500/90 backdrop-blur-sm max-w-[60vw]" data-testid="camera-sound-chip">
+              <Music2 className="w-3.5 h-3.5 text-white shrink-0" />
+              <span className="text-white text-xs font-medium truncate">{sound.name}</span>
+              <button onClick={() => { stopSound(); setSound(null); }} className="w-5 h-5 rounded-full bg-white/25 grid place-items-center text-white text-[10px]" data-testid="camera-sound-remove" aria-label="Quitar sonido">✕</button>
+            </div>
+          ) : (
+            <button onClick={() => navigate("/reels")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/30 backdrop-blur-sm" data-testid="camera-music-btn">
+              <Music2 className="w-3.5 h-3.5 text-white" />
+              <span className="text-white text-xs font-medium">Agregar sonido</span>
+            </button>
+          )}
 
           <div className="w-9" />
         </div>

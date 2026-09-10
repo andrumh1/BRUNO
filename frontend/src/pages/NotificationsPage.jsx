@@ -35,6 +35,8 @@ const API = process.env.REACT_APP_BACKEND_URL + "/api";
 const NOTIFICATION_ICONS = {
   like: Heart,
   comment: MessageCircle,
+  reply: MessageCircle,
+  live_started: Camera,
   follow: UserPlus,
   repost: Sparkles,
   remix: Sparkles,
@@ -56,6 +58,8 @@ const NOTIFICATION_ICONS = {
 const NOTIFICATION_COLORS = {
   like: "text-pink-500 bg-pink-500/10",
   comment: "text-blue-500 bg-blue-500/10",
+  reply: "text-blue-500 bg-blue-500/10",
+  live_started: "text-red-500 bg-red-500/10",
   follow: "text-purple-500 bg-purple-500/10",
   repost: "text-orange-500 bg-orange-500/10",
   remix: "text-orange-500 bg-orange-500/10",
@@ -88,7 +92,7 @@ const FILTERS = [
   { id: "all", label: "Todas" },
   { id: "unread", label: "No leídas" },
   { id: "mentions", label: "Menciones", types: ["mention"] },
-  { id: "social", label: "Social", types: ["like", "comment", "follow", "repost", "remix", "post_like", "post_comment", "new_follower", "new_story"] },
+  { id: "social", label: "Social", types: ["like", "comment", "reply", "follow", "repost", "remix", "live_started", "post_like", "post_comment", "new_follower", "new_story"] },
   { id: "deal", label: "DEAL", types: ["deal_commission", "order_update", "product_favorited", "product_cart_added"] },
 ];
 

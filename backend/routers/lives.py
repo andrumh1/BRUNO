@@ -175,6 +175,19 @@ async def create_live(request: CreateLiveRequest, current_user: dict = Depends(g
     active_lives[live_id] = {"host_id": current_user["id"], "viewers": [], "started_at": datetime.now(timezone.utc)}
     live_connections[live_id] = {}
 
+    if not request.is_private:
+        try:
+            from utils.notification_realtime import emit_notification_ws
+            now = datetime.now(timezone.utc).isoformat()
+            async for f in db.follows.find({"following_id": current_user["id"]}, {"_id": 0, "follower_id": 1}).limit(2000):
+                doc = {"id": str(uuid.uuid4()), "user_id": f["follower_id"], "actor_id": current_user["id"], "type": "live_started",
+                       "target_id": live_id, "target_type": "live", "message": f"{current_user.get('name', 'Alguien')} está en vivo: {request.title}",
+                       "is_read": False, "created_at": now}
+                await db.notifications.insert_one(dict(doc))
+                await emit_notification_ws(doc)
+        except Exception:
+            pass
+
     return {**live_doc, "stream_key": f"bruno_live_{live_id}", "rtc_config": {"iceServers": ICE_SERVERS}}
 
 

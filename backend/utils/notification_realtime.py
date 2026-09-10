@@ -72,6 +72,8 @@ async def enrich_notification(notif: dict) -> dict:
         notif["message"] = {
             "like": f"A {actor} le gustó tu {what}",
             "comment": f"{actor} comentó tu {what}",
+            "reply": f"{actor} respondió a tu comentario",
+            "live_started": f"{actor} está en vivo ahora",
             "mention": f"{actor} te mencionó en un{'a ' + what if what == 'publicación' else ' ' + what}",
             "repost": f"{actor} compartió tu {what}",
             "follow": f"{actor} comenzó a seguirte",

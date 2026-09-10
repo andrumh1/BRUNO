@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 76 — Backend (pytest, 8/8 PASS) + Frontend (mcp browser automation) validation of the new social-network notifications + 'Usar este sonido' + comment deep-link highlight iteration. All requested criteria verified end-to-end. BACKEND: (a) like creates ONE notif with url /reels?id=<id>+preview_url; unlike RETRACTS it; re-like dedupes to exactly one; (b) comment notif has type='comment', target_type='comment', message includes the comment text, url /reels?id=<postId>&comments=1&comment=<cid>; (c) reply from newtest with parent_id=<cid> generates type='reply' to viewer2 with url containing &comment=<replyId>; (d) POST /posts with remix.duet produces type='remix' to original author with url /reels?id=<newRemixId>; (e) POST /posts with audio.source_post_id returns audio{source_post_id, name 'Sonido original · @…', url non-null}; GET /posts/sound/<X> returns sound{name,url,uses,author} and posts[] with the original first and the new post included; sound.uses increments; (f) after ensuring viewer2 follows newtest, POST /lives (public) fans out type='live_started' with url /lives/<id> to the follower; private live does NOT notify; (g) EVERY notification returned by /api/notifications carries a non-empty url. FRONTEND (390x844, mobile viewport): /reels?id=5d8c719e... shows reel-sound-disc → tapping opens reel-sound-sheet with reel-sound-name 'Sonido original · @Test User' and reel-use-sound-btn → click navigates to /camera?sound=5d8c719e-... and camera-sound-chip is visible with the correct name; camera-sound-remove clears the chip. Comment deep-link on VIDEO post: clicking a 'comentó tu reel:' notif routes to /reels?id=<pid>&comments=1&comment=<cid>, reel-comments-sheet opens and reel-comment-<cid> carries 'ring-2 ring-primary/40 bg-primary/10'. Comment deep-link on IMAGE post: /post/64364ec6...?comments=1&comment=<cid> renders post-comment-<cid> with the same highlight classes and scrolls into view. Notifications list shows Spanish messages with correct icons and previews for like/comment/reply/remix (Stitch, Duet)/follow. NOT covered live: actual camera-recording+publish with mixed audio inside a real browser (mcp_browser_automation cannot pass --use-fake-device-for-media-stream) — behaviour is fully covered at the API level (test_audio_reuse_post_carries_metadata + test_sound_endpoint_returns_uses_and_posts) and the UI wiring in BrunoCameraPage.handlePublish sends audio:{source_post_id, name, url} on POST /api/posts, verified by direct file inspection.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration76_notifications.py",
+    "/app/test_reports/pytest/it76.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "posts_feed.py::_push_notification correctly deduplicates by (user_id, actor_id, type, target_id) and re-surfaces as unread — matches Instagram/TikTok behaviour. Unlike branch also deletes the row (retraction). Solid.",
+    "posts_feed.py::create_comment sets target_type='comment' and target_id=comment.id for BOTH the post-owner and the parent-comment-author notifications, and de-duplicates via `notified` set so the same actor never gets doubled when replying to their own post. Good.",
+    "notification_realtime.enrich_notification cleanly derives /reels?id=...&comments=1&comment=<cid> for comment/reply notifications by resolving comment→post — this is what powers the working deep-link highlight on the frontend.",
+    "lives.py::create_live only fans out live_started for public lives (guarded by `if not request.is_private`) — verified working.",
+    "MINOR: posts_feed.py is 1761 lines — over the 700-line soft cap in the code-review guidelines. Consider splitting notifications + sound + remix helpers into their own modules on a future pass.",
+    "MINOR: enrich_notification builds URLs with a leading '&' when the base has no '?' via `('&' if '?' in base else '?')` — the current base always contains '?', so it's correct today, but this could confuse future authors.",
+    "MINOR: BrunoCameraPage useEffect dep `[facingMode, mode === 'photo']` uses a computed expression as a dependency — lints/react-hooks warns and can lead to a subtle bug if the eslint plugin ever inlines it. Consider a memoised boolean state."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration76_notifications.py",
+    "/app/test_reports/iteration_76.json"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 pytest)",
+    "frontend": "100% on UI-checkable scenarios (sound sheet → camera chip → remove; comment deep-link highlight on both video and image posts; notifications list rendering). Camera recording+publish with fake media not runnable in this harness — covered by backend test."
+  },
+  "test_credentials": "newtest@bruno.com / Test1234! (owner) · viewer2@bruno.com / Test1234! (actor). Both worked.",
+  "seed_data_creation": "Created via API during tests: TEST comment + reply on post 5d8c719e-...; TEST comment on image post 64364ec6-...; TEST duet remix + TEST audio-reuse video post by viewer2 against 5d8c719e-...; one public TEST live and one private TEST live (both ended in finally-blocks). Ensured viewer2 follows newtest as required by the live_started test. Existing likes/notifs are re-used or refreshed by dedupe logic — nothing orphaned.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Full backend suite is at /app/backend/tests/test_iteration76_notifications.py — runs standalone in <15s. Uses REACT_APP_BACKEND_URL from env. The pytest 'module'-scoped _comment_and_reply and _remix_and_audio fixtures are shared across tests; keep that scope if you extend the suite. For the live_started test, _ensure_following toggles once and, if it lands on unfollowed, toggles again — this is safe because our follow endpoint returns state. Frontend camera+publish with mixed audio must be tested with `chromium --use-fake-device-for-media-stream --use-fake-ui-for-media-stream` (mcp_browser_automation cannot pass flags — write a standalone playwright script and run it via `python -m playwright ...`)."
+}

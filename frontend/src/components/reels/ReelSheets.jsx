@@ -3,7 +3,8 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, User, Columns2, Scissors, Layers } from "lucide-react";
+import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, User, Columns2, Scissors, Layers, Music2, Video } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { normalizeReel } from "./useReelsFeed";
 
@@ -36,7 +37,7 @@ export function BottomSheet({ open, onClose, title, children, testid, height = "
   );
 }
 
-export function ReelCommentsSheet({ reel, token, onClose, onPosted }) {
+export function ReelCommentsSheet({ reel, token, onClose, onPosted, highlightId = null }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -48,6 +49,12 @@ export function ReelCommentsSheet({ reel, token, onClose, onPosted }) {
     setLoading(true);
     axios.get(`${API}/posts/${reel.id}/comments`, { headers }).then((r) => setComments(r.data || [])).catch(() => setComments([])).finally(() => setLoading(false));
   }, [reel?.id]);
+
+  useEffect(() => {
+    if (!highlightId || loading) return;
+    const t = setTimeout(() => document.getElementById(`reel-comment-${highlightId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 200);
+    return () => clearTimeout(t);
+  }, [highlightId, loading]);
 
   const send = async () => {
     if (!text.trim() || !token) return;
@@ -66,7 +73,7 @@ export function ReelCommentsSheet({ reel, token, onClose, onPosted }) {
         {loading ? <div className="grid place-items-center py-10"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
           : comments.length === 0 ? <p className="text-center text-sm text-muted-foreground py-10">Sé el primero en comentar</p>
           : comments.map((c) => (
-            <div key={c.id} className="flex gap-2.5" data-testid={`reel-comment-${c.id}`}>
+            <div key={c.id} id={`reel-comment-${c.id}`} className={`flex gap-2.5 rounded-xl transition-colors ${highlightId === c.id ? "bg-primary/10 ring-2 ring-primary/40 p-2 -mx-1" : ""}`} data-testid={`reel-comment-${c.id}`}>
               <div className="w-8 h-8 rounded-full bg-foreground/10 overflow-hidden shrink-0 grid place-items-center">
                 {c.user?.avatar_url ? <img src={c.user.avatar_url} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-foreground/60" />}
               </div>
@@ -195,6 +202,51 @@ export function ReelRemixesSheet({ sourceId, token, onClose, onPick }) {
             ))}
           </div>
         )}
+    </BottomSheet>
+  );
+}
+
+export function ReelSoundSheet({ reel, token, onClose, onPick }) {
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!reel) return;
+    setLoading(true);
+    axios.get(`${API}/posts/sound/${reel.sound_source_id || reel.id}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then((r) => setData({ ...r.data, posts: (r.data.posts || []).map(normalizeReel) })).catch(() => setData(null)).finally(() => setLoading(false));
+  }, [reel?.id]);
+  if (!reel) return null;
+  const sound = data?.sound;
+  return (
+    <BottomSheet open onClose={onClose} title="Sonido" testid="reel-sound-sheet" height="70vh">
+      {loading ? <div className="grid place-items-center py-10"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div> : (
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 pb-3 flex items-center gap-3">
+            <div className="w-16 h-16 rounded-2xl bg-zinc-900 grid place-items-center overflow-hidden reel-disc shrink-0">
+              {sound?.author?.avatar_url ? <img src={sound.author.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" /> : <Music2 className="w-6 h-6 text-white" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold truncate" data-testid="reel-sound-name">{sound?.name || "Sonido original"}</p>
+              <p className="text-xs text-muted-foreground truncate">@{sound?.author?.username || sound?.author?.name || "usuario"} · {sound?.uses || 0} {sound?.uses === 1 ? "video lo usa" : "videos lo usan"}</p>
+            </div>
+          </div>
+          <div className="px-4 pb-3">
+            <button onClick={() => { onClose(); navigate(`/camera?sound=${sound?.source_post_id || reel.id}`); }} className="w-full h-12 rounded-full bg-primary text-white font-semibold text-sm inline-flex items-center justify-center gap-2 active:scale-[0.98]" data-testid="reel-use-sound-btn">
+              <Video className="w-4 h-4" /> Usar este sonido
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 px-3 pb-4">
+            {(data?.posts || []).map((r) => (
+              <button key={r.id} onClick={() => onPick(r)} className="relative aspect-[9/14] rounded-xl overflow-hidden bg-black no-glass" data-testid={`reel-sound-item-${r.id}`}>
+                {(r.poster_url || r.thumbnail_url) ? <img src={r.poster_url || r.thumbnail_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full grid place-items-center"><Play className="w-6 h-6 text-white/70" /></div>}
+                {r.id === sound?.source_post_id && <span className="absolute top-1.5 left-1.5 rounded-full bg-primary text-white text-[9px] px-1.5 py-0.5">Original</span>}
+                <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/70 to-transparent text-left"><p className="text-white text-[10px] font-semibold truncate">@{r.author?.username || r.author?.name}</p></div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </BottomSheet>
   );
 }

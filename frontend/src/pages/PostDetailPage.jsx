@@ -41,7 +41,7 @@ export default function PostDetailPage() {
         ) : !post ? (
           <div className="grid place-items-center py-16"><Loader2 className="w-7 h-7 animate-spin text-muted-foreground" /></div>
         ) : (
-          <PostCard post={post} defaultShowComments={params.get("comments") === "1"} onDelete={() => navigate(-1)} />
+          <PostCard post={post} defaultShowComments={params.get("comments") === "1" || !!params.get("comment")} highlightCommentId={params.get("comment")} onDelete={() => navigate(-1)} />
         )}
       </div>
     </div>

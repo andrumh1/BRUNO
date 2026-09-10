@@ -16,7 +16,8 @@ export const normalizeReel = (post) => {
     poster_url: firstMedia.poster_url || firstAttach.poster_url || post.poster_url || post.thumbnail_url || null,
     image_url: !isVideo ? url : post.image_url || post.thumbnail_url || null,
     thumbnail_url: post.thumbnail_url || firstMedia.poster_url || (!isVideo ? url : null),
-    audio_name: post.audio_name || post.music?.title || null,
+    audio_name: post.audio?.name || post.audio_name || post.music?.title || null,
+    sound_source_id: post.audio?.source_post_id || post.id,
     author: {
       id: post.user?.id || post.user_id,
       name: post.user?.display_name || post.user?.name,

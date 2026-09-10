@@ -76,7 +76,7 @@ const ReactionParticle = ({ emoji }) => (
   </motion.div>
 );
 
-const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarClick, defaultShowComments = false }) => {
+const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarClick, defaultShowComments = false, highlightCommentId = null }) => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const { addMinimizedItem } = useNavScroll();
@@ -218,6 +218,12 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
   useEffect(() => {
     if (defaultShowComments && comments.length === 0) loadComments();
   }, [defaultShowComments]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!highlightCommentId || !showComments || comments.length === 0) return;
+    const t = setTimeout(() => document.getElementById(`comment-${highlightCommentId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+    return () => clearTimeout(t);
+  }, [highlightCommentId, showComments, comments.length]);
 
   const handleComment = async (e) => {
     e.preventDefault();
@@ -492,7 +498,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
             ) : (
               <div className="space-y-3">
                 {comments.map((c) => (
-                  <div key={c.id} className="flex gap-2">
+                  <div key={c.id} id={`comment-${c.id}`} data-testid={`post-comment-${c.id}`} className={`flex gap-2 rounded-xl transition-colors ${highlightCommentId === c.id ? "bg-primary/10 ring-2 ring-primary/40 p-2 -m-1" : ""}`}>
                     <Link to={`/profile/${c.user?.id}`}>
                       {c.user?.avatar_url ? (
                         <img src={c.user.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />

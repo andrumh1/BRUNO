@@ -58,6 +58,8 @@ class Post(BaseModel):
     mentions: List[str] = []
     remix: Optional[dict] = None       # {type: duet|stitch, source_post_id, source_user_id, source_username, source_start, source_end}
     remix_count: int = 0
+    audio: Optional[dict] = None       # {source_post_id, name, url, author_username}  ("Usar este sonido")
+    sound_uses: int = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -69,6 +71,7 @@ class PostCreate(BaseModel):
     visibility: str = "public"
     hashtags: List[str] = []
     remix: Optional[dict] = None
+    audio: Optional[dict] = None
 
 class Like(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -227,6 +230,20 @@ async def create_post(
             "source_end": float(post_data.remix.get("source_end") or 0),
         }
 
+    audio = None
+    if post_data.audio and post_data.audio.get("source_post_id"):
+        src_a = await db.posts.find_one({"id": post_data.audio["source_post_id"]}, {"_id": 0, "id": 1, "user_id": 1, "audio": 1, "media": 1})
+        if src_a:
+            # Chain to the ORIGINAL sound if the source itself reused one
+            origin_id = (src_a.get("audio") or {}).get("source_post_id") or src_a["id"]
+            a_user = await db.users.find_one({"id": src_a["user_id"]}, {"_id": 0, "name": 1, "username": 1})
+            audio = {
+                "source_post_id": origin_id,
+                "name": post_data.audio.get("name") or f"Sonido original · @{(a_user or {}).get('username') or (a_user or {}).get('name') or 'usuario'}",
+                "url": post_data.audio.get("url") or next((m.get("mp4_url") or m.get("url") for m in (src_a.get("media") or []) if (m or {}).get("type") == "video"), None),
+                "author_username": (a_user or {}).get("username") or (a_user or {}).get("name"),
+            }
+
     post = Post(
         user_id=current_user.id,
         content=post_data.content,
@@ -236,6 +253,7 @@ async def create_post(
         visibility=post_data.visibility,
         hashtags=post_data.hashtags or _extract_hashtags(post_data.content),
         remix=remix,
+        audio=audio,
     )
     
     post_doc = post.model_dump()
@@ -243,8 +261,16 @@ async def create_post(
     post_doc['updated_at'] = post_doc['updated_at'].isoformat()
     
     await db.posts.insert_one(post_doc)
+    if audio:
+        await db.posts.update_one({"id": audio["source_post_id"]}, {"$inc": {"sound_uses": 1}})
     if remix:
         await db.posts.update_one({"id": remix["source_post_id"]}, {"$inc": {"remix_count": 1}})
+        if remix["source_user_id"] != current_user.id:
+            await _push_notification(
+                user_id=remix["source_user_id"], actor_id=current_user.id, ntype="remix",
+                target_id=post.id, target_type="post",
+                message=f"{current_user.name or 'Alguien'} hizo un {'dúo con' if remix['type'] == 'duet' else 'stitch de'} tu reel",
+            )
     
     # Update user's posts count
     await db.user_profiles.update_one(
@@ -403,6 +429,46 @@ async def get_recommended_videos(
 
     sliced = ordered[skip: skip + limit]
     return await _hydrate_video_posts(sliced, user_id)
+
+
+async def _push_notification(user_id: str, actor_id: Optional[str], ntype: str, target_id: str, target_type: str, message: Optional[str] = None):
+    """Create (or refresh) a notification like Instagram/TikTok: one row per actor+type+target,
+    re-surfaced as unread when it happens again; emitted in realtime over WS."""
+    now = datetime.now(timezone.utc).isoformat()
+    existing = await db.notifications.find_one({"user_id": user_id, "actor_id": actor_id, "type": ntype, "target_id": target_id}, {"_id": 0})
+    if existing:
+        await db.notifications.update_one({"id": existing["id"]}, {"$set": {"is_read": False, "read": False, "created_at": now, "message": message or existing.get("message")}})
+        doc = {**existing, "is_read": False, "created_at": now, "message": message or existing.get("message")}
+    else:
+        doc = {"id": str(uuid.uuid4()), "user_id": user_id, "actor_id": actor_id, "type": ntype, "target_id": target_id,
+               "target_type": target_type, "message": message, "is_read": False, "created_at": now}
+        await db.notifications.insert_one(dict(doc))
+    await emit_notification_ws(doc)
+    return doc
+
+
+@router.get("/posts/sound/{post_id}")
+async def get_posts_by_sound(post_id: str, limit: int = 60, current_user: Optional[User] = Depends(get_current_user_optional)):
+    """The original reel + every reel that reused its sound ("Usar este sonido")."""
+    origin = await db.posts.find_one({"id": post_id}, {"_id": 0})
+    if not origin:
+        raise HTTPException(status_code=404, detail="Post not found")
+    origin_id = (origin.get("audio") or {}).get("source_post_id") or origin["id"]
+    if origin_id != origin["id"]:
+        origin = await db.posts.find_one({"id": origin_id}, {"_id": 0}) or origin
+    uses = [p async for p in db.posts.find({"audio.source_post_id": origin_id, "visibility": "public"}, {"_id": 0}).sort("created_at", -1).limit(limit)]
+    items = await _hydrate_video_posts([origin] + [u for u in uses if u["id"] != origin["id"]], current_user.id if current_user else None)
+    a_user = items[0]["user"] if items else {}
+    return {
+        "sound": {
+            "source_post_id": origin["id"],
+            "name": (origin.get("audio") or {}).get("name") or f"Sonido original · @{a_user.get('username') or a_user.get('name') or 'usuario'}",
+            "url": next((m.get("mp4_url") or m.get("url") for m in (origin.get("media") or []) if m.get("type") == "video"), origin.get("video_url")),
+            "author": a_user,
+            "uses": len(uses),
+        },
+        "posts": items,
+    }
 
 
 @router.get("/posts/{post_id}/remixes")
@@ -754,9 +820,10 @@ async def toggle_like(post_id: str, current_user: User = Depends(get_current_use
     })
     
     if existing_like:
-        # Unlike
+        # Unlike → also retract the like notification (Instagram/TikTok behaviour)
         await db.likes.delete_one({"id": existing_like["id"]})
         await db.posts.update_one({"id": post_id}, {"$inc": {"likes_count": -1}})
+        await db.notifications.delete_many({"user_id": post["user_id"], "actor_id": current_user.id, "type": "like", "target_id": post_id})
         return {"liked": False, "likes_count": post["likes_count"] - 1}
     else:
         # Like
@@ -770,19 +837,9 @@ async def toggle_like(post_id: str, current_user: User = Depends(get_current_use
         await db.likes.insert_one(like_doc)
         await db.posts.update_one({"id": post_id}, {"$inc": {"likes_count": 1}})
         
-        # Create notification (if not own post)
+        # Create notification (if not own post) — deduped per actor/post
         if post["user_id"] != current_user.id:
-            notification = Notification(
-                user_id=post["user_id"],
-                actor_id=current_user.id,
-                type="like",
-                target_id=post_id,
-                target_type="post"
-            )
-            notif_doc = notification.model_dump()
-            notif_doc['created_at'] = notif_doc['created_at'].isoformat()
-            await db.notifications.insert_one(notif_doc)
-            await emit_notification_ws(notif_doc)
+            await _push_notification(user_id=post["user_id"], actor_id=current_user.id, ntype="like", target_id=post_id, target_type="post")
             
             # Send push notification
             from routers.push_notifications import notify_new_like
@@ -823,21 +880,20 @@ async def create_comment(
     if comment_data.parent_id:
         await db.comments.update_one({"id": comment_data.parent_id}, {"$inc": {"replies_count": 1}})
     
-    # Create notification
+    # Notifications: post owner (comment) + parent comment author (reply). Target = the comment itself so the app can highlight it.
+    preview = comment_data.content[:80]
+    notified = {current_user.id}
+    if comment_data.parent_id:
+        parent = await db.comments.find_one({"id": comment_data.parent_id}, {"_id": 0, "user_id": 1})
+        if parent and parent["user_id"] not in notified:
+            notified.add(parent["user_id"])
+            await _push_notification(user_id=parent["user_id"], actor_id=current_user.id, ntype="reply", target_id=comment.id, target_type="comment",
+                                     message=f"{current_user.name or 'Alguien'} respondió a tu comentario: “{preview}”")
+    if post["user_id"] not in notified:
+        notified.add(post["user_id"])
+        await _push_notification(user_id=post["user_id"], actor_id=current_user.id, ntype="comment", target_id=comment.id, target_type="comment",
+                                 message=f"{current_user.name or 'Alguien'} comentó tu {'reel' if (post.get('post_type') == 'video' or any((m or {}).get('type') == 'video' for m in (post.get('media') or []))) else 'publicación'}: “{preview}”")
     if post["user_id"] != current_user.id:
-        notification = Notification(
-            user_id=post["user_id"],
-            actor_id=current_user.id,
-            type="comment",
-            target_id=post_id,
-            target_type="post",
-            content=comment_data.content[:100]
-        )
-        notif_doc = notification.model_dump()
-        notif_doc['created_at'] = notif_doc['created_at'].isoformat()
-        await db.notifications.insert_one(notif_doc)
-        await emit_notification_ws(notif_doc)
-        
         # Send push notification
         from routers.push_notifications import notify_new_comment
         await notify_new_comment(post["user_id"], current_user.name or "Alguien", comment_data.content[:50])

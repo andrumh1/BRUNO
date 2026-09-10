@@ -13,7 +13,7 @@ const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1
  */
 export default function ReelItem({
   reel, isActive, isNear, globalMuted, onToggleMute, onLike, onFollow, onSave,
-  onOpenComments, onOpenShare, onOpenRemix, onOpenRemixes, onSwipeLeft, onSwipeRight, onMinimize, hideChrome,
+  onOpenComments, onOpenShare, onOpenRemix, onOpenRemixes, onOpenSound, onSwipeLeft, onSwipeRight, onMinimize, hideChrome,
 }) {
   const videoRef = useRef(null);
   const barRef = useRef(null);
@@ -170,9 +170,9 @@ export default function ReelItem({
             <Rail icon={<Share2 className="w-7 h-7 text-white" />} label="Enviar" testid="reel-share-btn" onClick={() => onOpenShare?.(reel)} />
             {src && <Rail icon={<Layers className="w-7 h-7 text-white" />} label={reel.remix_count ? fmt(reel.remix_count) : "Remix"} testid="reel-remix-btn" onClick={() => onOpenRemix?.(reel)} />}
             <Rail icon={<Minimize2 className="w-6 h-6 text-white" />} label="PiP" testid="reel-minimize-btn" onClick={() => onMinimize?.(reel)} />
-            <div className="mt-1 w-11 h-11 rounded-full bg-zinc-900 border-[3px] border-zinc-700 grid place-items-center overflow-hidden reel-disc" style={{ animationPlayState: isPlaying ? "running" : "paused" }}>
+            <button onClick={(e) => { e.stopPropagation(); onOpenSound?.(reel); }} className="mt-1 w-11 h-11 rounded-full bg-zinc-900 border-[3px] border-zinc-700 grid place-items-center overflow-hidden reel-disc active:scale-90" style={{ animationPlayState: isPlaying ? "running" : "paused" }} data-testid="reel-sound-disc" aria-label="Sonido">
               {reel.author?.avatar_url ? <img src={reel.author.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" /> : <Music2 className="w-4 h-4 text-white" />}
-            </div>
+            </button>
           </div>
 
           {/* Caption */}
@@ -187,10 +187,10 @@ export default function ReelItem({
               </button>
             )}
             {(reel.content || reel.description) && <p className="text-white/95 text-[13px] mt-1 line-clamp-2 drop-shadow">{reel.content || reel.description}</p>}
-            <div className="flex items-center gap-1.5 mt-2 text-white/90 text-[11px]">
+            <button onClick={(e) => { e.stopPropagation(); onOpenSound?.(reel); }} className="pointer-events-auto flex items-center gap-1.5 mt-2 text-white/90 text-[11px] max-w-full" data-testid="reel-sound-label">
               <Music2 className="w-3 h-3 shrink-0" />
-              <span className="truncate">{reel.audio_name || `Sonido original · ${reel.author?.username || reel.author?.name || "usuario"}`}</span>
-            </div>
+              <span className="truncate">{reel.audio_name || `Sonido original · @${reel.author?.username || reel.author?.name || "usuario"}`}</span>
+            </button>
           </div>
 
           {/* Mute */}
