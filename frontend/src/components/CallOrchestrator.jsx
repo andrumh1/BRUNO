@@ -61,7 +61,7 @@ export default function CallOrchestrator() {
     let alive = true;
     const connect = () => {
       try {
-        const socket = new WebSocket(`${WS_URL}/ws/chat/${token}`);
+        const socket = new WebSocket(`${WS_URL}/api/ws/chat/${token}`);
         wsRef.current = socket;
         socket.onmessage = (event) => {
           if (!alive) return;

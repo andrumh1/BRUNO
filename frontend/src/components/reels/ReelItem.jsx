@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, Volume2, VolumeX, User, Plus, Check, Minimize2, RotateCcw } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, Volume2, VolumeX, User, Plus, Check, Minimize2, RotateCcw, Layers, Scissors, Columns2 } from "lucide-react";
 
 const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n || 0));
 
@@ -13,7 +13,7 @@ const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1
  */
 export default function ReelItem({
   reel, isActive, isNear, globalMuted, onToggleMute, onLike, onFollow, onSave,
-  onOpenComments, onOpenShare, onSwipeLeft, onSwipeRight, onMinimize, hideChrome,
+  onOpenComments, onOpenShare, onOpenRemix, onOpenRemixes, onSwipeLeft, onSwipeRight, onMinimize, hideChrome,
 }) {
   const videoRef = useRef(null);
   const barRef = useRef(null);
@@ -168,6 +168,7 @@ export default function ReelItem({
             <Rail icon={<MessageCircle className="w-7 h-7 text-white" />} label={fmt(reel.comments_count)} testid="reel-comments-btn" onClick={() => onOpenComments?.(reel)} />
             <Rail icon={<Bookmark className={`w-7 h-7 ${reel.is_bookmarked ? "text-primary fill-primary" : "text-white"}`} />} label={reel.is_bookmarked ? "Guardado" : "Guardar"} testid="reel-save-btn" onClick={() => onSave?.(reel)} />
             <Rail icon={<Share2 className="w-7 h-7 text-white" />} label="Enviar" testid="reel-share-btn" onClick={() => onOpenShare?.(reel)} />
+            {src && <Rail icon={<Layers className="w-7 h-7 text-white" />} label={reel.remix_count ? fmt(reel.remix_count) : "Remix"} testid="reel-remix-btn" onClick={() => onOpenRemix?.(reel)} />}
             <Rail icon={<Minimize2 className="w-6 h-6 text-white" />} label="PiP" testid="reel-minimize-btn" onClick={() => onMinimize?.(reel)} />
             <div className="mt-1 w-11 h-11 rounded-full bg-zinc-900 border-[3px] border-zinc-700 grid place-items-center overflow-hidden reel-disc" style={{ animationPlayState: isPlaying ? "running" : "paused" }}>
               {reel.author?.avatar_url ? <img src={reel.author.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" /> : <Music2 className="w-4 h-4 text-white" />}
@@ -179,6 +180,12 @@ export default function ReelItem({
             <Link to={`/profile/${authorId}`} onClick={(e) => e.stopPropagation()} className="pointer-events-auto text-white font-bold text-[15px] drop-shadow" data-testid="reel-author-name">
               @{reel.author?.username || reel.author?.name || "usuario"}
             </Link>
+            {reel.remix?.source_post_id && (
+              <button onClick={(e) => { e.stopPropagation(); onOpenRemixes?.({ id: reel.remix.source_post_id }); }} className="pointer-events-auto mt-1 inline-flex items-center gap-1 rounded-full bg-white/15 backdrop-blur-sm px-2 py-0.5 text-white text-[11px]" data-testid="reel-remix-label">
+                {reel.remix.type === "duet" ? <Columns2 className="w-3 h-3" /> : <Scissors className="w-3 h-3" />}
+                {reel.remix.type === "duet" ? "Dúo con" : "Stitch de"} @{reel.remix.source_username}
+              </button>
+            )}
             {(reel.content || reel.description) && <p className="text-white/95 text-[13px] mt-1 line-clamp-2 drop-shadow">{reel.content || reel.description}</p>}
             <div className="flex items-center gap-1.5 mt-2 text-white/90 text-[11px]">
               <Music2 className="w-3 h-3 shrink-0" />

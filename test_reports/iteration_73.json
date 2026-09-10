@@ -1,0 +1,52 @@
+{
+  "summary": "Iteration 73 — Backend Remix + Frontend Remix UI + Private LIVE end-to-end (host + viewer via 2 contexts). Backend: 5/5 remix tests PASS (test_iteration73_remix.py). Frontend Remix: reel-remix-btn + reel-remix-sheet (Dúo/Stitch + Ver N remixes) work; reel-remix-label on a remix reel opens reel-remixes-sheet with items; RemixStudio Stitch opens with remix-trim + start/end sliders + next (no remix-error). Frontend LIVE HOST: /lives/start flow works end-to-end (title input, live-visibility-private, live-go-btn -> live-host-page, live-access-code=6 chars, live-host-video with fake camera videoWidth=1280 readyState=4, live-close-btn closes and redirects to /lives). Frontend LIVE VIEWER: /lives/join?code=CODE correctly redirects to /lives/<id>?code=CODE and auto-shows live-viewer-page; privacy-shield/privacy-watermark/privacy-badge all render; privacy-blackout appears on visibilitychange->hidden+blur and clears on focus. HOWEVER: on the viewer side the LIVE WS signaling (/api/lives/<id>/ws) is NEVER opened — captured ws opens are only /ws and /ws/chat/<token>. Consequently: remote-video.srcObject stays null (no WebRTC media), host live-viewer-count remains 0, host live-events empty (no 'se unió'), viewer comments do not appear in host events (and vice-versa), viewer hearts do not float on host, and the live_ended broadcast never reaches the viewer (viewer URL does NOT navigate to /lives when host closes).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Private Live viewer WebRTC signaling",
+        "issue": "On the viewer side the live-signaling WebSocket to /api/lives/<liveId>/ws is never opened after auto-joining via /lives/join?code=CODE. Playwright captured only /ws and /ws/chat/<token> ws opens on the viewer page; no /api/lives/<id>/ws. As a result: live-remote-video.srcObject remains null (no WebRTC track received), host live-viewer-count stays 0, host live-events is empty (no 'se unió' event), viewer's live-comment-send does NOT propagate to host live-events (and vice-versa), viewer hearts do NOT show as floating .live-heart on host, and when the host clicks live-close-btn the viewer is NOT navigated to /lives (no live_ended WS event received). Host-side WS to /api/lives/<id>/ws WAS observed opening (host camera works and code UI renders). Likely a bug in useLiveRTC on the viewer path (perhaps aborts when there is no local stream or waits for a stream that never comes, or the access_code / token is not being forwarded on the viewer WS URL). This blocks the entire private-live two-party experience.",
+        "affected_selectors": [
+          "[data-testid=live-remote-video]",
+          "[data-testid=live-viewer-count]",
+          "[data-testid=live-events]",
+          "[data-testid=live-heart-btn]",
+          "[data-testid=live-comment-send]",
+          "[data-testid=live-close-btn]"
+        ],
+        "priority": "HIGH"
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration73_remix.py",
+    "/app/test_reports/pytest/iteration73_remix.xml"
+  ],
+  "action_items": [
+    "Investigate why the viewer side of /pages/LiveViewerPage.jsx + hooks/useLiveRTC.js never opens the /api/lives/<liveId>/ws WebSocket. Repro: log in as any non-host user, visit /lives/join?code=<CODE> for a private live created by another host; page renders live-viewer-page but no WS is opened (Playwright browser.on('websocket') sees only /ws and /ws/chat/<token>). Fix should ensure the viewer opens the signaling WS with ?token=<jwt>&code=<CODE> immediately when live-viewer-page mounts, independent of getUserMedia (viewer does not need a local camera).",
+    "After fix, re-run the two-context private-live flow: expect host live-viewer-count -> 1, host live-events to receive 'se unió' + viewer comments + hearts, viewer live-events to receive its own + host echoes, and viewer navigation to /lives on host live-close-btn."
+  ],
+  "critical_code_review_comments": [
+    "posts_feed.py:206-247 — remix path looks correct; source_username fallback chain (username -> name -> 'usuario') is nice. Consider validating that source post has post_type=='video' before allowing a remix (currently any post is remixable).",
+    "posts_feed.py:411 — get_post_remixes does not filter by post_type=='video'; if someone creates a remix of a non-video post, it will still appear. Minor; visibility filter is fine.",
+    "LiveViewerPage.jsx + useLiveRTC.js — the viewer path appears to not open the signaling WS reliably; add a useEffect that opens the WS as soon as the page mounts (post-auth) with the code query param, and add a visible reconnect indicator + retry."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration73_remix.py"
+  ],
+  "success_rate": {
+    "backend": "5/5 (100%)",
+    "frontend": "Remix UI 100% (sheets + studio open); Live host 100%; Live viewer partial — page/privacy/gate render but WebRTC signaling never established -> media/comments/hearts/live_ended broken"
+  },
+  "test_credentials": "newtest@bruno.com / Test1234! (host). Viewer fresh users registered on-the-fly via POST /api/auth/register with TEST_v_<uuid>@bruno.com / Test1234!. viewer2@bruno.com login not verified this run (fell back to TEST_ user).",
+  "seed_data_creation": "Multiple TEST_ private lives created via POST /api/lives during test runs, all ended in teardown via POST /api/lives/{id}/end. One TEST_ duet remix post created against a recommended video (title starts with 'TEST duet remix'). Several TEST_v_<uuid>@bruno.com viewer accounts registered (persist, no delete-user endpoint).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend remix endpoints fully covered by /app/backend/tests/test_iteration73_remix.py (5/5). The Remix UI (sheets + RemixStudio open) works; the recording step could not be exercised because mcp_browser_automation does not accept custom chromium args (no --use-fake-device-for-media-stream) — publish path requires manual verification or a runner with fake media flags. Private-live HOST works; the VIEWER shows page + privacy but does NOT open /api/lives/<id>/ws, so no WebRTC/media/comments/hearts. Priority for main agent: check LiveViewerPage/useLiveRTC WS opener. Iteration 72 backend WS tests still pass, so the server relay is fine — this is a frontend viewer-side bug.",
+  "rca_of_the_issue": "Viewer-side private-live signaling WS is never opened. Captured websocket URLs on the viewer page: [wss://.../ws, wss://.../ws/chat/<token>] — no wss://.../api/lives/<liveId>/ws. Effects cascade: no viewer_joined -> host viewer-count=0 -> no offer/answer exchange -> live-remote-video.srcObject=null. Suggested fix: in LiveViewerPage.jsx (or useLiveRTC.js), ensure the WS is opened unconditionally when live-viewer-page mounts (post-join with a valid code), passing ?token=<jwt>&code=<CODE>, and do NOT gate the WS open on getUserMedia success (viewer is receive-only)."
+}

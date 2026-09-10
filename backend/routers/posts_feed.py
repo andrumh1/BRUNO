@@ -56,6 +56,8 @@ class Post(BaseModel):
     is_edited: bool = False
     hashtags: List[str] = []
     mentions: List[str] = []
+    remix: Optional[dict] = None       # {type: duet|stitch, source_post_id, source_user_id, source_username, source_start, source_end}
+    remix_count: int = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -66,6 +68,7 @@ class PostCreate(BaseModel):
     post_type: str = "text"
     visibility: str = "public"
     hashtags: List[str] = []
+    remix: Optional[dict] = None
 
 class Like(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -205,7 +208,25 @@ async def create_post(
     post_data: PostCreate,
     current_user: User = Depends(get_current_user)
 ):
-    """Create a new post"""
+    """Create a new post (optionally a Duet/Stitch remix of another post)"""
+    remix = None
+    if post_data.remix and post_data.remix.get("source_post_id"):
+        rtype = post_data.remix.get("type")
+        if rtype not in ("duet", "stitch"):
+            raise HTTPException(status_code=400, detail="remix.type must be duet or stitch")
+        src = await db.posts.find_one({"id": post_data.remix["source_post_id"]}, {"_id": 0, "id": 1, "user_id": 1})
+        if not src:
+            raise HTTPException(status_code=404, detail="Source post not found")
+        src_user = await db.users.find_one({"id": src["user_id"]}, {"_id": 0, "name": 1, "username": 1})
+        remix = {
+            "type": rtype,
+            "source_post_id": src["id"],
+            "source_user_id": src["user_id"],
+            "source_username": (src_user or {}).get("username") or (src_user or {}).get("name") or "usuario",
+            "source_start": float(post_data.remix.get("source_start") or 0),
+            "source_end": float(post_data.remix.get("source_end") or 0),
+        }
+
     post = Post(
         user_id=current_user.id,
         content=post_data.content,
@@ -213,7 +234,8 @@ async def create_post(
         card_id=post_data.card_id,
         post_type=post_data.post_type,
         visibility=post_data.visibility,
-        hashtags=post_data.hashtags or _extract_hashtags(post_data.content)
+        hashtags=post_data.hashtags or _extract_hashtags(post_data.content),
+        remix=remix,
     )
     
     post_doc = post.model_dump()
@@ -221,6 +243,8 @@ async def create_post(
     post_doc['updated_at'] = post_doc['updated_at'].isoformat()
     
     await db.posts.insert_one(post_doc)
+    if remix:
+        await db.posts.update_one({"id": remix["source_post_id"]}, {"$inc": {"remix_count": 1}})
     
     # Update user's posts count
     await db.user_profiles.update_one(
@@ -379,6 +403,13 @@ async def get_recommended_videos(
 
     sliced = ordered[skip: skip + limit]
     return await _hydrate_video_posts(sliced, user_id)
+
+
+@router.get("/posts/{post_id}/remixes")
+async def get_post_remixes(post_id: str, limit: int = 60, current_user: Optional[User] = Depends(get_current_user_optional)):
+    """Duets + stitches made from this post."""
+    out = [p async for p in db.posts.find({"remix.source_post_id": post_id, "visibility": "public"}, {"_id": 0}).sort("created_at", -1).limit(limit)]
+    return await _hydrate_video_posts(out, current_user.id if current_user else None)
 
 
 @router.get("/posts/history/videos")

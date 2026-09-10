@@ -1,0 +1,57 @@
+{
+  "summary": "Iteration 74 — retest with real chromium + fake-media flags (--use-fake-device-for-media-stream). Iteration 73 blocker CONFIRMED FIXED: viewer now opens the /api/lives/<liveId>/ws signaling socket; WebRTC media pipe establishes (viewer_srcObject != null); host viewer_count -> 1; host live-events shows 'Viewer Dos se unió 👋'; viewer comments propagate to host and vice-versa; badge 'EN VIVO' visible; privacy shield/watermark/badge present + visibilitychange->hidden shows privacy-blackout and focus clears it. Auth guards fixed: anon visit to /lives/<id> redirects to /login?next=/lives/<id>; direct URL /lives/<id>?code=... on a fresh (logged-in) page no longer bounces to /login; /lives/join?code=... redirects to /lives/<id>?code=... and auto-joins. Wrong-code path stays gated (error toast + live-code-gate still visible). REMIX publish end-to-end works for both Stitch and Duet: POST /api/posts returns 200, URL becomes /reels?id=<newId>, reel-remix-label shows 'Stitch de @Test User' / 'Dúo con @Test User' and no remix-error. Chat WS regression: /api/ws/chat/<token> opens and stays open; no reconnect loop to legacy /ws/chat/.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Viewer heart -> host floating hearts",
+        "issue": "Clicking live-heart-btn on the viewer never causes a .live-heart element to appear on the host DOM (polled up to ~2.4s across 6 samples). Viewer opens /api/lives/<id>/ws successfully and comments do reach the host, so the signaling socket works; only the 'heart' message type appears to not surface on the host side (either the backend WS relay drops type='heart' or the host's useLiveRTC does not add it to the hearts state when role='host'). Impact: love reactions never render on host.",
+        "affected_selectors": ["[data-testid=live-heart-btn]", ".live-heart"],
+        "priority": "MEDIUM"
+      },
+      {
+        "flow": "Host close -> viewer auto-navigate to /lives",
+        "issue": "When the host clicks live-close-btn (StartLivePage.end -> POST /lives/{id}/end), the viewer page does NOT receive a live_ended message within ~10s and never navigates to /lives. rtc.ended stays false. Impact: viewer is left staring at a black stage after the host ends the live. Backend end endpoint likely closes/removes the room without broadcasting live_ended first, OR the broadcast is emitted after the WS is already gone.",
+        "affected_selectors": ["[data-testid=live-close-btn]", "[data-testid=live-viewer-page]"],
+        "priority": "MEDIUM"
+      },
+      {
+        "flow": "Viewer WebRTC video decode (fake camera, headless)",
+        "issue": "Flaky: with the chromium fake-media camera the viewer sometimes sees srcObject set but videoWidth=0 / readyState=0 (no decoded frames) even after 25s; other runs decode to 320x/1280x and readyState=4. srcObject/track is always attached, so the SDP exchange is fine — this appears to be a decoder/pipe race that only shows up with the synthetic camera. Real cameras should be fine, but it's worth ensuring the viewer <video> gets a nudge (play()/track.enabled) once the first RTP frame arrives.",
+        "affected_selectors": ["[data-testid=live-remote-video]"],
+        "priority": "LOW"
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/tests/test_iteration74_live_remix.py",
+    "/app/test_reports/iteration_74.json"
+  ],
+  "action_items": [
+    "Check backend live-WS relay for type='heart' — ensure it fans out to the host (and possibly other viewers) exactly like 'new_comment'. Also verify LiveViewerPage/useLiveRTC handles 'heart' identically on host role (looks fine in the code — role-agnostic — so root cause is likely the backend).",
+    "In backend /api/lives/{id}/end, broadcast a {type:'live_ended'} message to all connected viewers BEFORE closing the room, and give the socket a small flush window (e.g. asyncio.sleep(0)) before closing. Frontend already handles 'live_ended' -> navigate('/lives').",
+    "(Nice-to-have) In useLiveRTC/viewer, when the first ontrack fires, call videoRef.current.play() after a microtask and also set track.enabled=true — this eliminates the fake-camera decode race in headless tests."
+  ],
+  "critical_code_review_comments": [
+    "LiveViewerPage.jsx:44 correctly appends ?next=... on the /login redirect (verified: /login?next=%2Flives%2F<id>).",
+    "LiveViewerPage.jsx:64 wires useLiveRTC only when {joined && !!live} which explains why the WS never opened for viewers stuck at the gate — that's intended.",
+    "useLiveRTC.js:59-60: WS URL correctly uses /api/lives/{id}/ws?token=...&code=... — matches server. No more starved-pool problem.",
+    "RealtimeNotificationContext / FloatingChatBubble / CallOrchestrator / ChatPage all now target /api/ws/chat — confirmed by capturing wss:// events (all chat WS URLs contain /api/ws/chat/, none go to legacy /ws/chat/).",
+    "Consider a light debounce or in-flight guard on LiveInputRow.send so double-taps on heart/comment don't stack requests."
+  ],
+  "updated_files": [
+    "/app/tests/test_iteration74_live_remix.py"
+  ],
+  "success_rate": {
+    "backend": "not tested (frontend-only iteration)",
+    "frontend": "Live host 100% · Live viewer signaling + WebRTC + comments + privacy + auth guards 100% · Live hearts fanout FAIL · Live end -> viewer nav FAIL · Remix (Stitch + Duet) publish 100% · Chat WS regression 100%"
+  },
+  "test_credentials": "newtest@bruno.com / Test1234! (host) · viewer2@bruno.com / Test1234! (viewer). Both worked.",
+  "seed_data_creation": "Multiple TEST_ private lives created via UI (StartLivePage) and cleaned up via POST /api/lives/{id}/end at end of run (also the pre-run cleanup ends any pre-existing active live). Two REMIX posts created: one Stitch and one Duet, both against source video id 5d8c719e-3e47-44fc-ad46-a7b17b2629ed. Post IDs printed in the run results (varies each run).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The Playwright suite at /app/tests/test_iteration74_live_remix.py runs full-chromium with fake-media flags (necessary — mcp_browser_automation cannot pass those chromium args). Split into three subruns via ONLY=live|remix|chat. Uses page.request to REST-login (Cloudflare blocks urllib) and to pre-clean an existing active live before UI login (otherwise StartLivePage renders the LiveHostPage in place and there is no title input). Use the viewer flow that navigates directly to /lives/<id>?code=<CODE> for the correct-code path — a two-step (wrong then correct) fill on the gate can leave stale React state. To retest heart + live_ended, focus on the backend WS relay in /app/backend/server.py around the /api/lives/<id>/ws handler.",
+  "rca_of_the_issue": "Iteration 73's viewer-WS starvation is fully resolved: the app-wide chat socket was moved from /ws/chat to /api/ws/chat, which fixed both the reconnect loop and the per-host connection pool starvation. Viewer now opens /api/lives/<id>/ws immediately after auto-join and receives 'welcome' + 'viewer_joined' + 'new_comment' + WebRTC 'offer'. Remaining bugs are two smaller backend/relay issues: (a) type='heart' does not appear to be relayed to the host peer, and (b) POST /api/lives/{id}/end does not deliver a 'live_ended' event to the viewer before the socket is torn down."
+}

@@ -414,13 +414,20 @@ async def live_ws(websocket: WebSocket, live_id: str, token: str = Query(None), 
 
     await websocket.accept()
     conns = live_connections.setdefault(live_id, {})
+    stale = conns.get(user["id"])
     conns[user["id"]] = websocket
+    if stale is not None and stale is not websocket:
+        try:
+            await stale.close(code=4000, reason="Replaced by a newer connection")
+        except Exception:
+            pass
     viewer = {"id": user["id"], "name": user.get("name", "Usuario"), "avatar_url": user.get("avatar_url")}
 
     await websocket.send_json({
         "type": "welcome", "is_host": is_host, "self_id": user["id"], "host_id": live["host_id"],
         "viewers": [uid for uid in conns.keys() if uid != live["host_id"]],
         "viewer_count": max(0, len(conns) - (1 if live["host_id"] in conns else 0)),
+        "host_online": live["host_id"] in conns,
         "rtc_config": {"iceServers": ICE_SERVERS},
     })
     if not is_host:
@@ -453,6 +460,8 @@ async def live_ws(websocket: WebSocket, live_id: str, token: str = Query(None), 
     except Exception:
         pass
     finally:
+        if conns.get(user["id"]) is not websocket:
+            return  # superseded by a newer socket of the same user — keep the live one registered
         conns.pop(user["id"], None)
         if not is_host:
             await db.lives.update_one({"id": live_id, "viewer_count": {"$gt": 0}}, {"$inc": {"viewer_count": -1}})

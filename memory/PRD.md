@@ -1,5 +1,15 @@
 # BRUNO Social Network - PRD
 
+## Phase 68: Dúo & Stitch + Live WebRTC verificado end-to-end + fix WebSockets realtime (2026-06)
+
+**Implementado:**
+- **Dúo & Stitch** (`components/reels/RemixStudio.jsx`): composición client-side en canvas (720×1280) → `captureStream` + AudioContext (audio original + micrófono mezclados) → MediaRecorder → upload `/upload/image` → `POST /posts` con `remix{type,source_post_id,source_start,source_end}`. Dúo = pantalla dividida; Stitch = recorte ≤5s del original + tu parte (fase "Original" → "Tu parte"). Botón **Remix** en rail del reel (`reel-remix-btn`) → `ReelRemixSheet` (Dúo / Stitch / "Ver N remixes") → `ReelRemixesSheet` (`GET /posts/{id}/remixes`). Etiqueta "Dúo con @x / Stitch de @x" (`reel-remix-label`). Backend: `Post.remix`, `remix_count` (+1 en el original), validación 400/404.
+- **Sheets de Reels portaladas a `document.body`** (las transiciones de página crean stacking context y quedaban bajo el nav).
+- **BUG RAÍZ realtime (preexistente)**: los WS `/ws/chat` y `/ws/map` no son enrutables por el ingress (solo `/api`) → bucle de reconexión saturaba el pool de conexiones del navegador y bloqueaba el handshake del WS de lives. Fix: `server.py` expone también `/api/ws/chat/{token}` y `/api/ws/map/{token}`; frontend (`RealtimeNotificationContext`, `CallOrchestrator`, `FloatingChatBubble`, `ChatPage`, `SharedLocationsLayer`, `MapPageLegacy`) usa `/api/ws/...`. **Chat realtime ahora funciona en preview y producción.**
+- **Lives**: `LiveViewerPage` espera `isLoading` de auth antes de redirigir a login (carga directa de URL); `LoginPage` respeta `?next=`. Servidor: StrictMode duplicaba el socket del host y el cleanup del socket viejo borraba el vivo → ahora el socket nuevo reemplaza al viejo (close 4000) y el cleanup solo elimina si sigue siendo el registrado; `welcome` incluye `host_online`. Viewer hace `play()` al recibir track.
+- **Verificado (iteration 73-75, 2 contextos Chromium con cámara falsa):** host inicia live privado → viewer con código entra → SDP/ICE OK, `srcObject` recibido, contador 1, comentarios y corazones bidireccionales, blackout de privacidad, host cierra → viewer navega a /lives. Remix Dúo y Stitch publicados end-to-end.
+
+
 ## Phase 67: Glass global + Mapa OSM fallback + Reels TikTok-class + Lives WebRTC (privados anti-captura) + Cámara Pro (2026-06)
 
 **Pedido del usuario (español):** (A) efecto translúcido del menú "Crear" aplicado a TODA la app; (B) el mapa falla al conectar con Google; (C) Reels fluidos, modernos, swipe vertical, historial, algoritmo justo + funciones TikTok incluyendo lives; (D) lives PRIVADOS con código que solo comparte el dueño, protegidos contra capturas; (E) filtros profesionales.

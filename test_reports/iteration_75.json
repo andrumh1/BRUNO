@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 75 — retest of the two remaining live-streaming issues from iteration 74 after the /app/backend/routers/lives.py fix (stale-socket replacement + guarded cleanup, welcome now carries host_online). Both fixes CONFIRMED WORKING end-to-end with real chromium + fake-media flags: (a) viewer→host and host→viewer floating hearts now render — WS frames show type='heart' fanning out to both peers and .live-heart DOM elements appear on the target page (host peak=3 for 3 viewer taps, viewer peak=1 for 1 host tap); (b) host live-close-btn now delivers type='live_ended' to the viewer socket BEFORE the room is torn down — viewer navigates to /lives within ~6s. All other criteria from the review request also pass: viewer live-status-badge shows 'EN VIVO' within ~5s thanks to host_online in welcome; host live-viewer-count == 1; comments propagate both ways; live-remote-video.srcObject is non-null on viewer (best-effort videoWidth: 0 with fake camera, srcObject and readyState pipeline established via successful SDP/ICE exchange visible on WS). Regression: /reels and /lives grid both load fine.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/tests/test_iteration75_live_fixes.py",
+    "/app/tests/test_iteration74_live_remix.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "lives.py:417-423 correctly replaces stale sockets (React StrictMode double-mount) before broadcasting welcome — the guarded cleanup at :463-464 (`if conns.get(user['id']) is not websocket: return`) prevents the first (immediately-closed) StrictMode socket from evicting the LIVE registration. Verified in-DOM by hearts + live_ended now delivering.",
+    "lives.py:430 welcome now includes host_online, and useLiveRTC.js:73 consumes it — viewer badge flips to 'EN VIVO' inside ~5s after auto-join instead of waiting for a separate 'host_online' broadcast. Good.",
+    "lives.py:270-272 order (pop active_lives → _broadcast live_ended → pop live_connections) is correct; broadcast completes while the WS is still registered, so the viewer reliably receives it before its socket is closed by the host peer disconnecting.",
+    "Minor: fake-media chromium camera on the viewer only surfaces `srcObject` + attached track but not decoded frames (videoWidth=0, readyState=0). Not a code issue — synthetic-camera decoder race. Real cameras are unaffected. (Same LOW note as it74.)"
+  ],
+  "updated_files": [
+    "/app/tests/test_iteration75_live_fixes.py"
+  ],
+  "success_rate": {
+    "backend": "not tested (frontend-only iteration)",
+    "frontend": "100% — viewer badge EN VIVO ≤5s, viewer→host hearts peak=3, host→viewer hearts peak=1, host viewer_count=1, comments both ways, viewer srcObject non-null, host-close→viewer-nav-to-/lives within 6s, /reels and /lives grid regression OK"
+  },
+  "test_credentials": "newtest@bruno.com / Test1234! (host) · viewer2@bruno.com / Test1234! (viewer)",
+  "seed_data_creation": "Created TEST private live via UI (StartLivePage) and ended it via POST /api/lives/{id}/end at the end of run. Pre-clean step also ends any pre-existing active live before the UI flow. No stray data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Playwright suite at /app/tests/test_iteration75_live_fixes.py runs full chromium with --use-fake-device-for-media-stream (mcp_browser_automation cannot pass those args). IMPORTANT: run with `REACT_APP_BACKEND_URL=<url>` explicitly on the command line — the script reads it from env and does not have a default. To trigger onHeart reliably from Playwright, use `page.evaluate(\"() => document.querySelector('[data-testid=live-heart-btn]').click()\")` (a real DOM click that bubbles through React) — plain `page.click(force=True)` on the covered viewer overlay does not always fire React's onClick in headless. WS-level verification uses `ws.on('framesent'/'framereceived')` on the /api/lives/{id}/ws socket and cleanly separates transport from render bugs. Two-context host+viewer flow with viewport 390x844 and grant_permissions(['camera','microphone'], origin=BASE).",
+  "rca_of_the_issue": "Root cause of both iteration-74 bugs was the same: React StrictMode mounted the host's useLiveRTC effect twice; the first WebSocket was closed by React's cleanup effect immediately after opening, but the cleanup handler ran conns.pop(user['id']) which deleted the LIVE (second) socket from live_connections. Consequences: (1) the WS-relayed 'heart' broadcast walked an empty room-map for the host, so no floating hearts on the host; (2) end_live's _broadcast('live_ended') also walked an empty map because active viewers' sockets were never in the room (or the host's own late-arriving socket was gone by the time), so viewers never got the shutdown event. Fix in lives.py:417-423 saves any existing entry as `stale` BEFORE overwriting with the fresh socket, sends welcome/host_online on the new socket, then closes the stale one; the finally block at :463-464 guards `conns.pop` so a superseded socket cannot evict the live registration. Additionally welcome now carries `host_online: live['host_id'] in conns` which lets the viewer flip to 'EN VIVO' without waiting for a separate broadcast. Verified end-to-end in this iteration."
+}

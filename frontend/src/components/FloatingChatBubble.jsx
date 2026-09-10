@@ -459,7 +459,7 @@ const FloatingChatBubble = () => {
     if (!token) return;
     const connect = () => {
       try {
-        const socket = new WebSocket(`${WS_URL}/ws/chat/${token}`);
+        const socket = new WebSocket(`${WS_URL}/api/ws/chat/${token}`);
         socket.onopen = () => setWs(socket);
         socket.onmessage = (event) => {
           try {

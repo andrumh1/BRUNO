@@ -945,7 +945,7 @@ const ChatPage = () => {
 
     const connectWebSocket = () => {
       try {
-        const socket = new WebSocket(`${WS_URL}/ws/chat/${token}`);
+        const socket = new WebSocket(`${WS_URL}/api/ws/chat/${token}`);
         
         socket.onopen = () => {
           setWs(socket);

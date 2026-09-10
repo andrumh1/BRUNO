@@ -177,7 +177,7 @@ export const RealtimeNotificationProvider = ({ children }) => {
   useEffect(() => {
     if (!token || !user) return;
 
-    const url = process.env.REACT_APP_BACKEND_URL.replace(/^http/, "ws") + `/ws/chat/${token}`;
+    const url = process.env.REACT_APP_BACKEND_URL.replace(/^http/, "ws") + `/api/ws/chat/${token}`;
     let cancelled = false;
 
     const connect = () => {

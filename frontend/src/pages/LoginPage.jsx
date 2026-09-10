@@ -59,7 +59,8 @@ const LoginPage = () => {
         localStorage.setItem("bruno_keep_session_active", keepActive ? "1" : "0");
       } catch (_) { /* no-op */ }
       login(response.data.user, response.data.access_token);
-      navigate("/my-profile");
+      const next = new URLSearchParams(window.location.search).get("next");
+      navigate(next && next.startsWith("/") ? next : "/my-profile");
     } catch (err) {
       setError(err.response?.data?.detail || "Error al iniciar sesion");
     } finally {

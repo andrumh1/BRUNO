@@ -171,7 +171,7 @@ const MapPage = () => {
     
     const connectWS = () => {
       try {
-        const ws = new WebSocket(`${WS_URL}/ws/map/${token}`);
+        const ws = new WebSocket(`${WS_URL}/api/ws/map/${token}`);
         
         ws.onopen = () => {
           wsRef.current = ws;

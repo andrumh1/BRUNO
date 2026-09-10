@@ -61,7 +61,7 @@ export function useLiveRTC({ liveId, token, role, accessCode, localStream, enabl
     const ws = new WebSocket(url);
     wsRef.current = ws;
     ws.onopen = () => setConnected(true);
-    ws.onclose = (e) => { setConnected(false); if (e.code === 4003) setDenied(true); };
+    ws.onclose = (e) => { setConnected(false); if (e.code === 4003) setDenied(true); if (e.code === 4000) return; };
     ws.onmessage = async (ev) => {
       let msg; try { msg = JSON.parse(ev.data); } catch (_) { return; }
       switch (msg.type) {
@@ -70,6 +70,7 @@ export function useLiveRTC({ liveId, token, role, accessCode, localStream, enabl
           selfId.current = msg.self_id; hostId.current = msg.host_id;
           if (msg.rtc_config?.iceServers) iceRef.current = msg.rtc_config.iceServers;
           setViewerCount(msg.viewer_count || 0);
+          if (role !== "host") setHostOnline(!!msg.host_online);
           if (role === "host") (msg.viewers || []).forEach((v) => offerTo(v));
           else send({ type: "request_stream" });
           break;

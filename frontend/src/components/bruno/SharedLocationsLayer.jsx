@@ -52,7 +52,7 @@ export default function SharedLocationsLayer({ onSelect }) {
     if (!token) return;
     let alive = true;
     const connect = () => {
-      const sock = new WebSocket(`${WS_URL}/ws/chat/${token}`);
+      const sock = new WebSocket(`${WS_URL}/api/ws/chat/${token}`);
       wsRef.current = sock;
       sock.onmessage = (ev) => {
         if (!alive) return;

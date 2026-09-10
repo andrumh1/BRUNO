@@ -2129,6 +2129,7 @@ async def get_user_from_token(token: str) -> Optional[User]:
     except JWTError:
         return None
 
+@app.websocket("/api/ws/chat/{token}")
 @app.websocket("/ws/chat/{token}")
 async def websocket_chat(websocket: WebSocket, token: str):
     """WebSocket endpoint for real-time chat"""
@@ -2344,6 +2345,7 @@ map_manager = MapConnectionManager()
 # Import math functions for distance calculation
 from math import sin, cos, sqrt, atan2
 
+@app.websocket("/api/ws/map/{token}")
 @app.websocket("/ws/map/{token}")
 async def map_websocket(websocket: WebSocket, token: str):
     """WebSocket endpoint for real-time map locations"""

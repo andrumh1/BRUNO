@@ -1,15 +1,16 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, User } from "lucide-react";
+import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, User, Columns2, Scissors, Layers } from "lucide-react";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { normalizeReel } from "./useReelsFeed";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
 export function BottomSheet({ open, onClose, title, children, testid, height = "62vh" }) {
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[10400] bg-black/30 backdrop-blur-[4px]" onClick={onClose} data-testid={`${testid}-backdrop`}>
@@ -30,7 +31,8 @@ export function BottomSheet({ open, onClose, title, children, testid, height = "
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
@@ -138,6 +140,57 @@ export function ReelHistorySheet({ open, token, onClose, onPick }) {
                   <p className="text-white text-[10px] font-semibold truncate">@{r.author?.username || r.author?.name}</p>
                   <p className="text-white/70 text-[9px]">{r.watch_count > 1 ? `Visto ${r.watch_count}×` : "Visto"}</p>
                 </div>
+              </button>
+            ))}
+          </div>
+        )}
+    </BottomSheet>
+  );
+}
+
+export function ReelRemixSheet({ reel, onClose, onPick }) {
+  if (!reel) return null;
+  const opts = [
+    { id: "duet", label: "Dúo", hint: "Pantalla dividida: el original y tú, grabados juntos", Icon: Columns2 },
+    { id: "stitch", label: "Stitch", hint: "Recorta hasta 5s del original y añade tu parte", Icon: Scissors },
+  ];
+  return (
+    <BottomSheet open onClose={onClose} title="Remix" testid="reel-remix-sheet" height="auto">
+      <div className="px-4 pb-5 space-y-2">
+        {opts.map((o) => (
+          <button key={o.id} onClick={() => onPick(o.id)} className="w-full flex items-center gap-3 rounded-2xl p-3 bg-foreground/[0.05] active:scale-[0.98] transition-transform text-left" data-testid={`reel-remix-${o.id}`}>
+            <div className="w-11 h-11 rounded-xl bg-primary/15 text-primary grid place-items-center shrink-0"><o.Icon className="w-5 h-5" /></div>
+            <div className="min-w-0"><p className="text-sm font-semibold">{o.label}</p><p className="text-[11px] text-muted-foreground">{o.hint}</p></div>
+          </button>
+        ))}
+        {reel.remix_count > 0 && (
+          <button onClick={() => onPick("list")} className="w-full flex items-center justify-center gap-2 h-10 rounded-full bg-foreground/[0.05] text-xs font-medium" data-testid="reel-remix-list-btn"><Layers className="w-4 h-4" /> Ver {reel.remix_count} remix{reel.remix_count === 1 ? "" : "es"} de este reel</button>
+        )}
+      </div>
+    </BottomSheet>
+  );
+}
+
+export function ReelRemixesSheet({ sourceId, token, onClose, onPick }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!sourceId) return;
+    setLoading(true);
+    axios.get(`${API}/posts/${sourceId}/remixes`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then((r) => setItems((r.data || []).map(normalizeReel))).catch(() => setItems([])).finally(() => setLoading(false));
+  }, [sourceId]);
+  return (
+    <BottomSheet open={!!sourceId} onClose={onClose} title="Remixes" testid="reel-remixes-sheet" height="62vh">
+      {loading ? <div className="grid place-items-center py-10"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+        : items.length === 0 ? <p className="text-center text-sm text-muted-foreground py-10">Aún no hay dúos ni stitches</p>
+        : (
+          <div className="grid grid-cols-3 gap-1.5 px-3 pb-4 overflow-y-auto">
+            {items.map((r) => (
+              <button key={r.id} onClick={() => onPick(r)} className="relative aspect-[9/14] rounded-xl overflow-hidden bg-black no-glass" data-testid={`reel-remix-item-${r.id}`}>
+                {(r.poster_url || r.thumbnail_url) && <img src={r.poster_url || r.thumbnail_url} alt="" className="w-full h-full object-cover" />}
+                <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-black/55 text-white text-[9px] px-1.5 py-0.5">{r.remix?.type === "duet" ? <Columns2 className="w-2.5 h-2.5" /> : <Scissors className="w-2.5 h-2.5" />}{r.remix?.type === "duet" ? "Dúo" : "Stitch"}</span>
+                <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/70 to-transparent text-left"><p className="text-white text-[10px] font-semibold truncate">@{r.author?.username || r.author?.name}</p></div>
               </button>
             ))}
           </div>

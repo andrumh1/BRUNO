@@ -19,7 +19,7 @@ export default function LiveViewerPage() {
   const { liveId } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { token, user } = useAuth();
+  const { token, user, isLoading: authLoading } = useAuth();
   const [live, setLive] = useState(null);
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState((params.get("code") || "").toUpperCase());
@@ -40,10 +40,10 @@ export default function LiveViewerPage() {
   }, [isJoinRoute]);
 
   useEffect(() => {
-    if (isJoinRoute) return;
+    if (isJoinRoute || authLoading) return;
     if (!token) { navigate(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`); return; }
     axios.get(`${API}/lives/${liveId}`, { headers }).then((r) => { setLive(r.data); if (r.data.is_host) navigate("/lives/start", { replace: true }); }).catch(() => setNotFound(true)).finally(() => setLoading(false));
-  }, [liveId, token]);
+  }, [liveId, token, authLoading]);
 
   // Auto-join when public or when the code came in the URL
   useEffect(() => {
@@ -63,12 +63,23 @@ export default function LiveViewerPage() {
 
   const rtc = useLiveRTC({ liveId, token, role: "viewer", accessCode: live?.requires_code ? code : null, enabled: joined && !!live });
 
-  useEffect(() => { if (videoRef.current) { videoRef.current.srcObject = rtc.remoteStream || null; if (rtc.remoteStream) videoRef.current.play().catch(() => {}); } }, [rtc.remoteStream]);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.srcObject = rtc.remoteStream || null;
+    if (!rtc.remoteStream) return;
+    rtc.remoteStream.getTracks().forEach((t) => { t.enabled = true; });
+    const kick = () => v.play().catch(() => {});
+    kick();
+    const t = setTimeout(kick, 400);
+    v.addEventListener("loadedmetadata", kick);
+    return () => { clearTimeout(t); v.removeEventListener("loadedmetadata", kick); };
+  }, [rtc.remoteStream]);
   useEffect(() => { if (rtc.ended) { brunoToast.info?.("El live ha terminado"); setTimeout(() => navigate("/lives"), 1200); } }, [rtc.ended]);
   useEffect(() => { if (rtc.denied) { setJoined(false); brunoToast.error("Código de acceso rechazado"); } }, [rtc.denied]);
   useEffect(() => () => { if (joined && token) axios.post(`${API}/lives/${liveId}/leave`, {}, { headers }).catch(() => {}); }, [joined]);
 
-  if (isJoinRoute || loading) return <div className="fixed inset-0 bg-black grid place-items-center"><Loader2 className="w-8 h-8 text-white animate-spin" /></div>;
+  if (isJoinRoute || loading || authLoading) return <div className="fixed inset-0 bg-black grid place-items-center"><Loader2 className="w-8 h-8 text-white animate-spin" /></div>;
 
   if (notFound || (live && live.status !== "live")) {
     return (

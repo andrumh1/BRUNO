@@ -14,7 +14,9 @@ import { useNavScroll } from "@/contexts/NavScrollContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import ReelItem from "@/components/reels/ReelItem";
 import { useReelsFeed } from "@/components/reels/useReelsFeed";
-import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet } from "@/components/reels/ReelSheets";
+import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet } from "@/components/reels/ReelSheets";
+import RemixStudio from "@/components/reels/RemixStudio";
+import { AnimatePresence } from "framer-motion";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -33,6 +35,9 @@ export default function ReelsPage() {
   const [commentsFor, setCommentsFor] = useState(null);
   const [shareFor, setShareFor] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [remixFor, setRemixFor] = useState(null);      // reel → choose duet/stitch
+  const [studio, setStudio] = useState(null);          // { reel, mode }
+  const [remixesOf, setRemixesOf] = useState(null);    // source post id
   const containerRef = useRef(null);
   const itemRefs = useRef([]);
 
@@ -152,6 +157,7 @@ export default function ReelsPage() {
                     globalMuted={globalMuted} onToggleMute={() => setGlobalMuted((m) => !m)}
                     onLike={handleLike} onFollow={handleFollow} onSave={handleSave}
                     onOpenComments={setCommentsFor} onOpenShare={setShareFor} onMinimize={handleMinimize}
+                    onOpenRemix={(r) => { if (requireAuth()) setRemixFor(r); }} onOpenRemixes={(r) => setRemixesOf(r.id)}
                     onSwipeLeft={swipeLeft} onSwipeRight={swipeRight}
                   />
                 ) : (
@@ -169,6 +175,14 @@ export default function ReelsPage() {
       <ReelCommentsSheet reel={commentsFor} token={token} onClose={() => setCommentsFor(null)} onPosted={(id) => patchReel(id, (r) => ({ comments_count: (r.comments_count || 0) + 1 }))} />
       {shareFor && <ReelShareSheet reel={shareFor} onClose={() => setShareFor(null)} />}
       <ReelHistorySheet open={historyOpen} token={token} onClose={() => setHistoryOpen(false)} onPick={openFromHistory} />
+      {remixFor && <ReelRemixSheet reel={remixFor} onClose={() => setRemixFor(null)} onPick={(m) => { const r = remixFor; setRemixFor(null); if (m === "list") setRemixesOf(r.id); else setStudio({ reel: r, mode: m }); }} />}
+      <ReelRemixesSheet sourceId={remixesOf} token={token} onClose={() => setRemixesOf(null)} onPick={(r) => { setRemixesOf(null); navigate(`/reels?id=${r.id}`); }} />
+      <AnimatePresence>
+        {studio && (
+          <RemixStudio reel={studio.reel} mode={studio.mode} token={token} onClose={() => setStudio(null)}
+            onPublished={(post) => { setStudio(null); patchReel(studio.reel.id, (r) => ({ remix_count: (r.remix_count || 0) + 1 })); if (post?.id) navigate(`/reels?id=${post.id}`); }} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
