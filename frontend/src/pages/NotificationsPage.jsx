@@ -109,7 +109,7 @@ function NotificationRow({ notif, onMark, onClick }) {
       exit={{ opacity: 0, x: -40 }}
       whileTap={{ scale: 0.98 }}
       onClick={() => {
-        if (isUnread) onMark?.(notif.id);
+        if (isUnread) onMark?.(notif.ids || [notif.id]);
         onClick?.(notif);
       }}
       data-testid={`notif-${notif.id}`}
@@ -117,13 +117,26 @@ function NotificationRow({ notif, onMark, onClick }) {
         isUnread ? "bg-orange-500/[0.06] hover:bg-orange-500/10" : "hover:bg-muted/50"
       }`}
     >
-      <div className={`shrink-0 grid place-items-center h-10 w-10 rounded-xl ${color}`}>
-        <Icon className="h-5 w-5" />
-      </div>
+      {notif.actors?.length > 1 ? (
+        <div className="shrink-0 relative h-10 w-12" data-testid={`notif-stack-${notif.id}`}>
+          {notif.actors.slice(0, 3).map((a, i) => (
+            <div key={a.id || i} className="absolute top-0 h-8 w-8 rounded-full ring-2 ring-background overflow-hidden bg-primary/15 grid place-items-center text-[10px] font-bold text-primary" style={{ left: i * 12, zIndex: 3 - i }}>
+              {a.avatar_url ? <img src={a.avatar_url} alt="" className="h-full w-full object-cover" /> : (a.username || "?").slice(0, 1).toUpperCase()}
+            </div>
+          ))}
+          <span className={`absolute -bottom-1 -right-0.5 grid place-items-center h-5 w-5 rounded-full ${color} ring-2 ring-background`}><Icon className="h-3 w-3" /></span>
+        </div>
+      ) : (
+        <div className={`shrink-0 grid place-items-center h-10 w-10 rounded-xl ${color}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+      )}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold truncate">
-            {notif.actor?.username || notif.title || "Bruno"}
+            {notif.actors?.length > 1
+              ? `${notif.actors[0]?.username || "Alguien"}${notif.count > 2 ? ` y ${notif.count - 1} más` : notif.actors[1] ? ` y ${notif.actors[1].username}` : ""}`
+              : notif.actor?.username || notif.title || "Bruno"}
           </p>
           {isUnread && <span className="h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0" />}
         </div>
@@ -171,24 +184,23 @@ export default function NotificationsPage() {
     // Realtime subscription — new notifications appear instantly
     const unsubscribe = subscribeRealtime((notif) => {
       setNotifs((arr) => {
-        // De-duplicate by id
-        if (notif.id && arr.some((n) => n.id === notif.id)) return arr;
+        // Optimistic insert; the grouped list is re-fetched right after so stacks stay coherent
+        if (notif.id && arr.some((n) => n.id === notif.id || n.ids?.includes(notif.id))) return arr;
         return [{ ...notif, is_read: false }, ...arr];
       });
+      clearTimeout(window.__notifReload);
+      window.__notifReload = setTimeout(load, 800);
     });
     return () => unsubscribe?.();
   }, [token, subscribeRealtime]);
 
-  const handleMark = async (id) => {
+  const handleMark = async (ids) => {
+    const list = Array.isArray(ids) ? ids : [ids];
     setNotifs((arr) =>
-      arr.map((n) => (n.id === id ? { ...n, is_read: true, read: true } : n))
+      arr.map((n) => (list.includes(n.id) ? { ...n, is_read: true, read: true } : n))
     );
     try {
-      await axios.post(
-        `${API}/notifications/mark-read/${id}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.put(`${API}/notifications/read-many`, { ids: list }, { headers: { Authorization: `Bearer ${token}` } });
     } catch (_) {
       /* ignore */
     }

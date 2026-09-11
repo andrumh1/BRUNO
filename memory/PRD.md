@@ -1,5 +1,12 @@
 # BRUNO Social Network - PRD
 
+## Phase 71: Notificaciones agrupadas (2026-06)
+- `GET /notifications?group=true` (default) apila al estilo Instagram: misma acción + mismo objetivo (o todos los follows / lives) dentro de 48 h → una fila con `ids[]`, `actors[]` (únicos), `count`, `is_read` (todas leídas), `preview_url` y mensaje combinado ("A Ana y 12 personas más les gustó tu reel", "X y Y comenzaron a seguirte"). `_group_notifications` + `_group_message` en `posts_feed.py`. Nuevo `PUT /notifications/read-many {ids}` (el antiguo `/mark-read/{id}` apuntaba a otra colección y nunca marcaba la lista in-app).
+- Frontend `NotificationsPage`: avatares apilados con mini-icono, título "Ana y 3 más", clic marca todo el grupo como leído y navega al `url`; los eventos realtime re-cargan la lista (800 ms) para mantener las pilas coherentes.
+- Fix infra: `plugins/visual-edits/babel-metadata-plugin.js` crasheaba en hot-reload (`parentPath` null → "Cannot read properties of null (reading 'traverse')") tumbando la compilación; añadida guarda.
+- Verificado con screenshot: 3 pilas, grupo de 4 likes, grupo de 2 follows, marcado como leído funcionando.
+
+
 ## Phase 70: "Usar este sonido" + resaltar comentario + notificaciones al estilo red social (2026-06)
 - **Usar este sonido**: disco/etiqueta de audio del reel → `ReelSoundSheet` (`GET /posts/sound/{id}`: sonido original, autor, usos, grid original + reutilizaciones) → botón → `/camera?sound=<postId>`. `BrunoCameraPage` muestra chip del sonido, y al grabar mezcla el audio del reel (Audio element + AudioContext) con el micrófono en la pista del video; publica con `audio:{source_post_id,name,url}` (cadena al sonido ORIGINAL si el fuente ya lo reutilizaba) y `sound_uses` +1. Reels muestran `audio.name`.
 - **Resaltar comentario**: `ReelCommentsSheet highlightId` y `PostCard highlightCommentId` hacen scroll + ring/bg al comentario. Deep-links `/reels?id=X&comments=1&comment=<cid>` y `/post/X?comment=<cid>`.

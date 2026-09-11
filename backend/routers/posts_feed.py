@@ -1696,6 +1696,7 @@ async def send_message(
 async def get_notifications(
     skip: int = 0,
     limit: int = 50,
+    group: bool = True,
     current_user: User = Depends(get_current_user)
 ):
     """Get notifications for current user"""
@@ -1729,7 +1730,86 @@ async def get_notifications(
         except Exception:
             notif.setdefault("url", "/notifications")
     
-    return notifications
+    return _group_notifications(notifications) if group else notifications
+
+
+GROUPABLE = {"like", "comment", "reply", "repost", "remix", "follow", "live_started"}
+GROUP_WINDOW_H = 48
+
+
+def _group_message(ntype: str, actors: list, count: int, label: Optional[str], single_message: Optional[str]) -> str:
+    if count <= 1:
+        return single_message or ""
+    names = [a.get("username") or "Alguien" for a in actors[:2]]
+    others = count - len(names)
+    who = names[0] if len(names) == 1 else f"{names[0]} y {names[1]}" if others <= 0 else f"{names[0]} y {others + 1} personas más"
+    what = label or "publicación"
+    verbs = {
+        "like": (f"A {who} les gustó tu {what}", f"A {who} le gustó tu {what}"),
+        "comment": (f"{who} comentaron tu {what}", f"{who} comentó tu {what}"),
+        "reply": (f"{who} respondieron a tu comentario", f"{who} respondió a tu comentario"),
+        "repost": (f"{who} compartieron tu {what}", f"{who} compartió tu {what}"),
+        "remix": (f"{who} hicieron remixes de tu {what}", f"{who} hizo un remix de tu {what}"),
+        "follow": (f"{who} comenzaron a seguirte", f"{who} comenzó a seguirte"),
+        "live_started": (f"{who} están en vivo", f"{who} está en vivo"),
+    }
+    plural, singular = verbs.get(ntype, (f"{who} interactuaron con tu {what}", f"{who} interactuó con tu {what}"))
+    return plural if (others > 0 or len(names) > 1) else singular
+
+
+def _group_notifications(items: list) -> list:
+    """Instagram-style stacking: same type + same target (or all follows) within 48h → one row
+    with stacked actors, count and a combined message. Newest activity keeps the position."""
+    groups: dict = {}
+    out: list = []
+    for n in items:  # items are newest-first
+        ntype = n.get("type")
+        if ntype not in GROUPABLE:
+            out.append(n)
+            continue
+        key = (ntype, "*" if ntype in ("follow", "live_started") else n.get("target_id"))
+        g = groups.get(key)
+        try:
+            ts = datetime.fromisoformat((n.get("created_at") or "").replace("Z", "+00:00"))
+        except Exception:
+            ts = None
+        if g and ts and g["_latest_ts"] and (g["_latest_ts"] - ts).total_seconds() > GROUP_WINDOW_H * 3600:
+            g = None  # too old for this stack → start a new one
+        if not g:
+            g = {**n, "ids": [n["id"]], "actors": [], "count": 0, "_latest_ts": ts, "_seen_actors": set()}
+            groups[key] = g
+            out.append(g)
+        actor = n.get("actor") or {}
+        if actor.get("id") and actor["id"] not in g["_seen_actors"]:
+            g["_seen_actors"].add(actor["id"])
+            g["actors"].append(actor)
+        elif not actor.get("id"):
+            g["actors"].append(actor)
+        if n["id"] not in g["ids"]:
+            g["ids"].append(n["id"])
+        g["count"] = len(g["actors"]) if ntype != "comment" else len(g["ids"])
+        g["is_read"] = bool(g.get("is_read", True)) and bool(n.get("is_read") or n.get("read"))
+        if not g.get("preview_url") and n.get("preview_url"):
+            g["preview_url"] = n["preview_url"]
+    for g in out:
+        if "ids" in g:
+            g["message"] = _group_message(g.get("type"), g["actors"], g["count"], g.get("target_label"), g.get("message"))
+            g.pop("_latest_ts", None); g.pop("_seen_actors", None)
+    return out
+
+
+class ReadManyRequest(BaseModel):
+    ids: List[str]
+
+
+@router.put("/notifications/read-many")
+async def mark_many_notifications_read(body: ReadManyRequest, current_user: User = Depends(get_current_user)):
+    """Mark a set of notifications (e.g. a grouped row) as read"""
+    await db.notifications.update_many(
+        {"user_id": current_user.id, "id": {"$in": body.ids}},
+        {"$set": {"is_read": True, "read": True}}
+    )
+    return {"updated": len(body.ids)}
 
 @router.put("/notifications/read")
 async def mark_notifications_read(current_user: User = Depends(get_current_user)):

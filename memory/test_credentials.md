@@ -13,3 +13,4 @@
 
 ## Viewer secundario (lives privados)
 - viewer2@bruno.com / Test1234!  (creado 2026-06, para probar entrar a un live privado con código)
+- viewer3@bruno.com, viewer4@bruno.com, viewer5@bruno.com / Test1234! (creados para probar agrupación de notificaciones)
