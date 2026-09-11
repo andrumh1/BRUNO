@@ -58,7 +58,8 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
           original_url: response.data.original_url || response.data.url,
         }]);
       } catch (error) {
-        // error handled
+        const { brunoToast } = await import("@/components/bruno/BrunoToast");
+        brunoToast.error("No se pudo subir el archivo", { description: error?.response?.data?.detail || file.name });
       }
     }
     setUploading(false);
@@ -144,8 +145,11 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
       setMedia([]);
       setSelectedCard(null);
       if (onPostCreated) onPostCreated(response.data);
+      const { brunoToast } = await import("@/components/bruno/BrunoToast");
+      brunoToast.publish("Publicación creada", { description: "Ya aparece en tu perfil y en el feed." });
     } catch (error) {
-      // error handled
+      const { brunoToast } = await import("@/components/bruno/BrunoToast");
+      brunoToast.error("No se pudo publicar", { description: error?.response?.data?.detail || "Inténtalo de nuevo." });
     } finally {
       setPosting(false);
     }

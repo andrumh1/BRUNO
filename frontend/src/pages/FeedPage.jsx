@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,12 +24,25 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const FeedPage = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
   const { t } = useLanguage();
   
   // Tab state: "foryou", "social", "reels" or "cards"
-  const [activeTab, setActiveTab] = useState("foryou");
+  const [activeTab, setActiveTab] = useState(() => (new URLSearchParams(window.location.search).get("compose") ? "social" : "foryou"));
+
+  // "Crear → Publicación" deep-link (/feed?compose=1): switch to the Feed tab, scroll to the composer and focus it
+  useEffect(() => {
+    if (!new URLSearchParams(location.search).get("compose")) return;
+    setActiveTab("social");
+    const t = setTimeout(() => {
+      const el = document.getElementById("feed-composer");
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      el?.querySelector("textarea, input[type=text]")?.focus();
+    }, 500);
+    return () => clearTimeout(t);
+  }, [location.search]);
   
   // Social feed state
   const [posts, setPosts] = useState([]);
@@ -148,9 +161,9 @@ const FeedPage = () => {
       ...newPost,
       user: {
         id: user?.id,
-        username: user?.username,
+        username: user?.username || user?.name || user?.email?.split("@")[0],
         avatar_url: user?.avatar_url,
-        display_name: user?.display_name || user?.username
+        display_name: user?.display_name || user?.name || user?.username
       },
       is_liked: false,
       likes_count: 0,
@@ -692,10 +705,12 @@ const FeedPage = () => {
               
               {/* Create Post (only for logged in users) */}
               {user && (
-                <CreatePost 
-                  onPostCreated={handlePostCreated} 
-                  userCards={userCards}
-                />
+                <div id="feed-composer" data-testid="feed-composer">
+                  <CreatePost 
+                    onPostCreated={handlePostCreated} 
+                    userCards={userCards}
+                  />
+                </div>
               )}
               
               {/* Refresh Button */}

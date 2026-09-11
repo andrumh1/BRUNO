@@ -666,10 +666,13 @@ const BrunoCameraPage = () => {
           visibility: "public",
           audio: sound && capturedMedia.type !== "photo" ? { source_post_id: sound.source_post_id, name: sound.name, url: sound.url } : null,
         }, { headers: { Authorization: `Bearer ${token}` } });
-        navigate(capturedMedia.type === "photo" ? "/feed" : `/reels?id=${created.data?.id || ""}`);
+        const { brunoToast } = await import("@/components/bruno/BrunoToast");
+        brunoToast.publish(capturedMedia.type === "photo" ? "Publicación creada" : "Reel publicado", { description: "Ya aparece en tu perfil, el feed y Reels." });
+        navigate(capturedMedia.type === "photo" ? `/post/${created.data?.id || ""}` : `/reels?id=${created.data?.id || ""}`);
       }
     } catch (err) {
-      // error handled
+      const { brunoToast } = await import("@/components/bruno/BrunoToast");
+      brunoToast.error("No se pudo publicar", { description: err?.response?.data?.detail || "Revisa tu conexión e inténtalo de nuevo." });
     } finally {
       setPublishing(false);
     }

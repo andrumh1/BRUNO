@@ -254,8 +254,45 @@ const MobileBottomNav = () => {
             }
           };
 
+          // Helper: publish a FEED POST / REEL (permanent) given a file
+          const publishPost = async (mediaFile, meta = {}) => {
+            const { brunoToast } = await import("@/components/bruno/BrunoToast");
+            const isVideo = mediaFile.type.startsWith("video");
+            const tid = `publish-${Date.now()}`;
+            brunoToast.loading(isVideo ? "Publicando tu reel…" : "Publicando…", { id: tid, description: "No cierres la app." });
+            try {
+              const form = new FormData();
+              form.append("file", mediaFile);
+              const ep = isVideo ? "/upload/chat-file" : "/upload/image";
+              const up = await axios.post(`${API}${ep}`, form, {
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
+              });
+              const u = up.data || {};
+              const mediaUrl = u.url || u.secure_url;
+              if (!mediaUrl) throw new Error("no url");
+              const r = await axios.post(`${API}/posts`, {
+                content: meta?.caption || "",
+                media: [{ type: isVideo ? "video" : "image", url: mediaUrl, mp4_url: u.mp4_url || null, poster_url: u.poster_url || null, f_auto_url: u.f_auto_url || null }],
+                post_type: isVideo ? "video" : "image",
+                visibility: "public",
+                audio: meta?.music?.url ? { source_post_id: meta.music.trackId, name: meta.music.title, url: meta.music.url } : null,
+              }, { headers: { Authorization: `Bearer ${token}` } });
+              brunoToast.dismiss(tid);
+              brunoToast.publish(isVideo ? "Reel publicado" : "Publicación creada", { id: tid, description: "Ya aparece en tu perfil, el feed y Reels." });
+              navigate(isVideo ? `/reels?id=${r.data.id}` : `/post/${r.data.id}`);
+            } catch (e) {
+              brunoToast.dismiss(tid);
+              brunoToast.error("No se pudo publicar", { id: tid, description: e?.response?.data?.detail || "Revisa tu conexión e inténtalo de nuevo." });
+            }
+          };
+
           // Route by type
           if (type === "post") {
+            if (source === "gallery" && file) { await publishPost(file); return; }
+            if (source === "camera") {
+              openCamera({ mode: "both", onCapture: async (capturedFile, meta) => publishPost(capturedFile, meta) });
+              return;
+            }
             navigate("/feed?compose=1");
             return;
           }
@@ -264,17 +301,11 @@ const MobileBottomNav = () => {
             return;
           }
           if (type === "reel") {
-            // Reels are always video; gallery source uploads, camera opens video mode
-            if (source === "gallery" && file) {
-              navigate("/reels?upload=1");
-              return;
-            }
+            // Reels are permanent video posts (not 24h stories)
+            if (source === "gallery" && file) { await publishPost(file); return; }
             openCamera({
               mode: "video",
-              onCapture: async (capturedFile) => {
-                navigate("/reels?upload=1");
-                await publishStory(capturedFile);
-              },
+              onCapture: async (capturedFile, meta) => publishPost(capturedFile, meta),
             });
             return;
           }

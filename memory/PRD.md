@@ -1,5 +1,12 @@
 # BRUNO Social Network - PRD
 
+## Phase 72: FIX publicar foto/video no guardaba nada (2026-06)
+- **Causa raíz** (`MobileBottomNav.jsx` → `BrunoPublishMenu.onPick`): "Crear → Publicación" con archivo navegaba a `/feed?compose=1` y **descartaba el archivo** (FeedPage ni siquiera leía `compose`); "Crear → Reel" desde galería navegaba a `/reels?upload=1` **sin subir nada**; "Crear → Reel" con cámara lo publicaba como **Story de 24 h** en vez de reel. Por eso "seguía el proceso" pero no quedaba en feed/reels/perfil.
+- **Fix**: nuevo `publishPost(file, meta)` en `MobileBottomNav`: sube (`/upload/image` o `/upload/chat-file`), crea el post (`media` con mp4/poster, `post_type`, `audio` si venía música) con toast de progreso → "Reel publicado / Publicación creada" → navega a `/reels?id=` o `/post/:id`. Reel = post permanente; Story sigue siendo 24 h solo desde "Historia". "Publicación" sin archivo → `/feed?compose=1` abre la pestaña Feed, hace scroll al composer (`#feed-composer`) y lo enfoca.
+- `CreatePost` y `BrunoCameraPage` ahora muestran toasts de éxito/error (antes fallaban en silencio); foto publicada desde cámara navega a `/post/:id`.
+- Verificado con Playwright: Reel desde galería → `/reels?id=<nuevo>`; foto desde composer → aparece en el feed + toast; ambos visibles en perfil (Posts/Reels) y en el feed.
+
+
 ## Phase 71: Notificaciones agrupadas (2026-06)
 - `GET /notifications?group=true` (default) apila al estilo Instagram: misma acción + mismo objetivo (o todos los follows / lives) dentro de 48 h → una fila con `ids[]`, `actors[]` (únicos), `count`, `is_read` (todas leídas), `preview_url` y mensaje combinado ("A Ana y 12 personas más les gustó tu reel", "X y Y comenzaron a seguirte"). `_group_notifications` + `_group_message` en `posts_feed.py`. Nuevo `PUT /notifications/read-many {ids}` (el antiguo `/mark-read/{id}` apuntaba a otra colección y nunca marcaba la lista in-app).
 - Frontend `NotificationsPage`: avatares apilados con mini-icono, título "Ana y 3 más", clic marca todo el grupo como leído y navega al `url`; los eventos realtime re-cargan la lista (800 ms) para mantener las pilas coherentes.
