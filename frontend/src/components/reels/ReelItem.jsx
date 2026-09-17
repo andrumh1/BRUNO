@@ -203,9 +203,11 @@ export default function ReelItem({
             <Rail icon={<Share2 className="w-7 h-7 text-white" />} label="Enviar" testid="reel-share-btn" onClick={() => onOpenShare?.(reel)} />
             {src && <Rail icon={<Layers className="w-7 h-7 text-white" />} label={reel.remix_count ? fmt(reel.remix_count) : "Remix"} testid="reel-remix-btn" onClick={() => onOpenRemix?.(reel)} />}
             <Rail icon={<Minimize2 className="w-6 h-6 text-white" />} label="PiP" testid="reel-minimize-btn" onClick={() => onMinimize?.(reel)} />
-            <button onClick={(e) => { e.stopPropagation(); if (src) onOpenSound?.(reel); }} className="mt-1 w-11 h-11 rounded-full bg-zinc-900 border-[3px] border-zinc-700 grid place-items-center overflow-hidden reel-disc active:scale-90" style={{ animationPlayState: isPlaying ? "running" : "paused" }} data-testid="reel-sound-disc" aria-label="Sonido">
+            {src && (
+            <button onClick={(e) => { e.stopPropagation(); onOpenSound?.(reel); }} className="mt-1 w-11 h-11 rounded-full bg-zinc-900 border-[3px] border-zinc-700 grid place-items-center overflow-hidden reel-disc active:scale-90" style={{ animationPlayState: isPlaying ? "running" : "paused" }} data-testid="reel-sound-disc" aria-label="Sonido">
               {reel.author?.avatar_url ? <img src={reel.author.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" /> : <Music2 className="w-4 h-4 text-white" />}
             </button>
+            )}
           </div>
 
           {/* Caption */}

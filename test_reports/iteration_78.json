@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 78 review: reels feed with text/image/video (kind=all), nav redesign (no Inicio), /map explore tabs, profile settings (language + explorar tarjetas + website), and /compose page. Backend + Frontend fully tested on preview @ 390x844.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "MyProfilePage settings gear", "issue": "Missing data-testid on the settings gear button in the profile header — added data-testid=\"profile-settings-btn\" for testability", "selector": "profile-settings-btn (added)", "priority": "LOW"},
+      {"component": "ReelItem sound disc", "issue": "reel-sound-disc (music disc button in right rail) is rendered on text/image reels as well as videos. It is not in the required-to-hide list (mute/remix/sound-label/progress-bar), but for text/image reels there is no audio, so showing the disc is inconsistent. Consider wrapping it with `src && (...)` like the mute/sound-label buttons.", "selector": "[data-testid=reel-sound-disc]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration78_reels_all_kinds.py",
+    "/app/test_reports/pytest/iter78.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: hide reel-sound-disc on text/image reels (wrap in `src && ...` inside ReelItem.jsx right rail)."
+  ],
+  "critical_code_review_comments": [
+    "ReelItem.jsx: right rail sound disc button lacks the `src && (...)` guard used for mute/sound-label/remix/progress — inconsistent UX on text/image reels.",
+    "MyProfilePage.jsx: gear button missing data-testid (fixed here). Other interactive icon buttons on the page also miss data-testid/aria-label; consider auditing."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/MyProfilePage.jsx (added data-testid=profile-settings-btn + aria-label to settings gear button)",
+    "/app/backend/tests/test_iteration78_reels_all_kinds.py (new)"
+  ],
+  "success_rate": {"backend": "100% (4/4)", "frontend": "100% functional (all required flows pass)"},
+  "test_credentials": "newtest@bruno.com / Test1234! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created one text post via /compose during testing (TEST_iter78_...). No cleanup performed.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All Iteration 78 requirements verified. Backend GET /api/posts/recommended-videos supports kind=all (mix of text/image/video) and default (video only). Frontend confirms: (1) / and /feed redirect to /reels; nav-home removed. (2) Reels feed shows mixed kinds (video/image/text) via ArrowDown scroll; direct link ?id=<textId> shows reel-text-<id>, ?id=<imgId> shows reel-image-<id>. (3) On text/image reel-item containers: mute-toggle, remix-btn, sound-label, progress-bar are correctly absent; like/comments/save/share present and working. Double-tap on text reel body toggles like (verified: unliked → double-clicked → heart fills red & count +1). (4) /map has map-tab-map + map-tab-explore; explore tab opens map-explore-panel with cards-explorer + search (filters items), 10 filter chips, compact/grid/list view toggles, compact-card-* items; URL becomes /map?explore=1; direct /map?explore=1 works; map-explore-close closes it. (5) Profile settings panel (open via new profile-settings-btn) shows profile-explore-cards-link (→ /map?explore=1), profile-language-toggle (ES↔EN switches label), profile-website-link. (6) nav-create → Publicación → /compose (compose-page) → submit navigates to /reels?id=<newId> with reel-text-<newId> visible & 'Publicación creada' toast. (7) Siguiendo/En vivo tabs render without crashes. Profile reels /profile/<uid>/reels renders 'Reels del perfil'. Only cosmetic finding: reel-sound-disc button remains visible on text/image reels — see action_items.",
+  "rca of the issue": "N/A — no bugs blocking the requirements. The initial page-wide selector check falsely reported mute/remix present on text/image reels; scoping to `[data-testid=reel-item-<id>]` confirmed they only exist on adjacent VIDEO reels in the DOM, not on text/image ones (ReelItem.jsx correctly guards those elements with `src && (...)`)."
+}

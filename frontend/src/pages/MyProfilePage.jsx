@@ -337,6 +337,8 @@ const MyProfilePage = () => {
               size="icon" 
               className="rounded-full"
               onClick={() => setShowSettings(!showSettings)}
+              data-testid="profile-settings-btn"
+              aria-label="Abrir ajustes"
             >
               <Settings className="w-5 h-5" />
             </Button>

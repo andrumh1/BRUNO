@@ -1342,3 +1342,12 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - `useReelsFeed.js`: normaliza `f_auto_url` y `original_url`.
 - Lint bloqueante `NDEFReader` → `window.NDEFReader` en `ActivateNFCPage.jsx`.
 **Testing**: 14/14 backend + flujo frontend Crear → Reel → galería verificado (iteration_77). Nota: Chromium headless no decodifica H.264; la reproducción se valida vía HTTP 206 video/mp4.
+
+## 2026-06 — Rediseño de navegación: sin "Inicio", Reels = feed único (iteration_78)
+- Eliminado botón **Inicio** del nav. `/`, `/feed` y `*` → `Navigate` a `/reels`. `FeedPage.jsx` eliminado.
+- Nav: Reels · Tienda · Crear · Mapa · Alertas · Perfil.
+- **Reels muestra todo**: `GET /posts/recommended-videos?kind=all` (videos ×2.2, imágenes ×1.5 de boost). `normalizeReel` añade `kind` (video|image|text). `ReelTextCard.jsx` renderiza posts de solo texto a pantalla completa (fondo por hash del id, link "Ver tarjeta compartida" si `card_id`). En texto/imagen se ocultan mute, remix, sonido y barra de progreso.
+- **Explorar tarjetas** → `CardsExplorer.jsx` (extraído del viejo Inicio). En `MapPage` pestañas "Mapa | Explorar" (`map-tab-explore`) → panel deslizable `map-explore-panel` (`/map?explore=1`). También enlace en ajustes del Perfil.
+- **Idioma** → toggle en panel de ajustes del Perfil (`profile-language-toggle`), junto a "Sitio Web BRUNO".
+- **/compose** (`ComposePage.jsx`, protegida): composer de publicación (texto/media/tarjeta). Menú Crear → "Publicación" navega aquí; al publicar → `/reels?id=<id>`.
+- Testing: iteration_78 100% backend + frontend.
