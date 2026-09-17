@@ -27,6 +27,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Check, Loader2, ImageIcon, Video as VideoIcon } from "lucide-react";
+import { isVideoFile } from "@/lib/media";
 
 export default function InternalGalleryPicker({
   open,
@@ -60,7 +61,7 @@ export default function InternalGalleryPicker({
       id: `${file.name}-${file.size}-${Math.random().toString(36).slice(2, 8)}`,
       file,
       url: URL.createObjectURL(file),
-      type: file.type.startsWith("video") ? "video" : "image",
+      type: isVideoFile(file) ? "video" : "image",
     }));
     setItems((prev) => [...prev, ...next]);
   };

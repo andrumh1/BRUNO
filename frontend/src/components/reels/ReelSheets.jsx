@@ -231,10 +231,11 @@ export function ReelSoundSheet({ reel, token, onClose, onPick }) {
               <p className="text-xs text-muted-foreground truncate">@{sound?.author?.username || sound?.author?.name || "usuario"} · {sound?.uses || 0} {sound?.uses === 1 ? "video lo usa" : "videos lo usan"}</p>
             </div>
           </div>
-          <div className="px-4 pb-3">
-            <button onClick={() => { onClose(); navigate(`/camera?sound=${sound?.source_post_id || reel.id}`); }} className="w-full h-12 rounded-full bg-primary text-white font-semibold text-sm inline-flex items-center justify-center gap-2 active:scale-[0.98]" data-testid="reel-use-sound-btn">
+          <div className="px-4 pb-3 flex gap-2">
+            <button onClick={() => { onClose(); navigate(`/camera?sound=${sound?.source_post_id || reel.id}`); }} className="flex-1 h-12 rounded-full bg-primary text-white font-semibold text-sm inline-flex items-center justify-center gap-2 active:scale-[0.98]" data-testid="reel-use-sound-btn">
               <Video className="w-4 h-4" /> Usar este sonido
             </button>
+            <button onClick={() => { onClose(); navigate(`/sound/${sound?.source_post_id || reel.id}`); }} className="h-12 px-4 rounded-full bg-foreground/[0.06] text-sm font-medium" data-testid="reel-sound-page-btn">Ver página</button>
           </div>
           <div className="grid grid-cols-3 gap-1.5 px-3 pb-4">
             {(data?.posts || []).map((r) => (

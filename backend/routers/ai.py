@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import UploadFile, File, APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 sys.path.insert(0, "/app/backend")
@@ -127,6 +127,34 @@ def _get_chat(session_id: str, model: str):
     return ai_chat_sessions[session_id]
 
 
+async def _image_content_from_attachment(url: Optional[str], mime: Optional[str]):
+    """Turn an attached image (hosted URL or data URL) into ImageContent so ChatGPT can SEE it."""
+    if not url or not (mime or "").startswith("image"):
+        return None
+    import base64
+    from emergentintegrations.llm.chat import ImageContent
+    try:
+        if url.startswith("data:"):
+            return ImageContent(image_base64=url.split(",", 1)[1])
+        import httpx
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.get(url)
+            r.raise_for_status()
+            if len(r.content) > 12 * 1024 * 1024:
+                return None
+            return ImageContent(image_base64=base64.b64encode(r.content).decode())
+    except Exception as e:
+        logging.warning(f"vision attachment skipped: {e}")
+        return None
+
+
+VISION_HINT = (
+    "\n\n[IMAGEN ADJUNTA] Analiza la imagen real que ves. Si el usuario pide convertirla en publicación "
+    "(o no especifica), responde con una descripción breve y luego propone un caption atractivo en español con 3-6 hashtags, "
+    "y termina EXACTAMENTE con una línea: [PUBLISH:<caption con hashtags>] para que la app pueda publicarla con un toque."
+)
+
+
 async def _build_enriched_message(input_data: "AIMessageInput"):
     cards_context = await _search_public_cards_for_ai(input_data.message) or []
     enriched_message = input_data.message
@@ -138,7 +166,69 @@ async def _build_enriched_message(input_data: "AIMessageInput"):
         enriched_message += f"\n\n[CONTEXTO DE TARJETAS ENCONTRADAS]\n{cards_info}"
     if input_data.attachment_url:
         enriched_message += f"\n\n[ARCHIVO ADJUNTO: {input_data.attachment_type or 'file'} - {input_data.attachment_url}]"
+        if (input_data.attachment_type or "").startswith("image"):
+            enriched_message += VISION_HINT
     return enriched_message, cards_context
+
+
+def _user_message(text: str, image):
+    from emergentintegrations.llm.chat import UserMessage
+    return UserMessage(text=text, file_contents=[image]) if image else UserMessage(text=text)
+
+
+class SpeakInput(BaseModel):
+    text: str
+    voice: Optional[str] = "nova"
+    speed: Optional[float] = 1.0
+
+
+@router.post("/transcribe")
+async def transcribe_audio(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    """Voice → text with OpenAI whisper-1 (Emergent universal key)."""
+    from emergentintegrations.llm.openai import OpenAISpeechToText
+    import tempfile
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    data = await file.read()
+    if len(data) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Audio demasiado grande (máx 25 MB)")
+    ext = "webm" if "webm" in (file.content_type or "") else "mp4" if "mp4" in (file.content_type or "") else "wav" if "wav" in (file.content_type or "") else "webm"
+    with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as tmp:
+        tmp.write(data); path = tmp.name
+    try:
+        stt = OpenAISpeechToText(api_key=api_key)
+        with open(path, "rb") as f:
+            res = await stt.transcribe(file=f, model="whisper-1", response_format="json", language="es")
+        return {"text": getattr(res, "text", "") or ""}
+    except Exception as e:
+        logging.error(f"STT error: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo transcribir el audio")
+    finally:
+        try: os.remove(path)
+        except Exception: pass
+
+
+@router.post("/speak")
+async def speak_text(body: SpeakInput, current_user: User = Depends(get_current_user)):
+    """Text → voice (OpenAI tts-1) — returns MP3 bytes."""
+    from emergentintegrations.llm.openai import OpenAITextToSpeech
+    from fastapi.responses import Response
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    import re as _re
+    clean = _re.sub(r"\[(ACTION|CARD|PUBLISH):[^\]]*\]", "", body.text).strip()[:1500]
+    if not clean:
+        raise HTTPException(status_code=400, detail="Texto vacío")
+    voice = body.voice if body.voice in ("alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer") else "nova"
+    try:
+        tts = OpenAITextToSpeech(api_key=api_key)
+        audio = await tts.generate_speech(text=clean, model="tts-1", voice=voice, speed=max(0.5, min(2.0, body.speed or 1.0)), response_format="mp3")
+        return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
+    except Exception as e:
+        logging.error(f"TTS error: {e}")
+        raise HTTPException(status_code=500, detail="No se pudo generar la voz")
 
 
 class AIMessageResponse(BaseModel):
@@ -200,15 +290,13 @@ async def chat_with_bruno_ai(
     current_user: User = Depends(get_current_user)
 ):
     """Chat with BRUNO AI assistant - with public card knowledge and action buttons"""
-    from emergentintegrations.llm.chat import UserMessage
     try:
         session_id = input_data.session_id or f"bruno_ai_{current_user.id}_{str(uuid.uuid4())[:8]}"
         model = _resolve_model(input_data.model)
         chat = _get_chat(session_id, model)
         enriched_message, cards_context = await _build_enriched_message(input_data)
-
-        user_message = UserMessage(text=enriched_message)
-        response = await chat.send_message(user_message)
+        image = await _image_content_from_attachment(input_data.attachment_url, input_data.attachment_type)
+        response = await chat.send_message(_user_message(enriched_message, image))
 
         conversation_doc = {
             "session_id": session_id,
@@ -242,13 +330,14 @@ async def chat_with_bruno_ai_stream(
 ):
     """Streaming (SSE) variant: tokens arrive word by word. Events: meta · delta · done · error."""
     from fastapi.responses import StreamingResponse
-    from emergentintegrations.llm.chat import UserMessage, TextDelta, StreamDone
+    from emergentintegrations.llm.chat import TextDelta, StreamDone
     import json as _json
 
     session_id = input_data.session_id or f"bruno_ai_{current_user.id}_{str(uuid.uuid4())[:8]}"
     model = _resolve_model(input_data.model)
     chat = _get_chat(session_id, model)
     enriched_message, cards_context = await _build_enriched_message(input_data)
+    image = await _image_content_from_attachment(input_data.attachment_url, input_data.attachment_type)
     cards_for_response = [
         {"id": c.get("id", ""), "title": c.get("title", ""), "card_type": c.get("card_type", ""),
          "subtitle": c.get("subtitle", ""), "city": (c.get("location") or {}).get("city", "")}
@@ -259,7 +348,7 @@ async def chat_with_bruno_ai_stream(
         full = []
         yield f"data: {_json.dumps({'type': 'meta', 'session_id': session_id, 'model': model, 'cards_context': cards_for_response})}\n\n"
         try:
-            async for ev in chat.stream_message(UserMessage(text=enriched_message)):
+            async for ev in chat.stream_message(_user_message(enriched_message, image)):
                 if isinstance(ev, TextDelta):
                     full.append(ev.content)
                     yield f"data: {_json.dumps({'type': 'delta', 'content': ev.content})}\n\n"

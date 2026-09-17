@@ -109,7 +109,7 @@ const ActivateNFCPage = () => {
       );
 
       // Write to NFC tag using the direct redirect endpoint
-      const ndef = new NDEFReader();
+      const ndef = new window.NDEFReader();
       const nfcUrl = `${window.location.origin}/api/nfc/go/${nfcId}`;
 
       await ndef.write({
@@ -172,7 +172,7 @@ const ActivateNFCPage = () => {
     }
     setReencoding(true);
     try {
-      const ndef = new NDEFReader();
+      const ndef = new window.NDEFReader();
       toast.info("Acerca la tarjeta NFC que quieres recodificar al dispositivo...");
 
       // Read first to identify which tag it is

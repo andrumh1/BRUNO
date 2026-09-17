@@ -9,6 +9,7 @@ import {
   Video
 } from "lucide-react";
 import { useBrunoCamera } from "@/contexts/BrunoCameraContext";
+import { isVideoFile } from "@/lib/media";
 
 const ATTACHMENT_OPTIONS = [
   { id: "camera", icon: Camera, label: "Camara", color: "bg-red-500", bruno: "photo" },
@@ -42,7 +43,7 @@ export const ChatAttachmentMenu = ({ isOpen, onClose, onFileSelect, onCardPick, 
       openBrunoCamera({
         mode: option.bruno === "video" ? "video" : (option.bruno === "photo" ? "photo" : "both"),
         onCapture: async (file, meta) => {
-          const type = file.type?.startsWith("video") ? "video" : "image";
+          const type = isVideoFile(file) ? "video" : "image";
           onFileSelect?.(file, type, meta);
         },
       });
@@ -58,7 +59,7 @@ export const ChatAttachmentMenu = ({ isOpen, onClose, onFileSelect, onCardPick, 
     if (!file) return;
     
     const type = option.id === "document" ? "document" : 
-                 file.type?.startsWith("video") ? "video" : "image";
+                 isVideoFile(file) ? "video" : "image";
     onFileSelect?.(file, type);
     onClose();
     e.target.value = "";

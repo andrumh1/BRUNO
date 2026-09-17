@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { isVideoFile } from "@/lib/media";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import InternalGalleryPicker from "@/components/bruno/InternalGalleryPicker";
@@ -1149,7 +1150,7 @@ const BrunoCameraPage = () => {
             const file = files[0];
             if (!file) return;
             const url = URL.createObjectURL(file);
-            const isVideo = file.type.startsWith("video");
+            const isVideo = isVideoFile(file);
             setCapturedMedia({ type: isVideo ? "video" : "photo", data: url, blob: file });
             if (isVideo && mode !== "video15" && mode !== "video60") setMode("video15");
           }}

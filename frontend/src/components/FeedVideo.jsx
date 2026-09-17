@@ -15,6 +15,16 @@ export default function FeedVideo({ media }) {
   const wrapperRef = useRef(null);
   const [muted, setMuted] = useState(true);
   const [playing, setPlaying] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const retries = useRef(0);
+
+  // Fresh uploads return 423 while Cloudinary transcodes → retry with backoff.
+  const onVideoError = (e) => {
+    const v = e.currentTarget;
+    if (!(v?.networkState === 3 && v.readyState === 0) || retries.current >= 5) return;
+    retries.current += 1;
+    setTimeout(() => setRetryKey((k) => k + 1), 2500 * retries.current);
+  };
 
   // Auto-play / pause based on visibility
   useEffect(() => {
@@ -44,7 +54,7 @@ export default function FeedVideo({ media }) {
     }, { threshold: [0.25, 0.6, 0.9] });
     observer.observe(w);
     return () => observer.disconnect();
-  }, [muted]);
+  }, [muted, retryKey]);
 
   const handleTap = (e) => {
     e.stopPropagation();
@@ -57,6 +67,7 @@ export default function FeedVideo({ media }) {
   return (
     <div ref={wrapperRef} className="relative w-full h-full" onClick={handleTap}>
       <video
+        key={retryKey}
         ref={videoRef}
         className="w-full h-full object-cover"
         loop
@@ -64,9 +75,11 @@ export default function FeedVideo({ media }) {
         playsInline
         preload="metadata"
         poster={media.poster_url || undefined}
+        onError={onVideoError}
       >
         {media.mp4_url && <source src={media.mp4_url} type="video/mp4" />}
         {media.f_auto_url && <source src={media.f_auto_url} type="video/mp4" />}
+        {media.original_url && media.original_url !== media.url && <source src={media.original_url} />}
         <source src={media.url} type={`video/${(media.url || "").split(".").pop()?.split("?")[0] || "mp4"}`} />
       </video>
 

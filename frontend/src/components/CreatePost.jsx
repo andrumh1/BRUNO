@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import axios from "axios";
+import { isVideoFile, videoTooLarge, VIDEO_TOO_LARGE_MSG } from "@/lib/media";
 import { 
   Image as ImageIcon, 
   Video, 
@@ -38,15 +39,19 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
     if (files.length === 0) return;
     setUploading(true);
     for (const file of files) {
+      if (videoTooLarge(file)) {
+        const { brunoToast } = await import("@/components/bruno/BrunoToast");
+        brunoToast.error("Video demasiado grande", { description: VIDEO_TOO_LARGE_MSG });
+        continue;
+      }
       try {
         const formData = new FormData();
         formData.append("file", file);
-        // Route videos to /upload/chat-file (uses resource_type=video on Cloudinary).
-        // /upload/image applies image-only transforms that fail for video files.
-        const isVideo = file.type.startsWith("video/");
+        const isVideo = isVideoFile(file);
         const endpoint = isVideo ? "/upload/chat-file" : "/upload/image";
         const response = await axios.post(`${API}${endpoint}`, formData, {
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+          timeout: 0,
         });
         const mediaType = isVideo ? "video" : "image";
         setMedia(prev => [...prev, {

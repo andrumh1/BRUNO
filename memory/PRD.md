@@ -1,5 +1,13 @@
 # BRUNO Social Network - PRD
 
+## Phase 74: Voz en BRUNO IA · IA que ve fotos · Sala de espera Live · Página de sonido (2026-06)
+- **Voz** (`routers/ai.py`): `POST /api/ai/transcribe` (multipart audio → `OpenAISpeechToText` whisper-1, idioma es) y `POST /api/ai/speak` ({text, voice=nova, speed} → `OpenAITextToSpeech` tts-1, devuelve MP3; limpia tags [ACTION]/[CARD]/[PUBLISH]). Frontend `FloatingBubbles`: botón micrófono (MediaRecorder → transcribe → auto-envía), toggle de voz en cabecera (persistido `bruno-ai-voice`; lee en voz la respuesta al terminar el streaming) y "Escuchar" por mensaje.
+- **Visión**: `_image_content_from_attachment()` convierte la imagen adjunta (URL hospedada o data URL) en `ImageContent` para que ChatGPT la vea de verdad (chat y stream). `VISION_HINT` pide descripción + caption/hashtags y una línea final `[PUBLISH:<caption>]`; el frontend la convierte en botón "Publicar esta foto con el caption" → `POST /posts` con la imagen adjunta → `/post/:id`. Chips rápidos al adjuntar imagen: "Convertir en publicación" / "Describir imagen".
+- **Sala de espera Live** (`components/live/LiveWaitingRoom.jsx`): portada difuminada del anfitrión, anillo de cuenta regresiva 10→0, título, estado (conectando / anfitrión preparando / esperando), contador de espectadores, badges privado/protegido. Se muestra en `LiveViewerPage` hasta que llega el `remoteStream`.
+- **Página de sonido** `/sound/:postId` (`pages/SoundPage.jsx`): cabecera con disco, nombre, autor, usos; "Usar este sonido"; compartir (Web Share / copiar link); ranking por `views_count` con medallas #1/#2/#3 y badge "Original". Enlace "Ver página" en `ReelSoundSheet`.
+- Verificado: TTS 200 (34 KB mp3) → STT transcribe correctamente; visión describe imagen real y emite [PUBLISH]; UI: mic/voz/chips/botón publicar; sala de espera con countdown; página de sonido con 3 en ranking.
+
+
 ## Phase 73: Integración ChatGPT (modelos seleccionables + streaming) (2026-06)
 - `emergentintegrations` actualizado a 0.2.0 (necesario para `TextDelta/StreamDone`); `requirements.txt` regenerado.
 - Backend `routers/ai.py`: catálogo `CHATGPT_MODELS` (gpt-5.4 recomendado/default, gpt-5.4-mini, gpt-5.5, gpt-4o) en `GET /api/ai/models`; `AIMessageInput.model`; `_get_chat()` reutiliza la sesión LlmChat y la reconstruye al cambiar de modelo; respuesta incluye `model`; conversaciones guardan `model`. **Nuevo `POST /api/ai/chat/stream`** (SSE, `X-Accel-Buffering: no`) con eventos `meta` (session_id, model, cards_context) · `delta` · `done` · `error`. Default subido de gpt-5.2 → gpt-5.4. Usa EMERGENT_LLM_KEY (universal).

@@ -10,6 +10,7 @@ import {
   Type,
 } from "lucide-react";
 import axios from "axios";
+import { isVideoFile } from "@/lib/media";
 import BrunoQuickCamera from "@/components/bruno/BrunoQuickCamera";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,7 +43,7 @@ function CaptionOverlay({ file, filterId, onPublished, onCancel }) {
   const [visibility, setVisibility] = useState("public");
   const [publishing, setPublishing] = useState(false);
   const previewUrl = React.useMemo(() => URL.createObjectURL(file), [file]);
-  const isVideo = file.type.startsWith("video");
+  const isVideo = isVideoFile(file);
 
   React.useEffect(() => () => URL.revokeObjectURL(previewUrl), [previewUrl]);
 

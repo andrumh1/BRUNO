@@ -6,8 +6,10 @@ import logging
 import uuid
 import os
 
+import io
 import cloudinary
 import cloudinary.uploader
+from starlette.concurrency import run_in_threadpool
 
 import sys
 sys.path.insert(0, '/app/backend')
@@ -26,6 +28,27 @@ cloudinary.config(
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/upload", tags=["uploads"])
+
+VIDEO_EAGER = [
+    {"format": "mp4", "video_codec": "h264", "audio_codec": "aac",
+     "bit_rate": "1500k", "width": 720, "crop": "limit"},
+    {"format": "jpg", "width": 720, "crop": "limit", "start_offset": "auto"},
+]
+
+
+MAX_VIDEO_BYTES = 100 * 1024 * 1024  # Cloudinary per-file video limit
+
+
+def _upload_video(contents: bytes, folder: str, filename: str | None):
+    """Blocking Cloudinary video upload. upload_large needs a file-like object, not raw bytes."""
+    if len(contents) > MAX_VIDEO_BYTES:
+        raise HTTPException(status_code=413, detail="El video supera los 100 MB. Recórtalo o bájale la calidad e inténtalo de nuevo.")
+    opts = {"folder": folder, "resource_type": "video", "eager": VIDEO_EAGER, "eager_async": True}
+    if len(contents) > 10_000_000:
+        return cloudinary.uploader.upload_large(
+            io.BytesIO(contents), filename=filename or "video", chunk_size=6_000_000, **opts
+        )
+    return cloudinary.uploader.upload(contents, **opts)
 
 
 @router.post("/image")
@@ -55,29 +78,8 @@ async def upload_image(
             # The MP4 + poster derivatives are generated in the background;
             # in the meantime the frontend can use `f_auto_url` which routes
             # through Cloudinary's adaptive codec picker.
-            result = cloudinary.uploader.upload_large(
-                contents,
-                folder=f"{folder}/{current_user.id}",
-                resource_type="video",
-                chunk_size=6_000_000,  # 6 MB chunks for big mobile videos
-                eager=[
-                    {"format": "mp4", "video_codec": "h264", "audio_codec": "aac",
-                     "bit_rate": "1500k", "width": 720, "crop": "limit"},
-                    {"format": "jpg", "width": 720, "crop": "limit",
-                     "start_offset": "auto"},
-                ],
-                eager_async=True,
-            ) if len(contents) > 10_000_000 else cloudinary.uploader.upload(
-                contents,
-                folder=f"{folder}/{current_user.id}",
-                resource_type="video",
-                eager=[
-                    {"format": "mp4", "video_codec": "h264", "audio_codec": "aac",
-                     "bit_rate": "1500k", "width": 720, "crop": "limit"},
-                    {"format": "jpg", "width": 720, "crop": "limit",
-                     "start_offset": "auto"},
-                ],
-                eager_async=True,
+            result = await run_in_threadpool(
+                _upload_video, contents, f"{folder}/{current_user.id}", file.filename
             )
             # eager_async=True means derivatives aren't ready immediately —
             # we synthesize predictable URLs via Cloudinary's URL-transform API.
@@ -121,6 +123,8 @@ async def upload_image(
             "resource_type": result.get('resource_type', 'image'),
             "duration": result.get('duration'),
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error uploading file: {e}")
         raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
@@ -206,7 +210,8 @@ async def upload_chat_file(
         poster_url = None
         f_auto_url = None
 
-        if content_type.startswith("image"):
+        IMAGE_EXTS = {"jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "avif"}
+        if content_type.startswith("image") or (not is_video and ext in IMAGE_EXTS):
             result = cloudinary.uploader.upload(
                 contents,
                 folder=f"bruno/chat/{current_user.id}",
@@ -217,20 +222,9 @@ async def upload_chat_file(
                 ],
             )
         elif is_video:
-            uploader = cloudinary.uploader.upload_large if len(contents) > 10_000_000 else cloudinary.uploader.upload
-            kwargs = {
-                "folder": f"bruno/chat/{current_user.id}",
-                "resource_type": "video",
-                "eager": [
-                    {"format": "mp4", "video_codec": "h264", "audio_codec": "aac",
-                     "bit_rate": "1500k", "width": 720, "crop": "limit"},
-                    {"format": "jpg", "width": 720, "crop": "limit", "start_offset": "auto"},
-                ],
-                "eager_async": True,
-            }
-            if uploader is cloudinary.uploader.upload_large:
-                kwargs["chunk_size"] = 6_000_000
-            result = uploader(contents, **kwargs)
+            result = await run_in_threadpool(
+                _upload_video, contents, f"bruno/chat/{current_user.id}", file.filename
+            )
             base_url = result.get("secure_url") or ""
             if "/upload/" in base_url:
                 mp4_url = base_url.replace("/upload/", "/upload/f_mp4,vc_h264,ac_aac,br_1500k,w_720,c_limit/").rsplit(".", 1)[0] + ".mp4"
@@ -265,6 +259,8 @@ async def upload_chat_file(
             "size": len(contents),
             "duration": result.get('duration'),
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error uploading chat file: {e}")
         raise HTTPException(status_code=500, detail=f"Error uploading chat file: {str(e)}")

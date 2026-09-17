@@ -21,8 +21,11 @@ export default function ReelItem({
   const [buffering, setBuffering] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [burst, setBurst] = useState(null);
   const [retryKey, setRetryKey] = useState(0);
+  const autoRetries = useRef(0);
+  const retryTimer = useRef(null);
   const touch = useRef({ x: 0, y: 0, t: 0, lastTap: 0 });
   const longPress = useRef(null);
   const pausedByHold = useRef(false);
@@ -42,6 +45,23 @@ export default function ReelItem({
       setIsPlaying(false); setProgress(0);
     }
   }, [isActive, globalMuted, retryKey]);
+
+  useEffect(() => () => clearTimeout(retryTimer.current), []);
+
+  // Freshly uploaded videos return 423 from Cloudinary while transcoding → auto-retry with backoff.
+  const handleVideoError = (e) => {
+    const v = e.currentTarget;
+    if (!(v?.networkState === 3 && v.readyState === 0)) return;
+    if (autoRetries.current < 5) {
+      autoRetries.current += 1;
+      setProcessing(true);
+      clearTimeout(retryTimer.current);
+      retryTimer.current = setTimeout(() => setRetryKey((k) => k + 1), 2500 * autoRetries.current);
+      return;
+    }
+    setProcessing(false);
+    setError(true);
+  };
 
   const seekTo = (clientX) => {
     const v = videoRef.current; const bar = barRef.current;
@@ -85,7 +105,7 @@ export default function ReelItem({
   };
 
   const src = reel.video_url;
-  const fAuto = src && src.includes("/upload/") && !src.includes("/upload/f_auto") ? src.replace("/upload/", "/upload/f_auto,q_auto/") : null;
+  const sources = [...new Set([reel.mp4_url, reel.f_auto_url, reel.original_url, src].filter(Boolean))];
   const authorId = reel.author?.id || reel.user_id;
 
   return (
@@ -110,23 +130,29 @@ export default function ReelItem({
           poster={reel.poster_url || reel.thumbnail_url || undefined}
           onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) setProgress((v.currentTime / v.duration) * 100); }}
           onWaiting={() => setBuffering(true)}
-          onPlaying={() => { setBuffering(false); setError(false); }}
-          onCanPlay={() => setBuffering(false)}
-          onError={(e) => { if (e.currentTarget?.networkState === 3 && e.currentTarget.readyState === 0) setError(true); }}
+          onPlaying={() => { setBuffering(false); setError(false); setProcessing(false); autoRetries.current = 0; }}
+          onCanPlay={() => { setBuffering(false); setProcessing(false); }}
+          onError={handleVideoError}
           data-testid={`reel-video-${reel.id}`}
         >
-          {reel.mp4_url && <source src={reel.mp4_url} type="video/mp4" />}
-          {fAuto && <source src={fAuto} type="video/mp4" />}
-          <source src={src} />
+          {sources.map((s) => <source key={s} src={s} type={/\.(webm)(\?|$)/i.test(s) ? "video/webm" : "video/mp4"} />)}
         </video>
       ) : (
         <img src={reel.image_url || reel.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-contain" />
       )}
 
       {/* Play glyph / buffering / error */}
-      {src && !isPlaying && !error && (
+      {src && !isPlaying && !error && !processing && (
         <div className="absolute inset-0 grid place-items-center pointer-events-none">
           <div className="w-16 h-16 rounded-full bg-white/15 backdrop-blur-sm grid place-items-center"><Play className="w-8 h-8 text-white fill-white ml-1" /></div>
+        </div>
+      )}
+      {processing && !error && (
+        <div className="absolute inset-0 grid place-items-center pointer-events-none" data-testid="reel-processing">
+          <div className="flex flex-col items-center gap-2 text-white text-xs">
+            <div className="h-9 w-9 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            Procesando video…
+          </div>
         </div>
       )}
       {buffering && isPlaying && (
@@ -134,7 +160,7 @@ export default function ReelItem({
       )}
       {error && (
         <div className="absolute inset-0 grid place-items-center">
-          <button onClick={(e) => { e.stopPropagation(); setError(false); setRetryKey((k) => k + 1); }} className="flex flex-col items-center gap-2 text-white text-xs" data-testid="reel-retry-btn">
+          <button onClick={(e) => { e.stopPropagation(); setError(false); autoRetries.current = 0; setRetryKey((k) => k + 1); }} className="flex flex-col items-center gap-2 text-white text-xs" data-testid="reel-retry-btn">
             <RotateCcw className="w-6 h-6" /> No se pudo cargar · Reintentar
           </button>
         </div>

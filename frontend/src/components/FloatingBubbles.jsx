@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavScroll } from "@/contexts/NavScrollContext";
-import { Sparkles, X, Send, Loader2, Trash2, Paperclip, FileText, Search, ArrowRight, ChevronRight, Minimize2 } from "lucide-react";
+import { Sparkles, X, Send, Loader2, Trash2, Paperclip, FileText, Search, ArrowRight, ChevronRight, Minimize2, Mic, Square, Volume2, VolumeX, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import useDragToMinimize from "@/hooks/useDragToMinimize";
@@ -18,11 +18,12 @@ const parseActions = (text) => {
     return '';
   });
   const cards = [];
+  let publish = null;
   const finalText = cleanText.replace(/\[CARD:([^|]+)\|([^|]+)\|([^|]*)\|?([^\]]*)\]/g, (_, id, title, cardType, city) => {
     cards.push({ id, title, cardType, city: city || '' });
     return '';
-  });
-  return { text: finalText.trim(), actions, cards };
+  }).replace(/\[PUBLISH:([^\]]+)\]/g, (_, caption) => { publish = caption.trim(); return ''; });
+  return { text: finalText.trim(), actions, cards, publish };
 };
 
 const ActionButton = ({ action, onClick }) => {
@@ -52,8 +53,8 @@ const CardPreview = ({ card, onClick }) => (
   </button>
 );
 
-const MessageBubble = ({ msg, navigate }) => {
-  const { text, actions, cards } = parseActions(msg.content);
+const MessageBubble = ({ msg, navigate, onPublish, onSpeak }) => {
+  const { text, actions, cards, publish } = parseActions(msg.content);
   const isUser = msg.role === 'user';
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -81,6 +82,18 @@ const MessageBubble = ({ msg, navigate }) => {
               <CardPreview key={`card-${i}`} card={card} onClick={() => navigate(`/c/${card.id}`)} />
             ))}
           </div>
+        )}
+        {!isUser && publish && msg.imageUrl && !msg.streaming && (
+          <button onClick={() => onPublish?.(msg.imageUrl, publish)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-primary text-white hover:bg-primary/90 active:scale-95 transition-all"
+            data-testid="ai-publish-photo-btn">
+            <ImagePlus className="w-3 h-3" /> Publicar esta foto con el caption
+          </button>
+        )}
+        {!isUser && text && !msg.streaming && onSpeak && (
+          <button onClick={() => onSpeak(text)} className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1" data-testid="ai-speak-msg-btn">
+            <Volume2 className="w-3 h-3" /> Escuchar
+          </button>
         )}
         {actions.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -130,6 +143,7 @@ const AIChatWindow = ({
   attachment, setAttachment,
   fileInputRef, handleFileSelect, navigate,
   aiModels = [], aiModel, setAiModel,
+  voiceOn, setVoiceOn, speak, recording, toggleRecording, publishPhoto, transcribing,
 }) => {
   const { bind: dragBind, dragY, dragging } = useDragToMinimize({ onMinimize, threshold: 55 });
   const [modelMenu, setModelMenu] = useState(false);
@@ -178,6 +192,9 @@ const AIChatWindow = ({
           </div>
         </div>
         <div className="flex items-center gap-0.5">
+          <Button variant="ghost" size="icon" className={`h-7 w-7 ${voiceOn ? "text-primary" : ""}`} onClick={(e) => { e.stopPropagation(); setVoiceOn((v) => !v); }} title={voiceOn ? "Voz activada" : "Activar voz"} data-testid="ai-voice-toggle">
+            {voiceOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+          </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onClear(); }} title="Limpiar">
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -193,7 +210,7 @@ const AIChatWindow = ({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5 bg-gradient-to-b from-transparent to-muted/10">
         {aiMessages.map((msg, i) => (
-          <MessageBubble key={`msg-${i}`} msg={msg} navigate={(path) => { navigate(path); onClose(); }} />
+          <MessageBubble key={`msg-${i}`} msg={msg} navigate={(path) => { navigate(path); onClose(); }} onPublish={publishPhoto} onSpeak={speak} />
         ))}
         {aiLoading && (
           <div className="flex justify-start">
@@ -207,6 +224,12 @@ const AIChatWindow = ({
       </div>
 
       {/* Attachment Preview */}
+      {attachment?.type?.startsWith("image") && (
+        <div className="px-2 pt-1.5 flex gap-1.5 flex-wrap">
+          <button type="button" onClick={() => setAiInput("Convierte esta foto en una publicación con caption y hashtags")} className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-primary/10 text-primary border border-primary/20" data-testid="ai-quick-publish">✨ Convertir en publicación</button>
+          <button type="button" onClick={() => setAiInput("Describe esta imagen en detalle")} className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-muted border" data-testid="ai-quick-describe">Describir imagen</button>
+        </div>
+      )}
       {attachment && (
         <div className="px-2 py-1.5 border-t bg-muted/30 flex items-center gap-2">
           {attachment.type?.startsWith("image") ? (
@@ -231,7 +254,12 @@ const AIChatWindow = ({
             className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors shrink-0" data-testid="ai-attach-btn">
             <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
           </button>
-          <Input value={aiInput} onChange={(e) => setAiInput(e.target.value)} placeholder="Escribe o adjunta..."
+          <button type="button" onClick={toggleRecording} disabled={aiLoading || transcribing}
+            className={`h-7 w-7 flex items-center justify-center rounded-full transition-colors shrink-0 ${recording ? "bg-red-500 text-white animate-pulse" : "hover:bg-muted text-muted-foreground"}`}
+            title={recording ? "Detener" : "Hablar"} data-testid="ai-mic-btn">
+            {transcribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : recording ? <Square className="w-3 h-3 fill-current" /> : <Mic className="w-3.5 h-3.5" />}
+          </button>
+          <Input value={aiInput} onChange={(e) => setAiInput(e.target.value)} placeholder={recording ? "Escuchando…" : "Escribe, habla o adjunta…"}
             className="flex-1 h-7 text-xs rounded-full bg-muted/50 border-0 px-3" disabled={aiLoading} data-testid="ai-chat-input" />
           <Button type="submit" size="sm"
             disabled={(!aiInput.trim() && !attachment) || aiLoading}
@@ -337,6 +365,71 @@ const FloatingBubbles = () => {
     reader.readAsDataURL(file);
   };
 
+  /* ── Voice (whisper-1 STT + tts-1 TTS) ── */
+  const [voiceOn, setVoiceOn] = useState(() => localStorage.getItem("bruno-ai-voice") === "1");
+  useEffect(() => { localStorage.setItem("bruno-ai-voice", voiceOn ? "1" : "0"); }, [voiceOn]);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const recRef = useRef(null);
+  const audioRef = useRef(null);
+  const pendingSendRef = useRef(false);
+
+  const speak = async (text) => {
+    try {
+      const res = await fetch(`${API}/ai/speak`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify({ text, voice: "nova" }) });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      audioRef.current?.pause();
+      const a = new Audio(URL.createObjectURL(blob));
+      audioRef.current = a;
+      a.play().catch(() => {});
+    } catch { /* silent */ }
+  };
+
+  const toggleRecording = async () => {
+    if (recording) { recRef.current?.stop(); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((m) => MediaRecorder.isTypeSupported(m)) || "";
+      const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      const chunks = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setRecording(false);
+        const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+        if (blob.size < 1000) return;
+        setTranscribing(true);
+        try {
+          const fd = new FormData();
+          fd.append("file", blob, `voz.${(rec.mimeType || "").includes("mp4") ? "mp4" : "webm"}`);
+          const r = await axios.post(`${API}/ai/transcribe`, fd, { headers: { Authorization: `Bearer ${token}` } });
+          const text = (r.data?.text || "").trim();
+          if (text) { setAiInput(text); pendingSendRef.current = true; }
+        } catch { /* silent */ }
+        setTranscribing(false);
+      };
+      rec.start();
+      recRef.current = rec;
+      setRecording(true);
+    } catch { /* mic denied */ }
+  };
+  // Auto-send right after a successful transcription
+  useEffect(() => {
+    if (pendingSendRef.current && aiInput.trim() && !aiLoading) { pendingSendRef.current = false; sendAIMessage({ preventDefault() {} }); }
+  }, [aiInput]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Vision → publish ── */
+  const publishPhoto = async (imageUrl, caption) => {
+    const { brunoToast } = await import("@/components/bruno/BrunoToast");
+    try {
+      const r = await axios.post(`${API}/posts`, { content: caption, media: [{ type: "image", url: imageUrl }], post_type: "image", visibility: "public" }, { headers: { Authorization: `Bearer ${token}` } });
+      brunoToast.publish("Publicación creada", { description: "Tu foto ya está en el feed y en tu perfil." });
+      setShowAIChat(false);
+      navigate(`/post/${r.data.id}`);
+    } catch { brunoToast.error("No se pudo publicar la foto"); }
+  };
+
   const sendAIMessage = async (e) => {
     e.preventDefault();
     if ((!aiInput.trim() && !attachment) || aiLoading) return;
@@ -397,7 +490,8 @@ const FloatingBubbles = () => {
           .map(c => `[CARD:${c.id}|${c.title}|${c.card_type}|${c.city || ''}]`).join('\n');
         if (cardTags && !aiResponse.includes('[CARD:')) aiResponse += '\n' + cardTags;
       }
-      patchLast(aiResponse, { streaming: false, model: aiModel });
+      patchLast(aiResponse, { streaming: false, model: aiModel, imageUrl: (attachmentType || "").startsWith("image") ? attachmentUrl : null });
+      if (voiceOn && aiResponse) speak(aiResponse);
     } catch {
       setAiMessages(prev => {
         const last = prev[prev.length - 1];
@@ -587,6 +681,7 @@ const FloatingBubbles = () => {
           setAiInput={setAiInput}
           sendAIMessage={sendAIMessage}
           aiModels={aiModels} aiModel={aiModel} setAiModel={setAiModel}
+          voiceOn={voiceOn} setVoiceOn={setVoiceOn} speak={speak} recording={recording} toggleRecording={toggleRecording} publishPhoto={publishPhoto} transcribing={transcribing}
           messagesEndRef={messagesEndRef}
           attachment={attachment}
           setAttachment={setAttachment}

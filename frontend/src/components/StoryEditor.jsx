@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { isVideoFile } from "@/lib/media";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
@@ -220,13 +221,15 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
       const fd = new FormData();
       fd.append("file", file);
       try {
-        const r = await axios.post(`${API}/upload/image`, fd, {
+        const isVid = isVideoFile(file);
+        const r = await axios.post(`${API}${isVid ? "/upload/chat-file" : "/upload/image"}`, fd, {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+          timeout: 0,
         });
-        return { url: r.data.url, type: file.type.startsWith("video") ? "video" : "image" };
+        return { url: r.data.url, type: isVid ? "video" : "image" };
       } catch (_err) {
         // local-only fallback
-        return { url: URL.createObjectURL(file), type: file.type.startsWith("video") ? "video" : "image" };
+        return { url: URL.createObjectURL(file), type: isVideoFile(file) ? "video" : "image" };
       }
     }));
     const ok = uploads.filter((u) => u.status === "fulfilled").map((u) => u.value);

@@ -13,6 +13,8 @@ export const normalizeReel = (post) => {
     ...post,
     video_url: isVideo ? url : post.video_url || null,
     mp4_url: firstMedia.mp4_url || firstAttach.mp4_url || post.mp4_url || null,
+    f_auto_url: firstMedia.f_auto_url || null,
+    original_url: firstMedia.original_url || null,
     poster_url: firstMedia.poster_url || firstAttach.poster_url || post.poster_url || post.thumbnail_url || null,
     image_url: !isVideo ? url : post.image_url || post.thumbnail_url || null,
     thumbnail_url: post.thumbnail_url || firstMedia.poster_url || (!isVideo ? url : null),

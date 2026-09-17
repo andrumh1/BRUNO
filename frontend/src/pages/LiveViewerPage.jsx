@@ -12,6 +12,7 @@ import { brunoToast } from "@/components/bruno/BrunoToast";
 import { useLiveRTC } from "@/components/live/useLiveRTC";
 import { LiveEvents, LiveInputRow, LiveTopBar } from "@/components/live/LiveOverlay";
 import PrivacyShield from "@/components/live/PrivacyShield";
+import LiveWaitingRoom from "@/components/live/LiveWaitingRoom";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -115,15 +116,7 @@ export default function LiveViewerPage() {
       <PrivacyShield active={!!live?.is_private && !!live?.anti_capture} label={`BRUNO · ${user?.name || user?.email || "viewer"} · ${new Date().toLocaleTimeString()}`}>
         <div className="live-stage absolute inset-0 bg-black" onClick={() => setMuted((m) => !m)}>
           <video ref={videoRef} autoPlay playsInline muted={muted} className="absolute inset-0 w-full h-full object-cover" disablePictureInPicture controlsList="nodownload noremoteplayback" data-testid="live-remote-video" />
-          {!rtc.remoteStream && (
-            <div className="absolute inset-0 grid place-items-center text-white/80 text-sm">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-20 h-20 rounded-full overflow-hidden bg-white/10 grid place-items-center">{live?.host_avatar ? <img src={live.host_avatar} alt="" className="w-full h-full object-cover" /> : <Radio className="w-8 h-8" />}</div>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <p>{rtc.hostOnline ? "Conectando con la transmisión…" : "Esperando al anfitrión…"}</p>
-              </div>
-            </div>
-          )}
+          {!rtc.remoteStream && <LiveWaitingRoom live={live} viewerCount={rtc.viewerCount} hostOnline={rtc.hostOnline} />}
         </div>
       </PrivacyShield>
 

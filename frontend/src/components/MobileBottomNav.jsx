@@ -5,6 +5,7 @@ import { useNavScroll } from "@/contexts/NavScrollContext";
 import { useBrunoCamera } from "@/contexts/BrunoCameraContext";
 import BrunoPublishMenu from "@/components/bruno/BrunoPublishMenu";
 import axios from "axios";
+import { isVideoFile, videoTooLarge, VIDEO_TOO_LARGE_MSG } from "@/lib/media";
 import { 
   Home, Film, Map, ShoppingBag, User, Plus, Bell,
   ChevronUp, ChevronDown
@@ -228,13 +229,16 @@ const MobileBottomNav = () => {
         onPick={async ({ type, source, file }) => {
           // Helper: publish a story given a file
           const publishStory = async (mediaFile, meta = {}) => {
+            const { brunoToast } = await import("@/components/bruno/BrunoToast");
+            if (videoTooLarge(mediaFile)) { brunoToast.error("Video demasiado grande", { description: VIDEO_TOO_LARGE_MSG }); return; }
             try {
               const form = new FormData();
               form.append("file", mediaFile);
-              const isVideo = mediaFile.type.startsWith("video");
+              const isVideo = isVideoFile(mediaFile);
               const ep = isVideo ? "/upload/chat-file" : "/upload/image";
               const up = await axios.post(`${API}${ep}`, form, {
-                headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+                timeout: 0,
               });
               const mediaUrl = up.data.url || up.data.secure_url;
               if (!mediaUrl) throw new Error("no url");
@@ -248,24 +252,33 @@ const MobileBottomNav = () => {
               }, { headers: { Authorization: `Bearer ${token}` } });
               const { brunoToast } = await import("@/components/bruno/BrunoToast");
               brunoToast.publish("Publicado en Story", { description: "Disponible durante 24h." });
-            } catch (_) {
-              const { brunoToast } = await import("@/components/bruno/BrunoToast");
-              brunoToast.error("No se pudo publicar");
+            } catch (e) {
+              brunoToast.error("No se pudo publicar", { description: e?.response?.data?.detail || "Revisa tu conexión e inténtalo de nuevo." });
             }
           };
 
           // Helper: publish a FEED POST / REEL (permanent) given a file
           const publishPost = async (mediaFile, meta = {}) => {
             const { brunoToast } = await import("@/components/bruno/BrunoToast");
-            const isVideo = mediaFile.type.startsWith("video");
+            const isVideo = isVideoFile(mediaFile);
+            if (videoTooLarge(mediaFile)) { brunoToast.error("Video demasiado grande", { description: VIDEO_TOO_LARGE_MSG }); return; }
             const tid = `publish-${Date.now()}`;
-            brunoToast.loading(isVideo ? "Publicando tu reel…" : "Publicando…", { id: tid, description: "No cierres la app." });
+            brunoToast.loading(isVideo ? "Subiendo tu reel… 0%" : "Publicando…", { id: tid, description: "No cierres la app." });
             try {
               const form = new FormData();
               form.append("file", mediaFile);
               const ep = isVideo ? "/upload/chat-file" : "/upload/image";
               const up = await axios.post(`${API}${ep}`, form, {
-                headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+                timeout: 0,
+                onUploadProgress: (ev) => {
+                  if (!ev.total) return;
+                  const pct = Math.round((ev.loaded / ev.total) * 100);
+                  brunoToast.loading(
+                    pct >= 100 ? "Procesando tu video…" : `${isVideo ? "Subiendo tu reel" : "Subiendo"}… ${pct}%`,
+                    { id: tid, description: "No cierres la app." }
+                  );
+                },
               });
               const u = up.data || {};
               const mediaUrl = u.url || u.secure_url;
