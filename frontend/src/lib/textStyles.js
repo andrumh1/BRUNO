@@ -20,3 +20,6 @@ export const TEXT_FONTS = [
 export const bgById = (id) => TEXT_BGS.find((b) => b.id === id) || null;
 export const fontById = (id) => TEXT_FONTS.find((f) => f.id === id) || TEXT_FONTS[0];
 export const bgGradient = ({ a, b }) => `radial-gradient(120% 90% at 20% 10%, ${a} 0%, ${b} 70%)`;
+
+export const TEXT_EMOJIS = ["🔥", "❤️", "😂", "😍", "🎉", "💪", "🙏", "✨", "💡", "🚀", "🎵", "☕", "🌎", "💼", "📣", "🤝"];
+export const TEXT_ALIGNS = [{ id: "center", label: "Centrado" }, { id: "left", label: "Izquierda" }];

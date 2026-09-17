@@ -16,6 +16,7 @@ import ReelItem from "@/components/reels/ReelItem";
 import { useReelsFeed } from "@/components/reels/useReelsFeed";
 import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet, ReelLikersSheet } from "@/components/reels/ReelSheets";
 import RemixStudio from "@/components/reels/RemixStudio";
+import ReelsStoriesStrip from "@/components/reels/ReelsStoriesStrip";
 import { AnimatePresence } from "framer-motion";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
@@ -156,6 +157,8 @@ export default function ReelsPage() {
         </button>
       </div>
 
+      {!profileMode && tab !== "lives" && <ReelsStoriesStrip token={token} user={user} visible={activeIndex === 0 && !loading && reels.length > 0} />}
+
       {tab !== "lives" ? (
         loading ? (
           <div className="h-full grid place-items-center"><Loader2 className="w-10 h-10 text-white animate-spin" /></div>
@@ -189,7 +192,7 @@ export default function ReelsPage() {
       <ReelCommentsSheet reel={commentsFor} token={token} highlightId={commentsFor?.id === initialReelId ? highlightCommentId : null} onClose={() => setCommentsFor(null)} onPosted={(id) => patchReel(id, (r) => ({ comments_count: (r.comments_count || 0) + 1 }))} />
       {soundFor && <ReelSoundSheet reel={soundFor} token={token} onClose={() => setSoundFor(null)} onPick={(r) => { setSoundFor(null); navigate(`/reels?id=${r.id}`); }} />}
       <ReelLikersSheet reel={likersFor} token={token} onClose={() => setLikersFor(null)} onFollow={(uid, next) => reels.forEach((r) => { if ((r.author?.id || r.user_id) === uid) patchReel(r.id, { is_following: next }); })} />
-      {shareFor && <ReelShareSheet reel={shareFor} onClose={() => setShareFor(null)} />}
+      {shareFor && <ReelShareSheet reel={shareFor} token={token} onClose={() => setShareFor(null)} />}
       <ReelHistorySheet open={historyOpen} token={token} onClose={() => setHistoryOpen(false)} onPick={openFromHistory} />
       {remixFor && <ReelRemixSheet reel={remixFor} onClose={() => setRemixFor(null)} onPick={(m) => { const r = remixFor; setRemixFor(null); if (m === "list") setRemixesOf(r.id); else setStudio({ reel: r, mode: m }); }} />}
       <ReelRemixesSheet sourceId={remixesOf} token={token} onClose={() => setRemixesOf(null)} onPick={(r) => { setRemixesOf(null); navigate(`/reels?id=${r.id}`); }} />

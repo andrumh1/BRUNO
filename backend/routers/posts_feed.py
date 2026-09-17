@@ -164,6 +164,12 @@ class MessageAttachment(BaseModel):
     card_type: Optional[str] = None
     primary_color: Optional[str] = None
     secondary_color: Optional[str] = None
+    # shared reel / post
+    post_id: Optional[str] = None
+    poster_url: Optional[str] = None
+    caption: Optional[str] = None
+    author_name: Optional[str] = None
+    kind: Optional[str] = None
 
 class Message(BaseModel):
     model_config = ConfigDict(extra="ignore")

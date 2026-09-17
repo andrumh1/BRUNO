@@ -692,7 +692,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                       )}
 
                       {/* Regular Attachments (non-sticker, non-card) */}
-                      {message.message_type !== 'sticker' && message.message_type !== 'card' && message.attachments?.length > 0 && (
+                      {message.message_type !== 'sticker' && message.message_type !== 'card' && message.message_type !== 'reel' && message.message_type !== 'location_share' && message.attachments?.length > 0 && (
                         <div className="mb-2">
                           {message.attachments.map((att, idx) => (
                             <FileAttachment key={`att-${idx}`} file={att} isOwn={isOwn} />
@@ -713,9 +713,23 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
                       {message.message_type === 'location_share' && message.attachments?.[0] && (
                         <LocationMessagePreview attachment={message.attachments[0]} isOwn={isOwn} />
                       )}
+
+                      {/* Shared reel */}
+                      {message.message_type === 'reel' && message.attachments?.[0] && (
+                        <button onClick={() => navigate(`/reels?id=${message.attachments[0].post_id}`)} className="block w-[200px] max-w-full my-1 rounded-2xl overflow-hidden bg-black/85 text-left active:scale-[0.98] transition-transform" data-testid={`chat-reel-${message.attachments[0].post_id}`}>
+                          <div className="relative aspect-[4/5] bg-zinc-900">
+                            {message.attachments[0].poster_url ? <img src={message.attachments[0].poster_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full grid place-items-center text-white/50 text-3xl">🎬</div>}
+                            <span className="absolute top-2 left-2 rounded-full bg-black/55 px-2 py-0.5 text-[10px] text-white font-semibold">Reel</span>
+                          </div>
+                          <div className="p-2.5">
+                            <p className="text-white text-xs font-semibold truncate">@{message.attachments[0].author_name}</p>
+                            {message.attachments[0].caption && <p className="text-white/70 text-[11px] line-clamp-2">{message.attachments[0].caption}</p>}
+                          </div>
+                        </button>
+                      )}
                       
                       {/* Text content with @mention parsing */}
-                      {message.content && message.message_type !== 'audio' && message.message_type !== 'sticker' && message.message_type !== 'card' && message.message_type !== 'location_share' && (
+                      {message.content && message.message_type !== 'audio' && message.message_type !== 'sticker' && message.message_type !== 'card' && message.message_type !== 'location_share' && message.message_type !== 'reel' && (
                         <p className="text-sm whitespace-pre-wrap break-words">
                           {message.content.split(/(@\w+)/g).map((part, pi) => {
                             if (part.startsWith("@")) {

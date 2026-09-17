@@ -28,7 +28,7 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
   const [posting, setPosting] = useState(false);
   const [showCardPicker, setShowCardPicker] = useState(false);
   const [selectedCard, setSelectedCard] = useState(null);
-  const [textStyle, setTextStyle] = useState({ bg: TEXT_BGS[0].id, font: TEXT_FONTS[0].id });
+  const [textStyle, setTextStyle] = useState({ bg: TEXT_BGS[0].id, font: TEXT_FONTS[0].id, align: "center", emoji: null });
   const [showStyle, setShowStyle] = useState(false);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);

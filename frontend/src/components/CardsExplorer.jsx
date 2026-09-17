@@ -12,10 +12,25 @@ import CardPreviewModal from "@/components/CardPreviewModal";
 import BeaconsStyleCard from "@/components/BeaconsStyleCard";
 import SocialLinkButton from "@/components/SocialLinkButton";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Search, Eye, MapPin, Grid3X3, List, LayoutGrid, Briefcase, Users, HandHelping } from "lucide-react";
+import { Search, Eye, MapPin, Grid3X3, List, LayoutGrid, Briefcase, Users, HandHelping, Navigation, Loader2 } from "lucide-react";
+import { brunoToast } from "@/components/bruno/BrunoToast";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const JOB_TYPES = ["oferta_trabajo", "busqueda_personal", "solicitud_servicio"];
+
+const haversineKm = (a, b) => {
+  const R = 6371, toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+};
+export const fmtKm = (km) => (km == null ? null : km < 1 ? `${Math.round(km * 1000)} m` : km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`);
+
+const DistanceBadge = ({ km, className = "" }) => (km == null ? null : (
+  <span className={`inline-flex items-center gap-0.5 rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-300 px-1.5 py-0.5 text-[9px] font-semibold ${className}`} data-testid="card-distance">
+    <Navigation className="w-2.5 h-2.5" />{fmtKm(km)}
+  </span>
+));
 
 export default function CardsExplorer({ compact = false }) {
   const navigate = useNavigate();
@@ -26,18 +41,36 @@ export default function CardsExplorer({ compact = false }) {
   const [filter, setFilter] = useState("all");
   const [view, setView] = useState("compact");
   const [preview, setPreview] = useState(null);
+  const [nearby, setNearby] = useState(false);
+  const [me, setMe] = useState(null);
+  const [locating, setLocating] = useState(false);
   const press = useRef({ timer: null, at: 0 });
 
   useEffect(() => {
     axios.get(`${API}/public/cards`).then((r) => setCards(Array.isArray(r.data) ? r.data : [])).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
+  const toggleNearby = () => {
+    if (nearby) { setNearby(false); return; }
+    if (me) { setNearby(true); return; }
+    if (!navigator.geolocation) { brunoToast.error("Tu dispositivo no permite ubicación"); return; }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { setMe({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setNearby(true); setLocating(false); },
+      () => { setLocating(false); brunoToast.error("No pudimos obtener tu ubicación", { description: "Activa el permiso de ubicación e inténtalo de nuevo." }); },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 120000 }
+    );
+  };
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    return cards.filter((c) => (c.title || "").toLowerCase().includes(q) || (c.subtitle || "").toLowerCase().includes(q))
+    let list = cards.filter((c) => (c.title || "").toLowerCase().includes(q) || (c.subtitle || "").toLowerCase().includes(q))
       .filter((c) => filter === "all" || c.card_type === filter)
-      .filter((c) => c.show_in_feed !== false);
-  }, [cards, query, filter]);
+      .filter((c) => c.show_in_feed !== false)
+      .map((c) => ({ ...c, distance_km: me && c.location?.lat != null && c.location?.lng != null ? haversineKm(me, c.location) : null }));
+    if (nearby && me) list = list.filter((c) => c.distance_km != null).sort((a, b) => a.distance_km - b.distance_km);
+    return list;
+  }, [cards, query, filter, nearby, me]);
 
   const typeLabel = (type) => ({
     personal: t("cards.types.personal"), empresarial: t("cards.types.empresarial"), negocio: t("cards.types.negocio"),
@@ -62,6 +95,9 @@ export default function CardsExplorer({ compact = false }) {
         <Input placeholder={t("feed.searchPlaceholder")} value={query} onChange={(e) => setQuery(e.target.value)} className="pl-9 h-10 rounded-full" data-testid="cards-search-input" />
       </div>
       <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 -mx-1 px-1">
+        <Button size="sm" variant={nearby ? "default" : "outline"} onClick={toggleNearby} disabled={locating} className={`rounded-full h-8 text-xs shrink-0 gap-1 ${nearby ? "bg-sky-600 hover:bg-sky-600" : ""}`} data-testid="cards-filter-nearby">
+          {locating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />} Cerca de mí
+        </Button>
         {FILTERS.map(([id, label, Icon]) => (
           <Button key={id} size="sm" variant={filter === id ? "default" : "outline"} onClick={() => setFilter(id)} className="rounded-full h-8 text-xs shrink-0 gap-1" data-testid={`cards-filter-${id}`}>
             {Icon && <Icon className="w-3 h-3" />}{label}
@@ -80,7 +116,7 @@ export default function CardsExplorer({ compact = false }) {
 
       {loading && <div className="py-12 text-center"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" /></div>}
       {!loading && filtered.length === 0 && (
-        <div className="text-center py-12 text-sm text-muted-foreground" data-testid="cards-empty">{query ? `No hay resultados para "${query}"` : t("feed.noResults")}</div>
+        <div className="text-center py-12 text-sm text-muted-foreground" data-testid="cards-empty">{nearby ? "Ninguna tarjeta cercana tiene ubicación todavía" : query ? `No hay resultados para "${query}"` : t("feed.noResults")}</div>
       )}
       {!loading && filtered.length > 0 && (
         view === "compact" ? (
@@ -94,7 +130,7 @@ export default function CardsExplorer({ compact = false }) {
                 <div className="pt-6 pb-2.5 px-2.5">
                   <h4 className="text-xs font-bold truncate">{card.title}</h4>
                   {card.subtitle && <p className="text-[10px] text-muted-foreground truncate">{card.subtitle}</p>}
-                  <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground"><Eye className="w-2.5 h-2.5" /> {card.views || 0}<span className="ml-auto px-1.5 py-0.5 rounded-full bg-primary/10 text-[8px] font-medium capitalize">{card.card_type}</span></div>
+                  <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground"><Eye className="w-2.5 h-2.5" /> {card.views || 0}<DistanceBadge km={card.distance_km} className="ml-1" /><span className="ml-auto px-1.5 py-0.5 rounded-full bg-primary/10 text-[8px] font-medium capitalize">{card.card_type}</span></div>
                 </div>
               </div>
             ))}
@@ -119,6 +155,7 @@ export default function CardsExplorer({ compact = false }) {
                     {card.social_links?.length > 0 && <div className="flex flex-wrap gap-1.5 pt-1">{card.social_links.slice(0, 4).map((l) => <SocialLinkButton key={`${l.platform}-${l.url}`} link={l} size="sm" onlyIcon />)}</div>}
                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground pt-2 border-t border-border/60">
                       <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {card.views || 0}</span>
+                      <DistanceBadge km={card.distance_km} />
                       {card.user_id && <Link to={`/profile/${card.user_id}`} className="ml-auto text-primary hover:underline" onClick={(e) => e.stopPropagation()}>Perfil</Link>}
                     </div>
                   </div>
@@ -140,6 +177,7 @@ export default function CardsExplorer({ compact = false }) {
                   {card.description && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{card.description}</p>}
                   <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
                     <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {card.views || 0}</span>
+                    <DistanceBadge km={card.distance_km} />
                     {card.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {card.location.city || card.location.address}</span>}
                   </div>
                 </div>

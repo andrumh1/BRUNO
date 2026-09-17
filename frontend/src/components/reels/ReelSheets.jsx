@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, User, Columns2, Scissors, Layers, Music2, Video } from "lucide-react";
+import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, User, Columns2, Scissors, Layers, Music2, Video, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { normalizeReel } from "./useReelsFeed";
@@ -138,7 +138,14 @@ export function ReelLikersSheet({ reel, token, onClose, onFollow }) {
   );
 }
 
-export function ReelShareSheet({ reel, onClose }) {
+export function ReelShareSheet({ reel, token, onClose }) {
+  const [chats, setChats] = useState(null);
+  const [sentTo, setSentTo] = useState({});
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  useEffect(() => {
+    if (!token) { setChats([]); return; }
+    axios.get(`${API}/chats`, { headers }).then((r) => setChats((Array.isArray(r.data) ? r.data : []).filter((c) => c.other_participants?.length).slice(0, 20))).catch(() => setChats([]));
+  }, [token]);
   if (!reel) return null;
   const url = `${process.env.REACT_APP_BACKEND_URL}/api/share/p/${reel.id}`;
   const appUrl = `${window.location.origin}/reels?id=${reel.id}`;
@@ -148,6 +155,20 @@ export function ReelShareSheet({ reel, onClose }) {
     else copy();
     onClose();
   };
+  const sendToChat = async (chat) => {
+    if (sentTo[chat.id]) return;
+    setSentTo((s) => ({ ...s, [chat.id]: "sending" }));
+    const who = reel.author?.username || reel.author?.name || "usuario";
+    try {
+      await axios.post(`${API}/chats/${chat.id}/messages`, {
+        content: `🎬 Reel de @${who}: ${appUrl}`,
+        message_type: "reel",
+        attachments: [{ type: "reel", post_id: reel.id, url: appUrl, poster_url: reel.poster_url || reel.thumbnail_url || reel.image_url || null, caption: (reel.content || "").slice(0, 120), author_name: who, kind: reel.kind || (reel.video_url ? "video" : "post") }],
+      }, { headers });
+      setSentTo((s) => ({ ...s, [chat.id]: "sent" }));
+      brunoToast.success(`Enviado a ${chat.other_participants[0]?.display_name || chat.other_participants[0]?.username}`);
+    } catch (_) { setSentTo((s) => ({ ...s, [chat.id]: undefined })); brunoToast.error("No se pudo enviar"); }
+  };
   const opts = [
     { id: "native", label: "Compartir…", Icon: Share2, run: native },
     { id: "copy", label: "Copiar link", Icon: Link2, run: copy },
@@ -155,6 +176,27 @@ export function ReelShareSheet({ reel, onClose }) {
   ];
   return (
     <BottomSheet open onClose={onClose} title="Enviar a" testid="reel-share-sheet" height="auto">
+      {token && (
+        <div className="px-4 pt-1 pb-2" data-testid="reel-share-contacts">
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Enviar por chat</p>
+          {chats === null ? <div className="py-3 grid place-items-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+            : chats.length === 0 ? <p className="text-xs text-muted-foreground py-2" data-testid="reel-share-no-chats">Aún no tienes chats. Escríbele a alguien desde su perfil.</p>
+            : (
+              <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+                {chats.map((c) => { const p = c.other_participants[0]; const st = sentTo[c.id]; return (
+                  <button key={c.id} onClick={() => sendToChat(c)} disabled={!!st} className="flex flex-col items-center gap-1 shrink-0 w-16 active:scale-95 transition-transform" data-testid={`reel-share-chat-${c.id}`}>
+                    <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted grid place-items-center">
+                      {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-muted-foreground" />}
+                      {st === "sent" && <span className="absolute inset-0 bg-primary/85 grid place-items-center text-white"><Check className="w-5 h-5" strokeWidth={3} /></span>}
+                      {st === "sending" && <span className="absolute inset-0 bg-black/40 grid place-items-center"><Loader2 className="w-4 h-4 text-white animate-spin" /></span>}
+                    </div>
+                    <span className="text-[10px] truncate w-full text-center">{st === "sent" ? "Enviado" : (p.display_name || p.username)}</span>
+                  </button>
+                ); })}
+              </div>
+            )}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3 px-5 pb-6 pt-2">
         {opts.map((o) => (
           <button key={o.id} onClick={o.run} className="flex flex-col items-center gap-2 rounded-2xl p-3 bg-foreground/[0.05] active:scale-95 transition-transform" data-testid={`reel-share-${o.id}`}>
