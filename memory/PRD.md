@@ -1355,3 +1355,9 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 ## 2026-06 — Fix: likes duplicados / inconsistentes entre Reels y Perfil
 **Causa raíz**: el feed de Reels (`_hydrate_video_posts`) y la afinidad del algoritmo leían `db.post_likes` (colección vacía) mientras `toggle_like` escribía en `db.likes` → Reels siempre mostraba `is_liked=false`, el usuario volvía a dar like y el contador se desincronizaba.
 **Fix** (`routers/posts_feed.py`): todo lee `db.likes`; `toggle_like` ahora borra duplicados y devuelve/persiste el conteo autoritativo (likers distintos, `$set`, no `$inc`); `/users/{id}/posts` añade `is_bookmarked` y consulta en lote. `ReelsPage.handleLike` sincroniza estado con la respuesta del servidor. Se reconciliaron `likes_count` de 10 posts con drift.
+
+## 2026-06 — 4 features Reels (iteration_79, 100% backend+frontend)
+- **Carrusel de fotos**: `reels/ReelCarousel.jsx` — swipe horizontal propio (no dispara swipe L/R del reel), contador N/M, dots, flechas en desktop.
+- **Lista de likes**: `GET /posts/{id}/likes` (likers únicos + is_following/is_me). `ReelLikersSheet` en `ReelSheets.jsx`; `Rail` en ReelItem separa icono (like) de etiqueta (`reel-likes-count` → abre sheet), con botón Seguir.
+- **Tour de bienvenida**: `WelcomeTour.jsx` reescrito a 5 pasos (Reels, Mapa+Explorar, Crear/Cámara, Perfil, Listo); cada paso navega a su pantalla (`target`) y resalta el botón del nav (`highlight` → `tour-spotlight`); modal anclado arriba. Reiniciable desde Perfil → ajustes → "Tour de bienvenida" (`profile-start-tour`). Auto-inicia para cuentas creadas hace <1h.
+- **Estilos de texto**: `lib/textStyles.js` (8 fondos, 5 tipografías; Google Fonts en index.html). `TextStylePicker.jsx` en CreatePost (botón paleta, solo sin media). Post guarda `text_style {bg,font}`; `ReelTextCard` lo aplica.
