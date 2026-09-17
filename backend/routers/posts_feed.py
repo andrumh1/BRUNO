@@ -337,6 +337,7 @@ async def get_recommended_videos(
     skip: int = 0,
     limit: int = 30,
     mode: str = "for_you",
+    kind: str = "video",
     exclude: Optional[str] = None,
     seed: Optional[int] = None,
     current_user: Optional[User] = Depends(get_current_user_optional),
@@ -365,7 +366,7 @@ async def get_recommended_videos(
             async for p in db.posts.find({"id": {"$in": liked_ids}}, {"_id": 0, "user_id": 1}):
                 if p.get("user_id"): affinity_authors.add(p["user_id"])
 
-    base_q = {"visibility": "public", **VIDEO_QUERY}
+    base_q = {"visibility": "public"} if kind == "all" else {"visibility": "public", **VIDEO_QUERY}
     if mode == "following":
         if not follow_ids:
             return []
@@ -392,6 +393,10 @@ async def get_recommended_videos(
 
     def score(p):
         s = 1.0
+        if kind == "all":
+            media_types = {m.get("type") for m in (p.get("media") or []) if isinstance(m, dict)}
+            if "video" in media_types or p.get("post_type") == "video": s *= 2.2
+            elif media_types: s *= 1.5
         if user_id and p.get("id") not in viewed_ids: s *= 5.0
         if user_id and p.get("user_id") in follow_ids: s *= 3.0
         if user_id and p.get("user_id") in affinity_authors: s *= 2.0

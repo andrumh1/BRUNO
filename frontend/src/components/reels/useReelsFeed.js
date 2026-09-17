@@ -9,8 +9,10 @@ export const normalizeReel = (post) => {
   const firstAttach = (post.attachments || [])[0] || {};
   const url = firstMedia.url || firstMedia.secure_url || firstAttach.url || post.media_url || post.image_url;
   const isVideo = firstMedia.type === "video" || /\.(mp4|webm|mov|m4v|ogv)(\?|$)/i.test(url || "");
+  const kind = isVideo ? "video" : url ? "image" : "text";
   return {
     ...post,
+    kind,
     video_url: isVideo ? url : post.video_url || null,
     mp4_url: firstMedia.mp4_url || firstAttach.mp4_url || post.mp4_url || null,
     f_auto_url: firstMedia.f_auto_url || null,
@@ -46,12 +48,11 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
     const exclude = reset ? [] : [...seenRef.current];
     const url = profileUserId
       ? `${API}/posts?user_id=${profileUserId}&media_only=true&limit=60`
-      : `${API}/posts/recommended-videos?limit=${PAGE}&mode=${mode}&seed=${seedRef.current}&exclude=${exclude.join(",")}`;
+      : `${API}/posts/recommended-videos?kind=all&limit=${PAGE}&mode=${mode}&seed=${seedRef.current}&exclude=${exclude.join(",")}`;
     const res = await axios.get(url, { headers }).catch(() => ({ data: [] }));
     let list = (Array.isArray(res.data) ? res.data : [])
-      .filter((p) => (Array.isArray(p.media) && p.media.some((m) => m.url || m.secure_url)) || p.media_url || p.image_url || p.attachments?.length)
       .map(normalizeReel)
-      .filter((r) => r.video_url || r.image_url);
+      .filter((r) => r.video_url || r.image_url || (r.content || "").trim() || r.card_id);
     if (profileUserId) list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     list = list.filter((r) => reset || !seenRef.current.has(r.id));
     list.forEach((r) => seenRef.current.add(r.id));

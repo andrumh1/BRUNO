@@ -44,7 +44,7 @@ const TOUR_STEPS = [
     message: "Comparte publicaciones, fotos y videos con tu red. Descubre contenido de otros profesionales y haz crecer tu comunidad.",
     icon: User,
     color: "from-purple-500 to-pink-500",
-    target: "/feed",
+    target: "/reels",
     mascot: "/mascots/bruno-dog.webp"
   },
   {
@@ -101,7 +101,7 @@ const TOUR_STEPS = [
     mascot: "/mascots/bruno-dog.webp",
     actions: [
       { label: "Crear mi tarjeta", path: "/cards/new", primary: true },
-      { label: "Explorar feed", path: "/feed" }
+      { label: "Explorar Reels", path: "/reels" }
     ]
   }
 ];

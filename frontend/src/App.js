@@ -40,7 +40,7 @@ import PiupManagerPage from "@/pages/PiupManagerPage";
 import ContactPage from "@/pages/ContactPage";
 import HelpPage from "@/pages/HelpPage";
 import PricingPage from "@/pages/PricingPage";
-import FeedPage from "@/pages/FeedPage";
+import ComposePage from "@/pages/ComposePage";
 import PostDetailPage from "@/pages/PostDetailPage";
 import SoundPage from "@/pages/SoundPage";
 import MapPage from "@/pages/MapPage";
@@ -98,8 +98,9 @@ function AppRouter() {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<FeedPage />} />
-      <Route path="/feed" element={<FeedPage />} />
+      <Route path="/" element={<Navigate to="/reels" replace />} />
+      <Route path="/feed" element={<Navigate to="/reels" replace />} />
+      <Route path="/compose" element={<ProtectedRoute><ComposePage /></ProtectedRoute>} />
       <Route path="/post/:postId" element={<PostDetailPage />} />
       <Route path="/sound/:postId" element={<SoundPage />} />
       <Route path="/landing" element={<LandingPage />} />
@@ -173,7 +174,7 @@ function AppRouter() {
       <Route path="/lives/:liveId" element={<LiveViewerPage />} />
       
       {/* Fallback */}
-      <Route path="*" element={<FeedPage />} />
+      <Route path="*" element={<Navigate to="/reels" replace />} />
     </Routes>
   );
 }

@@ -7,8 +7,8 @@ import BrunoPublishMenu from "@/components/bruno/BrunoPublishMenu";
 import axios from "axios";
 import { isVideoFile, videoTooLarge, VIDEO_TOO_LARGE_MSG } from "@/lib/media";
 import { 
-  Home, Film, Map, ShoppingBag, User, Plus, Bell,
-  ChevronUp, ChevronDown
+  Film, Map, ShoppingBag, User, Plus, Bell,
+  ChevronDown
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
@@ -54,9 +54,8 @@ const MobileBottomNav = () => {
   if (shouldHide) return null;
 
   const navItems = [
-    { id: 'home', icon: Home, label: 'Inicio', path: '/feed', matchPaths: ['/', '/feed'] },
+    { id: 'reels', icon: Film, label: 'Reels', path: '/reels', matchPaths: ['/', '/feed', '/reels', '/lives'], hasIndicator: true },
     { id: 'marketplace', icon: ShoppingBag, label: 'Tienda', path: '/marketplace', matchPaths: ['/marketplace'] },
-    { id: 'reels', icon: Film, label: 'Reels', path: '/reels', matchPaths: ['/reels', '/lives'], hasIndicator: true },
     { id: 'create', icon: Plus, label: '', path: '/camera', isCreate: true },
     { id: 'map', icon: Map, label: 'Mapa', path: '/map', matchPaths: ['/map'] },
     { id: 'notifications', icon: Bell, label: 'Alertas', path: '/notifications', matchPaths: ['/notifications', '/settings/notifications'], hasBadge: true },
@@ -306,7 +305,7 @@ const MobileBottomNav = () => {
               openCamera({ mode: "both", onCapture: async (capturedFile, meta) => publishPost(capturedFile, meta) });
               return;
             }
-            navigate("/feed?compose=1");
+            navigate("/compose");
             return;
           }
           if (type === "status") {

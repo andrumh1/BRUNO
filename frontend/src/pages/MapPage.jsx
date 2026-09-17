@@ -12,18 +12,20 @@
  */
 /* eslint-disable */
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { APIProvider, Map, AdvancedMarker, useMap, InfoWindow } from "@vis.gl/react-google-maps";
 import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import MapProfilesBar from "@/components/bruno/MapProfilesBar";
 import MapPinClaimModal from "@/components/bruno/MapPinClaimModal";
 import MapStyleSocial from "@/components/bruno/MapStyleSocial";
 import SharedLocationsLayer from "@/components/bruno/SharedLocationsLayer";
 import OsmFallbackMap from "@/components/bruno/OsmFallbackMap";
+import CardsExplorer from "@/components/CardsExplorer";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
-import { ArrowLeft, MapPin as MapPinIcon, Plus, Layers, Crosshair, ExternalLink, KeyRound } from "lucide-react";
+import { ArrowLeft, MapPin as MapPinIcon, Plus, Layers, Crosshair, ExternalLink, KeyRound, Compass, X } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const GOOGLE_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
@@ -34,6 +36,9 @@ const BOGOTA = { lat: 4.6097, lng: -74.0817 };
 export default function MapPage() {
   const navigate = useNavigate();
   const { token } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const exploreOpen = searchParams.get("explore") === "1";
+  const setExplore = (open) => setSearchParams(open ? { explore: "1" } : {}, { replace: true });
 
   const [initialCenter] = useState(BOGOTA);   // used only as the map's default center
   const [showClaim, setShowClaim] = useState(false);
@@ -93,12 +98,13 @@ export default function MapPage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="flex-1 h-10 rounded-full bg-background/90 backdrop-blur-md shadow flex items-center px-4 gap-2">
-              <MapPinIcon className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold truncate">Mapa social BRUNO</span>
-              <span className="ml-auto text-[10px] text-muted-foreground hidden sm:block" data-testid="map-engine-label">
-                {useOsm ? "Mapa libre + PIUP" : "Google Maps + PIUP"}
-              </span>
+            <div className="flex-1 h-10 rounded-full bg-background/90 backdrop-blur-md shadow flex items-center p-1 gap-1" data-testid="map-mode-tabs">
+              <button onClick={() => setExplore(false)} className={`flex-1 h-8 rounded-full text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors ${!exploreOpen ? "bg-primary text-white shadow" : "text-muted-foreground"}`} data-testid="map-tab-map">
+                <MapPinIcon className="w-3.5 h-3.5" /> Mapa
+              </button>
+              <button onClick={() => setExplore(true)} className={`flex-1 h-8 rounded-full text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors ${exploreOpen ? "bg-primary text-white shadow" : "text-muted-foreground"}`} data-testid="map-tab-explore">
+                <Compass className="w-3.5 h-3.5" /> Explorar
+              </button>
             </div>
             <button
               onClick={() => setShowPiupLayer((v) => !v)}
@@ -179,6 +185,26 @@ export default function MapPage() {
         </div>
 
         <MapProfilesBar />
+
+        <AnimatePresence>
+          {exploreOpen && (
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 260 }}
+              className="absolute inset-x-0 bottom-0 z-[70] bg-background/95 backdrop-blur-2xl rounded-t-[28px] border-t border-border/50 shadow-2xl flex flex-col"
+              style={{ top: "calc(env(safe-area-inset-top, 0px) + 64px)" }}
+              data-testid="map-explore-panel"
+            >
+              <div className="flex items-center justify-between px-4 pt-3 pb-2">
+                <div className="mx-auto absolute left-1/2 -translate-x-1/2 top-2 w-10 h-1 rounded-full bg-foreground/20" />
+                <h2 className="font-bold text-base mt-2">Explorar tarjetas</h2>
+                <button onClick={() => setExplore(false)} className="mt-2 w-8 h-8 rounded-full bg-muted grid place-items-center" data-testid="map-explore-close" aria-label="Cerrar"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4" style={{ paddingBottom: "calc(var(--nav-reserve, 88px) + 16px)" }}>
+                <CardsExplorer />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {showClaim && (
           <MapPinClaimModal

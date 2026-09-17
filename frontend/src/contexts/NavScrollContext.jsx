@@ -102,7 +102,7 @@ export const NavScrollProvider = ({ children }) => {
   // On other routes we leave the current state alone so the user keeps
   // their preferred minimization.
   useEffect(() => {
-    if (location.pathname === "/" || location.pathname === "/feed") {
+    if (location.pathname === "/" || location.pathname === "/reels") {
       setMinimized(false);
     }
   }, [location.pathname, setMinimized]);

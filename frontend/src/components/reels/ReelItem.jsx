@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, Volume2, VolumeX, User, Plus, Check, Minimize2, RotateCcw, Layers, Scissors, Columns2 } from "lucide-react";
+import ReelTextCard from "@/components/reels/ReelTextCard";
 
 const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n || 0));
 
@@ -137,8 +138,14 @@ export default function ReelItem({
         >
           {sources.map((s) => <source key={s} src={s} type={/\.(webm)(\?|$)/i.test(s) ? "video/webm" : "video/mp4"} />)}
         </video>
+      ) : reel.image_url || reel.thumbnail_url ? (
+        <>
+          <div className="absolute inset-0 bg-center bg-cover scale-110 opacity-50" style={{ backgroundImage: `url(${reel.image_url || reel.thumbnail_url})`, filter: "blur(30px)" }} />
+          <img src={reel.image_url || reel.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-contain" data-testid={`reel-image-${reel.id}`} />
+          {(reel.media || []).length > 1 && <span className="absolute right-3 z-10 rounded-full bg-black/45 px-2 py-0.5 text-[11px] text-white" style={{ top: "calc(env(safe-area-inset-top, 0px) + 100px)" }}>1/{reel.media.length}</span>}
+        </>
       ) : (
-        <img src={reel.image_url || reel.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-contain" />
+        <ReelTextCard reel={reel} />
       )}
 
       {/* Play glyph / buffering / error */}
@@ -196,7 +203,7 @@ export default function ReelItem({
             <Rail icon={<Share2 className="w-7 h-7 text-white" />} label="Enviar" testid="reel-share-btn" onClick={() => onOpenShare?.(reel)} />
             {src && <Rail icon={<Layers className="w-7 h-7 text-white" />} label={reel.remix_count ? fmt(reel.remix_count) : "Remix"} testid="reel-remix-btn" onClick={() => onOpenRemix?.(reel)} />}
             <Rail icon={<Minimize2 className="w-6 h-6 text-white" />} label="PiP" testid="reel-minimize-btn" onClick={() => onMinimize?.(reel)} />
-            <button onClick={(e) => { e.stopPropagation(); onOpenSound?.(reel); }} className="mt-1 w-11 h-11 rounded-full bg-zinc-900 border-[3px] border-zinc-700 grid place-items-center overflow-hidden reel-disc active:scale-90" style={{ animationPlayState: isPlaying ? "running" : "paused" }} data-testid="reel-sound-disc" aria-label="Sonido">
+            <button onClick={(e) => { e.stopPropagation(); if (src) onOpenSound?.(reel); }} className="mt-1 w-11 h-11 rounded-full bg-zinc-900 border-[3px] border-zinc-700 grid place-items-center overflow-hidden reel-disc active:scale-90" style={{ animationPlayState: isPlaying ? "running" : "paused" }} data-testid="reel-sound-disc" aria-label="Sonido">
               {reel.author?.avatar_url ? <img src={reel.author.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" /> : <Music2 className="w-4 h-4 text-white" />}
             </button>
           </div>
@@ -212,17 +219,21 @@ export default function ReelItem({
                 {reel.remix.type === "duet" ? "Dúo con" : "Stitch de"} @{reel.remix.source_username}
               </button>
             )}
-            {(reel.content || reel.description) && <p className="text-white/95 text-[13px] mt-1 line-clamp-2 drop-shadow">{reel.content || reel.description}</p>}
+            {(reel.content || reel.description) && reel.kind !== "text" && <p className="text-white/95 text-[13px] mt-1 line-clamp-2 drop-shadow">{reel.content || reel.description}</p>}
+            {src && (
             <button onClick={(e) => { e.stopPropagation(); onOpenSound?.(reel); }} className="pointer-events-auto flex items-center gap-1.5 mt-2 text-white/90 text-[11px] max-w-full" data-testid="reel-sound-label">
               <Music2 className="w-3 h-3 shrink-0" />
               <span className="truncate">{reel.audio_name || `Sonido original · @${reel.author?.username || reel.author?.name || "usuario"}`}</span>
             </button>
+            )}
           </div>
 
           {/* Mute */}
+          {src && (
           <button onClick={(e) => { e.stopPropagation(); onToggleMute(); }} className="absolute right-3 z-20 p-2 rounded-full bg-black/35 backdrop-blur-sm" style={{ top: "calc(env(safe-area-inset-top, 0px) + 52px)" }} data-testid="reel-mute-toggle">
             {globalMuted ? <VolumeX className="w-5 h-5 text-white" /> : <Volume2 className="w-5 h-5 text-white" />}
           </button>
+          )}
         </>
       )}
 

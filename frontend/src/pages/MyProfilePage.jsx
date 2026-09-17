@@ -14,10 +14,12 @@ import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
 import LikesModal from "@/components/bruno/LikesModal";
 import MyLikedPostsModal from "@/components/bruno/MyLikedPostsModal";
 import useActiveStories from "@/hooks/useActiveStories";
+import { useLanguage } from "@/contexts/LanguageContext";
 import axios from "axios";
 import { 
   ArrowLeft,
   Settings,
+  Search,
   Edit3,
   Grid3X3,
   Bookmark,
@@ -75,6 +77,7 @@ const MyProfilePage = () => {
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const { language, toggleLanguage } = useLanguage();
   const [exploreCards, setExploreCards] = useState([]);
   const [cardViewMode, setCardViewMode] = useState("grid");
   const [showFollowers, setShowFollowers] = useState(null);
@@ -396,7 +399,21 @@ const MyProfilePage = () => {
                 </button>
               </Link>
               
-              <Link to="/website" onClick={() => setShowSettings(false)}>
+              <Link to="/map?explore=1" onClick={() => setShowSettings(false)} data-testid="profile-explore-cards-link">
+                <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
+                  <Search className="w-5 h-5 text-sky-500" />
+                  <span className="flex-1 text-left">Explorar tarjetas</span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </Link>
+
+              <button onClick={toggleLanguage} className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors" data-testid="profile-language-toggle">
+                <Globe className="w-5 h-5 text-emerald-500" />
+                <span className="flex-1 text-left">Idioma</span>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted">{language === "es" ? "Español · ES" : "English · EN"}</span>
+              </button>
+
+              <Link to="/website" onClick={() => setShowSettings(false)} data-testid="profile-website-link">
                 <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
                   <Globe className="w-5 h-5 text-orange-500" />
                   <span className="flex-1 text-left">Sitio Web BRUNO</span>
@@ -625,7 +642,7 @@ const MyProfilePage = () => {
             <div className="text-center py-12">
               <Grid3X3 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground">No hay publicaciones aún</p>
-              <Link to="/feed">
+              <Link to="/compose">
                 <Button className="mt-4">Crear publicación</Button>
               </Link>
             </div>
