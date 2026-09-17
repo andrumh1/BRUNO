@@ -95,12 +95,63 @@ class AIMessageInput(BaseModel):
     session_id: Optional[str] = None
     attachment_url: Optional[str] = None
     attachment_type: Optional[str] = None
+    model: Optional[str] = None          # ChatGPT model id (see CHATGPT_MODELS)
+
+
+# ChatGPT models available to end users (served through the Emergent universal key)
+CHATGPT_MODELS = [
+    {"id": "gpt-5.4", "name": "ChatGPT 5.4", "tag": "Recomendado", "description": "Equilibrio ideal entre velocidad y calidad"},
+    {"id": "gpt-5.4-mini", "name": "ChatGPT 5.4 Mini", "tag": "Rápido", "description": "Respuestas instantáneas para tareas cotidianas"},
+    {"id": "gpt-5.5", "name": "ChatGPT 5.5", "tag": "Avanzado", "description": "Razonamiento profundo para tareas complejas"},
+    {"id": "gpt-4o", "name": "GPT-4o", "tag": "Clásico", "description": "Modelo multimodal clásico"},
+]
+DEFAULT_CHATGPT_MODEL = "gpt-5.4"
+_ALLOWED_MODELS = {m["id"] for m in CHATGPT_MODELS}
+
+
+def _resolve_model(requested: Optional[str]) -> str:
+    return requested if requested in _ALLOWED_MODELS else DEFAULT_CHATGPT_MODEL
+
+
+def _get_chat(session_id: str, model: str):
+    """Reuse the cached LlmChat for the session; rebuild it when the user switches model."""
+    from emergentintegrations.llm.chat import LlmChat
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    cached = ai_chat_sessions.get(session_id)
+    if cached is None or getattr(cached, "_bruno_model", None) != model:
+        chat = LlmChat(api_key=api_key, session_id=session_id, system_message=BRUNO_SYSTEM_MESSAGE).with_model("openai", model)
+        chat._bruno_model = model
+        ai_chat_sessions[session_id] = chat
+    return ai_chat_sessions[session_id]
+
+
+async def _build_enriched_message(input_data: "AIMessageInput"):
+    cards_context = await _search_public_cards_for_ai(input_data.message) or []
+    enriched_message = input_data.message
+    if cards_context:
+        cards_info = "\n".join([
+            f"- [{c.get('id','?')}] {c.get('title','')} ({c.get('card_type','')}) - {c.get('subtitle','')} - {(c.get('description','') or '')[:80]}"
+            for c in cards_context if c
+        ])
+        enriched_message += f"\n\n[CONTEXTO DE TARJETAS ENCONTRADAS]\n{cards_info}"
+    if input_data.attachment_url:
+        enriched_message += f"\n\n[ARCHIVO ADJUNTO: {input_data.attachment_type or 'file'} - {input_data.attachment_url}]"
+    return enriched_message, cards_context
 
 
 class AIMessageResponse(BaseModel):
     response: str
     session_id: str
     cards_context: Optional[list] = None
+    model: Optional[str] = None
+
+
+@router.get("/models")
+async def list_chatgpt_models():
+    """ChatGPT models the user can pick for BRUNO IA."""
+    return {"default": DEFAULT_CHATGPT_MODEL, "models": CHATGPT_MODELS}
 
 
 class AICardGenerateInput(BaseModel):
@@ -149,34 +200,12 @@ async def chat_with_bruno_ai(
     current_user: User = Depends(get_current_user)
 ):
     """Chat with BRUNO AI assistant - with public card knowledge and action buttons"""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    from emergentintegrations.llm.chat import UserMessage
     try:
         session_id = input_data.session_id or f"bruno_ai_{current_user.id}_{str(uuid.uuid4())[:8]}"
-
-        if session_id not in ai_chat_sessions:
-            api_key = os.environ.get("EMERGENT_LLM_KEY")
-            if not api_key:
-                raise HTTPException(status_code=500, detail="AI service not configured")
-            chat = LlmChat(
-                api_key=api_key,
-                session_id=session_id,
-                system_message=BRUNO_SYSTEM_MESSAGE
-            ).with_model("openai", "gpt-5.2")
-            ai_chat_sessions[session_id] = chat
-
-        chat = ai_chat_sessions[session_id]
-        cards_context = await _search_public_cards_for_ai(input_data.message) or []
-
-        enriched_message = input_data.message
-        if cards_context:
-            cards_info = "\n".join([
-                f"- [{c.get('id','?')}] {c.get('title','')} ({c.get('card_type','')}) - {c.get('subtitle','')} - {(c.get('description','') or '')[:80]}"
-                for c in cards_context if c
-            ])
-            enriched_message += f"\n\n[CONTEXTO DE TARJETAS ENCONTRADAS]\n{cards_info}"
-
-        if input_data.attachment_url:
-            enriched_message += f"\n\n[ARCHIVO ADJUNTO: {input_data.attachment_type or 'file'} - {input_data.attachment_url}]"
+        model = _resolve_model(input_data.model)
+        chat = _get_chat(session_id, model)
+        enriched_message, cards_context = await _build_enriched_message(input_data)
 
         user_message = UserMessage(text=enriched_message)
         response = await chat.send_message(user_message)
@@ -184,6 +213,7 @@ async def chat_with_bruno_ai(
         conversation_doc = {
             "session_id": session_id,
             "user_id": current_user.id,
+            "model": model,
             "user_message": input_data.message,
             "ai_response": response,
             "attachment_url": input_data.attachment_url,
@@ -198,11 +228,58 @@ async def chat_with_bruno_ai(
             for c in cards_context if c
         ] if cards_context else None
 
-        return AIMessageResponse(response=response, session_id=session_id, cards_context=cards_for_response)
+        return AIMessageResponse(response=response, session_id=session_id, cards_context=cards_for_response, model=model)
 
     except Exception as e:
         logging.error(f"AI Chat error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing AI request: {str(e)}")
+
+
+@router.post("/chat/stream")
+async def chat_with_bruno_ai_stream(
+    input_data: AIMessageInput,
+    current_user: User = Depends(get_current_user)
+):
+    """Streaming (SSE) variant: tokens arrive word by word. Events: meta · delta · done · error."""
+    from fastapi.responses import StreamingResponse
+    from emergentintegrations.llm.chat import UserMessage, TextDelta, StreamDone
+    import json as _json
+
+    session_id = input_data.session_id or f"bruno_ai_{current_user.id}_{str(uuid.uuid4())[:8]}"
+    model = _resolve_model(input_data.model)
+    chat = _get_chat(session_id, model)
+    enriched_message, cards_context = await _build_enriched_message(input_data)
+    cards_for_response = [
+        {"id": c.get("id", ""), "title": c.get("title", ""), "card_type": c.get("card_type", ""),
+         "subtitle": c.get("subtitle", ""), "city": (c.get("location") or {}).get("city", "")}
+        for c in cards_context if c
+    ]
+
+    async def event_generator():
+        full = []
+        yield f"data: {_json.dumps({'type': 'meta', 'session_id': session_id, 'model': model, 'cards_context': cards_for_response})}\n\n"
+        try:
+            async for ev in chat.stream_message(UserMessage(text=enriched_message)):
+                if isinstance(ev, TextDelta):
+                    full.append(ev.content)
+                    yield f"data: {_json.dumps({'type': 'delta', 'content': ev.content})}\n\n"
+                elif isinstance(ev, StreamDone):
+                    break
+            text = "".join(full)
+            await db.ai_conversations.insert_one({
+                "session_id": session_id, "user_id": current_user.id, "model": model,
+                "user_message": input_data.message, "ai_response": text,
+                "attachment_url": input_data.attachment_url,
+                "cards_context": [c.get("id") for c in cards_context if c],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
+            yield f"data: {_json.dumps({'type': 'done', 'response': text})}\n\n"
+        except Exception as e:
+            logging.error(f"AI stream error: {e}")
+            yield f"data: {_json.dumps({'type': 'error', 'detail': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @router.get("/history")

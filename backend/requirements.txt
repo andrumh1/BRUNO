@@ -19,7 +19,7 @@ distro==1.9.0
 dnspython==2.8.0
 ecdsa==0.19.1
 email-validator==2.3.0
-emergentintegrations==0.1.0
+emergentintegrations==0.2.0
 fastapi==0.110.1
 fastuuid==0.14.0
 filelock==3.20.3
@@ -40,6 +40,7 @@ google-genai==1.62.0
 google-generativeai==0.8.6
 google-resumable-media==2.10.1
 googleapis-common-protos==1.72.0
+greenlet==3.5.5
 grpcio==1.76.0
 grpcio-status==1.71.2
 h11==0.16.0
@@ -79,6 +80,7 @@ passlib==1.7.4
 pathspec==1.0.4
 pillow==12.1.0
 platformdirs==4.5.1
+playwright==1.62.0
 pluggy==1.6.0
 propcache==0.4.1
 proto-plus==1.27.1
@@ -90,12 +92,14 @@ pycodestyle==2.14.0
 pycparser==3.0
 pydantic==2.12.5
 pydantic_core==2.41.5
+pyee==13.0.1
 pyflakes==3.4.0
 Pygments==2.19.2
 PyJWT==2.11.0
 pymongo==4.5.0
 pyparsing==3.3.2
 pytest==9.0.2
+pytest-asyncio==1.4.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.1
 python-jose==3.5.0

@@ -129,8 +129,11 @@ const AIChatWindow = ({
   sendAIMessage, messagesEndRef,
   attachment, setAttachment,
   fileInputRef, handleFileSelect, navigate,
+  aiModels = [], aiModel, setAiModel,
 }) => {
   const { bind: dragBind, dragY, dragging } = useDragToMinimize({ onMinimize, threshold: 55 });
+  const [modelMenu, setModelMenu] = useState(false);
+  const currentModel = aiModels.find((m) => m.id === aiModel);
   return (
     <div
       className="fixed bottom-24 left-2 z-[10001] w-[calc(100vw-16px)] sm:w-[340px] h-[440px] bg-card/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-2 duration-200"
@@ -148,9 +151,30 @@ const AIChatWindow = ({
           <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-full flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-white" />
           </div>
-          <div>
+          <div className="relative">
             <h4 className="font-semibold text-xs">BRUNO IA</h4>
-            <p className="text-[10px] text-muted-foreground">Agente inteligente</p>
+            <button
+              onClick={(e) => { e.stopPropagation(); setModelMenu((v) => !v); }}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+              data-testid="ai-model-toggle"
+            >
+              {currentModel?.name || "ChatGPT"} <span className="text-[8px]">▾</span>
+            </button>
+            {modelMenu && (
+              <div className="absolute left-0 top-full mt-1 z-50 w-60 rounded-2xl border bruno-glass p-1.5 shadow-xl" data-testid="ai-model-menu" onClick={(e) => e.stopPropagation()}>
+                {aiModels.map((m) => (
+                  <button key={m.id} onClick={() => { setAiModel(m.id); setModelMenu(false); }}
+                    className={`w-full text-left rounded-xl px-2.5 py-2 hover:bg-foreground/[0.06] ${m.id === aiModel ? "bg-primary/10" : ""}`}
+                    data-testid={`ai-model-${m.id}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold">{m.name}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">{m.tag}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-tight">{m.description}</p>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-0.5">
@@ -229,6 +253,12 @@ const FloatingBubbles = () => {
   const [showAIChat, setShowAIChat] = useState(false);
   const [aiMinimized, setAiMinimized] = useState(false);
   const [aiMessages, setAiMessages] = useState([]);
+  const [aiModels, setAiModels] = useState([]);
+  const [aiModel, setAiModel] = useState(() => localStorage.getItem("bruno-ai-model") || "gpt-5.4");
+  useEffect(() => {
+    axios.get(`${API}/ai/models`).then((r) => setAiModels(r.data?.models || [])).catch(() => {});
+  }, []);
+  useEffect(() => { localStorage.setItem("bruno-ai-model", aiModel); }, [aiModel]);
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
@@ -329,21 +359,51 @@ const FloatingBubbles = () => {
           attachmentType = userAttachment.type;
         } catch {}
       }
-      const response = await axios.post(`${API}/ai/chat`,
-        { message: userMessage, session_id: sessionId, attachment_url: attachmentUrl, attachment_type: attachmentType },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setSessionId(response.data.session_id);
-      let aiResponse = response.data.response;
-      if (response.data.cards_context?.length > 0) {
-        const cardTags = response.data.cards_context
+      // Streaming (SSE) — tokens appear word by word
+      const res = await fetch(`${API}/ai/chat/stream`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage, session_id: sessionId, attachment_url: attachmentUrl, attachment_type: attachmentType, model: aiModel }),
+      });
+      if (!res.ok || !res.body) throw new Error("stream failed");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "", aiResponse = "", cards = [];
+      setAiMessages(prev => [...prev, { role: "assistant", content: "", streaming: true }]);
+      const patchLast = (content, extra = {}) => setAiMessages(prev => {
+        const next = [...prev];
+        const i = next.length - 1;
+        if (i >= 0 && next[i].role === "assistant") next[i] = { ...next[i], content, ...extra };
+        return next;
+      });
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith("data:")) continue;
+          let ev; try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+          if (ev.type === "meta") { setSessionId(ev.session_id); cards = ev.cards_context || []; }
+          else if (ev.type === "delta") { aiResponse += ev.content; patchLast(aiResponse); }
+          else if (ev.type === "error") throw new Error(ev.detail || "stream error");
+        }
+      }
+      if (cards.length > 0) {
+        const cardTags = cards
           .filter(c => !aiResponse.includes(`[CARD:${c.id}`))
           .map(c => `[CARD:${c.id}|${c.title}|${c.card_type}|${c.city || ''}]`).join('\n');
         if (cardTags && !aiResponse.includes('[CARD:')) aiResponse += '\n' + cardTags;
       }
-      setAiMessages(prev => [...prev, { role: "assistant", content: aiResponse }]);
+      patchLast(aiResponse, { streaming: false, model: aiModel });
     } catch {
-      setAiMessages(prev => [...prev, { role: "assistant", content: "Error de conexion. Intenta de nuevo." }]);
+      setAiMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && last.streaming) return [...prev.slice(0, -1), { role: "assistant", content: "Error de conexion. Intenta de nuevo." }];
+        return [...prev, { role: "assistant", content: "Error de conexion. Intenta de nuevo." }];
+      });
     } finally { setAiLoading(false); }
   };
 
@@ -526,6 +586,7 @@ const FloatingBubbles = () => {
           aiInput={aiInput}
           setAiInput={setAiInput}
           sendAIMessage={sendAIMessage}
+          aiModels={aiModels} aiModel={aiModel} setAiModel={setAiModel}
           messagesEndRef={messagesEndRef}
           attachment={attachment}
           setAttachment={setAttachment}

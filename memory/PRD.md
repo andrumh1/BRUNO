@@ -1,5 +1,13 @@
 # BRUNO Social Network - PRD
 
+## Phase 73: Integración ChatGPT (modelos seleccionables + streaming) (2026-06)
+- `emergentintegrations` actualizado a 0.2.0 (necesario para `TextDelta/StreamDone`); `requirements.txt` regenerado.
+- Backend `routers/ai.py`: catálogo `CHATGPT_MODELS` (gpt-5.4 recomendado/default, gpt-5.4-mini, gpt-5.5, gpt-4o) en `GET /api/ai/models`; `AIMessageInput.model`; `_get_chat()` reutiliza la sesión LlmChat y la reconstruye al cambiar de modelo; respuesta incluye `model`; conversaciones guardan `model`. **Nuevo `POST /api/ai/chat/stream`** (SSE, `X-Accel-Buffering: no`) con eventos `meta` (session_id, model, cards_context) · `delta` · `done` · `error`. Default subido de gpt-5.2 → gpt-5.4. Usa EMERGENT_LLM_KEY (universal).
+- Frontend `FloatingBubbles.jsx` (BRUNO IA): selector de modelo bajo el título (persistido en localStorage `bruno-ai-model`), respuestas por streaming token a token con `fetch` + ReadableStream (mensaje del asistente se va rellenando), tags [CARD:] conservadas. `BrunoMascot` sigue usando el endpoint no-streaming (default gpt-5.4).
+- `.gitignore` creado (advertencia del deployment check).
+- Verificado: /ai/models, /ai/chat con model, /ai/chat/stream (meta+7 delta+done), UI selector de 4 modelos y respuesta en streaming con ChatGPT 5.4 Mini.
+
+
 ## Phase 72: FIX publicar foto/video no guardaba nada (2026-06)
 - **Causa raíz** (`MobileBottomNav.jsx` → `BrunoPublishMenu.onPick`): "Crear → Publicación" con archivo navegaba a `/feed?compose=1` y **descartaba el archivo** (FeedPage ni siquiera leía `compose`); "Crear → Reel" desde galería navegaba a `/reels?upload=1` **sin subir nada**; "Crear → Reel" con cámara lo publicaba como **Story de 24 h** en vez de reel. Por eso "seguía el proceso" pero no quedaba en feed/reels/perfil.
 - **Fix**: nuevo `publishPost(file, meta)` en `MobileBottomNav`: sube (`/upload/image` o `/upload/chat-file`), crea el post (`media` con mp4/poster, `post_type`, `audio` si venía música) con toast de progreso → "Reel publicado / Publicación creada" → navega a `/reels?id=` o `/post/:id`. Reel = post permanente; Story sigue siendo 24 h solo desde "Historia". "Publicación" sin archivo → `/feed?compose=1` abre la pestaña Feed, hace scroll al composer (`#feed-composer`) y lo enfoca.
