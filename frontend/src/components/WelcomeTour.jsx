@@ -7,101 +7,76 @@ import {
   ChevronLeft, 
   X, 
   Sparkles,
-  CreditCard,
-  MessageCircle,
+  Film,
   Map,
-  ShoppingBag,
-  Trophy,
-  Bell,
+  Camera,
+  Compass,
   User,
   Check
 } from "lucide-react";
 
-// Tour steps configuration
+// Tour steps configuration — 5 steps: Reels · Mapa+Explorar · Cámara · Perfil · Listo
 const TOUR_STEPS = [
   {
     id: "welcome",
-    title: "Bienvenido a BRUNO!",
-    message: "Soy BRUNO, tu asistente personal. Te guiare por todas las funciones increibles que tenemos para ti. Comenzamos?",
+    title: "¡Bienvenido a BRUNO!",
+    message: "Te muestro en 4 pasos rápidos cómo moverte por la app. ¿Comenzamos?",
     icon: Sparkles,
     color: "from-orange-500 to-yellow-500",
     position: "center",
     mascot: "/mascots/bruno-dog.webp"
   },
   {
-    id: "cards",
-    title: "Tarjetas Digitales",
-    message: "Crea tarjetas de presentacion digitales unicas. Puedes elegir entre tarjetas personales, profesionales, de empresa o de servicios. Compartelas con un solo toque!",
-    icon: CreditCard,
-    color: "from-blue-500 to-cyan-500",
-    target: "/my-profile",
-    highlight: "[data-testid='create-card-btn']",
-    mascot: "/mascots/bruno-human.png"
-  },
-  {
-    id: "feed",
-    title: "Feed Social",
-    message: "Comparte publicaciones, fotos y videos con tu red. Descubre contenido de otros profesionales y haz crecer tu comunidad.",
-    icon: User,
-    color: "from-purple-500 to-pink-500",
+    id: "reels",
+    title: "Reels: tu inicio",
+    message: "Aquí vive todo el contenido: videos, fotos y publicaciones en un mismo scroll vertical. Desliza hacia arriba para seguir viendo, toca dos veces para dar me gusta y usa la barra derecha para comentar, guardar o compartir.",
+    icon: Film,
+    color: "from-pink-500 to-rose-600",
     target: "/reels",
-    mascot: "/mascots/bruno-dog.webp"
-  },
-  {
-    id: "chat",
-    title: "Chat en Tiempo Real",
-    message: "Comunicarte con otros usuarios mediante mensajes, notas de voz, stickers, y hasta videollamadas! Todo en un solo lugar.",
-    icon: MessageCircle,
-    color: "from-green-500 to-emerald-500",
-    target: "/chat",
+    highlight: "[data-testid='nav-reels']",
     mascot: "/mascots/bruno-human.png"
   },
   {
     id: "map",
-    title: "Mapa de Tarjetas",
-    message: "Descubre profesionales y negocios cerca de ti. El mapa te muestra tarjetas de otros usuarios con su ubicacion y distancia.",
-    icon: Map,
+    title: "Mapa + Explorar",
+    message: "En el Mapa ves negocios y personas cerca de ti. Arriba, la pestaña Explorar abre el directorio de tarjetas con buscador y filtros por tipo.",
+    icon: Compass,
     color: "from-red-500 to-orange-500",
-    target: "/map",
+    target: "/map?explore=1",
+    highlight: "[data-testid='nav-map']",
     mascot: "/mascots/bruno-dog.webp"
   },
   {
-    id: "store",
-    title: "Tienda BRUNO",
-    message: "Explora nuestra tienda con tarjetas NFC fisicas, productos para tu negocio y servicios de marketing digital.",
-    icon: ShoppingBag,
-    color: "from-amber-500 to-yellow-500",
-    target: "/store",
+    id: "camera",
+    title: "Crear con la cámara",
+    message: "El botón central abre el menú Crear: historias de 24h, reels, publicaciones con estilo o estados. Puedes grabar con la Cámara Bruno o elegir de tu galería.",
+    icon: Camera,
+    color: "from-violet-500 to-fuchsia-500",
+    target: "/reels",
+    highlight: "[data-testid='nav-create']",
     mascot: "/mascots/bruno-human.png"
   },
   {
-    id: "points",
-    title: "Sistema de Puntos",
-    message: "Gana puntos por usar BRUNO: check-in diario, publicaciones, interacciones. Sube de nivel y compite en el ranking!",
-    icon: Trophy,
-    color: "from-yellow-500 to-orange-500",
-    target: "/points",
+    id: "profile",
+    title: "Tu perfil y ajustes",
+    message: "En Perfil administras tus tarjetas digitales, tus publicaciones y, en el engranaje, el idioma, Explorar tarjetas y el sitio web de BRUNO.",
+    icon: User,
+    color: "from-blue-500 to-cyan-500",
+    target: "/my-profile",
+    highlight: "[data-testid='nav-profile']",
     mascot: "/mascots/bruno-dog.webp"
-  },
-  {
-    id: "notifications",
-    title: "Notificaciones",
-    message: "Activa las notificaciones para no perderte llamadas, mensajes o interacciones importantes. Mantente conectado!",
-    icon: Bell,
-    color: "from-indigo-500 to-purple-500",
-    mascot: "/mascots/bruno-human.png"
   },
   {
     id: "complete",
-    title: "Listo para comenzar!",
-    message: "Ya conoces lo basico de BRUNO. Que te gustaria hacer primero? Puedes crear tu primera tarjeta o explorar el feed.",
+    title: "¡Listo para comenzar!",
+    message: "Ya conoces lo básico. ¿Qué quieres hacer primero?",
     icon: Check,
     color: "from-green-500 to-emerald-500",
     position: "center",
     mascot: "/mascots/bruno-dog.webp",
     actions: [
       { label: "Crear mi tarjeta", path: "/cards/new", primary: true },
-      { label: "Explorar Reels", path: "/reels" }
+      { label: "Ver Reels", path: "/reels" }
     ]
   }
 ];
@@ -192,11 +167,30 @@ export const TourProvider = ({ children }) => {
 export const TourOverlay = () => {
   const navigate = useNavigate();
   const { isActive, currentStep, totalSteps, step, endTour, nextStep, prevStep } = useTour();
+  const [spot, setSpot] = useState(null);
+
+  // Interactive: each step navigates to its screen and spotlights its nav button
+  useEffect(() => {
+    if (!isActive || !step) return undefined;
+    if (step.target) navigate(step.target);
+    setSpot(null);
+    if (!step.highlight) return undefined;
+    let tries = 0;
+    const find = () => {
+      const el = document.querySelector(step.highlight);
+      if (el) { const r = el.getBoundingClientRect(); if (r.width) { setSpot({ x: r.left, y: r.top, w: r.width, h: r.height }); return; } }
+      if (tries++ < 20) setTimeout(find, 150);
+    };
+    const t = setTimeout(find, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, currentStep]);
 
   if (!isActive || !step) return null;
 
   const Icon = step.icon;
   const progress = ((currentStep + 1) / totalSteps) * 100;
+  const anchorTop = !!step.highlight;
 
   const handleAction = (action) => {
     endTour(true);
@@ -204,15 +198,24 @@ export const TourOverlay = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className={`fixed inset-0 z-[10500] flex justify-center p-4 ${anchorTop ? "items-start pt-[max(1rem,env(safe-area-inset-top))]" : "items-center"}`} data-testid="tour-overlay">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
         onClick={() => endTour(false)}
       />
+
+      {/* Spotlight ring over the highlighted nav button */}
+      {spot && (
+        <div
+          className="absolute pointer-events-none rounded-2xl ring-4 ring-primary animate-pulse"
+          style={{ left: spot.x - 8, top: spot.y - 8, width: spot.w + 16, height: spot.h + 16, boxShadow: "0 0 0 9999px rgba(0,0,0,0.0), 0 0 30px 6px rgba(255,90,0,.55)" }}
+          data-testid="tour-spotlight"
+        />
+      )}
       
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-card rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-md bg-card rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300" data-testid={`tour-step-${step.id}`}>
         {/* Progress bar */}
         <div className="h-1 bg-muted">
           <div 
@@ -224,30 +227,31 @@ export const TourOverlay = () => {
         {/* Close button */}
         <button
           onClick={() => endTour(false)}
+          data-testid="tour-close-btn"
           className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted transition-colors z-10"
         >
           <X className="w-5 h-5 text-muted-foreground" />
         </button>
 
         {/* Content */}
-        <div className="p-6 pt-8">
+        <div className={`${anchorTop ? "p-5 pt-7" : "p-6 pt-8"}`}>
           {/* Mascot + Icon */}
-          <div className="flex items-center justify-center gap-4 mb-6">
+          <div className={`flex items-center justify-center gap-4 ${anchorTop ? "mb-4" : "mb-6"}`}>
             {step.mascot && (
               <img 
                 src={step.mascot} 
                 alt="BRUNO Mascot" 
-                className="w-20 h-20 object-contain rounded-2xl"
+                className={`${anchorTop ? "w-14 h-14" : "w-20 h-20"} object-contain rounded-2xl`}
               />
             )}
-            <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center shadow-lg`}>
-              <Icon className="w-8 h-8 text-white" />
+            <div className={`${anchorTop ? "w-12 h-12" : "w-16 h-16"} rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center shadow-lg`}>
+              <Icon className={`${anchorTop ? "w-6 h-6" : "w-8 h-8"} text-white`} />
             </div>
           </div>
 
           {/* Text */}
-          <h2 className="text-2xl font-bold text-center mb-3">{step.title}</h2>
-          <p className="text-muted-foreground text-center leading-relaxed mb-6">
+          <h2 className={`${anchorTop ? "text-xl" : "text-2xl"} font-bold text-center mb-2`}>{step.title}</h2>
+          <p className={`text-muted-foreground text-center leading-relaxed ${anchorTop ? "text-sm mb-4" : "mb-6"}`}>
             {step.message}
           </p>
 
@@ -276,6 +280,7 @@ export const TourOverlay = () => {
                   variant={action.primary ? "default" : "outline"}
                   className={`w-full ${action.primary ? "bg-gradient-to-r from-primary to-orange-500 hover:opacity-90" : ""}`}
                   onClick={() => handleAction(action)}
+                  data-testid={`tour-action-${idx}`}
                 >
                   {action.label}
                 </Button>
@@ -287,6 +292,7 @@ export const TourOverlay = () => {
                 variant="outline"
                 className="flex-1"
                 onClick={prevStep}
+                data-testid="tour-prev-btn"
                 disabled={currentStep === 0}
               >
                 <ChevronLeft className="w-4 h-4 mr-1" />
@@ -295,6 +301,7 @@ export const TourOverlay = () => {
               <Button
                 className="flex-1 bg-gradient-to-r from-primary to-orange-500 hover:opacity-90"
                 onClick={nextStep}
+                data-testid="tour-next-btn"
               >
                 {currentStep === totalSteps - 1 ? "Finalizar" : "Siguiente"}
                 <ChevronRight className="w-4 h-4 ml-1" />
@@ -308,6 +315,7 @@ export const TourOverlay = () => {
           <div className="pb-4 text-center">
             <button
               onClick={() => endTour(true)}
+              data-testid="tour-skip-btn"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Omitir tour

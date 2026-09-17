@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import axios from "axios";
 import { isVideoFile, videoTooLarge, VIDEO_TOO_LARGE_MSG } from "@/lib/media";
+import TextStylePicker from "@/components/TextStylePicker";
+import { TEXT_BGS, TEXT_FONTS } from "@/lib/textStyles";
 import { 
   Image as ImageIcon, 
   Video, 
@@ -11,7 +13,8 @@ import {
   X,
   Loader2,
   CreditCard,
-  AtSign
+  AtSign,
+  Palette
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -25,6 +28,8 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
   const [posting, setPosting] = useState(false);
   const [showCardPicker, setShowCardPicker] = useState(false);
   const [selectedCard, setSelectedCard] = useState(null);
+  const [textStyle, setTextStyle] = useState({ bg: TEXT_BGS[0].id, font: TEXT_FONTS[0].id });
+  const [showStyle, setShowStyle] = useState(false);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -141,7 +146,8 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
         post_type: selectedCard ? "card_share" : media.length > 0 ? (media[0].type === "video" ? "video" : "image") : "text",
         card_id: selectedCard?.id || null,
         visibility: "public",
-        hashtags: content.match(/#\w+/g)?.map(h => h.slice(1)) || []
+        hashtags: content.match(/#\w+/g)?.map(h => h.slice(1)) || [],
+        text_style: media.length === 0 ? textStyle : null,
       };
       const response = await axios.post(`${API}/posts`, postData, {
         headers: { Authorization: `Bearer ${token}` }
@@ -218,6 +224,9 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
                 )}
               </div>
               
+              {/* Text style (only for text-only posts) */}
+              {media.length === 0 && showStyle && <TextStylePicker value={textStyle} onChange={setTextStyle} text={content} />}
+
               {/* Media Preview */}
               {media.length > 0 && (
                 <div className="grid grid-cols-2 gap-2">
@@ -263,6 +272,12 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
                   <Button type="button" variant="ghost" size="sm" onClick={() => { if (fileInputRef.current) fileInputRef.current.accept = "video/*"; fileInputRef.current?.click(); }} disabled={uploading} className="text-primary" data-testid="create-post-video-btn">
                     <Video className="w-5 h-5" />
                   </Button>
+
+                  {media.length === 0 && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setShowStyle((v) => !v)} className={showStyle ? "text-primary bg-primary/10" : "text-primary"} data-testid="create-post-style-btn" aria-label="Estilo de texto">
+                      <Palette className="w-5 h-5" />
+                    </Button>
+                  )}
                   
                   {userCards.length > 0 && (
                     <Button type="button" variant="ghost" size="sm" onClick={() => setShowCardPicker(!showCardPicker)} className="text-primary">

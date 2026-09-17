@@ -15,11 +15,13 @@ import LikesModal from "@/components/bruno/LikesModal";
 import MyLikedPostsModal from "@/components/bruno/MyLikedPostsModal";
 import useActiveStories from "@/hooks/useActiveStories";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTour } from "@/components/WelcomeTour";
 import axios from "axios";
 import { 
   ArrowLeft,
   Settings,
   Search,
+  Sparkles,
   Edit3,
   Grid3X3,
   Bookmark,
@@ -78,6 +80,7 @@ const MyProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const { language, toggleLanguage } = useLanguage();
+  const { startTour } = useTour();
   const [exploreCards, setExploreCards] = useState([]);
   const [cardViewMode, setCardViewMode] = useState("grid");
   const [showFollowers, setShowFollowers] = useState(null);
@@ -413,6 +416,12 @@ const MyProfilePage = () => {
                 <Globe className="w-5 h-5 text-emerald-500" />
                 <span className="flex-1 text-left">Idioma</span>
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted">{language === "es" ? "Español · ES" : "English · EN"}</span>
+              </button>
+
+              <button onClick={() => { setShowSettings(false); startTour(); }} className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors" data-testid="profile-start-tour">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <span className="flex-1 text-left">Tour de bienvenida</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </button>
 
               <Link to="/website" onClick={() => setShowSettings(false)} data-testid="profile-website-link">

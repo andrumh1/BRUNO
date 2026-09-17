@@ -95,6 +95,49 @@ export function ReelCommentsSheet({ reel, token, onClose, onPosted, highlightId 
   );
 }
 
+export function ReelLikersSheet({ reel, token, onClose, onFollow }) {
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  useEffect(() => {
+    if (!reel) return;
+    setData(null);
+    axios.get(`${API}/posts/${reel.id}/likes`, { headers }).then((r) => setData(r.data)).catch(() => setData({ total: 0, users: [] }));
+  }, [reel?.id]);
+
+  const follow = async (u) => {
+    if (!token) return brunoToast.error("Inicia sesión para seguir");
+    setData((d) => ({ ...d, users: d.users.map((x) => (x.id === u.id ? { ...x, is_following: !x.is_following } : x)) }));
+    try { await axios.post(`${API}/users/${u.id}/follow`, {}, { headers }); onFollow?.(u.id, !u.is_following); }
+    catch (_) { setData((d) => ({ ...d, users: d.users.map((x) => (x.id === u.id ? { ...x, is_following: u.is_following } : x)) })); }
+  };
+
+  return (
+    <BottomSheet open={!!reel} onClose={onClose} title={data ? `${data.total} me gusta` : "Me gusta"} testid="reel-likers-sheet" height="60vh">
+      <div className="flex-1 overflow-y-auto px-3 pb-4">
+        {!data ? <div className="grid place-items-center py-10"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+          : data.users.length === 0 ? <p className="text-center text-sm text-muted-foreground py-10" data-testid="reel-likers-empty">Sé el primero en dar me gusta</p>
+          : data.users.map((u) => (
+            <div key={u.id} className="flex items-center gap-3 py-2" data-testid={`reel-liker-${u.id}`}>
+              <button onClick={() => { onClose(); navigate(`/profile/${u.id}`); }} className="w-11 h-11 rounded-full overflow-hidden bg-muted shrink-0 grid place-items-center">
+                {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-muted-foreground" />}
+              </button>
+              <button onClick={() => { onClose(); navigate(`/profile/${u.id}`); }} className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-semibold truncate">{u.display_name || u.username || "Usuario"}</p>
+                {u.username && <p className="text-xs text-muted-foreground truncate">@{u.username}</p>}
+              </button>
+              {!u.is_me && (
+                <button onClick={() => follow(u)} className={`h-8 px-3 rounded-full text-xs font-semibold ${u.is_following ? "bg-foreground/[0.08]" : "bg-primary text-white"}`} data-testid={`reel-liker-follow-${u.id}`}>
+                  {u.is_following ? "Siguiendo" : "Seguir"}
+                </button>
+              )}
+            </div>
+          ))}
+      </div>
+    </BottomSheet>
+  );
+}
+
 export function ReelShareSheet({ reel, onClose }) {
   if (!reel) return null;
   const url = `${process.env.REACT_APP_BACKEND_URL}/api/share/p/${reel.id}`;

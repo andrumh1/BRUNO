@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, Volume2, VolumeX, User, Plus, Check, Minimize2, RotateCcw, Layers, Scissors, Columns2 } from "lucide-react";
 import ReelTextCard from "@/components/reels/ReelTextCard";
+import ReelCarousel from "@/components/reels/ReelCarousel";
 
 const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n || 0));
 
@@ -14,7 +15,7 @@ const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1
  */
 export default function ReelItem({
   reel, isActive, isNear, globalMuted, onToggleMute, onLike, onFollow, onSave,
-  onOpenComments, onOpenShare, onOpenRemix, onOpenRemixes, onOpenSound, onSwipeLeft, onSwipeRight, onMinimize, hideChrome,
+  onOpenComments, onOpenShare, onOpenRemix, onOpenRemixes, onOpenSound, onOpenLikers, onSwipeLeft, onSwipeRight, onMinimize, hideChrome,
 }) {
   const videoRef = useRef(null);
   const barRef = useRef(null);
@@ -139,11 +140,7 @@ export default function ReelItem({
           {sources.map((s) => <source key={s} src={s} type={/\.(webm)(\?|$)/i.test(s) ? "video/webm" : "video/mp4"} />)}
         </video>
       ) : reel.image_url || reel.thumbnail_url ? (
-        <>
-          <div className="absolute inset-0 bg-center bg-cover scale-110 opacity-50" style={{ backgroundImage: `url(${reel.image_url || reel.thumbnail_url})`, filter: "blur(30px)" }} />
-          <img src={reel.image_url || reel.thumbnail_url} alt="" className="absolute inset-0 h-full w-full object-contain" data-testid={`reel-image-${reel.id}`} />
-          {(reel.media || []).length > 1 && <span className="absolute right-3 z-10 rounded-full bg-black/45 px-2 py-0.5 text-[11px] text-white" style={{ top: "calc(env(safe-area-inset-top, 0px) + 100px)" }}>1/{reel.media.length}</span>}
-        </>
+        <ReelCarousel reel={reel} images={[...new Set([reel.image_url || reel.thumbnail_url, ...(reel.media || []).filter((m) => m.type === "image" && m.url).map((m) => m.url)])]} />
       ) : (
         <ReelTextCard reel={reel} />
       )}
@@ -197,7 +194,7 @@ export default function ReelItem({
               </button>
             </div>
 
-            <Rail icon={<Heart className={`w-7 h-7 ${reel.is_liked ? "text-red-500 fill-red-500 scale-110" : "text-white"} transition-all`} />} label={fmt(reel.likes_count)} testid="reel-like-btn" onClick={() => onLike?.(reel, !reel.is_liked)} />
+            <Rail icon={<Heart className={`w-7 h-7 ${reel.is_liked ? "text-red-500 fill-red-500 scale-110" : "text-white"} transition-all`} />} label={fmt(reel.likes_count)} testid="reel-like-btn" onClick={() => onLike?.(reel, !reel.is_liked)} onLabelClick={() => onOpenLikers?.(reel)} labelTestid="reel-likes-count" />
             <Rail icon={<MessageCircle className="w-7 h-7 text-white" />} label={fmt(reel.comments_count)} testid="reel-comments-btn" onClick={() => onOpenComments?.(reel)} />
             <Rail icon={<Bookmark className={`w-7 h-7 ${reel.is_bookmarked ? "text-primary fill-primary" : "text-white"}`} />} label={reel.is_bookmarked ? "Guardado" : "Guardar"} testid="reel-save-btn" onClick={() => onSave?.(reel)} />
             <Rail icon={<Share2 className="w-7 h-7 text-white" />} label="Enviar" testid="reel-share-btn" onClick={() => onOpenShare?.(reel)} />
@@ -260,11 +257,15 @@ export default function ReelItem({
   );
 }
 
-function Rail({ icon, label, onClick, testid }) {
+function Rail({ icon, label, onClick, testid, onLabelClick, labelTestid }) {
   return (
-    <button onClick={(e) => { e.stopPropagation(); onClick?.(); }} className="flex flex-col items-center active:scale-90 transition-transform" data-testid={testid}>
-      {icon}
-      <span className="text-white text-[11px] font-semibold mt-1 drop-shadow">{label}</span>
-    </button>
+    <div className="flex flex-col items-center">
+      <button onClick={(e) => { e.stopPropagation(); onClick?.(); }} className="active:scale-90 transition-transform" data-testid={testid}>{icon}</button>
+      {onLabelClick ? (
+        <button onClick={(e) => { e.stopPropagation(); onLabelClick(); }} className="text-white text-[11px] font-semibold mt-1 drop-shadow px-2 -mx-2 py-0.5 active:opacity-70" data-testid={labelTestid}>{label}</button>
+      ) : (
+        <span className="text-white text-[11px] font-semibold mt-1 drop-shadow">{label}</span>
+      )}
+    </div>
   );
 }

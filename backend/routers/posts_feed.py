@@ -60,6 +60,7 @@ class Post(BaseModel):
     remix_count: int = 0
     audio: Optional[dict] = None       # {source_post_id, name, url, author_username}  ("Usar este sonido")
     sound_uses: int = 0
+    text_style: Optional[dict] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -72,6 +73,7 @@ class PostCreate(BaseModel):
     hashtags: List[str] = []
     remix: Optional[dict] = None
     audio: Optional[dict] = None
+    text_style: Optional[dict] = None  # {bg, font} for text-only posts
 
 class Like(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -254,6 +256,7 @@ async def create_post(
         hashtags=post_data.hashtags or _extract_hashtags(post_data.content),
         remix=remix,
         audio=audio,
+        text_style=post_data.text_style if not post_data.media else None,
     )
     
     post_doc = post.model_dump()
@@ -810,6 +813,32 @@ async def delete_post(post_id: str, current_user: User = Depends(get_current_use
     return {"message": "Post deleted"}
 
 # -------------------- LIKES --------------------
+
+@router.get("/posts/{post_id}/likes")
+async def get_post_likers(post_id: str, limit: int = 100, current_user: Optional[User] = Depends(get_current_user_optional)):
+    """Users who liked a post (newest first) with is_following for the viewer."""
+    likes = await db.likes.find({"target_id": post_id, "target_type": "post"}, {"_id": 0, "user_id": 1, "created_at": 1}).sort("created_at", -1).to_list(limit * 2)
+    seen: set = set()
+    ordered_ids = []
+    for lk in likes:
+        if lk["user_id"] not in seen:
+            seen.add(lk["user_id"]); ordered_ids.append(lk["user_id"])
+    ordered_ids = ordered_ids[:limit]
+    if not ordered_ids:
+        return {"total": 0, "users": []}
+    users = {u["id"]: u async for u in db.users.find({"id": {"$in": ordered_ids}}, {"_id": 0, "id": 1, "name": 1, "username": 1, "avatar_url": 1})}
+    profiles = {p["user_id"]: p async for p in db.user_profiles.find({"user_id": {"$in": ordered_ids}}, {"_id": 0, "user_id": 1, "display_name": 1, "avatar_url": 1, "is_verified": 1})}
+    following: set = set()
+    if current_user:
+        following = {f["following_id"] async for f in db.follows.find({"follower_id": current_user.id, "following_id": {"$in": ordered_ids}}, {"_id": 0, "following_id": 1})}
+    out = []
+    for uid in ordered_ids:
+        u, p = users.get(uid, {}), profiles.get(uid, {})
+        out.append({"id": uid, "username": u.get("username") or u.get("name"), "display_name": p.get("display_name") or u.get("name"),
+                    "avatar_url": p.get("avatar_url") or u.get("avatar_url"), "is_verified": bool(p.get("is_verified")),
+                    "is_following": uid in following, "is_me": bool(current_user and uid == current_user.id)})
+    return {"total": len(seen), "users": out}
+
 
 @router.post("/posts/{post_id}/like")
 async def toggle_like(post_id: str, current_user: User = Depends(get_current_user)):
