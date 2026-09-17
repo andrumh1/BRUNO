@@ -306,8 +306,8 @@ async def _hydrate_video_posts(posts: list, user_id: Optional[str]):
     following: set = set()
     if user_id:
         ids = [p.get("id") for p in posts]
-        async for lk in db.post_likes.find({"user_id": user_id, "post_id": {"$in": ids}}, {"_id": 0, "post_id": 1}):
-            liked.add(lk["post_id"])
+        async for lk in db.likes.find({"user_id": user_id, "target_type": "post", "target_id": {"$in": ids}}, {"_id": 0, "target_id": 1}):
+            liked.add(lk["target_id"])
         async for bk in db.bookmarks.find({"user_id": user_id, "post_id": {"$in": ids}}, {"_id": 0, "post_id": 1}):
             saved.add(bk["post_id"])
         async for f in db.follows.find({"follower_id": user_id, "following_id": {"$in": author_ids}}, {"_id": 0, "following_id": 1}):
@@ -361,7 +361,7 @@ async def get_recommended_videos(
             viewed_ids.add(v["post_id"])
         async for f in db.follows.find({"follower_id": user_id}, {"_id": 0, "following_id": 1}):
             follow_ids.add(f["following_id"])
-        liked_ids = [lk["post_id"] async for lk in db.post_likes.find({"user_id": user_id}, {"_id": 0, "post_id": 1}).sort("created_at", -1).limit(100)]
+        liked_ids = [lk["target_id"] async for lk in db.likes.find({"user_id": user_id, "target_type": "post"}, {"_id": 0, "target_id": 1}).sort("created_at", -1).limit(100)]
         if liked_ids:
             async for p in db.posts.find({"id": {"$in": liked_ids}}, {"_id": 0, "user_id": 1}):
                 if p.get("user_id"): affinity_authors.add(p["user_id"])
@@ -818,20 +818,15 @@ async def toggle_like(post_id: str, current_user: User = Depends(get_current_use
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     
-    existing_like = await db.likes.find_one({
-        "user_id": current_user.id,
-        "target_id": post_id,
-        "target_type": "post"
-    })
-    
+    like_q = {"user_id": current_user.id, "target_id": post_id, "target_type": "post"}
+    existing_like = await db.likes.find_one(like_q)
+
     if existing_like:
-        # Unlike → also retract the like notification (Instagram/TikTok behaviour)
-        await db.likes.delete_one({"id": existing_like["id"]})
-        await db.posts.update_one({"id": post_id}, {"$inc": {"likes_count": -1}})
+        # Unlike → remove every like row for this user/post (self-heals duplicates) + retract notification
+        await db.likes.delete_many(like_q)
         await db.notifications.delete_many({"user_id": post["user_id"], "actor_id": current_user.id, "type": "like", "target_id": post_id})
-        return {"liked": False, "likes_count": post["likes_count"] - 1}
+        liked = False
     else:
-        # Like
         like = Like(
             user_id=current_user.id,
             target_id=post_id,
@@ -840,17 +835,21 @@ async def toggle_like(post_id: str, current_user: User = Depends(get_current_use
         like_doc = like.model_dump()
         like_doc['created_at'] = like_doc['created_at'].isoformat()
         await db.likes.insert_one(like_doc)
-        await db.posts.update_one({"id": post_id}, {"$inc": {"likes_count": 1}})
-        
+        liked = True
+
         # Create notification (if not own post) — deduped per actor/post
         if post["user_id"] != current_user.id:
             await _push_notification(user_id=post["user_id"], actor_id=current_user.id, ntype="like", target_id=post_id, target_type="post")
-            
+
             # Send push notification
             from routers.push_notifications import notify_new_like
             await notify_new_like(post["user_id"], current_user.name or "Alguien", "publicación")
-        
-        return {"liked": True, "likes_count": post["likes_count"] + 1}
+
+    # Authoritative count: one like per user, derived from the likes collection (never $inc drift)
+    likers = await db.likes.distinct("user_id", {"target_id": post_id, "target_type": "post"})
+    likes_count = len(likers)
+    await db.posts.update_one({"id": post_id}, {"$set": {"likes_count": likes_count}})
+    return {"liked": liked, "likes_count": likes_count}
 
 # -------------------- COMMENTS --------------------
 
@@ -1229,18 +1228,16 @@ async def get_user_posts(
     username = user.get("name") if user else "Unknown"
     
     # Enrich posts
+    post_ids = [p["id"] for p in posts]
+    liked_ids: set = set()
+    saved_ids: set = set()
+    if current_user and post_ids:
+        async for lk in db.likes.find({"user_id": current_user.id, "target_type": "post", "target_id": {"$in": post_ids}}, {"_id": 0, "target_id": 1}):
+            liked_ids.add(lk["target_id"])
+        async for bm in db.bookmarks.find({"user_id": current_user.id, "post_id": {"$in": post_ids}}, {"_id": 0, "post_id": 1}):
+            saved_ids.add(bm["post_id"])
     result = []
     for post in posts:
-        # Check if current user liked the post
-        is_liked = False
-        if current_user:
-            like = await db.likes.find_one({
-                "user_id": current_user.id,
-                "target_id": post["id"],
-                "target_type": "post"
-            })
-            is_liked = like is not None
-        
         result.append({
             **post,
             "user": {
@@ -1250,7 +1247,8 @@ async def get_user_posts(
                 "avatar_url": profile.get("avatar_url") if profile else None,
                 "is_verified": profile.get("is_verified", False) if profile else False
             },
-            "is_liked": is_liked
+            "is_liked": post["id"] in liked_ids,
+            "is_bookmarked": post["id"] in saved_ids,
         })
     
     return result

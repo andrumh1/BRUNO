@@ -1351,3 +1351,7 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - **Idioma** → toggle en panel de ajustes del Perfil (`profile-language-toggle`), junto a "Sitio Web BRUNO".
 - **/compose** (`ComposePage.jsx`, protegida): composer de publicación (texto/media/tarjeta). Menú Crear → "Publicación" navega aquí; al publicar → `/reels?id=<id>`.
 - Testing: iteration_78 100% backend + frontend.
+
+## 2026-06 — Fix: likes duplicados / inconsistentes entre Reels y Perfil
+**Causa raíz**: el feed de Reels (`_hydrate_video_posts`) y la afinidad del algoritmo leían `db.post_likes` (colección vacía) mientras `toggle_like` escribía en `db.likes` → Reels siempre mostraba `is_liked=false`, el usuario volvía a dar like y el contador se desincronizaba.
+**Fix** (`routers/posts_feed.py`): todo lee `db.likes`; `toggle_like` ahora borra duplicados y devuelve/persiste el conteo autoritativo (likers distintos, `$set`, no `$inc`); `/users/{id}/posts` añade `is_bookmarked` y consulta en lote. `ReelsPage.handleLike` sincroniza estado con la respuesta del servidor. Se reconciliaron `likes_count` de 10 posts con drift.

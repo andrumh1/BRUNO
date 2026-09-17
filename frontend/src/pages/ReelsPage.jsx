@@ -97,7 +97,10 @@ export default function ReelsPage() {
   const handleLike = useCallback(async (reel, next) => {
     if (!requireAuth()) return;
     patchReel(reel.id, (r) => ({ is_liked: next, likes_count: Math.max(0, (r.likes_count || 0) + (next ? 1 : -1)) }));
-    try { await axios.post(`${API}/posts/${reel.id}/like`, {}, { headers }); }
+    try {
+      const res = await axios.post(`${API}/posts/${reel.id}/like`, {}, { headers });
+      patchReel(reel.id, { is_liked: !!res.data?.liked, likes_count: res.data?.likes_count ?? 0 });
+    }
     catch (_) { patchReel(reel.id, (r) => ({ is_liked: !next, likes_count: Math.max(0, (r.likes_count || 0) + (next ? -1 : 1)) })); }
   }, [token]);
   const handleFollow = useCallback(async (reel) => {
