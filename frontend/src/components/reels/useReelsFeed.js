@@ -81,13 +81,16 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
     return () => { cancelled = true; };
   }, [fetchPage, initialReelId, profileUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const loadingRef = useRef(false);
   const loadMore = useCallback(async () => {
-    if (loadingMore || done || profileUserId) return;
+    if (loadingRef.current || loadingMore || done || profileUserId) return;
+    loadingRef.current = true;
     setLoadingMore(true);
     const more = await fetchPage(false);
-    setReels((prev) => [...prev, ...more]);
+    setReels((prev) => { const ids = new Set(prev.map((r) => r.id)); return [...prev, ...more.filter((r) => !ids.has(r.id))]; });
     if (more.length === 0) setDone(true);
     setLoadingMore(false);
+    loadingRef.current = false;
   }, [fetchPage, loadingMore, done, profileUserId]);
 
   const trackView = useCallback((id) => {

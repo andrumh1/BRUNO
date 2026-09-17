@@ -1361,3 +1361,10 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - **Lista de likes**: `GET /posts/{id}/likes` (likers únicos + is_following/is_me). `ReelLikersSheet` en `ReelSheets.jsx`; `Rail` en ReelItem separa icono (like) de etiqueta (`reel-likes-count` → abre sheet), con botón Seguir.
 - **Tour de bienvenida**: `WelcomeTour.jsx` reescrito a 5 pasos (Reels, Mapa+Explorar, Crear/Cámara, Perfil, Listo); cada paso navega a su pantalla (`target`) y resalta el botón del nav (`highlight` → `tour-spotlight`); modal anclado arriba. Reiniciable desde Perfil → ajustes → "Tour de bienvenida" (`profile-start-tour`). Auto-inicia para cuentas creadas hace <1h.
 - **Estilos de texto**: `lib/textStyles.js` (8 fondos, 5 tipografías; Google Fonts en index.html). `TextStylePicker.jsx` en CreatePost (botón paleta, solo sin media). Post guarda `text_style {bg,font}`; `ReelTextCard` lo aplica.
+
+## 2026-06 — 4 features más (iteration_80, 100% backend+frontend)
+- **Historias en Reels**: `reels/ReelsStoriesStrip.jsx` (usa `/stories/feed`, `BrunoStoryViewer`); visible solo en el primer reel (activeIndex===0), no en "En vivo"/perfil. "Tu historia" → /camera.
+- **Explorar cerca**: `CardsExplorer` chip `cards-filter-nearby` → geolocalización, haversine, orden por distancia y badge `card-distance` (m/km). Vacío: "Ninguna tarjeta cercana tiene ubicación todavía".
+- **Compartir reel por chat**: `ReelShareSheet` recibe `token`, lista `GET /chats` y envía `POST /chats/{id}/messages` con `message_type:"reel"` + attachment `{type:'reel', post_id, poster_url, caption, author_name, kind}` (campos añadidos a `MessageAttachment`). `ChatPage` renderiza tarjeta `chat-reel-<postId>` → `/reels?id=`.
+- **Pegatinas de texto**: `text_style` gana `align` (center|left) y `emoji`. `TextStylePicker` con alineación + 16 emojis; `ReelTextCard` renderiza emoji grande y alineación.
+- Fix: `useReelsFeed.loadMore` con guard por ref + dedupe → sin keys duplicadas.
