@@ -1,0 +1,20 @@
+{
+  "summary": "Verified video-upload fix end-to-end. Backend: 14/14 pytest tests passed covering /upload/chat-file with mid.mp4 (43MB), sample.mp4 (30MB), iOS .MOV with application/octet-stream, /upload/image with video (resource_type=video), 413 for big.mp4 (130MB) with Spanish detail, POST /api/posts preserving all 5 media url fields, and cross-user visibility for viewer2 in /api/posts, /api/feed/for-you, /api/posts/recommended-videos, /api/users/{author}/posts, /api/posts/{id}, plus Cloudinary mp4_url/original_url fetchable via Range requests. Frontend (390x844): logged in as newtest@bruno.com, opened publish menu via nav-create, selected Reel → gallery, injected /tmp/sample.mp4 into publish-menu-file-input, observed progress toast 'Subiendo tu reel', success toast 'Reel publicado', navigation to /reels?id=<newId>, reel-item-<id> rendered, and after 15s no reel-retry-btn and no reel-processing state. Viewer2 sees posts and reels; feed shows FeedVideo elements (10 videos visible), reels list renders items (target reel exists per backend API verification).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_iteration77_video_upload.py", "/app/test_reports/pytest/iter77.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "uploads.py MAX_VIDEO_BYTES check happens AFTER reading file into memory - a 500MB upload still occupies RAM before rejection. Consider streaming size check or nginx client_max_body_size.",
+    "uploads.py logs 'Error uploading chat file' at ERROR level for legitimate 413 HTTPException path is avoided (re-raise before except catch), which is correct — good.",
+    "sys.path.insert at module import in uploads.py is fragile — prefer package-relative imports."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration77_video_upload.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "newtest@bruno.com / Test1234! (author), viewer2@bruno.com / Test1234! (viewer)",
+  "seed_data_creation": "Created one test video post via UI (reel id 3001ecda-fe13-4028-9078-115e85ce8b80) plus 3 backend upload posts. Cloudinary quota used: ~4 video uploads as budgeted.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Regression test file at /app/backend/tests/test_iteration77_video_upload.py — reuses /tmp/mid.mp4, /tmp/sample.mp4, /tmp/big.mp4. Skips gracefully if files missing. Consumes ~3 Cloudinary uploads per run; use sparingly.",
+  "rca of the issue": "Original bug: cloudinary.uploader.upload_large was called with raw bytes when video >10MB; the SDK treats the first positional as a file path, causing 'embedded null byte' 500 error. Fix in uploads.py:_upload_video wraps bytes in io.BytesIO with filename= kwarg and runs the blocking call via starlette run_in_threadpool. 413 guard added for >100MB. Extension-based video detection (mp4/mov/webm/m4v/mkv/avi/ogv/3gp/qt/hevc) covers iOS uploads that arrive as application/octet-stream. All verified via automated tests."
+}

@@ -1331,3 +1331,14 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 
 
 
+
+## 2026-06 — Fix: subida de video desde la fototeca del celular (iteration_77)
+**Causa raíz**: `cloudinary.uploader.upload_large(bytes)` trataba los bytes como ruta de archivo → 500 `embedded null byte` en TODO video > 10 MB (cualquier video de celular). El post nunca se creaba.
+**Fix**:
+- `routers/uploads.py`: helper `_upload_video` (BytesIO + `run_in_threadpool`), compartido por `/upload/image` y `/upload/chat-file`. 413 en español para videos > 100 MB (límite Cloudinary). Detección de imagen/video por extensión cuando el MIME viene vacío (iOS .MOV / octet-stream).
+- `lib/media.js`: `isVideoFile`, `videoTooLarge` usados en MobileBottomNav, CreatePost, QuickStoryButton, InternalGalleryPicker, StoryEditor, BrunoCameraPage, ChatAttachmentMenu.
+- `MobileBottomNav.jsx`: toast con % de progreso real de subida, `timeout: 0`, error con detalle del backend.
+- `ReelItem.jsx` / `FeedVideo.jsx`: auto-reintento con backoff (Cloudinary responde 423 mientras transcodifica) + cadena de fuentes mp4 → f_auto → original. Estado "Procesando video…".
+- `useReelsFeed.js`: normaliza `f_auto_url` y `original_url`.
+- Lint bloqueante `NDEFReader` → `window.NDEFReader` en `ActivateNFCPage.jsx`.
+**Testing**: 14/14 backend + flujo frontend Crear → Reel → galería verificado (iteration_77). Nota: Chromium headless no decodifica H.264; la reproducción se valida vía HTTP 206 video/mp4.
