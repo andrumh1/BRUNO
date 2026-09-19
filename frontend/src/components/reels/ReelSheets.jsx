@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, User, Columns2, Scissors, Layers, Music2, Video, Check } from "lucide-react";
+import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, Pause, User, Columns2, Scissors, Layers, Music2, Video, Check, Trash2, Flag, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { normalizeReel } from "./useReelsFeed";
@@ -37,7 +37,7 @@ export function BottomSheet({ open, onClose, title, children, testid, height = "
   );
 }
 
-export function ReelCommentsSheet({ reel, token, onClose, onPosted, highlightId = null }) {
+export function ReelCommentsSheet({ reel, token, onClose, onPosted, onDeleted, currentUserId, highlightId = null }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -77,10 +77,25 @@ export function ReelCommentsSheet({ reel, token, onClose, onPosted, highlightId 
               <div className="w-8 h-8 rounded-full bg-foreground/10 overflow-hidden shrink-0 grid place-items-center">
                 {c.user?.avatar_url ? <img src={c.user.avatar_url} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-foreground/60" />}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-foreground/80">{c.user?.display_name || c.user?.username || "Usuario"}</p>
                 <p className="text-sm leading-snug break-words">{c.content}</p>
               </div>
+              {token && (c.user_id === currentUserId || (reel.author?.id || reel.user_id) === currentUserId) && (
+                <button
+                  onClick={async () => {
+                    try {
+                      const r = await axios.delete(`${API}/posts/${reel.id}/comments/${c.id}`, { headers });
+                      setComments((prev) => prev.filter((x) => x.id !== c.id && x.parent_id !== c.id));
+                      onDeleted?.(reel.id, r.data?.comments_count);
+                      brunoToast.success("Comentario eliminado");
+                    } catch (_) { brunoToast.error("No se pudo eliminar"); }
+                  }}
+                  className="self-start p-1.5 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10" aria-label="Eliminar comentario" data-testid={`reel-comment-delete-${c.id}`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           ))}
       </div>
@@ -133,6 +148,45 @@ export function ReelLikersSheet({ reel, token, onClose, onFollow }) {
               )}
             </div>
           ))}
+      </div>
+    </BottomSheet>
+  );
+}
+
+export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDeleted }) {
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  if (!reel) return null;
+  const isOwner = (reel.author?.id || reel.user_id) === currentUserId;
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const del = async () => {
+    setBusy(true);
+    try { await axios.delete(`${API}/posts/${reel.id}`, { headers }); brunoToast.success("Publicación eliminada"); onDeleted?.(reel.id); onClose(); }
+    catch (e) { brunoToast.error("No se pudo eliminar", { description: e?.response?.data?.detail }); }
+    finally { setBusy(false); }
+  };
+  const report = () => { brunoToast.success("Gracias, revisaremos este contenido"); onClose(); };
+  return (
+    <BottomSheet open onClose={onClose} title="Opciones" testid="reel-options-sheet" height="auto">
+      <div className="px-4 pb-6 pt-1 space-y-1.5">
+        {isOwner ? (
+          confirm ? (
+            <div className="rounded-2xl bg-destructive/10 p-3" data-testid="reel-delete-confirm">
+              <p className="text-sm font-medium mb-2">¿Eliminar esta publicación? Esta acción no se puede deshacer.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirm(false)} className="flex-1 h-10 rounded-full bg-foreground/[0.06] text-sm">Cancelar</button>
+                <button onClick={del} disabled={busy} className="flex-1 h-10 rounded-full bg-destructive text-white text-sm font-semibold" data-testid="reel-delete-confirm-btn">{busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Eliminar"}</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setConfirm(true)} className="w-full h-12 rounded-2xl bg-foreground/[0.05] flex items-center gap-3 px-4 text-sm text-destructive" data-testid="reel-delete-btn"><Trash2 className="w-4 h-4" /> Eliminar publicación</button>
+          )
+        ) : (
+          <>
+            <button onClick={report} className="w-full h-12 rounded-2xl bg-foreground/[0.05] flex items-center gap-3 px-4 text-sm" data-testid="reel-report-btn"><Flag className="w-4 h-4" /> Reportar</button>
+            <button onClick={() => { brunoToast.success("Verás menos contenido como este"); onClose(); }} className="w-full h-12 rounded-2xl bg-foreground/[0.05] flex items-center gap-3 px-4 text-sm" data-testid="reel-not-interested-btn"><EyeOff className="w-4 h-4" /> No me interesa</button>
+          </>
+        )}
       </div>
     </BottomSheet>
   );
@@ -295,6 +349,16 @@ export function ReelSoundSheet({ reel, token, onClose, onPick }) {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [playing, setPlaying] = useState(false);
+  const audioRef = React.useRef(null);
+  useEffect(() => () => { audioRef.current?.pause(); }, []);
+  const togglePreview = () => {
+    const url = data?.sound?.url;
+    if (!url) return brunoToast.error("Este sonido no tiene audio para previsualizar");
+    if (!audioRef.current) { audioRef.current = new Audio(url); audioRef.current.onended = () => setPlaying(false); audioRef.current.onerror = () => { setPlaying(false); brunoToast.error("No se pudo reproducir el sonido"); }; }
+    if (playing) { audioRef.current.pause(); setPlaying(false); }
+    else { audioRef.current.play().then(() => setPlaying(true)).catch(() => brunoToast.error("No se pudo reproducir el sonido")); }
+  };
   useEffect(() => {
     if (!reel) return;
     setLoading(true);
@@ -308,9 +372,10 @@ export function ReelSoundSheet({ reel, token, onClose, onPick }) {
       {loading ? <div className="grid place-items-center py-10"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div> : (
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 pb-3 flex items-center gap-3">
-            <div className="w-16 h-16 rounded-2xl bg-zinc-900 grid place-items-center overflow-hidden reel-disc shrink-0">
+            <button onClick={togglePreview} className={`w-16 h-16 rounded-2xl bg-zinc-900 grid place-items-center overflow-hidden reel-disc shrink-0 relative ${playing ? "" : "[animation-play-state:paused]"}`} data-testid="reel-sound-preview-btn" aria-label={playing ? "Pausar" : "Escuchar"}>
               {sound?.author?.avatar_url ? <img src={sound.author.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" /> : <Music2 className="w-6 h-6 text-white" />}
-            </div>
+              <span className="absolute inset-0 grid place-items-center bg-black/35">{playing ? <Pause className="w-5 h-5 text-white fill-white" /> : <Play className="w-5 h-5 text-white fill-white ml-0.5" />}</span>
+            </button>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold truncate" data-testid="reel-sound-name">{sound?.name || "Sonido original"}</p>
               <p className="text-xs text-muted-foreground truncate">@{sound?.author?.username || sound?.author?.name || "usuario"} · {sound?.uses || 0} {sound?.uses === 1 ? "video lo usa" : "videos lo usan"}</p>

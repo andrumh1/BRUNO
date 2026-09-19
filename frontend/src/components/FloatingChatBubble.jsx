@@ -441,19 +441,21 @@ const FloatingChatBubble = () => {
   const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(p => location.pathname.startsWith(p));
 
+  const fetchChats = useCallback(async () => {
+    if (!token) return;
+    try {
+      const r = await axios.get(`${API}/chats`, { headers: { Authorization: `Bearer ${token}` } });
+      setChats(r.data);
+      setUnreadTotal(r.data.reduce((s, c) => s + (c.unread_count || 0), 0));
+    } catch (_e) { /* ignore */ }
+  }, [token]);
+
   useEffect(() => {
     if (!token) return;
-    const fetchChats = async () => {
-      try {
-        const r = await axios.get(`${API}/chats`, { headers: { Authorization: `Bearer ${token}` } });
-        setChats(r.data);
-        setUnreadTotal(r.data.reduce((s, c) => s + (c.unread_count || 0), 0));
-      } catch (_e) { /* ignore */ }
-    };
     fetchChats();
     const iv = setInterval(fetchChats, 30000);
     return () => clearInterval(iv);
-  }, [token]);
+  }, [token, fetchChats]);
 
   useEffect(() => {
     if (!token) return;
@@ -508,7 +510,7 @@ const FloatingChatBubble = () => {
       // Close the chat-list popup AND collapse every open chat to mini.
       setIsOpen(false);
       setShowNewChat(false);
-      setOpenChats(prev => prev.map(c => ({ ...c, minimized: true })));
+      setOpenChats([]);
     }
   }, [minimized]);
 
@@ -517,7 +519,7 @@ const FloatingChatBubble = () => {
     const onAll = () => {
       setIsOpen(false);
       setShowNewChat(false);
-      setOpenChats(prev => prev.map(c => ({ ...c, minimized: true })));
+      setOpenChats([]);
     };
     window.addEventListener("bruno:minimize-all", onAll);
     return () => window.removeEventListener("bruno:minimize-all", onAll);
@@ -615,11 +617,11 @@ const FloatingChatBubble = () => {
           <div key={chat.id} className="animate-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms` }}>
             <ChatWindow chat={chat}
               onClose={() => { setOpenChats(prev => prev.filter(c => c.id !== chat.id)); }}
-              onMinimize={() => { 
-                setOpenChats(prev => prev.map(c => c.id === chat.id ? { ...c, minimized: !c.minimized } : c));
-                if (!chat.minimized) {
-                  try { window.dispatchEvent(new CustomEvent("bruno:child-minimized")); } catch (_e) { /* ignore */ }
-                }
+              onMinimize={() => {
+                // Minimize = close this window and return to the chat list (sorted by latest message)
+                setOpenChats(prev => prev.filter(c => c.id !== chat.id));
+                setIsOpen(true);
+                fetchChats();
               }}
               isMinimized={chat.minimized} currentUserId={user.id} ws={ws} token={token} />
           </div>

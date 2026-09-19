@@ -106,5 +106,6 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
     setReels((prev) => prev.map((r) => (r.id === id ? { ...r, ...(typeof patch === "function" ? patch(r) : patch) } : r)));
   }, []);
 
-  return { reels, loading, loadingMore, done, loadMore, trackView, patchReel };
+  const removeReel = useCallback((id) => setReels((prev) => prev.filter((r) => r.id !== id)), []);
+  return { reels, loading, loadingMore, done, loadMore, trackView, patchReel, removeReel };
 }

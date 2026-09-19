@@ -846,6 +846,24 @@ async def get_post_likers(post_id: str, limit: int = 100, current_user: Optional
     return {"total": len(seen), "users": out}
 
 
+@router.delete("/posts/{post_id}/comments/{comment_id}")
+async def delete_comment(post_id: str, comment_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a comment: allowed for the comment author or the post owner."""
+    comment = await db.comments.find_one({"id": comment_id, "post_id": post_id}, {"_id": 0})
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    post = await db.posts.find_one({"id": post_id}, {"_id": 0, "user_id": 1})
+    if comment.get("user_id") != current_user.id and (post or {}).get("user_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="No puedes borrar este comentario")
+    replies = await db.comments.count_documents({"parent_id": comment_id})
+    await db.comments.delete_many({"$or": [{"id": comment_id}, {"parent_id": comment_id}]})
+    if comment.get("parent_id"):
+        await db.comments.update_one({"id": comment["parent_id"]}, {"$inc": {"replies_count": -1}})
+    total = await db.comments.count_documents({"post_id": post_id})
+    await db.posts.update_one({"id": post_id}, {"$set": {"comments_count": total}})
+    return {"deleted": True, "removed": 1 + replies, "comments_count": total}
+
+
 @router.post("/posts/{post_id}/like")
 async def toggle_like(post_id: str, current_user: User = Depends(get_current_user)):
     """Toggle like on a post"""

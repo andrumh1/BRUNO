@@ -14,7 +14,7 @@ import { useNavScroll } from "@/contexts/NavScrollContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import ReelItem from "@/components/reels/ReelItem";
 import { useReelsFeed } from "@/components/reels/useReelsFeed";
-import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet, ReelLikersSheet } from "@/components/reels/ReelSheets";
+import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet, ReelLikersSheet, ReelOptionsSheet } from "@/components/reels/ReelSheets";
 import RemixStudio from "@/components/reels/RemixStudio";
 import ReelsStoriesStrip from "@/components/reels/ReelsStoriesStrip";
 import { AnimatePresence } from "framer-motion";
@@ -41,12 +41,13 @@ export default function ReelsPage() {
   const [remixesOf, setRemixesOf] = useState(null);    // source post id
   const [soundFor, setSoundFor] = useState(null);      // reel → sound sheet
   const [likersFor, setLikersFor] = useState(null);    // reel → who liked
+  const [optionsFor, setOptionsFor] = useState(null);  // reel → "…" options
   const highlightCommentId = searchParams.get("comment");
   const containerRef = useRef(null);
   const itemRefs = useRef([]);
 
   const feedMode = tab === "following" ? "following" : "for_you";
-  const { reels, loading, loadingMore, loadMore, trackView, patchReel } = useReelsFeed({ token, mode: feedMode, profileUserId, initialReelId });
+  const { reels, loading, loadingMore, loadMore, trackView, patchReel, removeReel } = useReelsFeed({ token, mode: feedMode, profileUserId, initialReelId });
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
   /* Active reel tracking via IntersectionObserver */
@@ -174,7 +175,7 @@ export default function ReelsPage() {
                     globalMuted={globalMuted} onToggleMute={() => setGlobalMuted((m) => !m)}
                     onLike={handleLike} onFollow={handleFollow} onSave={handleSave}
                     onOpenComments={setCommentsFor} onOpenShare={setShareFor} onMinimize={handleMinimize}
-                    onOpenRemix={(r) => { if (requireAuth()) setRemixFor(r); }} onOpenRemixes={(r) => setRemixesOf(r.id)} onOpenSound={setSoundFor} onOpenLikers={setLikersFor}
+                    onOpenRemix={(r) => { if (requireAuth()) setRemixFor(r); }} onOpenRemixes={(r) => setRemixesOf(r.id)} onOpenSound={setSoundFor} onOpenLikers={setLikersFor} onOpenOptions={setOptionsFor}
                     onSwipeLeft={swipeLeft} onSwipeRight={swipeRight}
                   />
                 ) : (
@@ -189,7 +190,8 @@ export default function ReelsPage() {
         <LivesGrid token={token} navigate={navigate} />
       )}
 
-      <ReelCommentsSheet reel={commentsFor} token={token} highlightId={commentsFor?.id === initialReelId ? highlightCommentId : null} onClose={() => setCommentsFor(null)} onPosted={(id) => patchReel(id, (r) => ({ comments_count: (r.comments_count || 0) + 1 }))} />
+      <ReelCommentsSheet reel={commentsFor} token={token} currentUserId={user?.id} highlightId={commentsFor?.id === initialReelId ? highlightCommentId : null} onClose={() => setCommentsFor(null)} onPosted={(id) => patchReel(id, (r) => ({ comments_count: (r.comments_count || 0) + 1 }))} onDeleted={(id, count) => patchReel(id, (r) => ({ comments_count: count ?? Math.max(0, (r.comments_count || 0) - 1) }))} />
+      {optionsFor && <ReelOptionsSheet reel={optionsFor} token={token} currentUserId={user?.id} onClose={() => setOptionsFor(null)} onDeleted={(id) => removeReel(id)} />}
       {soundFor && <ReelSoundSheet reel={soundFor} token={token} onClose={() => setSoundFor(null)} onPick={(r) => { setSoundFor(null); navigate(`/reels?id=${r.id}`); }} />}
       <ReelLikersSheet reel={likersFor} token={token} onClose={() => setLikersFor(null)} onFollow={(uid, next) => reels.forEach((r) => { if ((r.author?.id || r.user_id) === uid) patchReel(r.id, { is_following: next }); })} />
       {shareFor && <ReelShareSheet reel={shareFor} token={token} onClose={() => setShareFor(null)} />}

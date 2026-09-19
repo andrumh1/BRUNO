@@ -116,8 +116,8 @@ export default function CallOrchestrator() {
   const handleAccept = async () => {
     if (!call?.id) return;
     try {
-      await axios.post(`${API}/calls/${call.id}/answer`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      setCall((prev) => prev ? { ...prev, room_url: prev._pending_room || prev.room_url, isIncoming: false } : prev);
+      const ans = await axios.post(`${API}/calls/${call.id}/answer`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      setCall((prev) => prev ? { ...prev, room_url: ans.data?.room_url || prev._pending_room || prev.room_url, isIncoming: false } : prev);
     } catch (_e) { setCall(null); }
   };
   const handleDecline = async () => {

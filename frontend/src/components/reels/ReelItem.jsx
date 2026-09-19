@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, Volume2, VolumeX, User, Plus, Check, Minimize2, RotateCcw, Layers, Scissors, Columns2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, Volume2, VolumeX, User, Plus, Check, Minimize2, RotateCcw, Layers, Scissors, Columns2, MoreHorizontal } from "lucide-react";
 import ReelTextCard from "@/components/reels/ReelTextCard";
 import ReelCarousel from "@/components/reels/ReelCarousel";
 
@@ -15,7 +15,7 @@ const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1
  */
 export default function ReelItem({
   reel, isActive, isNear, globalMuted, onToggleMute, onLike, onFollow, onSave,
-  onOpenComments, onOpenShare, onOpenRemix, onOpenRemixes, onOpenSound, onOpenLikers, onSwipeLeft, onSwipeRight, onMinimize, hideChrome,
+  onOpenComments, onOpenShare, onOpenRemix, onOpenRemixes, onOpenSound, onOpenLikers, onOpenOptions, onSwipeLeft, onSwipeRight, onMinimize, hideChrome,
 }) {
   const videoRef = useRef(null);
   const barRef = useRef(null);
@@ -200,6 +200,7 @@ export default function ReelItem({
             <Rail icon={<Share2 className="w-7 h-7 text-white" />} label="Enviar" testid="reel-share-btn" onClick={() => onOpenShare?.(reel)} />
             {src && <Rail icon={<Layers className="w-7 h-7 text-white" />} label={reel.remix_count ? fmt(reel.remix_count) : "Remix"} testid="reel-remix-btn" onClick={() => onOpenRemix?.(reel)} />}
             <Rail icon={<Minimize2 className="w-6 h-6 text-white" />} label="PiP" testid="reel-minimize-btn" onClick={() => onMinimize?.(reel)} />
+            <Rail icon={<MoreHorizontal className="w-6 h-6 text-white" />} label="Más" testid="reel-more-btn" onClick={() => onOpenOptions?.(reel)} />
             {src && (
             <button onClick={(e) => { e.stopPropagation(); onOpenSound?.(reel); }} className="mt-1 w-11 h-11 rounded-full bg-zinc-900 border-[3px] border-zinc-700 grid place-items-center overflow-hidden reel-disc active:scale-90" style={{ animationPlayState: isPlaying ? "running" : "paused" }} data-testid="reel-sound-disc" aria-label="Sonido">
               {reel.author?.avatar_url ? <img src={reel.author.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" /> : <Music2 className="w-4 h-4 text-white" />}

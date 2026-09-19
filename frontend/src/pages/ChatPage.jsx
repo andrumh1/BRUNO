@@ -207,10 +207,10 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   const handleAcceptCall = async () => {
     if (!videoCallState.callId) return;
     try {
-      await axios.post(`${API}/calls/${videoCallState.callId}/answer`, {}, {
+      const ans = await axios.post(`${API}/calls/${videoCallState.callId}/answer`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setVideoCallState(prev => ({ ...prev, isIncoming: false }));
+      setVideoCallState(prev => ({ ...prev, isIncoming: false, roomUrl: ans.data?.room_url || prev.roomUrl }));
     } catch (error) {
       // error handled
     }

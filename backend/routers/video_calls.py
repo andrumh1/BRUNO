@@ -8,6 +8,9 @@ from pydantic import BaseModel
 from datetime import datetime, timezone
 import uuid
 import logging
+import os
+import time
+import httpx
 
 import sys
 sys.path.insert(0, '/app/backend')
@@ -19,6 +22,35 @@ from models.user import User
 
 router = APIRouter(prefix="/calls", tags=["calls"])
 logger = logging.getLogger(__name__)
+
+DAILY_API = "https://api.daily.co/v1"
+
+
+def _daily_key():
+    return os.environ.get("DAILY_API_KEY")
+
+
+async def _daily_post(path: str, body: dict) -> dict:
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.post(f"{DAILY_API}{path}", headers={"Authorization": f"Bearer {_daily_key()}", "Content-Type": "application/json"}, json=body)
+    if r.is_error:
+        logger.error(f"Daily error {r.status_code}: {r.text[:200]}")
+        raise HTTPException(status_code=502, detail="No se pudo crear la sala de llamada")
+    return r.json()
+
+
+async def _daily_token(room_name: str, user: User, is_owner: bool, exp: int) -> str:
+    res = await _daily_post("/meeting-tokens", {"properties": {
+        "room_name": room_name, "user_id": user.id, "user_name": user.name or "Usuario",
+        "is_owner": is_owner, "exp": min(exp, int(time.time()) + 2 * 3600), "eject_at_token_exp": True,
+    }})
+    return res["token"]
+
+
+def _with_token(room_url: str, token: str | None, call_type: str) -> str:
+    if not token:
+        return room_url
+    return f"{room_url}?t={token}"
 
 
 class VideoCallRequest(BaseModel):
@@ -47,10 +79,22 @@ async def start_video_call(
 
     room_name = f"bruno-{request.chat_id}-{str(uuid.uuid4())[:8]}"
     start_video_muted = "true" if request.call_type == "audio" else "false"
-    room_url = (
-        f"https://meet.jit.si/{room_name}"
-        f"#config.prejoinPageEnabled=false&config.startWithVideoMuted={start_video_muted}"
-    )
+    provider = "jitsi"
+    caller_url = None
+    if _daily_key():
+        # Daily.co: private room that expires in 2h; each participant gets its own token
+        exp = int(time.time()) + 2 * 3600
+        room = await _daily_post("/rooms", {"name": room_name[:40], "privacy": "private", "properties": {
+            "exp": exp, "eject_at_room_exp": True, "max_participants": 8, "start_video_off": request.call_type == "audio",
+            "enable_prejoin_ui": False, "enable_chat": False,
+        }})
+        room_name, room_url, provider = room["name"], room["url"], "daily"
+        caller_url = _with_token(room_url, await _daily_token(room_name, current_user, True, exp), request.call_type)
+    else:
+        room_url = (
+            f"https://meet.jit.si/{room_name}"
+            f"#config.prejoinPageEnabled=false&config.startWithVideoMuted={start_video_muted}"
+        )
     call_id = str(uuid.uuid4())
 
     call_doc = {
@@ -58,6 +102,7 @@ async def start_video_call(
         "chat_id": request.chat_id,
         "room_name": room_name,
         "room_url": room_url,
+        "provider": provider,
         "call_type": request.call_type,
         "started_by": current_user.id,
         "participants": chat["participants"],
@@ -106,7 +151,7 @@ async def start_video_call(
     except Exception as e:
         logger.warning(f"Push notification module unavailable: {e}")
 
-    return VideoCallResponse(room_url=room_url, room_name=room_name, call_id=call_id)
+    return VideoCallResponse(room_url=caller_url or room_url, room_name=room_name, call_id=call_id)
 
 
 @router.post("/{call_id}/answer")
@@ -135,7 +180,10 @@ async def answer_call(
     except Exception as e:
         logger.warning(f"WS answer broadcast failed: {e}")
 
-    return {"status": "answered", "room_url": call["room_url"]}
+    room_url = call["room_url"]
+    if call.get("provider") == "daily" and _daily_key():
+        room_url = _with_token(room_url, await _daily_token(call["room_name"], current_user, False, int(time.time()) + 2 * 3600), call.get("call_type", "video"))
+    return {"status": "answered", "room_url": room_url}
 
 
 @router.post("/{call_id}/decline")
