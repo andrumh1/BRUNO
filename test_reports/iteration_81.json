@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 81 audit: Reels rail end-to-end (like/comments/save/share/remix/minimize/more/sound), new comment-delete, new More→delete/report/not-interested + confirm, sound preview, floating chat minimize behavior, calls (Jitsi fallback). Backend 14/14 passed. Frontend flows verified via UI login (secureStorage token cannot be injected).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration81_reels_chat_calls.py",
+    "/app/test_reports/pytest/iter81.xml"
+  ],
+  "action_items": [
+    "Optional: add data-testid=\"floating-chat-list\" and data-testid=\"reels-history-sheet\" to the respective root containers so future test scripts can reference the visible-again list and history sheet directly. Behavior is correct; only testid coverage is missing.",
+    "Optional: add data-testid=\"reel-save-label\" / labelTestid wiring so save-toggle label text can be asserted (currently label empty text_content in test — likely because label uses aria-only). Functional behavior is correct."
+  ],
+  "critical_code_review_comments": [
+    "ReelSheets.jsx line 160: isOwner uses (reel.author?.id || reel.user_id) === currentUserId — depends on reel schema exposing author.id; confirmed working for shared post fe1ab84f (newtest sees Eliminar) and non-owner post (viewer2's post) newtest sees Reportar/No me interesa. Good.",
+    "Delete-comment endpoint enforces author OR post-owner correctly (200) and returns 403 for outsiders — verified.",
+    "Calls: Jitsi fallback URL is well-formed (meet.jit.si/bruno-<chatId>-<random>#config.prejoinPageEnabled=false&startWithVideoMuted=true). Good.",
+    "Live comment schema uses field 'text' not 'content' — worth aligning with reels comments which use 'content' for API consistency (minor)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration81_reels_chat_calls.py"
+  ],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "100% critical flows"},
+  "test_credentials": "newtest@bruno.com / Test1234!, viewer2@bruno.com / Test1234! (from problem statement)",
+  "seed_data_creation": "During tests: transient TEST_ prefixed posts by viewer2 (deleted at end); TEST_ comments on shared post fe1ab84f (deleted at end); one TEST_ live (ended). Shared fixture fe1ab84f NOT deleted.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests are green when REACT_APP_BACKEND_URL is exported. UI cannot use injected localStorage token due to secureStorage encryption in AuthContext — always drive login via the /login form (email/password inputs, 'Iniciar Sesión' button). Target specific reels using data-testid=reel-item-<postId> and scope rail lookups within that container (feed renders 3 reels around ?id=). Comments sheet input testid: reel-comment-input; send button: reel-comment-send (NOT reel-comment-send-btn). Backend follow endpoint is /api/users/{id}/follow (toggle). Live comment body field is 'text'. Lives create fails with 400 'Ya tienes un live activo' if user already has one — end via /api/lives/mine/active + /api/lives/{id}/end first.",
+  "rca of the issue": "No open issues — all fixes in this iteration function as intended."
+}

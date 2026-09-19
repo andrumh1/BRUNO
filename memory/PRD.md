@@ -1368,3 +1368,11 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - **Compartir reel por chat**: `ReelShareSheet` recibe `token`, lista `GET /chats` y envía `POST /chats/{id}/messages` con `message_type:"reel"` + attachment `{type:'reel', post_id, poster_url, caption, author_name, kind}` (campos añadidos a `MessageAttachment`). `ChatPage` renderiza tarjeta `chat-reel-<postId>` → `/reels?id=`.
 - **Pegatinas de texto**: `text_style` gana `align` (center|left) y `emoji`. `TextStylePicker` con alineación + 16 emojis; `ReelTextCard` renderiza emoji grande y alineación.
 - Fix: `useReelsFeed.loadMore` con guard por ref + dedupe → sin keys duplicadas.
+
+## 2026-06 — Auditoría Reels + Chat + Llamadas (iteration_81, 100%)
+- Nuevo `DELETE /posts/{post_id}/comments/{comment_id}` (autor del comentario o dueño del post; recalcula `comments_count`). Papelera en `ReelCommentsSheet` (props `currentUserId`, `onDeleted`).
+- Botón "Más" (`reel-more-btn`) → `ReelOptionsSheet`: dueño → Eliminar publicación (confirmación, `DELETE /posts/{id}`, `removeReel`); otros → Reportar / No me interesa.
+- `ReelSoundSheet`: botón play/pause (`reel-sound-preview-btn`) que reproduce `sound.url`.
+- Chat flotante: minimizar = cerrar ventana y volver al listado (ordenado por `last_message_at`); nav-minimize cierra ventanas (sin burbujas). `fetchChats` hoisted a `useCallback`.
+- Llamadas: `video_calls.py` usa **Daily.co** si `DAILY_API_KEY` está en backend/.env (sala privada 2h + token por participante, `room_url?t=token` en el iframe existente); si no, fallback Jitsi (meet.jit.si exige login del anfitrión desde 2023 → causa de "no hace llamadas" en producción). `answer` devuelve `room_url` con token del receptor; `ChatPage`/`CallOrchestrator` lo usan.
+- **PENDIENTE USUARIO**: pegar `DAILY_API_KEY` (dashboard.daily.co → Developers) en backend/.env de producción y redesplegar.
