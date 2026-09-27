@@ -26,10 +26,26 @@ export default function MessageReactionsBubble({
   onReply,
   reactions = [],
   testId = "msg-reactions",
+  onShowReactors,
+  myEmoji = null,
 }) {
   const [open, setOpen] = useState(false);
+  const [burst, setBurst] = useState(0);
   const containerRef = useRef(null);
   const pressTimerRef = useRef(null);
+  const lastTapRef = useRef(0);
+
+  // Double tap / double click → quick ❤️
+  const handleTap = (e) => {
+    if (e.target.closest("a, button, video, audio, [data-no-dbltap]")) return;
+    const now = Date.now();
+    if (now - lastTapRef.current < 320) {
+      lastTapRef.current = 0;
+      cancelPress();
+      setBurst((b) => b + 1);
+      onReact?.("❤️");
+    } else lastTapRef.current = now;
+  };
 
   // Outside click
   useEffect(() => {
@@ -71,6 +87,7 @@ export default function MessageReactionsBubble({
       onPointerUp={cancelPress}
       onPointerCancel={cancelPress}
       onPointerLeave={cancelPress}
+      onClick={handleTap}
       onContextMenu={(e) => {
         e.preventDefault();
         setOpen(true);
@@ -78,17 +95,33 @@ export default function MessageReactionsBubble({
     >
       {children}
 
+      {/* Heart burst on double tap */}
+      <AnimatePresence>
+        {burst > 0 && (
+          <motion.span key={burst} className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl select-none" data-testid="heart-burst"
+            initial={{ scale: 0.3, opacity: 0 }} animate={{ scale: [0.3, 1.25, 1], opacity: [0, 1, 0] }} transition={{ duration: 0.75, times: [0, 0.4, 1] }}
+            onAnimationComplete={() => setBurst(0)}>
+            ❤️
+          </motion.span>
+        )}
+      </AnimatePresence>
+
       {/* Existing reactions display */}
       {reactions.length > 0 && (
         <div
-          className={`mt-1 flex gap-1 flex-wrap ${
+          role="button"
+          tabIndex={0}
+          data-no-dbltap
+          onClick={(e) => { e.stopPropagation(); onShowReactors?.(); }}
+          className={`mt-1 flex gap-1 flex-wrap cursor-pointer ${
             isOwn ? "justify-end" : "justify-start"
           }`}
+          data-testid="reactions-row"
         >
           {reactions.map((r, i) => (
             <span
               key={`${r.emoji}-${i}`}
-              className="inline-flex items-center gap-0.5 bg-white dark:bg-zinc-800 rounded-full px-2 py-0.5 text-xs shadow-sm border border-zinc-200/60 dark:border-zinc-700"
+              className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs shadow-sm border ${myEmoji === r.emoji ? "bg-primary/10 border-primary/40" : "bg-white dark:bg-zinc-800 border-zinc-200/60 dark:border-zinc-700"}`}
             >
               <span>{r.emoji}</span>
               {r.count > 1 && (

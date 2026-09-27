@@ -2516,6 +2516,8 @@ from routers.video_calls import router as video_calls_router
 api_router.include_router(video_calls_router)
 from routers.chat_groups import router as chat_groups_router
 api_router.include_router(chat_groups_router)
+from routers.chat_extras import router as chat_extras_router
+api_router.include_router(chat_extras_router)
 from routers.card_transfer import router as card_transfer_router
 api_router.include_router(card_transfer_router)
 from routers.cards import router as cards_router, public_router as cards_public_router

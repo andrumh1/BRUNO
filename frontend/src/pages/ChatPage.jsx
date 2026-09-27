@@ -59,6 +59,8 @@ import {
   Wallet
 } from "lucide-react";
 import OfflineBanner from "@/components/chat/OfflineBanner";
+import ChatSearchBar from "@/components/chat/ChatSearchBar";
+import ReactorsSheet from "@/components/chat/ReactorsSheet";
 import { useChatOutbox } from "@/hooks/useChatOutbox";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -70,7 +72,27 @@ const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws:
 const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = null, onChatUpdated, onLeftGroup }) => {
   const { token } = useAuth();
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
+  const [newMessage, setNewMessage] = useState(() => { try { return localStorage.getItem(`bruno_draft_${chat?.id}`) || ""; } catch { return ""; } });
+  const [showSearch, setShowSearch] = useState(false);
+  const [reactorsFor, setReactorsFor] = useState(null);
+  // Draft per chat: persisted while typing, restored when you come back
+  const draftChatRef = useRef(chat?.id);
+  useEffect(() => {
+    if (draftChatRef.current === chat?.id) return;
+    draftChatRef.current = chat?.id;
+    try { setNewMessage(localStorage.getItem(`bruno_draft_${chat?.id}`) || ""); } catch { setNewMessage(""); }
+  }, [chat?.id]);
+  useEffect(() => {
+    if (draftChatRef.current !== chat?.id) return undefined;
+    const t = setTimeout(() => {
+      try {
+        if (newMessage.trim()) localStorage.setItem(`bruno_draft_${chat?.id}`, newMessage);
+        else localStorage.removeItem(`bruno_draft_${chat?.id}`);
+        window.dispatchEvent(new CustomEvent("bruno:draft", { detail: { chatId: chat?.id, draft: newMessage.trim() } }));
+      } catch { /* ignore */ }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [newMessage, chat?.id]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -214,6 +236,9 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
       try {
         const data = JSON.parse(event.data);
         
+        if (data.type === "message_reaction" && data.chat_id === chat.id) {
+          setMessages(prev => prev.map(m => (m.id === data.message_id ? { ...m, reactions: data.reactions } : m)));
+        }
         if (data.type === "new_message" && data.message.chat_id === chat.id) {
           setMessages(prev => {
             if (prev.some(m => m.id === data.message.id)) return prev;
@@ -582,23 +607,31 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
   };
 
   const handleReactMessage = async (message, emoji) => {
-    // Optimistic UI
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === message.id
-          ? { ...m, reactions: [...(m.reactions || []), { user_id: currentUserId, emoji }] }
-          : m
-      )
-    );
+    if (String(message.id).startsWith("pending-")) return;
+    const mine = (message.reactions || []).find((r) => r.user_id === currentUserId);
+    // Optimistic toggle (same emoji → remove, other → replace)
+    setMessages((prev) => prev.map((m) => {
+      if (m.id !== message.id) return m;
+      const rest = (m.reactions || []).filter((r) => r.user_id !== currentUserId);
+      return { ...m, reactions: mine && mine.emoji === emoji ? rest : [...rest, { user_id: currentUserId, emoji }] };
+    }));
+    if (navigator.vibrate) navigator.vibrate(15);
     try {
-      await axios.post(
-        `${API}/chats/${chat.id}/messages/${message.id}/react?emoji=${encodeURIComponent(emoji)}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    } catch (e) {
-      // Silently fail — non-blocking. Endpoint may not exist yet.
+      const r = await axios.post(`${API}/chats/${chat.id}/messages/${message.id}/react?emoji=${encodeURIComponent(emoji)}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, reactions: r.data.reactions } : m)));
+    } catch (e) { /* keep optimistic */ }
+  };
+
+  // Jump to a message found by search (loads older history if needed)
+  const jumpToSearchResult = async (hit) => {
+    if (!document.getElementById(`bubble-${hit.id}`)) {
+      try {
+        const r = await axios.get(`${API}/chats/${chat.id}/messages`, { params: { limit: Math.max(50, (hit.offset || 0) + 40) }, headers: { Authorization: `Bearer ${token}` } });
+        setMessages(r.data);
+        await new Promise((res) => setTimeout(res, 150));
+      } catch { /* ignore */ }
     }
+    jumpToMessage(hit.id);
   };
 
   const handleSetReply = (message) => {
@@ -696,6 +729,9 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
         )}
         
         <div className="flex gap-0.5 shrink-0">
+          <Button variant="ghost" size="icon" className={`rounded-full h-9 w-9 ${showSearch ? "text-primary bg-primary/10" : "hover:bg-muted"}`} onClick={() => setShowSearch((v) => !v)} aria-label="Buscar en el chat" data-testid="chat-search-toggle">
+            <Search className="w-4 h-4" />
+          </Button>
           <MuteMenu chatId={chat.id} token={token} muted={muted} mutedUntil={muteState.until} onChange={handleMuteChange} />
           <Button 
             variant="ghost" size="icon" 
@@ -720,6 +756,9 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
         </div>
       </div>
 
+      <ReactorsSheet chatId={chat.id} token={token} messageId={reactorsFor} isOpen={!!reactorsFor} onClose={() => setReactorsFor(null)}
+        onToggle={(emoji) => { const m = messages.find((x) => x.id === reactorsFor); if (m) handleReactMessage(m, emoji); }} />
+
       {/* Group info */}
       {isGroup && (
         <GroupInfoSheet chat={chat} isOpen={showGroupInfo} onClose={() => setShowGroupInfo(false)} token={token} currentUserId={currentUserId}
@@ -739,6 +778,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
       />
 
       {/* Messages */}
+      <ChatSearchBar chatId={chat.id} token={token} isOpen={showSearch} onClose={() => setShowSearch(false)} onJump={jumpToSearchResult} />
       <OfflineBanner online={outbox.online} wsConnected={!wsLost} pendingCount={outbox.pending.length} onRetry={outbox.flush} />
       <div ref={messagesBoxRef} className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-4" style={{ WebkitOverflowScrolling: "touch" }} data-testid="chat-messages-box">
         {loading ? (
@@ -762,7 +802,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                 if (message.message_type === "system") {
                   return (
                     <div key={message.id} className="flex justify-center my-2" data-testid={`chat-system-${message.id}`}>
-                      <span className="px-3 py-1.5 rounded-full bg-muted/60 backdrop-blur-sm text-[11px] text-muted-foreground text-center">{message.content}</span>
+                      <span id={`bubble-${message.id}`} className="px-3 py-1.5 rounded-full bg-muted/60 backdrop-blur-sm text-[11px] text-muted-foreground text-center">{message.content}</span>
                     </div>
                   );
                 }
@@ -772,7 +812,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                   const missed = a.status === "missed" || a.status === "dnd" || a.status === "declined";
                   const CallIcon = a.call_type === "video" ? Video : Phone;
                   return (
-                    <div key={message.id} className="flex justify-center my-2" data-testid={`chat-call-${message.id}`}>
+                    <div key={message.id} id={`bubble-${message.id}`} className="flex justify-center my-2 rounded-full" data-testid={`chat-call-${message.id}`}>
                       <button onClick={() => startVideoCall(a.call_type === "video" ? "video" : "audio")} className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium backdrop-blur-sm active:scale-95 transition-transform ${missed ? "bg-red-500/10 text-red-600 dark:text-red-400" : "bg-muted/70 text-foreground/80"}`} data-testid="chat-call-redial">
                         <CallIcon className={`w-3.5 h-3.5 ${missed ? "" : "text-emerald-500"}`} />
                         <span>{message.content}</span>
@@ -825,6 +865,8 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                     <MessageReactionsBubble
                       isOwn={isOwn}
                       reactions={reactionsList}
+                      myEmoji={(message.reactions || []).find((r) => r.user_id === currentUserId)?.emoji || null}
+                      onShowReactors={() => setReactorsFor(message.id)}
                       onReact={(emoji) => handleReactMessage(message, emoji)}
                       onReply={() => handleSetReply(message)}
                       testId={`msg-${message.id}`}

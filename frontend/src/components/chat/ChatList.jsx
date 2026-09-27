@@ -37,6 +37,18 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat, onNewGroup, 
   const [searchFilter, setSearchFilter] = useState("");
   const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).get("tab") === "calls" ? "calls" : "chats"));
   const [showCreate, setShowCreate] = useState(false);
+  const [drafts, setDrafts] = useState({});
+  useEffect(() => {
+    const read = () => {
+      const d = {};
+      try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k?.startsWith("bruno_draft_")) d[k.slice(12)] = localStorage.getItem(k); } } catch { /* ignore */ }
+      setDrafts(d);
+    };
+    read();
+    const onDraft = (e) => setDrafts((prev) => { const n = { ...prev }; if (e.detail?.draft) n[e.detail.chatId] = e.detail.draft; else delete n[e.detail?.chatId]; return n; });
+    window.addEventListener("bruno:draft", onDraft);
+    return () => window.removeEventListener("bruno:draft", onDraft);
+  }, []);
 
   useEffect(() => {
     const ids = chats.flatMap((c) => (c.other_participants || []).map((p) => p.id)).filter(Boolean);
@@ -125,6 +137,7 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat, onNewGroup, 
             filteredChats.map((chat) => {
               const isActive = selectedChatId === chat.id;
               const lm = chat.last_message;
+              const draft = drafts[chat.id];
               const preview = lm?.message_type === "system" ? lm.content : chat.is_group && lm?.sender?.username ? `${lm.sender.username}: ${lm.content}` : lm?.content;
               return (
                 <div key={chat.id} onClick={() => onSelectChat(chat)} className={`flex items-center gap-3 p-3 my-0.5 cursor-pointer rounded-xl transition-all ${isActive ? "bg-primary/10 shadow-sm" : "hover:bg-muted/60"}`} data-testid={`chat-item-${chat.id}`}>
@@ -143,8 +156,14 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat, onNewGroup, 
                     <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
                       {lm?.message_type === "audio" && <Mic className="w-3 h-3 shrink-0" />}
                       {lm?.message_type === "image" && <ImageIcon className="w-3 h-3 shrink-0" />}
-                      {chat.is_group && !lm && <span>{chat.members_count} participantes</span>}
-                      {preview || (!chat.is_group && "Sin mensajes")}
+                      {draft ? (
+                        <span className="truncate" data-testid="chat-draft-preview"><span className="text-primary font-semibold">Borrador:</span> {draft}</span>
+                      ) : (
+                        <>
+                          {chat.is_group && !lm && <span>{chat.members_count} participantes</span>}
+                          {preview || (!chat.is_group && "Sin mensajes")}
+                        </>
+                      )}
                     </p>
                   </div>
                   {chat.unread_count > 0 && (
