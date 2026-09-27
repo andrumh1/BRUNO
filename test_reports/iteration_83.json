@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 83: Daily.co calls (start/answer/end/decline/missed + system chat 'call' pill logs), DND (all-day, window-not-active, disable), Scheduled posts (visibility='scheduled', owner-only, cron auth, cron publishes due, past→public, invalid→400), Global back button. Backend 14/14 pytest passed. Frontend: 9 passed / 3 failed (2 real UI issues to report + 1 modal-close automation flake). Daily rooms are unique (no 'room already exists'), tokened URLs contain '?t=' for both caller and callee, and chat pills for missed/declined/dnd/ended are all rendered with 'Volver a llamar' redial button. DND toggle wires up correctly (dnd-settings, dnd-toggle, dnd-window with time inputs). Scheduled compose UI works (button → panel → datetime-local with min≈now+15min → submit navigates to /my-profile, clear button empties value).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "FloatingBackButton on /website", "issue": "global-back-btn NOT rendered on /website even though the page has no back/close control (query returns null). Expected per spec: 'Global floating back button on pages without the bottom nav'.", "selector": "[data-testid=\"global-back-btn\"]", "priority": "HIGH"},
+      {"component": "FloatingBackButton on /lives/<invalid>", "issue": "'Este live ha terminado' page shows only 'Ver otros lives' button; global-back-btn is not visible. Spec asks to report — reporting as absent. If considered a page without its own back control, FloatingBackButton should mount.", "selector": "[data-testid=\"global-back-btn\"]", "priority": "MEDIUM"},
+      {"component": "MyProfilePage Programado badge", "issue": "After creating a scheduled post via /compose (submit → navigation to /my-profile succeeds), no element matching [data-testid^='profile-post-scheduled-'] is found in the grid. Backend confirms the post is stored with visibility='scheduled' and /users/{me}/posts includes it for the owner, but the profile UI does not render the amber 'Programado' badge on the tile. Possible causes: default tab filters out scheduled/text posts, or grid rendering skips visibility='scheduled'.", "selector": "[data-testid^='profile-post-scheduled-']", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration83_calls_dnd_scheduled.py",
+    "/app/test_reports/pytest/iter83.xml"
+  ],
+  "action_items": [
+    "Investigate why 'Programado' badge doesn't render on MyProfile grid after creating a scheduled text post (backend returns it correctly for owner via /users/{id}/posts and /posts/scheduled/mine). Likely a default-tab filter (Publicaciones vs Videos) or a filter that excludes visibility!='public'.",
+    "Ensure FloatingBackButton mounts on /website (page has no built-in back control). Verify OWN_BACK selector detection in FloatingBackButton.jsx isn't matching an unrelated element on WebsitePage.",
+    "Consider rendering FloatingBackButton on /lives/:id 'live ended' fallback screen so users can go back."
+  ],
+  "critical_code_review_comments": [
+    "video_calls.py: end_call — when call.status is 'ringing' at time of /end, it correctly flips to 'missed' and calls _log_call_message. Good.",
+    "video_calls.py: _log_call_message computes duration from now - answered_at, which is safe since ended path only runs when status was 'active'. Missed/declined force duration=0. OK.",
+    "posts_feed.py: _publish_due_scheduled_posts rewrites created_at to now (so published post appears fresh in feeds). This may distort analytics — consider keeping original created_at and adding published_at only.",
+    "posts_feed.py: /cron/publish-scheduled uses hmac.compare_digest — good. Returns 200 + BackgroundTasks quickly — good pattern for cron.",
+    "utils/dnd.py is_dnd_active: when start==end and enabled=True, treats it as all-day DND. This is used by test payload {start:'00:00',end:'00:00'} — semantically consistent."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration83_calls_dnd_scheduled.py"],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "9/12 checkpoints passed; 2 real UI gaps (Programado badge, /website global-back), 1 modal-close automation flake unrelated to feature"},
+  "test_credentials": "newtest@bruno.com / Test1234!, viewer2@bruno.com / Test1234!",
+  "seed_data_creation": "Created ~4 scheduled posts by newtest (some published by cron, some remain scheduled) + a few call rows in fe8ed855 chat (ended/declined/missed/dnd). viewer2 DND left DISABLED as instructed. Total Daily rooms consumed during backend run: ~5.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend for Daily calls, DND, scheduled posts, cron is fully green — /app/backend/tests/test_iteration83_calls_dnd_scheduled.py is the regression suite. On the frontend: (1) the 'Programado' badge selector data-testid^='profile-post-scheduled-' was not found on /my-profile after scheduled compose — verify which grid tab renders scheduled posts and whether the current default profile view fetches visibility='scheduled'. (2) FloatingBackButton is not appearing on /website — inspect FloatingBackButton.jsx's OWN_BACK regex/selector list against WebsitePage DOM. (3) Chat has 20 call pills in fixture chat fe8ed855, all rendered as centered pills with 'Volver a llamar'. Redial + start-video-call-btn both open daily iframe with '?t=' token. To close the in-call-screen in automation, use page.evaluate to remove modal or set state, since call-hangup-btn is intercepted by an internal overlay in headless Chromium without WebRTC.",
+  "rca of the issue": "Programado badge absence RCA: the MyProfilePage renders profile-post-scheduled-<id> only inside profile-post-<id> tiles produced by the Publicaciones/Reels grid. Repro: login newtest → /compose → schedule input to now+20min → text 'TEST_UI scheduled iter83' → submit → auto-nav to /my-profile → no scheduled tile visible. Mitigation: ensure profile posts loader fetches visibility='scheduled' for the owner (backend already returns them via /users/{id}/posts when current_user.id == user_id) and that the current default tab (Publicaciones) doesn't filter them out."
+}

@@ -16,7 +16,11 @@ export default function FloatingBackButton() {
     let tries = 0;
     let t;
     const check = () => {
-      const has = !!document.querySelector(OWN_BACK);
+      const has = [...document.querySelectorAll(OWN_BACK)].some((el) => {
+        if (el.dataset.testid === "global-back-btn") return false;
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && r.top < window.innerHeight * 0.35 && getComputedStyle(el).visibility !== "hidden";
+      });
       setShow(!has);
       if (has || tries++ > 6) return;
       t = setTimeout(check, 400);

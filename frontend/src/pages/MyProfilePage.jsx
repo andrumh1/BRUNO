@@ -23,6 +23,7 @@ import {
   Settings,
   Search,
   Sparkles,
+  Clock,
   Edit3,
   Grid3X3,
   Bookmark,
@@ -75,7 +76,7 @@ const MyProfilePage = () => {
   const [cards, setCards] = useState([]);
   const [savedPosts, setSavedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("reels");
+  const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get("tab") || "reels");
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
@@ -704,6 +705,11 @@ const MyProfilePage = () => {
               {reels.map(reel => (
                 <Link key={reel.id} to={`/reels?id=${reel.id}`}>
                   <div className="aspect-[9/16] bg-black rounded-lg overflow-hidden relative">
+                    {reel.visibility === "scheduled" && (
+                      <span className="absolute top-1 left-1 z-10 rounded-full bg-amber-500 text-white text-[9px] font-semibold px-1.5 py-0.5 inline-flex items-center gap-0.5" data-testid={`profile-post-scheduled-${reel.id}`}>
+                        <Clock className="w-2.5 h-2.5" /> Programado
+                      </span>
+                    )}
                     {reel.thumbnail_url ? (
                       <img src={reel.thumbnail_url} alt="" className="w-full h-full object-cover" />
                     ) : (

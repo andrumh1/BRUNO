@@ -1382,3 +1382,11 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - Historial: `DELETE /posts/history/videos[?post_id=]`. `ReelHistorySheet`: X por item, swipe horizontal quita item, "Limpiar" con confirmación.
 - Editar: `PUT /posts/{id}` (dueño; content/hashtags/text_style solo sin media/visibility, `edited_at`). `ReelEditSheet` (textarea + `TextStylePicker` si es texto) desde `ReelOptionsSheet` → `reel-edit-btn`; `patchReel` actualiza in place.
 - Pendiente usuario: `DAILY_API_KEY` para llamadas reales.
+
+## 2026-06 — Daily activo, historial de llamadas, programar publicación, No molestar, botón atrás (iteration_83 + fixes)
+- **Daily.co ACTIVO** (`DAILY_API_KEY` en backend/.env preview; el usuario debe ponerla en producción). Nombres de sala únicos `bruno-{chat8}-{hex10}`.
+- **Historial de llamadas**: `video_calls._log_call_message` inserta mensaje `message_type:"call"` (`is_deleted:false`) al terminar/rechazar/perder/DND, con `attachments[0]={type:'call', call_type, status, duration_sec}`; `end` marca `missed` si nunca se contestó. `ChatPage` renderiza píldora centrada `chat-call-<id>` con "Volver a llamar".
+- **No molestar**: `utils/dnd.py is_dnd_active`; `GET/PUT /api/auth/me/dnd` (en server.py, no en routers/auth.py); `send_push_notification` omite en DND; `calls/start` devuelve `{dnd:true}` y registra perdida. UI `DndSettings.jsx` en ajustes del perfil.
+- **Programar publicación**: `PostCreate.scheduled_at`; se guarda `visibility:"scheduled"` + `scheduled_visibility`; `POST /api/cron/publish-scheduled` (Bearer `WEBHOOK_CRON_SECRET`) → `.emergent/crons.yml` cada 15 min; `GET /posts/scheduled/mine`. UI: botón calendario en CreatePost, badge "Programado" en perfil (Posts y Reels), `/my-profile?tab=posts`.
+- **Botón atrás global**: `FloatingBackButton.jsx` en rutas sin nav (/lives/:id, /camera, /website, /bruno, /chat/:id) si no hay control propio VISIBLE en el tercio superior.
+- Fix: `Clock` faltaba en imports de MyProfilePage (crash en badge).
