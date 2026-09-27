@@ -511,9 +511,20 @@ async def get_post_remixes(post_id: str, limit: int = 60, current_user: Optional
 async def _publish_due_scheduled_posts():
     now = datetime.now(timezone.utc)
     published = 0
-    async for p in db.posts.find({"visibility": "scheduled", "scheduled_at": {"$lte": now.isoformat()}}, {"_id": 0, "id": 1, "scheduled_visibility": 1}):
+    async for p in db.posts.find({"visibility": "scheduled", "scheduled_at": {"$lte": now.isoformat()}}, {"_id": 0, "id": 1, "user_id": 1, "content": 1, "scheduled_visibility": 1}):
         await db.posts.update_one({"id": p["id"]}, {"$set": {"visibility": p.get("scheduled_visibility") or "public", "created_at": now.isoformat(), "updated_at": now.isoformat(), "published_at": now.isoformat()}, "$unset": {"scheduled_visibility": ""}})
         published += 1
+        # Reminder to the author: in-app notification + push
+        notif = Notification(user_id=p["user_id"], actor_id=p["user_id"], type="scheduled_published", target_id=p["id"], target_type="post",
+                             content=f"Tu publicación programada ya está en línea: {(p.get('content') or '')[:60]}")
+        nd = notif.model_dump(); nd["created_at"] = nd["created_at"].isoformat()
+        await db.notifications.insert_one(nd)
+        try:
+            await emit_notification_ws(nd)
+            from routers.push_notifications import send_push_notification, NotificationPayload
+            await send_push_notification(p["user_id"], NotificationPayload(title="Publicación en línea", body="Tu publicación programada ya se publicó", url=f"/reels?id={p['id']}"))
+        except Exception as e:
+            logger.warning(f"scheduled reminder failed: {e}")
     if published:
         logger.info(f"Scheduled posts published: {published}")
     return published
@@ -1652,6 +1663,7 @@ async def get_chats(current_user: User = Depends(get_current_user)):
                     "display_name": display_name or username
                 })
         chat["other_participants"] = participants
+        chat["is_muted"] = current_user.id in (chat.get("muted_by") or [])
         
         # Get last message
         if chat.get("last_message_id"):
@@ -1750,6 +1762,18 @@ async def get_messages(
     
     return messages[::-1]  # Return in chronological order
 
+@router.post("/chats/{chat_id}/mute")
+async def toggle_chat_mute(chat_id: str, current_user: User = Depends(get_current_user)):
+    """Silence only this chat: no message notifications/pushes, calls land as missed."""
+    chat = await db.chats.find_one({"id": chat_id, "participants": current_user.id}, {"_id": 0, "id": 1, "muted_by": 1})
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    muted = current_user.id in (chat.get("muted_by") or [])
+    op = {"$pull": {"muted_by": current_user.id}} if muted else {"$addToSet": {"muted_by": current_user.id}}
+    await db.chats.update_one({"id": chat_id}, op)
+    return {"muted": not muted}
+
+
 @router.post("/chats/{chat_id}/messages")
 async def send_message(
     chat_id: str,
@@ -1794,10 +1818,11 @@ async def send_message(
         }
     )
     
-    # Create notification for other participants
+    # Create notification for other participants (skip users who muted this chat)
     from routers.push_notifications import notify_new_message
+    muted_by = set(chat.get("muted_by") or [])
     for participant_id in chat["participants"]:
-        if participant_id != current_user.id:
+        if participant_id != current_user.id and participant_id not in muted_by:
             notification = Notification(
                 user_id=participant_id,
                 actor_id=current_user.id,

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import axios from "axios";
 import {
-  MessageCircle, X, Minimize2, Send, ArrowLeft, Search, Plus,
+  MessageCircle, X, Minimize2, Send, ArrowLeft, Search, Plus, BellOff,
   Phone, Video, Paperclip, Check, CheckCheck, Loader2, Mic, MicOff,
   File, Play, Pause, MapPin
 } from "lucide-react";
@@ -372,6 +372,7 @@ const ChatListPopup = ({ chats, onSelectChat, onNewChat, onClose }) => {
                 <span className="text-xs font-medium truncate block">{p.display_name || p.username}</span>
                 <p className="text-[10px] text-muted-foreground truncate leading-tight">{chat.last_message?.content || "Sin mensajes"}</p>
               </div>
+              {chat.is_muted && <BellOff className="w-3 h-3 text-muted-foreground" data-testid={`chat-muted-icon-${chat.id}`} />}
               {chat.unread_count > 0 && (
                 <span className="min-w-[18px] h-[18px] bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">{chat.unread_count}</span>
               )}

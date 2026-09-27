@@ -29,10 +29,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeNotifications } from "@/contexts/RealtimeNotificationContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { brunoToast } from "@/components/bruno/BrunoToast";
+import MissedCallsToday from "@/components/MissedCallsToday";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
 const NOTIFICATION_ICONS = {
+  scheduled_published: Sparkles,
   like: Heart,
   comment: MessageCircle,
   reply: MessageCircle,
@@ -56,6 +58,7 @@ const NOTIFICATION_ICONS = {
 };
 
 const NOTIFICATION_COLORS = {
+  scheduled_published: "text-amber-500 bg-amber-500/10",
   like: "text-pink-500 bg-pink-500/10",
   comment: "text-blue-500 bg-blue-500/10",
   reply: "text-blue-500 bg-blue-500/10",
@@ -222,7 +225,7 @@ export default function NotificationsPage() {
   };
 
   const handleClick = (n) => {
-    const url = n.url || n.action_url || (n.target_type === "post" && n.target_id ? `/post/${n.target_id}` : n.target_type === "user" && n.target_id ? `/profile/${n.target_id}` : null);
+    const url = n.url || n.action_url || (n.type === "scheduled_published" && n.target_id ? `/reels?id=${n.target_id}` : n.target_type === "post" && n.target_id ? `/post/${n.target_id}` : n.target_type === "user" && n.target_id ? `/profile/${n.target_id}` : null);
     if (url) navigate(url);
   };
 
@@ -295,6 +298,8 @@ export default function NotificationsPage() {
           )}
         </div>
       </header>
+
+      <MissedCallsToday token={token} />
 
       <div className="max-w-2xl mx-auto px-3 py-3">
         {/* Collapsible settings — minimized single pill */}

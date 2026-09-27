@@ -5,7 +5,7 @@ built-in STUN+TURN servers. No API keys or extra config required.
 """
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid
 import logging
 import os
@@ -93,6 +93,23 @@ class VideoCallResponse(BaseModel):
     dnd: bool = False
 
 
+@router.get("/missed/today")
+async def missed_calls_today(current_user: User = Depends(get_current_user)):
+    """Missed/declined incoming calls of the last 24h for the Alerts page."""
+    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    calls = await db.video_calls.find(
+        {"participants": current_user.id, "started_by": {"$ne": current_user.id}, "status": {"$in": ["missed", "declined"]}, "started_at": {"$gte": since}},
+        {"_id": 0}).sort("started_at", -1).to_list(50)
+    callers = {u["id"]: u async for u in db.users.find({"id": {"$in": list({c["started_by"] for c in calls})}}, {"_id": 0, "id": 1, "name": 1, "username": 1})}
+    profiles = {p["user_id"]: p async for p in db.user_profiles.find({"user_id": {"$in": list(callers)}}, {"_id": 0, "user_id": 1, "avatar_url": 1, "display_name": 1})}
+    out = []
+    for c in calls:
+        u, p = callers.get(c["started_by"], {}), profiles.get(c["started_by"], {})
+        out.append({"id": c["id"], "chat_id": c["chat_id"], "call_type": c.get("call_type", "video"), "status": c["status"], "created_at": c.get("started_at"),
+                    "caller": {"id": c["started_by"], "name": p.get("display_name") or u.get("name") or u.get("username") or "Usuario", "avatar_url": p.get("avatar_url")}})
+    return {"total": len(out), "calls": out}
+
+
 @router.post("/start", response_model=VideoCallResponse)
 async def start_video_call(
     request: VideoCallRequest,
@@ -143,10 +160,11 @@ async def start_video_call(
 
     other_participants = [p for p in chat["participants"] if p != current_user.id]
 
-    # Do-Not-Disturb: receiver is silenced → register as missed, no ring/push
+    # Do-Not-Disturb or chat muted: receiver is silenced → register as missed, no ring/push
     from utils.dnd import is_dnd_active
+    muted_by = set(chat.get("muted_by") or [])
     receivers = [u async for u in db.users.find({"id": {"$in": other_participants}}, {"_id": 0, "id": 1, "dnd": 1})]
-    if receivers and all(is_dnd_active(u) for u in receivers):
+    if receivers and all(is_dnd_active(u) or u["id"] in muted_by for u in receivers):
         await db.video_calls.update_one({"id": call_id}, {"$set": {"status": "missed", "ended_at": datetime.now(timezone.utc).isoformat(), "dnd": True}})
         await _log_call_message({**call_doc, "id": call_id}, "dnd", current_user.id)
         return VideoCallResponse(room_url="", room_name=room_name, call_id=call_id, dnd=True)

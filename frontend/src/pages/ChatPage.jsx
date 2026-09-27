@@ -34,6 +34,8 @@ import {
   Mic, 
   MicOff,
   MoreVertical,
+  Bell,
+  BellOff,
   Phone,
   Video,
   Search,
@@ -87,6 +89,29 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   const typingTimeoutRef = useRef(null);
   const navigate = useNavigate();
   const participant = chat?.other_participants?.[0] || {};
+  const isGroup = (chat?.other_participants?.length || 0) > 1 || !!chat?.is_group;
+  const groupName = chat?.name || (chat?.other_participants || []).map((p) => p.display_name || p.username).slice(0, 3).join(", ");
+  const [muted, setMuted] = useState(!!chat?.is_muted);
+  useEffect(() => { setMuted(!!chat?.is_muted); }, [chat?.id, chat?.is_muted]);
+  const toggleMute = async () => {
+    try {
+      const r = await axios.post(`${API}/chats/${chat.id}/mute`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      setMuted(!!r.data?.muted);
+      const { brunoToast } = await import("@/components/bruno/BrunoToast");
+      brunoToast.success(r.data?.muted ? "Chat silenciado" : "Chat con sonido", { description: r.data?.muted ? "No recibirás avisos ni llamadas de este chat." : undefined });
+    } catch (_) { /* ignore */ }
+  };
+
+  // Auto-dial when arriving from "Devolver llamada" (/chat/:id?call=audio|video)
+  const autoDialed = useRef(false);
+  useEffect(() => {
+    const kind = new URLSearchParams(window.location.search).get("call");
+    if (!kind || autoDialed.current || !chat?.id) return;
+    autoDialed.current = true;
+    const t = setTimeout(() => startVideoCall(kind === "video" ? "video" : "audio"), 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat?.id]);
   
   const { isRecording, audioBlob, recordingTime, startRecording, stopRecording, cancelRecording, clearAudio } = useAudioRecorder();
 
@@ -551,21 +576,31 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
           )}
         </Link>
         
-        <Link to={`/profile/${participant.id}`} className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm truncate hover:text-primary transition-colors">{participant.display_name || participant.username}</h3>
+        <Link to={isGroup ? "#" : `/profile/${participant.id}`} className="flex-1 min-w-0" onClick={(e) => { if (isGroup) e.preventDefault(); }}>
+          <h3 className="font-semibold text-sm truncate hover:text-primary transition-colors" data-testid="chat-header-title">{isGroup ? groupName : (participant.display_name || participant.username)}</h3>
           <p className="text-[10px] text-muted-foreground">
             {isTyping ? (
               <TypingDots label="escribiendo" />
-            ) : "En linea"}
+            ) : isGroup ? `${(chat?.other_participants?.length || 0) + 1} participantes` : "En linea"}
           </p>
         </Link>
         
         <div className="flex gap-0.5">
+          <Button
+            variant="ghost" size="icon"
+            className={`rounded-full h-9 w-9 ${muted ? "text-amber-500 bg-amber-500/10" : "hover:bg-muted"}`}
+            onClick={toggleMute}
+            aria-label={muted ? "Activar sonido" : "Silenciar chat"}
+            data-testid="chat-mute-btn"
+          >
+            {muted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+          </Button>
           <Button 
             variant="ghost" size="icon" 
             className="rounded-full h-9 w-9 hover:bg-green-500/10 hover:text-green-500"
             onClick={() => startVideoCall("audio")}
             disabled={callLoading}
+            aria-label={isGroup ? "Llamada grupal" : "Llamar"}
             data-testid="start-audio-call-btn"
           >
             <Phone className="w-4 h-4" />
@@ -575,6 +610,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
             className="rounded-full h-9 w-9 hover:bg-blue-500/10 hover:text-blue-500"
             onClick={() => startVideoCall("video")}
             disabled={callLoading}
+            aria-label={isGroup ? "Videollamada grupal" : "Videollamada"}
             data-testid="start-video-call-btn"
           >
             {callLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
@@ -587,7 +623,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
         isOpen={videoCallState.isOpen}
         onClose={handleEndCall}
         roomUrl={videoCallState.roomUrl}
-        remoteUserName={participant.display_name || participant.username}
+        remoteUserName={isGroup ? `${groupName} (grupo)` : (participant.display_name || participant.username)}
         isIncoming={videoCallState.isIncoming}
         onAccept={handleAcceptCall}
         onDecline={handleDeclineCall}
