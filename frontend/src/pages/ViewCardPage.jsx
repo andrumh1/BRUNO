@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import SocialLinkButton from "@/components/SocialLinkButton";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
-import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2 } from "lucide-react";
+import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2, Nfc } from "lucide-react";
 import { useNavScroll } from "@/contexts/NavScrollContext";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -153,6 +153,11 @@ const ViewCardPage = () => {
           {isOwner && (
             <Button variant="ghost" size="sm" onClick={() => navigate(`/cards/${cardId}/edit`)} data-testid="card-edit-btn">
               <Pencil className="w-4 h-4 mr-1.5" /> Editar
+            </Button>
+          )}
+          {isOwner && (
+            <Button variant="ghost" size="icon" onClick={() => navigate(`/cards/${cardId}/transfer`)} data-testid="card-nfc-transfer-btn" title="Transferir por NFC" className="text-primary">
+              <Nfc className="w-4 h-4" />
             </Button>
           )}
           <Button variant="ghost" size="icon" onClick={handleShare} data-testid="card-share-btn">
@@ -366,13 +371,18 @@ const ViewCardPage = () => {
         </div>
 
         {/* Share bar */}
-        <div className="mt-5 flex items-center justify-center gap-3">
+        <div className="mt-5 flex items-center justify-center gap-3 flex-wrap">
           <Button variant="outline" size="sm" onClick={copyLink} data-testid="card-copy-link">
             {copied ? "Copiado!" : <><Copy className="w-3.5 h-3.5 mr-1.5" /> Copiar enlace</>}
           </Button>
           <Button variant="outline" size="sm" onClick={handleShare}>
             <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Compartir
           </Button>
+          {isOwner && (
+            <Button size="sm" onClick={() => navigate(`/cards/${cardId}/transfer`)} className="rounded-full" data-testid="card-transfer-nfc-cta">
+              <Nfc className="w-3.5 h-3.5 mr-1.5" /> Transferir por contacto
+            </Button>
+          )}
         </div>
 
         {/* CTA */}

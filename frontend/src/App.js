@@ -33,6 +33,9 @@ import Dashboard from "@/pages/Dashboard";
 import CreateCardPage from "@/pages/CreateCardPage";
 import ViewCardPage from "@/pages/ViewCardPage";
 import QRCodePage from "@/pages/QRCodePage";
+import CardTransferPage from "@/pages/CardTransferPage";
+import TransferReceivePage from "@/pages/TransferReceivePage";
+import ReceivedCardsPage from "@/pages/ReceivedCardsPage";
 import ActivateNFCPage from "@/pages/ActivateNFCPage";
 import NFCWritePage from "@/pages/NFCWritePage";
 import NFCRedirectPage from "@/pages/NFCRedirectPage";
@@ -121,6 +124,9 @@ function AppRouter() {
       <Route path="/ui-kit" element={<BrunoUIKitPage />} />
       <Route path="/welcome" element={<WelcomePage />} />
       <Route path="/c/:cardId" element={<ViewCardPage />} />
+      <Route path="/t/:token" element={<TransferReceivePage />} />
+      <Route path="/wallet" element={<ProtectedRoute><ReceivedCardsPage /></ProtectedRoute>} />
+      <Route path="/cards/:cardId/transfer" element={<ProtectedRoute><CardTransferPage /></ProtectedRoute>} />
       <Route path="/n/:nfcId" element={<NFCRedirectPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />
       <Route path="/marketplace/:productId" element={<ProductDetailPage />} />

@@ -57,6 +57,7 @@ import {
   Eye,
   QrCode,
   Nfc,
+  Wallet,
   List as ListIcon,
   Scale,
   TrendingUp,
@@ -757,6 +758,10 @@ const MyProfilePage = () => {
               <Button size="sm" variant="outline" onClick={() => navigate("/nfc/manage")} className="rounded-full">
                 <Nfc className="w-3.5 h-3.5 mr-1" />
                 NFC
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => navigate("/wallet")} className="rounded-full" data-testid="received-cards-btn">
+                <Wallet className="w-3.5 h-3.5 mr-1" />
+                Recibidas
               </Button>
               <Button 
                 size="sm" 

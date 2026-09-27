@@ -42,7 +42,7 @@ export const BrunoPillInput = forwardRef(function BrunoPillInput(
     uploading = false,
     replyTo = null,
     onCancelReply,
-    placeholder = "Escribe un mensaje...",
+    placeholder = "Mensaje...",
     onTyping,
     disabled = false,
   },

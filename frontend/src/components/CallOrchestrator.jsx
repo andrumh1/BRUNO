@@ -72,7 +72,7 @@ export default function CallOrchestrator() {
                 id: data.call_id,
                 room_url: null,
                 type: data.call_type || "video",
-                peerName: data.caller_name || "Usuario",
+                peerName: data.is_group && data.chat_name ? `${data.chat_name} · ${data.caller_name || "Usuario"}` : (data.caller_name || "Usuario"),
                 peerAvatar: data.caller_avatar || null,
                 _pending_room: data.room_url,
                 isIncoming: true,

@@ -1644,26 +1644,29 @@ async def get_chats(current_user: User = Depends(get_current_user)):
         {"_id": 0}
     ).sort("last_message_at", -1).to_list(100)
     
-    # Enrich with other participant info and last message
+    # Batch-load every participant once
+    all_ids = list({p for c in chats for p in c.get("participants", [])})
+    users_map = {u["id"]: u async for u in db.users.find({"id": {"$in": all_ids}}, {"_id": 0, "id": 1, "name": 1, "email": 1, "avatar_url": 1})}
+    profiles_map = {p["user_id"]: p async for p in db.user_profiles.find({"user_id": {"$in": all_ids}}, {"_id": 0, "user_id": 1, "display_name": 1, "avatar_url": 1})}
+
+    def brief(uid):
+        user = users_map.get(uid)
+        if not user:
+            return None
+        profile = profiles_map.get(uid, {})
+        username = user.get("name") or user.get("email", "Unknown").split("@")[0]
+        return {"id": uid, "username": username, "avatar_url": profile.get("avatar_url") or user.get("avatar_url"), "display_name": profile.get("display_name") or username}
+
+    from utils.chat_mute import active_mutes
     for chat in chats:
-        # Get other participant(s)
         other_ids = [p for p in chat["participants"] if p != current_user.id]
-        participants = []
-        for uid in other_ids:
-            user = await db.users.find_one({"id": uid}, {"_id": 0, "hashed_password": 0})
-            profile = await db.user_profiles.find_one({"user_id": uid}, {"_id": 0})
-            if user:
-                username = user.get("name") or user.get("email", "Unknown").split("@")[0]
-                display_name = profile.get("display_name") if profile else None
-                avatar_url = profile.get("avatar_url") if profile else user.get("avatar_url")
-                participants.append({
-                    "id": uid,
-                    "username": username,
-                    "avatar_url": avatar_url,
-                    "display_name": display_name or username
-                })
-        chat["other_participants"] = participants
-        chat["is_muted"] = current_user.id in (chat.get("muted_by") or [])
+        chat["other_participants"] = [b for b in (brief(uid) for uid in other_ids) if b]
+        chat["is_group"] = bool(chat.get("is_group") or chat.get("type") == "group")
+        chat["members_count"] = len(chat["participants"])
+        mutes = active_mutes(chat)
+        chat["is_muted"] = current_user.id in mutes
+        chat["muted_until"] = mutes.get(current_user.id)
+        chat.pop("mute_until", None)
         
         # Get last message
         if chat.get("last_message_id"):
@@ -1762,16 +1765,30 @@ async def get_messages(
     
     return messages[::-1]  # Return in chronological order
 
+class MuteRequest(BaseModel):
+    duration: Optional[str] = None  # "1h" | "8h" | "1w" | "forever" | None(=toggle)
+
+
 @router.post("/chats/{chat_id}/mute")
-async def toggle_chat_mute(chat_id: str, current_user: User = Depends(get_current_user)):
-    """Silence only this chat: no message notifications/pushes, calls land as missed."""
-    chat = await db.chats.find_one({"id": chat_id, "participants": current_user.id}, {"_id": 0, "id": 1, "muted_by": 1})
+async def toggle_chat_mute(chat_id: str, data: Optional[MuteRequest] = None, current_user: User = Depends(get_current_user)):
+    """Silence only this chat (1h / 8h / 1w / forever, auto-expires). No body → toggle."""
+    from utils.chat_mute import active_mutes, MUTE_DURATIONS
+    chat = await db.chats.find_one({"id": chat_id, "participants": current_user.id}, {"_id": 0, "id": 1, "muted_by": 1, "mute_until": 1})
     if chat is None:
         raise HTTPException(status_code=404, detail="Chat not found")
-    muted = current_user.id in (chat.get("muted_by") or [])
-    op = {"$pull": {"muted_by": current_user.id}} if muted else {"$addToSet": {"muted_by": current_user.id}}
-    await db.chats.update_one({"id": chat_id}, op)
-    return {"muted": not muted}
+    duration = (data.duration if data else None)
+    currently = current_user.id in active_mutes(chat)
+    if duration is None:
+        duration = "unmute" if currently else "forever"
+    if duration == "unmute":
+        await db.chats.update_one({"id": chat_id}, {"$pull": {"muted_by": current_user.id}, "$unset": {f"mute_until.{current_user.id}": ""}})
+        return {"muted": False, "muted_until": None}
+    if duration not in MUTE_DURATIONS:
+        raise HTTPException(status_code=400, detail="Duración inválida")
+    secs = MUTE_DURATIONS[duration]
+    until = (datetime.now(timezone.utc) + timedelta(seconds=secs)).isoformat() if secs else None
+    await db.chats.update_one({"id": chat_id}, {"$addToSet": {"muted_by": current_user.id}, "$set": {f"mute_until.{current_user.id}": until}})
+    return {"muted": True, "muted_until": until, "duration": duration}
 
 
 @router.post("/chats/{chat_id}/messages")
@@ -1820,7 +1837,11 @@ async def send_message(
     
     # Create notification for other participants (skip users who muted this chat)
     from routers.push_notifications import notify_new_message
-    muted_by = set(chat.get("muted_by") or [])
+    from utils.chat_mute import muted_user_ids
+    muted_by = muted_user_ids(chat)
+    sender_label = current_user.name or "Alguien"
+    if chat.get("is_group") and chat.get("name"):
+        sender_label = f"{sender_label} · {chat['name']}"
     for participant_id in chat["participants"]:
         if participant_id != current_user.id and participant_id not in muted_by:
             notification = Notification(
@@ -1838,7 +1859,7 @@ async def send_message(
             
             # Send push notification
             msg_preview = message_data.content[:50] if message_data.content else "Envió un archivo"
-            await notify_new_message(participant_id, current_user.name or "Alguien", msg_preview)
+            await notify_new_message(participant_id, sender_label, msg_preview)
     
     # Add sender info to response
     profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0})

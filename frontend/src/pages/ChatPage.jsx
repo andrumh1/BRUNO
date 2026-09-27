@@ -23,8 +23,11 @@ import VideoNoteRecorder from "@/components/bruno/VideoNoteRecorder";
 import useAudioRecorder from "@/hooks/useAudioRecorder";
 import AudioPlayer from "@/components/chat/AudioPlayer";
 import FileAttachment from "@/components/chat/FileAttachment";
-import ChatList from "@/components/chat/ChatList";
+import ChatList, { ChatAvatar, chatTitle } from "@/components/chat/ChatList";
 import NewChatModal from "@/components/chat/NewChatModal";
+import NewGroupModal from "@/components/chat/NewGroupModal";
+import GroupInfoSheet from "@/components/chat/GroupInfoSheet";
+import MuteMenu, { formatMutedUntil } from "@/components/chat/MuteMenu";
 import LocationMessagePreview from "@/components/chat/LocationMessagePreview";
 import axios from "axios";
 import { 
@@ -60,7 +63,7 @@ const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws:
 
 
 // Chat View Component with bubble design
-const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = null }) => {
+const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = null, onChatUpdated, onLeftGroup }) => {
   const { token } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -89,17 +92,23 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
   const typingTimeoutRef = useRef(null);
   const navigate = useNavigate();
   const participant = chat?.other_participants?.[0] || {};
-  const isGroup = (chat?.other_participants?.length || 0) > 1 || !!chat?.is_group;
-  const groupName = chat?.name || (chat?.other_participants || []).map((p) => p.display_name || p.username).slice(0, 3).join(", ");
-  const [muted, setMuted] = useState(!!chat?.is_muted);
-  useEffect(() => { setMuted(!!chat?.is_muted); }, [chat?.id, chat?.is_muted]);
-  const toggleMute = async () => {
-    try {
-      const r = await axios.post(`${API}/chats/${chat.id}/mute`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      setMuted(!!r.data?.muted);
-      const { brunoToast } = await import("@/components/bruno/BrunoToast");
-      brunoToast.success(r.data?.muted ? "Chat silenciado" : "Chat con sonido", { description: r.data?.muted ? "No recibirás avisos ni llamadas de este chat." : undefined });
-    } catch (_) { /* ignore */ }
+  const isGroup = !!chat?.is_group;
+  const groupName = chatTitle(chat);
+  const [muteState, setMuteState] = useState({ muted: !!chat?.is_muted, until: chat?.muted_until || null });
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
+  useEffect(() => { setMuteState({ muted: !!chat?.is_muted, until: chat?.muted_until || null }); }, [chat?.id, chat?.is_muted, chat?.muted_until]);
+  // Auto-unmute in the UI when the temporary mute expires
+  useEffect(() => {
+    if (!muteState.muted || !muteState.until) return undefined;
+    const ms = new Date(muteState.until) - Date.now();
+    if (ms <= 0) { setMuteState({ muted: false, until: null }); return undefined; }
+    const t = setTimeout(() => setMuteState({ muted: false, until: null }), Math.min(ms, 2147000000));
+    return () => clearTimeout(t);
+  }, [muteState]);
+  const muted = muteState.muted;
+  const handleMuteChange = (data) => {
+    setMuteState({ muted: !!data.muted, until: data.muted_until || null });
+    onChatUpdated?.(chat.id, { is_muted: !!data.muted, muted_until: data.muted_until || null });
   };
 
   // Auto-dial when arriving from "Devolver llamada" (/chat/:id?call=audio|video)
@@ -553,14 +562,19 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
   const messageGroups = groupMessagesByDate(messages);
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full w-full min-w-0 flex flex-col bg-background">
       {/* Modern Header */}
-      <div className="px-3 py-2.5 border-b bg-background/80 backdrop-blur-xl flex items-center gap-3 sticky top-0 z-10">
+      <div className="px-3 py-2.5 border-b bg-background/80 backdrop-blur-xl flex items-center gap-2 sticky top-0 z-10 w-full max-w-full overflow-hidden">
         <Button variant="ghost" size="icon" onClick={onBack} className="md:hidden rounded-full h-9 w-9" aria-label="Volver" data-testid="chat-back-btn">
           <ArrowLeft className="w-4 h-4" />
         </Button>
         
-        {/* Clickable avatar → profile */}
+        {/* Clickable avatar → profile (or group info) */}
+        {isGroup ? (
+          <button type="button" onClick={() => setShowGroupInfo(true)} className="shrink-0" data-testid="chat-group-avatar-btn">
+            <ChatAvatar chat={chat} size={40} />
+          </button>
+        ) : (
         <Link to={`/profile/${participant.id}`} className="shrink-0" data-testid="chat-profile-link">
           {participant.avatar_url ? (
             <img 
@@ -574,26 +588,28 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
             </div>
           )}
         </Link>
+        )}
         
-        <Link to={isGroup ? "#" : `/profile/${participant.id}`} className="flex-1 min-w-0" onClick={(e) => { if (isGroup) e.preventDefault(); }}>
-          <h3 className="font-semibold text-sm truncate hover:text-primary transition-colors" data-testid="chat-header-title">{isGroup ? groupName : (participant.display_name || participant.username)}</h3>
+        {isGroup ? (
+          <button type="button" onClick={() => setShowGroupInfo(true)} className="flex-1 min-w-0 overflow-hidden text-left" data-testid="chat-group-info-btn">
+            <h3 className="font-semibold text-sm truncate hover:text-primary transition-colors" data-testid="chat-header-title">{groupName}</h3>
+            <p className="text-[10px] text-muted-foreground truncate">
+              {isTyping ? <TypingDots label={typingUser || "escribiendo"} /> : muted ? formatMutedUntil(muteState.until) : `${chat?.members_count || (chat?.other_participants?.length || 0) + 1} participantes · toca para ver info`}
+            </p>
+          </button>
+        ) : (
+        <Link to={`/profile/${participant.id}`} className="flex-1 min-w-0">
+          <h3 className="font-semibold text-sm truncate hover:text-primary transition-colors" data-testid="chat-header-title">{participant.display_name || participant.username}</h3>
           <p className="text-[10px] text-muted-foreground">
             {isTyping ? (
               <TypingDots label="escribiendo" />
-            ) : isGroup ? `${(chat?.other_participants?.length || 0) + 1} participantes` : "En linea"}
+            ) : muted ? formatMutedUntil(muteState.until) : "En linea"}
           </p>
         </Link>
+        )}
         
-        <div className="flex gap-0.5">
-          <Button
-            variant="ghost" size="icon"
-            className={`rounded-full h-9 w-9 ${muted ? "text-amber-500 bg-amber-500/10" : "hover:bg-muted"}`}
-            onClick={toggleMute}
-            aria-label={muted ? "Activar sonido" : "Silenciar chat"}
-            data-testid="chat-mute-btn"
-          >
-            {muted ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
-          </Button>
+        <div className="flex gap-0.5 shrink-0">
+          <MuteMenu chatId={chat.id} token={token} muted={muted} mutedUntil={muteState.until} onChange={handleMuteChange} />
           <Button 
             variant="ghost" size="icon" 
             className="rounded-full h-9 w-9 hover:bg-green-500/10 hover:text-green-500"
@@ -616,6 +632,12 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
           </Button>
         </div>
       </div>
+
+      {/* Group info */}
+      {isGroup && (
+        <GroupInfoSheet chat={chat} isOpen={showGroupInfo} onClose={() => setShowGroupInfo(false)} token={token} currentUserId={currentUserId}
+          onUpdated={(patch) => onChatUpdated?.(chat.id, patch)} onLeft={(id) => onLeftGroup?.(id)} onCall={(kind) => startVideoCall(kind)} />
+      )}
 
       {/* Video Call Modal */}
       <VideoCallModal
@@ -649,6 +671,13 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
               {msgs.map((message) => {
                 const isOwn = message.sender_id === currentUserId;
                 const reactionsList = aggregateReactions(message.reactions || []);
+                if (message.message_type === "system") {
+                  return (
+                    <div key={message.id} className="flex justify-center my-2" data-testid={`chat-system-${message.id}`}>
+                      <span className="px-3 py-1.5 rounded-full bg-muted/60 backdrop-blur-sm text-[11px] text-muted-foreground text-center">{message.content}</span>
+                    </div>
+                  );
+                }
                 // ── Call log (system message) ──
                 if (message.message_type === "call") {
                   const a = message.attachments?.[0] || {};
@@ -719,6 +748,9 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                           : "bg-muted/60 rounded-2xl rounded-bl-sm"
                       }`}
                     >
+                      {isGroup && !isOwn && message.sender?.username && (
+                        <p className="text-[10px] font-bold text-primary mb-0.5" data-testid="group-msg-sender">{message.sender.username}</p>
+                      )}
                       {/* Reply preview */}
                       {message.reply_to && (
                         <div className={`mb-1.5 px-2 py-1 rounded-md border-l-2 ${isOwn ? "border-white/50 bg-white/10" : "border-orange-500 bg-orange-50/60 dark:bg-orange-500/10"}`}>
@@ -954,7 +986,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
           uploading={uploading}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
-          placeholder="Escribe un mensaje..."
+          placeholder="Mensaje..."
         />
       </div>
 
@@ -1008,9 +1040,11 @@ const ChatPage = () => {
   const [selectedChat, setSelectedChat] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showNewChat, setShowNewChat] = useState(false);
+  const [showNewGroup, setShowNewGroup] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [ws, setWs] = useState(null);
   const wsReconnectRef = useRef(null);
+  const fetchChatsRef = useRef(null);
 
   useEffect(() => {
     if (!token) return;
@@ -1027,8 +1061,12 @@ const ChatPage = () => {
           try {
             const data = JSON.parse(event.data);
             
+            if (data.type === "group_created") {
+              fetchChatsRef.current?.();
+            }
             if (data.type === "new_message") {
               setChats(prev => {
+                if (!prev.some(c => c.id === data.message.chat_id)) { fetchChatsRef.current?.(); return prev; }
                 const updated = prev.map(c => {
                   if (c.id === data.message.chat_id) {
                     return {
@@ -1097,6 +1135,7 @@ const ChatPage = () => {
       setLoading(false);
     }
   }, [token]);
+  useEffect(() => { fetchChatsRef.current = fetchChats; }, [fetchChats]);
 
   useEffect(() => {
     if (!user) {
@@ -1106,19 +1145,38 @@ const ChatPage = () => {
     fetchChats();
   }, [user, navigate, fetchChats]);
 
-  // Sync selectedChat from URL param (e.g. when route is /chat/:id).
-  // This runs both on initial mount once chats are loaded AND when the
-  // URL changes — without re-fetching chats (which previously caused a
-  // race where the first tap appeared to do nothing).
+  const handleChatUpdated = (id, patch) => {
+    setChats(prev => prev.map(c => (c.id === id ? { ...c, ...patch } : c)));
+    setSelectedChat(prev => (prev?.id === id ? { ...prev, ...patch } : prev));
+  };
+  const handleLeftGroup = (id) => {
+    setChats(prev => prev.filter(c => c.id !== id));
+    setSelectedChat(null);
+    navigate("/chat", { replace: true });
+  };
+  const handleGroupCreated = (group) => {
+    setChats(prev => [group, ...prev.filter(c => c.id !== group.id)]);
+    syncedChatIdRef.current = group.id;
+    setSelectedChat(group);
+    navigate(`/chat/${group.id}`, { replace: true });
+  };
+
+  // Sync selectedChat from URL param (e.g. when route is /chat/:id). React Router applies the
+  // navigation in a transition, so right after handleBack the old chatId is still visible for one
+  // render → guard with a ref so we only react to REAL URL changes (fixes "back button does nothing").
+  const syncedChatIdRef = useRef(null);
   useEffect(() => {
-    if (!chatId || chats.length === 0) return;
+    if (!chatId) { syncedChatIdRef.current = null; return; }
+    if (chats.length === 0 || syncedChatIdRef.current === chatId) return;
     const target = chats.find(c => c.id === chatId);
-    if (target && selectedChat?.id !== target.id) {
+    if (target) {
+      syncedChatIdRef.current = chatId;
       setSelectedChat(target);
     }
-  }, [chatId, chats, selectedChat?.id]);
+  }, [chatId, chats]);
 
   const handleSelectChat = (chat) => {
+    syncedChatIdRef.current = chat.id;
     setSelectedChat(chat);
     setChats(prev => prev.map(c => 
       c.id === chat.id ? { ...c, unread_count: 0 } : c
@@ -1155,6 +1213,7 @@ const ChatPage = () => {
         return [newChat, ...prev];
       });
       
+      syncedChatIdRef.current = newChat.id;
       setSelectedChat(newChat);
       setShowNewChat(false);
       navigate(`/chat/${newChat.id}`, { replace: true });
@@ -1197,11 +1256,13 @@ const ChatPage = () => {
           onSelectChat={handleSelectChat}
           selectedChatId={selectedChat?.id}
           onNewChat={() => setShowNewChat(true)}
+          onNewGroup={() => setShowNewGroup(true)}
+          token={token}
         />
       </div>
 
       {/* Chat View */}
-      <div className={`${isMobile && !selectedChat ? "hidden" : "flex"} flex-1 flex-col`}>
+      <div className={`${isMobile && !selectedChat ? "hidden" : "flex"} flex-1 min-w-0 flex-col`}>
         {selectedChat ? (
           <ChatView 
             chat={selectedChat} 
@@ -1209,6 +1270,8 @@ const ChatPage = () => {
             currentUserId={user.id}
             ws={ws}
             autoCall={autoCallRef.current}
+            onChatUpdated={handleChatUpdated}
+            onLeftGroup={handleLeftGroup}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-muted/10">
@@ -1233,6 +1296,7 @@ const ChatPage = () => {
         onSelectUser={handleNewChat}
         token={token}
       />
+      <NewGroupModal isOpen={showNewGroup} onClose={() => setShowNewGroup(false)} token={token} onCreated={handleGroupCreated} />
     </div>
   );
 };

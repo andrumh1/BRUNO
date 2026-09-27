@@ -93,6 +93,59 @@ class VideoCallResponse(BaseModel):
     dnd: bool = False
 
 
+@router.get("/history")
+async def call_history(filter: str = "all", q: str = "", limit: int = 100, current_user: User = Depends(get_current_user)):
+    """Every call of the user (incoming/outgoing/missed) with duration, peer/group and redial info."""
+    query = {"participants": current_user.id, "status": {"$in": ["ended", "missed", "declined"]}}
+    if filter == "missed":
+        query["started_by"] = {"$ne": current_user.id}
+        query["status"] = {"$in": ["missed", "declined"]}
+    calls = await db.video_calls.find(query, {"_id": 0}).sort("started_at", -1).to_list(400)
+    chat_ids = list({c["chat_id"] for c in calls})
+    chats = {c["id"]: c async for c in db.chats.find({"id": {"$in": chat_ids}}, {"_id": 0, "id": 1, "name": 1, "avatar_url": 1, "is_group": 1, "participants": 1})}
+    uids = list({p for c in calls for p in c.get("participants", [])})
+    users = {u["id"]: u async for u in db.users.find({"id": {"$in": uids}}, {"_id": 0, "id": 1, "name": 1, "email": 1})}
+    profiles = {p["user_id"]: p async for p in db.user_profiles.find({"user_id": {"$in": uids}}, {"_id": 0, "user_id": 1, "display_name": 1, "avatar_url": 1})}
+
+    def person(uid):
+        u, p = users.get(uid, {}), profiles.get(uid, {})
+        return {"id": uid, "name": p.get("display_name") or u.get("name") or (u.get("email") or "Usuario").split("@")[0], "avatar_url": p.get("avatar_url")}
+
+    out = []
+    ql = q.strip().lower()
+    for c in calls:
+        chat = chats.get(c["chat_id"], {})
+        is_group = bool(c.get("is_group") or chat.get("is_group"))
+        others = [p for p in c.get("participants", []) if p != current_user.id]
+        peer = {"id": c["chat_id"], "name": chat.get("name") or "Grupo", "avatar_url": chat.get("avatar_url"), "members": len(c.get("participants", []))} if is_group else person(others[0] if others else c["started_by"])
+        if ql and ql not in (peer.get("name") or "").lower():
+            continue
+        duration = 0
+        if c.get("answered_at") and c.get("ended_at"):
+            try:
+                duration = int((datetime.fromisoformat(c["ended_at"]) - datetime.fromisoformat(c["answered_at"])).total_seconds())
+            except Exception:
+                duration = 0
+        outgoing = c["started_by"] == current_user.id
+        out.append({"id": c["id"], "chat_id": c["chat_id"], "call_type": c.get("call_type", "video"), "status": c["status"],
+                    "direction": "outgoing" if outgoing else "incoming", "missed": (not outgoing) and c["status"] in ("missed", "declined"),
+                    "duration_sec": duration, "duration": _fmt_duration(duration) if duration else None, "dnd": bool(c.get("dnd")),
+                    "started_at": c.get("started_at"), "ended_at": c.get("ended_at"), "is_group": is_group, "peer": peer, "caller": person(c["started_by"])})
+        if len(out) >= limit:
+            break
+    return {"total": len(out), "calls": out}
+
+
+@router.delete("/history")
+async def clear_call_history(call_id: str | None = None, current_user: User = Depends(get_current_user)):
+    """Hide calls from my history (removes me from the participants list of the log)."""
+    query = {"participants": current_user.id, "status": {"$in": ["ended", "missed", "declined"]}}
+    if call_id:
+        query["id"] = call_id
+    res = await db.video_calls.update_many(query, {"$pull": {"participants": current_user.id}})
+    return {"deleted": res.modified_count}
+
+
 @router.get("/missed/today")
 async def missed_calls_today(current_user: User = Depends(get_current_user)):
     """Missed/declined incoming calls of the last 24h for the Alerts page."""
@@ -131,7 +184,7 @@ async def start_video_call(
         # Daily.co: private room that expires in 2h; each participant gets its own token
         exp = int(time.time()) + 2 * 3600
         room = await _daily_post("/rooms", {"name": room_name, "privacy": "private", "properties": {
-            "exp": exp, "eject_at_room_exp": True, "max_participants": 8, "start_video_off": request.call_type == "audio",
+            "exp": exp, "eject_at_room_exp": True, "max_participants": 50 if chat.get("is_group") else 8, "start_video_off": request.call_type == "audio",
             "enable_prejoin_ui": False, "enable_chat": False,
         }})
         room_name, room_url, provider = room["name"], room["url"], "daily"
@@ -152,6 +205,7 @@ async def start_video_call(
         "call_type": request.call_type,
         "started_by": current_user.id,
         "participants": chat["participants"],
+        "is_group": bool(chat.get("is_group")),
         "status": "ringing",
         "started_at": datetime.now(timezone.utc).isoformat(),
         "ended_at": None,
@@ -162,7 +216,8 @@ async def start_video_call(
 
     # Do-Not-Disturb or chat muted: receiver is silenced → register as missed, no ring/push
     from utils.dnd import is_dnd_active
-    muted_by = set(chat.get("muted_by") or [])
+    from utils.chat_mute import muted_user_ids
+    muted_by = muted_user_ids(chat)
     receivers = [u async for u in db.users.find({"id": {"$in": other_participants}}, {"_id": 0, "id": 1, "dnd": 1})]
     if receivers and all(is_dnd_active(u) or u["id"] in muted_by for u in receivers):
         await db.video_calls.update_one({"id": call_id}, {"$set": {"status": "missed", "ended_at": datetime.now(timezone.utc).isoformat(), "dnd": True}})
@@ -177,6 +232,8 @@ async def start_video_call(
         "call_type": request.call_type,
         "caller_id": current_user.id,
         "caller_name": current_user.name,
+        "is_group": bool(chat.get("is_group")),
+        "chat_name": chat.get("name"),
     }
     try:
         await ws_manager.broadcast_to_users(call_notification, other_participants)

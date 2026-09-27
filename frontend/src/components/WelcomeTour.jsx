@@ -7,76 +7,74 @@ import {
   ChevronLeft, 
   X, 
   Sparkles,
-  Film,
-  Map,
-  Camera,
-  Compass,
   User,
-  Check
+  Check,
+  CreditCard,
+  Palette,
+  Nfc
 } from "lucide-react";
+import { SCENES } from "@/components/tour/TourScenes";
 
-// Tour steps configuration — 5 steps: Reels · Mapa+Explorar · Cámara · Perfil · Listo
+// Guided tour (shown ONCE to new users): from completing the profile to the first Digital Business Card
 const TOUR_STEPS = [
   {
     id: "welcome",
     title: "¡Bienvenido a BRUNO!",
-    message: "Te muestro en 4 pasos rápidos cómo moverte por la app. ¿Comenzamos?",
+    message: "En 4 pasos crearás tu Digital Business Card: tu perfil, tu tarjeta, tu estilo y cómo compartirla con un toque. ¿Empezamos?",
     icon: Sparkles,
     color: "from-orange-500 to-yellow-500",
     position: "center",
-    mascot: "/mascots/bruno-dog.webp"
-  },
-  {
-    id: "reels",
-    title: "Reels: tu inicio",
-    message: "Aquí vive todo el contenido: videos, fotos y publicaciones en un mismo scroll vertical. Desliza hacia arriba para seguir viendo, toca dos veces para dar me gusta y usa la barra derecha para comentar, guardar o compartir.",
-    icon: Film,
-    color: "from-pink-500 to-rose-600",
-    target: "/reels",
-    highlight: "[data-testid='nav-reels']",
-    mascot: "/mascots/bruno-human.png"
-  },
-  {
-    id: "map",
-    title: "Mapa + Explorar",
-    message: "En el Mapa ves negocios y personas cerca de ti. Arriba, la pestaña Explorar abre el directorio de tarjetas con buscador y filtros por tipo.",
-    icon: Compass,
-    color: "from-red-500 to-orange-500",
-    target: "/map?explore=1",
-    highlight: "[data-testid='nav-map']",
-    mascot: "/mascots/bruno-dog.webp"
-  },
-  {
-    id: "camera",
-    title: "Crear con la cámara",
-    message: "El botón central abre el menú Crear: historias de 24h, reels, publicaciones con estilo o estados. Puedes grabar con la Cámara Bruno o elegir de tu galería.",
-    icon: Camera,
-    color: "from-violet-500 to-fuchsia-500",
-    target: "/reels",
-    highlight: "[data-testid='nav-create']",
-    mascot: "/mascots/bruno-human.png"
+    scene: "welcome",
   },
   {
     id: "profile",
-    title: "Tu perfil y ajustes",
-    message: "En Perfil administras tus tarjetas digitales, tus publicaciones y, en el engranaje, el idioma, Explorar tarjetas y el sitio web de BRUNO.",
+    title: "1 · Completa tu perfil",
+    message: "Sube tu foto y escribe tu nombre, profesión y empresa. Esta información se usa como base para tu tarjeta. Pulsa Guardar cuando termines.",
     icon: User,
     color: "from-blue-500 to-cyan-500",
-    target: "/my-profile",
-    highlight: "[data-testid='nav-profile']",
-    mascot: "/mascots/bruno-dog.webp"
+    target: "/edit-profile",
+    highlight: "[data-testid='edit-profile-save']",
+    scene: "profile",
+  },
+  {
+    id: "card",
+    title: "2 · Crea tu tarjeta",
+    message: "Elige el tipo de tarjeta (personal, negocio, profesional…), escribe un título y un subtítulo y añade teléfono, email y sitio web.",
+    icon: CreditCard,
+    color: "from-primary to-orange-400",
+    target: "/cards/new",
+    scene: "card",
+  },
+  {
+    id: "customize",
+    title: "3 · Dale tu estilo",
+    message: "Colores, plantilla, redes sociales, galería y ubicación. Tu tarjeta se ve igual de bien en cualquier teléfono.",
+    icon: Palette,
+    color: "from-violet-500 to-fuchsia-500",
+    target: "/cards/new",
+    scene: "customize",
+  },
+  {
+    id: "share",
+    title: "4 · Compártela con un toque",
+    message: "Acerca tu teléfono a otro (Android o iPhone) para transferir la tarjeta por NFC, muéstrala como QR o pégala en un tag PIUP. Quien la recibe la guarda en su BRUNO.",
+    icon: Nfc,
+    color: "from-emerald-500 to-teal-500",
+    position: "center",
+    scene: "share",
   },
   {
     id: "complete",
-    title: "¡Listo para comenzar!",
-    message: "Ya conoces lo básico. ¿Qué quieres hacer primero?",
+    title: "¡Todo listo!",
+    message: "Ya sabes cómo funciona. Crea tu primera tarjeta ahora, te toma menos de 2 minutos.",
     icon: Check,
     color: "from-green-500 to-emerald-500",
     position: "center",
-    mascot: "/mascots/bruno-dog.webp",
+    scene: "done",
     actions: [
-      { label: "Crear mi tarjeta", path: "/cards/new", primary: true },
-      { label: "Ver Reels", path: "/reels" }
+      { label: "Crear mi primera tarjeta", path: "/cards/new", primary: true },
+      { label: "Completar mi perfil primero", path: "/edit-profile" },
+      { label: "Explorar la app", path: "/reels" }
     ]
   }
 ];
@@ -111,7 +109,7 @@ export const TourProvider = ({ children }) => {
       const hoursSinceCreation = (now - userCreatedAt) / (1000 * 60 * 60);
       
       // Auto-show tour if user was created less than 1 hour ago
-      if (isNewUser && hoursSinceCreation < 1) {
+      if (isNewUser && hoursSinceCreation < 24) {
         setTimeout(() => setIsActive(true), 1000);
       }
     }
@@ -122,9 +120,9 @@ export const TourProvider = ({ children }) => {
     setIsActive(true);
   }, []);
 
-  const endTour = useCallback((completed = false) => {
+  const endTour = useCallback((_completed = false) => {
     setIsActive(false);
-    if (completed && user) {
+    if (user) {
       localStorage.setItem(`bruno_tour_completed_${user.id}`, "true");
       setHasCompletedTour(true);
     }
@@ -235,19 +233,21 @@ export const TourOverlay = () => {
 
         {/* Content */}
         <div className={`${anchorTop ? "p-5 pt-7" : "p-6 pt-8"}`}>
-          {/* Mascot + Icon */}
+          {/* Animated scene */}
+          {step.scene && SCENES[step.scene] ? (
+            <div className={`${anchorTop ? "mb-3" : "mb-5"}`} data-testid={`tour-scene-${step.scene}`}>
+              {React.createElement(SCENES[step.scene])}
+            </div>
+          ) : (
           <div className={`flex items-center justify-center gap-4 ${anchorTop ? "mb-4" : "mb-6"}`}>
             {step.mascot && (
-              <img 
-                src={step.mascot} 
-                alt="BRUNO Mascot" 
-                className={`${anchorTop ? "w-14 h-14" : "w-20 h-20"} object-contain rounded-2xl`}
-              />
+              <img src={step.mascot} alt="BRUNO Mascot" className={`${anchorTop ? "w-14 h-14" : "w-20 h-20"} object-contain rounded-2xl`} />
             )}
             <div className={`${anchorTop ? "w-12 h-12" : "w-16 h-16"} rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center shadow-lg`}>
               <Icon className={`${anchorTop ? "w-6 h-6" : "w-8 h-8"} text-white`} />
             </div>
           </div>
+          )}
 
           {/* Text */}
           <h2 className={`${anchorTop ? "text-xl" : "text-2xl"} font-bold text-center mb-2`}>{step.title}</h2>
