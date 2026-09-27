@@ -492,6 +492,42 @@ async def get_post_remixes(post_id: str, limit: int = 60, current_user: Optional
     return await _hydrate_video_posts(out, current_user.id if current_user else None)
 
 
+@router.delete("/posts/history/videos")
+async def clear_video_history(post_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """Clear the whole watch history, or a single post from it."""
+    q = {"user_id": current_user.id}
+    if post_id:
+        q["post_id"] = post_id
+    res = await db.video_views.delete_many(q)
+    return {"deleted": res.deleted_count}
+
+
+class PostUpdate(BaseModel):
+    content: Optional[str] = None
+    text_style: Optional[dict] = None
+    visibility: Optional[str] = None
+
+
+@router.put("/posts/{post_id}")
+async def update_post(post_id: str, data: PostUpdate, current_user: User = Depends(get_current_user)):
+    """Owner edits caption / text style / visibility."""
+    post = await db.posts.find_one({"id": post_id}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if post["user_id"] != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo el dueño puede editar")
+    upd = {"edited_at": datetime.now(timezone.utc).isoformat()}
+    if data.content is not None:
+        upd["content"] = data.content.strip()
+        upd["hashtags"] = [h[1:] for h in re_module.findall(r"#\w+", data.content)]
+    if data.text_style is not None and not post.get("media"):
+        upd["text_style"] = data.text_style
+    if data.visibility in ("public", "followers", "private"):
+        upd["visibility"] = data.visibility
+    await db.posts.update_one({"id": post_id}, {"$set": upd})
+    return await db.posts.find_one({"id": post_id}, {"_id": 0})
+
+
 @router.get("/posts/history/videos")
 async def get_video_history(
     limit: int = 60,

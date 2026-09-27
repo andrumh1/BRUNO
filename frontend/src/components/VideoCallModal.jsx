@@ -11,9 +11,36 @@
  *    2. Incoming call — "{name} is calling you" + Accept/Decline
  *    3. In-call — iframe rendering the Jitsi room
  */
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Phone, PhoneOff, Video as VideoIcon, X, User as UserIcon, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+// Ringtone synthesized with WebAudio (no asset needed) + haptics while an incoming call rings.
+function useRingtone(active) {
+  useEffect(() => {
+    if (!active) return undefined;
+    let ctx, timer, stopped = false;
+    const pattern = [400, 200, 400, 1200];
+    try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (_) { /* no haptics */ }
+    const vib = setInterval(() => { try { navigator.vibrate?.(pattern); } catch (_) { /* ignore */ } }, 2200);
+    const ring = () => {
+      if (stopped) return;
+      try {
+        ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+        const t0 = ctx.currentTime;
+        [0, 0.6].forEach((off) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.type = "sine"; o.frequency.setValueAtTime(880, t0 + off); o.frequency.setValueAtTime(660, t0 + off + 0.2);
+          g.gain.setValueAtTime(0.0001, t0 + off); g.gain.exponentialRampToValueAtTime(0.25, t0 + off + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.45);
+          o.connect(g).connect(ctx.destination); o.start(t0 + off); o.stop(t0 + off + 0.5);
+        });
+      } catch (_) { /* autoplay blocked until user gesture */ }
+      timer = setTimeout(ring, 2200);
+    };
+    ring();
+    return () => { stopped = true; clearTimeout(timer); clearInterval(vib); try { navigator.vibrate?.(0); } catch (_) { /* ignore */ } try { ctx?.close(); } catch (_) { /* ignore */ } };
+  }, [active]);
+}
 
 export default function VideoCallModal({
   isOpen,
@@ -34,6 +61,15 @@ export default function VideoCallModal({
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
+
+  const ringing = isOpen && isIncoming && !isConnecting;
+  useRingtone(ringing);
+  const autoDecline = useRef(null);
+  useEffect(() => {
+    if (!ringing) return undefined;
+    autoDecline.current = setTimeout(() => onDecline?.(), 45000);
+    return () => clearTimeout(autoDecline.current);
+  }, [ringing, onDecline]);
 
   if (!isOpen) return null;
 
@@ -72,24 +108,32 @@ export default function VideoCallModal({
           <h2 className="mt-2 text-2xl font-bold">{remoteUserName}</h2>
         </motion.div>
 
-        <div className="mt-12 flex items-center gap-12">
-          <button
-            onClick={onDecline}
-            className="grid place-items-center w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 shadow-xl shadow-red-500/40 active:scale-95"
-            aria-label="Rechazar"
-            data-testid="call-decline-btn"
-          >
-            <PhoneOff className="w-7 h-7 text-white" />
-          </button>
-          <button
-            onClick={onAccept}
-            className="grid place-items-center w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 shadow-xl shadow-green-500/40 active:scale-95 animate-bounce"
-            aria-label="Aceptar"
-            data-testid="call-accept-btn"
-          >
-            {callType === "audio" ? <Phone className="w-7 h-7 text-white" /> : <VideoIcon className="w-7 h-7 text-white" />}
-          </button>
+        <div className="mt-14 flex items-end justify-center gap-14 w-full px-8">
+          <div className="flex flex-col items-center gap-3">
+            <button
+              onClick={onDecline}
+              className="grid place-items-center w-24 h-24 rounded-full bg-red-500 hover:bg-red-600 shadow-2xl shadow-red-500/40 active:scale-95 transition-transform"
+              aria-label="Rechazar"
+              data-testid="call-decline-btn"
+            >
+              <PhoneOff className="w-10 h-10 text-white" />
+            </button>
+            <span className="text-sm font-semibold text-white/85">Rechazar</span>
+          </div>
+          <div className="flex flex-col items-center gap-3">
+            <motion.button
+              onClick={onAccept}
+              animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 1.1, ease: "easeInOut" }}
+              className="grid place-items-center w-24 h-24 rounded-full bg-green-500 hover:bg-green-600 shadow-2xl shadow-green-500/50 active:scale-95"
+              aria-label="Aceptar"
+              data-testid="call-accept-btn"
+            >
+              {callType === "audio" ? <Phone className="w-10 h-10 text-white" /> : <VideoIcon className="w-10 h-10 text-white" />}
+            </motion.button>
+            <span className="text-sm font-semibold text-white/85">Aceptar</span>
+          </div>
         </div>
+        <p className="mt-8 text-xs text-white/40" data-testid="incoming-call-ringing">Sonando…</p>
       </div>
     );
   }

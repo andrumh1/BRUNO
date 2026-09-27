@@ -3,7 +3,8 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, Pause, User, Columns2, Scissors, Layers, Music2, Video, Check, Trash2, Flag, EyeOff } from "lucide-react";
+import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, Pause, User, Columns2, Scissors, Layers, Music2, Video, Check, Trash2, Flag, EyeOff, Pencil } from "lucide-react";
+import TextStylePicker from "@/components/TextStylePicker";
 import { useNavigate } from "react-router-dom";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { normalizeReel } from "./useReelsFeed";
@@ -153,7 +154,7 @@ export function ReelLikersSheet({ reel, token, onClose, onFollow }) {
   );
 }
 
-export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDeleted }) {
+export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDeleted, onEdit }) {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
   if (!reel) return null;
@@ -179,7 +180,10 @@ export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDelete
               </div>
             </div>
           ) : (
-            <button onClick={() => setConfirm(true)} className="w-full h-12 rounded-2xl bg-foreground/[0.05] flex items-center gap-3 px-4 text-sm text-destructive" data-testid="reel-delete-btn"><Trash2 className="w-4 h-4" /> Eliminar publicación</button>
+            <>
+              <button onClick={() => { onClose(); onEdit?.(reel); }} className="w-full h-12 rounded-2xl bg-foreground/[0.05] flex items-center gap-3 px-4 text-sm" data-testid="reel-edit-btn"><Pencil className="w-4 h-4" /> Editar publicación</button>
+              <button onClick={() => setConfirm(true)} className="w-full h-12 rounded-2xl bg-foreground/[0.05] flex items-center gap-3 px-4 text-sm text-destructive" data-testid="reel-delete-btn"><Trash2 className="w-4 h-4" /> Eliminar publicación</button>
+            </>
           )
         ) : (
           <>
@@ -266,30 +270,93 @@ export function ReelShareSheet({ reel, token, onClose }) {
 export function ReelHistorySheet({ open, token, onClose, onPick }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const swipe = React.useRef({});
+  const headers = { Authorization: `Bearer ${token}` };
   useEffect(() => {
     if (!open || !token) return;
-    setLoading(true);
-    axios.get(`${API}/posts/history/videos`, { headers: { Authorization: `Bearer ${token}` } })
+    setLoading(true); setConfirmClear(false);
+    axios.get(`${API}/posts/history/videos`, { headers })
       .then((r) => setItems((r.data || []).map(normalizeReel))).catch(() => setItems([])).finally(() => setLoading(false));
   }, [open, token]);
+  const removeOne = async (id) => {
+    setItems((prev) => prev.filter((r) => r.id !== id));
+    try { await axios.delete(`${API}/posts/history/videos?post_id=${id}`, { headers }); } catch (_) { brunoToast.error("No se pudo quitar del historial"); }
+  };
+  const clearAll = async () => {
+    try { await axios.delete(`${API}/posts/history/videos`, { headers }); setItems([]); setConfirmClear(false); brunoToast.success("Historial limpiado"); }
+    catch (_) { brunoToast.error("No se pudo limpiar el historial"); }
+  };
+  const onTouchStart = (id) => (e) => { swipe.current[id] = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
+  const onTouchEnd = (id) => (e) => {
+    const s = swipe.current[id]; if (!s) return;
+    const dx = e.changedTouches[0].clientX - s.x, dy = e.changedTouches[0].clientY - s.y;
+    delete swipe.current[id];
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { e.preventDefault(); removeOne(id); }
+  };
   return (
     <BottomSheet open={open} onClose={onClose} title="Historial de reels" testid="reel-history-sheet" height="72vh">
+      {token && items.length > 0 && (
+        <div className="px-4 pb-2 flex items-center justify-between gap-2">
+          <p className="text-[11px] text-muted-foreground">Desliza un reel hacia el lado para quitarlo</p>
+          {confirmClear ? (
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setConfirmClear(false)} className="h-8 px-3 rounded-full bg-foreground/[0.06] text-xs">Cancelar</button>
+              <button onClick={clearAll} className="h-8 px-3 rounded-full bg-destructive text-white text-xs font-semibold" data-testid="reel-history-clear-confirm">Limpiar todo</button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmClear(true)} className="h-8 px-3 rounded-full bg-foreground/[0.06] text-xs inline-flex items-center gap-1" data-testid="reel-history-clear-btn"><Trash2 className="w-3.5 h-3.5" /> Limpiar</button>
+          )}
+        </div>
+      )}
       {!token ? <p className="text-center text-sm text-muted-foreground py-10">Inicia sesión para ver tu historial</p>
         : loading ? <div className="grid place-items-center py-10"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-        : items.length === 0 ? <div className="flex flex-col items-center py-12 text-muted-foreground"><Clock className="w-8 h-8 mb-2" /><p className="text-sm">Aún no has visto reels</p></div>
+        : items.length === 0 ? <div className="flex flex-col items-center py-12 text-muted-foreground" data-testid="reel-history-empty"><Clock className="w-8 h-8 mb-2" /><p className="text-sm">Aún no has visto reels</p></div>
         : (
           <div className="grid grid-cols-3 gap-1.5 px-3 pb-4 overflow-y-auto">
             {items.map((r) => (
-              <button key={r.id} onClick={() => onPick(r)} className="relative aspect-[9/14] rounded-xl overflow-hidden bg-black no-glass" data-testid={`reel-history-item-${r.id}`}>
-                {(r.poster_url || r.thumbnail_url || r.image_url) ? <img src={r.poster_url || r.thumbnail_url || r.image_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full grid place-items-center"><Play className="w-6 h-6 text-white/70" /></div>}
-                <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/70 to-transparent text-left">
-                  <p className="text-white text-[10px] font-semibold truncate">@{r.author?.username || r.author?.name}</p>
-                  <p className="text-white/70 text-[9px]">{r.watch_count > 1 ? `Visto ${r.watch_count}×` : "Visto"}</p>
-                </div>
-              </button>
+              <div key={r.id} className="relative aspect-[9/14] rounded-xl overflow-hidden bg-black no-glass group" onTouchStart={onTouchStart(r.id)} onTouchEnd={onTouchEnd(r.id)} data-testid={`reel-history-item-${r.id}`}>
+                <button onClick={() => onPick(r)} className="absolute inset-0 w-full h-full text-left">
+                  {(r.poster_url || r.thumbnail_url || r.image_url) ? <img src={r.poster_url || r.thumbnail_url || r.image_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full grid place-items-center"><Play className="w-6 h-6 text-white/70" /></div>}
+                  <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/70 to-transparent">
+                    <p className="text-white text-[10px] font-semibold truncate">@{r.author?.username || r.author?.name}</p>
+                    <p className="text-white/70 text-[9px]">{r.watch_count > 1 ? `Visto ${r.watch_count}×` : "Visto"}</p>
+                  </div>
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); removeOne(r.id); }} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white grid place-items-center" aria-label="Quitar del historial" data-testid={`reel-history-remove-${r.id}`}><X className="w-3.5 h-3.5" /></button>
+              </div>
             ))}
           </div>
         )}
+    </BottomSheet>
+  );
+}
+
+export function ReelEditSheet({ reel, token, onClose, onSaved }) {
+  const [content, setContent] = useState(reel?.content || "");
+  const [style, setStyle] = useState(reel?.text_style || { bg: "ember", font: "sans", align: "center", emoji: null });
+  const [saving, setSaving] = useState(false);
+  if (!reel) return null;
+  const isText = reel.kind === "text";
+  const save = async () => {
+    setSaving(true);
+    try {
+      const r = await axios.put(`${API}/posts/${reel.id}`, { content, text_style: isText ? style : undefined }, { headers: { Authorization: `Bearer ${token}` } });
+      onSaved?.(reel.id, { content: r.data?.content ?? content, text_style: r.data?.text_style ?? (isText ? style : reel.text_style) });
+      brunoToast.success("Publicación actualizada"); onClose();
+    } catch (e) { brunoToast.error("No se pudo guardar", { description: e?.response?.data?.detail }); }
+    finally { setSaving(false); }
+  };
+  return (
+    <BottomSheet open onClose={onClose} title="Editar publicación" testid="reel-edit-sheet" height="85vh">
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
+        <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={4} maxLength={2200} placeholder="Escribe algo…" className="w-full rounded-2xl bg-foreground/[0.05] p-3 text-sm outline-none resize-none" data-testid="reel-edit-content" />
+        {isText && <TextStylePicker value={style} onChange={setStyle} text={content} />}
+      </div>
+      <div className="px-4 pb-5 pt-2 border-t border-border/40 flex gap-2">
+        <button onClick={onClose} className="flex-1 h-11 rounded-full bg-foreground/[0.06] text-sm">Cancelar</button>
+        <button onClick={save} disabled={saving || (!content.trim() && isText)} className="flex-1 h-11 rounded-full bg-primary text-white text-sm font-semibold disabled:opacity-50" data-testid="reel-edit-save">{saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Guardar"}</button>
+      </div>
     </BottomSheet>
   );
 }

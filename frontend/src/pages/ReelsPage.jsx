@@ -14,7 +14,7 @@ import { useNavScroll } from "@/contexts/NavScrollContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import ReelItem from "@/components/reels/ReelItem";
 import { useReelsFeed } from "@/components/reels/useReelsFeed";
-import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet, ReelLikersSheet, ReelOptionsSheet } from "@/components/reels/ReelSheets";
+import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet, ReelLikersSheet, ReelOptionsSheet, ReelEditSheet } from "@/components/reels/ReelSheets";
 import RemixStudio from "@/components/reels/RemixStudio";
 import ReelsStoriesStrip from "@/components/reels/ReelsStoriesStrip";
 import { AnimatePresence } from "framer-motion";
@@ -42,6 +42,7 @@ export default function ReelsPage() {
   const [soundFor, setSoundFor] = useState(null);      // reel → sound sheet
   const [likersFor, setLikersFor] = useState(null);    // reel → who liked
   const [optionsFor, setOptionsFor] = useState(null);  // reel → "…" options
+  const [editFor, setEditFor] = useState(null);        // reel → edit sheet
   const highlightCommentId = searchParams.get("comment");
   const containerRef = useRef(null);
   const itemRefs = useRef([]);
@@ -191,7 +192,8 @@ export default function ReelsPage() {
       )}
 
       <ReelCommentsSheet reel={commentsFor} token={token} currentUserId={user?.id} highlightId={commentsFor?.id === initialReelId ? highlightCommentId : null} onClose={() => setCommentsFor(null)} onPosted={(id) => patchReel(id, (r) => ({ comments_count: (r.comments_count || 0) + 1 }))} onDeleted={(id, count) => patchReel(id, (r) => ({ comments_count: count ?? Math.max(0, (r.comments_count || 0) - 1) }))} />
-      {optionsFor && <ReelOptionsSheet reel={optionsFor} token={token} currentUserId={user?.id} onClose={() => setOptionsFor(null)} onDeleted={(id) => removeReel(id)} />}
+      {optionsFor && <ReelOptionsSheet reel={optionsFor} token={token} currentUserId={user?.id} onClose={() => setOptionsFor(null)} onDeleted={(id) => removeReel(id)} onEdit={setEditFor} />}
+      {editFor && <ReelEditSheet reel={editFor} token={token} onClose={() => setEditFor(null)} onSaved={(id, patch) => patchReel(id, patch)} />}
       {soundFor && <ReelSoundSheet reel={soundFor} token={token} onClose={() => setSoundFor(null)} onPick={(r) => { setSoundFor(null); navigate(`/reels?id=${r.id}`); }} />}
       <ReelLikersSheet reel={likersFor} token={token} onClose={() => setLikersFor(null)} onFollow={(uid, next) => reels.forEach((r) => { if ((r.author?.id || r.user_id) === uid) patchReel(r.id, { is_following: next }); })} />
       {shareFor && <ReelShareSheet reel={shareFor} token={token} onClose={() => setShareFor(null)} />}
