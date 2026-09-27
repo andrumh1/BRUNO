@@ -1,0 +1,30 @@
+{
+  "summary": "Iteration 87 (reactions / in-chat search / drafts) tested end-to-end. Backend: 10/10 pytest passing in test_iteration87_reactions_search_drafts.py; iter85 + iter86 regression 37/37 still green. Frontend (390x844, viewer2): double-tap on last own bubble toggles ❤️ reaction (add/remove), reactions-row appears with ❤️; tapping the row opens reactors-sheet showing 'Reacciones · 1', tab '❤️ 1', row 'Tú' with 'Quitar reacción' — clicking Quitar reacción closes the sheet and clears the row. Live update: newtest REST reacts with 😂 → viewer2's open chat shows reactions-row updated to '😂' within ~2s via WS message_reaction. Chat search: magnifier opens bar, 'creó el grupo' → 1 result, counter '1/1', click loads older history and adds .bubble-flash on #bubble-<id>; 'iter86' → 14 results with prev/next arrows visible+enabled; 'zzzzqqq' shows 'Sin resultados'; close hides the bar. Drafts: typing 'borrador QA' persists in localStorage bruno_draft_<chatId>, ChatList shows chat-draft-preview 'Borrador: borrador QA', re-opening restores textarea; page reload on /chat/<id> restores; pressing Enter sends and clears both localStorage and the preview; per-chat isolation confirmed (draft-A visible only in chat A, chat B empty, back to A restores).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Chat / BrunoPillInput (mobile 390)", "issues": ["When calling pill-send-btn.click(force=True) from Playwright a 'Mensajes' side-panel overlay sometimes intercepts the click instead of sending; pressing Enter on the textarea sends reliably. Not user-facing (real users use Enter or tap on the mobile). Might indicate the send button's hit area is beneath a floating panel at 390px in some states."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration87_reactions_search_drafts.py",
+    "/app/test_reports/pytest/iter87.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "chat_extras.search_messages runs one count_documents per result to compute offset (O(N) round-trips). For a search with many results this is slow; consider computing offsets client-side from a single sorted fetch or aggregating with $rank.",
+    "MessageReactionsBubble.handleTap: double-tap detection window 320ms is tight for slow devices; also the outer div is the tap target which grows to include the reactions-row → data-no-dbltap on the row correctly excludes it, but clicking in the small gap between bubble and row could still fire toggle; consider anchoring the double-tap listener to the bubble content only.",
+    "react_to_message: emoji is truncated to first 8 chars silently; safer to validate against a whitelist (heart/laugh/…) or reject unknowns with 400 for consistency.",
+    "search endpoint does one aggregate $count then N per-result count_documents — a single $facet aggregation would return total + offsets in one round-trip."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration87_reactions_search_drafts.py", "/app/test_reports/iteration_87.json"],
+  "success_rate": {"backend": "100% (10/10 new, 37/37 regression)", "frontend": "100% for reactions / search / drafts / WS live update"},
+  "test_credentials": "viewer2@bruno.com / Test1234!  |  newtest@bruno.com / Test1234!  |  viewer3@bruno.com / Test1234!",
+  "seed_data_creation": "None — tests use existing chat 655d23d2-b133-4188-a95c-bd8a777c04f4 and clean up (unreact) at the end.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Playwright double-tap must be simulated with TWO page.mouse.click at the same coords ~120-150ms apart on #bubble-<msg_id> (or [data-testid='msg-<id>']). page.dblclick fires a single 'click' with detail=2 which handleTap treats as one tap → no reaction. When targeting a bubble that already has a reaction from prior runs, dbltap toggles OFF; check the initial reactions-row state first. To send a message from the pill composer prefer textarea.press('Enter') rather than clicking pill-send-btn — the button occasionally sits under a floating chats overlay at 390px. WS reactions come with type='message_reaction'; the client updates messages[].reactions from the payload without a REST re-fetch.",
+  "rca_of_the_issue": "No bugs found — behavior matches the spec for all three features."
+}

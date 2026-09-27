@@ -1,5 +1,12 @@
 # BRUNO Social Network - PRD
 
+## Phase 78: Reacciones rápidas · Buscar en el chat · Borradores por chat (2026-06)
+- **Reacciones** (`routers/chat_extras.py`): `POST /chats/{id}/messages/{mid}/react?emoji=` toggle (mismo emoji quita, otro reemplaza; una por usuario) + WS `message_reaction`; `GET .../reactions` agrupado por emoji con nombres/is_me. UI: doble toque/doble clic en la burbuja = ❤️ con destello (`heart-burst`), fila de reacciones (`reactions-row`, la mía resaltada) → `ReactorsSheet.jsx` (Todas / por emoji, "Tú · Quitar reacción"). Handler `handleReactMessage` optimista + verdad del servidor; WS actualiza en vivo.
+- **Buscar en la conversación**: `GET /chats/{id}/messages/search?q=` (regex case-insensitive, snippet, sender, `offset` = mensajes más nuevos). UI `ChatSearchBar.jsx` (lupa en cabecera `chat-search-toggle`, input `chat-msg-search-input`, contador x/total, flechas, lista con resaltado). `jumpToSearchResult` carga historial (`limit=offset+40`) si hace falta y destella `#bubble-{id}` (también mensajes de sistema y llamadas).
+- **Borradores por chat**: `localStorage bruno_draft_{chatId}` (debounce 250ms, evento `bruno:draft`), restauración al cambiar de chat (`draftChatRef` evita cruzar borradores), se limpia al enviar; `ChatList` muestra "Borrador: …" (`chat-draft-preview`).
+- Verificado iteration_87: backend 10/10 + regresiones 37/37; frontend móvil OK (incl. actualización WS en vivo desde otro usuario).
+
+
 ## Phase 77: Respuestas en grupo · @mención→perfil · Aviso sin conexión + outbox · Guardar tarjeta desde chat (2026-06)
 - **Respuestas**: toque largo / clic derecho → "Responder" (ya existía); ahora la cita muestra el nombre real del remitente en grupos (`message.sender`), cada burbuja tiene `id=bubble-{id}` y tocar la cita (`reply-quote-*`) hace scroll y destello (`.bubble-flash`). WS conserva `reply_to`.
 - **@Menciones → perfil**: `mentionTarget()` resuelve el handle contra `message.mentions` + miembros del grupo (o participante 1:1) → `Link /profile/{userId}` (`mention-link-{id}`); sin coincidencia se muestra como texto.
