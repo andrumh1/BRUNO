@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="6" time="5.588" timestamp="2026-09-27T22:21:20.602292+00:00" hostname="agent-env-fbec3dde-5c57-40bf-9a8a-afc0f3c51e3f"><testcase classname="backend.tests.test_iteration86_chat_replies_offline_save.TestCardSave" name="test_save_unknown_card_404" time="0.661" /><testcase classname="backend.tests.test_iteration86_chat_replies_offline_save.TestCardSave" name="test_owner_cannot_save_own_card" time="0.496" /><testcase classname="backend.tests.test_iteration86_chat_replies_offline_save.TestCardSave" name="test_non_owner_save_first_and_already" time="0.937" /><testcase classname="backend.tests.test_iteration86_chat_replies_offline_save.TestChatRepliesAndMentions" name="test_rest_send_with_mentions_and_reply" time="1.560" /><testcase classname="backend.tests.test_iteration86_chat_replies_offline_save.TestChatRepliesAndMentions" name="test_mentions_filtered_to_participants" time="0.617" /><testcase classname="backend.tests.test_iteration86_chat_replies_offline_save.TestWSReplyEcho" name="test_ws_send_message_echoes_reply_to" time="1.204"><failure message="websockets.exceptions.InvalidStatus: server rejected WebSocket connection: HTTP 403">backend/tests/test_iteration86_chat_replies_offline_save.py:200: in test_ws_send_message_echoes_reply_to
+    asyncio.get_event_loop().run_until_complete(run())
+/usr/local/lib/python3.11/asyncio/base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+backend/tests/test_iteration86_chat_replies_offline_save.py:167: in run
+    async with websockets.connect(uri, ping_interval=None) as ws:
+/root/.venv/lib/python3.11/site-packages/websockets/asyncio/client.py:587: in __aenter__
+    return await self
+           ^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/websockets/asyncio/client.py:543: in __await_impl__
+    await self.connection.handshake(
+/root/.venv/lib/python3.11/site-packages/websockets/asyncio/client.py:114: in handshake
+    raise self.protocol.handshake_exc
+/root/.venv/lib/python3.11/site-packages/websockets/client.py:325: in parse
+    self.process_response(response)
+/root/.venv/lib/python3.11/site-packages/websockets/client.py:142: in process_response
+    raise InvalidStatus(response)
+E   websockets.exceptions.InvalidStatus: server rejected WebSocket connection: HTTP 403</failure></testcase></testsuite></testsuites>

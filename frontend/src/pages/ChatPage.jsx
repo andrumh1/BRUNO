@@ -150,6 +150,10 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
   };
 
   const [savedCards, setSavedCards] = useState({});
+  const [myCardIds, setMyCardIds] = useState(null);
+  useEffect(() => {
+    axios.get(`${API}/cards`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setMyCardIds(new Set((r.data || []).map((c) => c.id)))).catch(() => setMyCardIds(new Set()));
+  }, [token]);
   const saveSharedCard = async (cardId) => {
     const { brunoToast } = await import("@/components/bruno/BrunoToast");
     try {
@@ -882,7 +886,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                             isOwn={isOwn}
                             onClick={() => navigate(`/c/${message.attachments[0].card_id}`)}
                           />
-                          {!isOwn && (
+                          {!isOwn && myCardIds && !myCardIds.has(message.attachments[0].card_id) && (
                             <button type="button" onClick={() => saveSharedCard(message.attachments[0].card_id)} disabled={!!savedCards[message.attachments[0].card_id]}
                               className={`mt-1.5 w-full h-9 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${savedCards[message.attachments[0].card_id] ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-primary text-white active:scale-[0.98]"}`}
                               data-testid={`save-card-btn-${message.id}`}>

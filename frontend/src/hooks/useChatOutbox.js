@@ -22,24 +22,31 @@ export function useChatOutbox({ chatId, token, onSent, onFailed }) {
     return optimistic;
   }, [chatId]); // eslint-disable-line
 
+  const pendingRef = useRef(pending);
+  useEffect(() => { pendingRef.current = pending; }, [pending]);
+  const inflight = useRef(new Set());
+
   const flush = useCallback(async () => {
-    if (flushing.current || !navigator.onLine || !pending.length) return;
+    if (flushing.current || !navigator.onLine) return;
+    const batch = pendingRef.current.filter((m) => !inflight.current.has(m.id));
+    if (!batch.length) return;
     flushing.current = true;
+    batch.forEach((m) => inflight.current.add(m.id));
     try {
-      for (const msg of pending) {
+      for (const msg of batch) {
         const { id, status, created_at, chat_id, ...body } = msg;
         try {
           const r = await axios.post(`${API}/chats/${chatId}/messages`, body, { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 });
           setPending((prev) => { const next = prev.filter((m) => m.id !== id); persist(next); return next; });
           onSent?.(id, r.data);
         } catch (e) {
-          if (!navigator.onLine || !e?.response) break; // still offline → retry later
+          if (!navigator.onLine || !e?.response) { inflight.current.delete(id); break; } // still offline → retry later
           setPending((prev) => { const next = prev.filter((m) => m.id !== id); persist(next); return next; });
           onFailed?.(id, e);
-        }
+        } finally { inflight.current.delete(id); }
       }
     } finally { flushing.current = false; }
-  }, [pending, chatId, token, onSent, onFailed]);
+  }, [chatId, token, onSent, onFailed]); // eslint-disable-line
 
   useEffect(() => {
     const up = () => { setOnline(true); setTimeout(flush, 400); };

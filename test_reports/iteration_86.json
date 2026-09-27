@@ -1,0 +1,49 @@
+{
+  "summary": "Iteration 86 — Backend (6/6 new + 31/31 iter85 regression = 37/37 pass) and mobile (390x844) frontend testing of chat replies, @mention profile links, offline outbox, save-shared-card, keyboard-aware layout. Backend: POST /api/cards/{id}/save non-owner→{saved:true,already:false} then already:true; owner→400 'Esta tarjeta ya es tuya'; unknown→404; /transfer/received/mine returns the card with via='chat'. REST /chats/{id}/messages accepts reply_to_id + mentions[] and GET returns them; non-participant mentions are filtered out. WS send_message echoes reply_to and mentions in the broadcast. Frontend: right-click on bubble opens popover with 'Responder', 'Respondiendo a Test User' bar appears, sending creates a reply-quote (sender name + preview), clicking the quote adds .bubble-flash to the original #bubble-<id>. Mention links have href /profile/<uuid> (UUID confirmed). Save-card button on shared card shows 'Guardar en mi BRUNO' for non-owner → click → 'Guardada en tu BRUNO' → /wallet shows 'Test NFC Card'. Offline banner appears ('Sin conexión · 1 mensaje en espera'), pending-icon shows on bubble, banner+icon disappear ~5s after online. Keyboard layout: dataset.keyboard toggles closed/open, chat-page height matches simulated 500px viewport, messages-box scrolled to bottom, textarea fully visible, .kb-hide opacity=0 while open and 1 when closed. No horizontal overflow at 390px.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ChatPage save-card-btn (own card)",
+        "issue": "When logged in as newtest@bruno.com (owner/sender of the shared card d16c2745-...), the own card message still renders [data-testid^='save-card-btn-'] (count=1). Per the spec it must NOT be shown to the owner. Server would reject with 400 'Esta tarjeta ya es tuya' if clicked, but the button should be hidden client-side by comparing card.user_id === currentUser.id (or sender === current).",
+        "selector": "[data-testid^='save-card-btn-']",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Offline outbox flush (send while offline → back online)",
+        "issue": "After queuing exactly 1 message offline and going back online, the message is persisted TWICE in the DB (occurrences after reload = 2, both bubbles have the same timestamp 22:24). The banner and pending icon behave correctly, but the flush duplicates. Likely a race in /app/frontend/src/hooks/useChatOutbox.js: the online→up() handler triggers a setTimeout(flush,400) while the useEffect on [online, pending.length] also invokes flush; flushing.current guards concurrent invocations but the two calls capture the SAME stale `pending` array through their closures and can run sequentially, POSTing each item twice. Suggested fix: (a) capture-then-clear pattern — synchronously read pending into a local, immediately setPending([]) & persist([]), then POST from the local; or (b) mark each pending item with sending=true before POST and skip those in the loop.",
+        "affected_selectors": ["[data-testid='offline-banner-text']", "[data-testid='msg-pending-icon']", "[data-testid^='msg-']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration86_chat_replies_offline_save.py",
+    "/app/backend/tests/test_iteration85_groups_mute_calls_transfer.py",
+    "/app/test_reports/pytest/iteration86.xml",
+    "/app/test_reports/pytest/iteration85_regress.xml"
+  ],
+  "action_items": [
+    "FIX (HIGH): useChatOutbox.js duplicates messages on flush when going back online. Use capture-then-clear or per-item sending flag to make flush idempotent.",
+    "FIX (MEDIUM): Hide [data-testid^='save-card-btn-'] when the card belongs to the current user (owner should not see 'Guardar en mi BRUNO' on own shared card).",
+    "Optional: expose data-testid on the 'new group' + button in chat list header for easier smoke-test coverage."
+  ],
+  "critical_code_review_comments": [
+    "useChatOutbox.js: flush closure captures a stale `pending` array; between the online-event setTimeout(flush,400) and the effect-driven flush the same items can be POSTed twice — duplicate messages verified in UI and DB.",
+    "posts_feed.py send_message: only stores reply_to_id (bare id); the WS path stores full reply_to object with sender_name/preview. Client renders reply-quote with sender name from BOTH sources — verify that REST-sourced replies also resolve sender name from participants map (currently the UI test showed the correct sender name, but only because the base message existed in local state). Consider persisting sender_name/preview snapshot on REST too so the quote survives after the parent is scrolled out of the initial pagination window.",
+    "card_transfer.save_card_to_wallet: OK — proper 400/404/upsert semantics. Consider using res.matched_count instead of upserted_id for `already` detection (upserted_id can be non-None even in some drivers when upsert did nothing — motor is fine but future-proof).",
+    "Frontend save button: authorization is only enforced server-side; the button being visible to the owner leaks the endpoint attempt and shows a confusing toast. Hide client-side."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration86_chat_replies_offline_save.py"
+  ],
+  "success_rate": {"backend": "100% (37/37)", "frontend": "~85% (reply flow, mention link, save-card, wallet, keyboard layout, chat list smoke all pass; offline duplicates on flush; owner still sees save button)"},
+  "test_credentials": "newtest@bruno.com / Test1234!, viewer2@bruno.com / Test1234!, viewer3@bruno.com / Test1234!",
+  "seed_data_creation": "Test messages posted into group 655d23d2-b133-4188-a95c-bd8a777c04f4 with 'TEST_iter86' prefix (reply/mentions/offline). viewer3 got card d16c2745-... added to received (via='chat') during test and is removed at start of test class run. Owner will now see a duplicate offline message in the group — main agent may want to purge messages matching /TEST_iter86 OFFLINE \\d+/.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression file test_iteration86_chat_replies_offline_save.py (6 tests) + test_iteration85_groups_mute_calls_transfer.py (31 tests) both green. Frontend gaps to retest after main-agent fix: (1) offline flush duplication — send exactly one message offline then online, reload, expect count=1; (2) newtest logged in on same group must render zero [data-testid^='save-card-btn-']. The reply/mention/keyboard flows are stable and can be assumed working.",
+  "rca of the issue": "Offline-outbox duplication: useChatOutbox.flush uses `flushing.current` for concurrency, but two flush calls scheduled from the online transition (setTimeout in the up() listener + useEffect on [online, pending.length]) can run sequentially. Both closures capture the same non-empty `pending` array; the first drains it (state removes items one by one) but the second closure still iterates its captured copy → each item is POSTed twice. Reproduction: (a) load /chat/{id}, (b) context.set_offline(true), (c) type + Enter, (d) context.set_offline(false), (e) wait ~6s, (f) reload → duplicated bubble. Mitigation: capture pending list into local, setPending([])+persist([]) synchronously, then POST each item from the local list; on error re-queue that specific item."
+}
