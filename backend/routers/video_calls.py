@@ -53,6 +53,34 @@ def _with_token(room_url: str, token: str | None, call_type: str) -> str:
     return f"{room_url}?t={token}"
 
 
+def _fmt_duration(sec: int) -> str:
+    m, s = divmod(max(0, int(sec)), 60)
+    return f"{m}:{s:02d}"
+
+
+async def _log_call_message(call: dict, status: str, actor_id: str):
+    """Insert a system 'call' message into the chat (missed / declined / ended with duration)."""
+    kind = "Videollamada" if call.get("call_type") == "video" else "Llamada de voz"
+    duration = 0
+    if status == "ended" and call.get("answered_at"):
+        try:
+            duration = int((datetime.now(timezone.utc) - datetime.fromisoformat(call["answered_at"])).total_seconds())
+        except Exception:
+            duration = 0
+    label = {"missed": f"{kind} perdida", "declined": f"{kind} rechazada", "ended": f"{kind} · {_fmt_duration(duration)}", "dnd": f"{kind} perdida (No molestar)"}.get(status, kind)
+    msg = {
+        "id": str(uuid.uuid4()), "chat_id": call["chat_id"], "sender_id": call["started_by"], "content": label,
+        "message_type": "call", "attachments": [{"type": "call", "call_type": call.get("call_type", "video"), "status": status, "duration_sec": duration, "call_id": call["id"], "actor_id": actor_id}],
+        "is_read": False, "is_deleted": False, "read_by": [call["started_by"]], "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.messages.insert_one(msg)
+    await db.chats.update_one({"id": call["chat_id"]}, {"$set": {"last_message": label, "last_message_at": msg["created_at"], "updated_at": msg["created_at"]}})
+    try:
+        await ws_manager.broadcast_to_users({"type": "new_message", "chat_id": call["chat_id"], "message": {k: v for k, v in msg.items() if k != "_id"}}, call.get("participants", []))
+    except Exception as e:
+        logger.warning(f"WS call-log broadcast failed: {e}")
+
+
 class VideoCallRequest(BaseModel):
     chat_id: str
     call_type: str = "video"  # video or audio
@@ -62,6 +90,7 @@ class VideoCallResponse(BaseModel):
     room_url: str
     room_name: str
     call_id: str
+    dnd: bool = False
 
 
 @router.post("/start", response_model=VideoCallResponse)
@@ -77,14 +106,14 @@ async def start_video_call(
     if not chat:
         raise HTTPException(status_code=404, detail="Chat not found")
 
-    room_name = f"bruno-{request.chat_id}-{str(uuid.uuid4())[:8]}"
+    room_name = f"bruno-{request.chat_id[:8]}-{uuid.uuid4().hex[:10]}"
     start_video_muted = "true" if request.call_type == "audio" else "false"
     provider = "jitsi"
     caller_url = None
     if _daily_key():
         # Daily.co: private room that expires in 2h; each participant gets its own token
         exp = int(time.time()) + 2 * 3600
-        room = await _daily_post("/rooms", {"name": room_name[:40], "privacy": "private", "properties": {
+        room = await _daily_post("/rooms", {"name": room_name, "privacy": "private", "properties": {
             "exp": exp, "eject_at_room_exp": True, "max_participants": 8, "start_video_off": request.call_type == "audio",
             "enable_prejoin_ui": False, "enable_chat": False,
         }})
@@ -113,6 +142,15 @@ async def start_video_call(
     await db.video_calls.insert_one(call_doc)
 
     other_participants = [p for p in chat["participants"] if p != current_user.id]
+
+    # Do-Not-Disturb: receiver is silenced → register as missed, no ring/push
+    from utils.dnd import is_dnd_active
+    receivers = [u async for u in db.users.find({"id": {"$in": other_participants}}, {"_id": 0, "id": 1, "dnd": 1})]
+    if receivers and all(is_dnd_active(u) for u in receivers):
+        await db.video_calls.update_one({"id": call_id}, {"$set": {"status": "missed", "ended_at": datetime.now(timezone.utc).isoformat(), "dnd": True}})
+        await _log_call_message({**call_doc, "id": call_id}, "dnd", current_user.id)
+        return VideoCallResponse(room_url="", room_name=room_name, call_id=call_id, dnd=True)
+
     call_notification = {
         "type": "incoming_call",
         "call_id": call_id,
@@ -204,6 +242,7 @@ async def decline_call(
         {"id": call_id},
         {"$set": {"status": "declined", "ended_at": datetime.now(timezone.utc).isoformat()}},
     )
+    await _log_call_message(call, "declined", current_user.id)
     try:
         await ws_manager.send_personal_message(
             {"type": "call_declined", "call_id": call_id},
@@ -227,11 +266,15 @@ async def end_call(
     })
     if not call:
         raise HTTPException(status_code=404, detail="Call not found")
+    if call.get("status") in ("ended", "declined", "missed"):
+        return {"status": call["status"]}
 
+    final = "ended" if call.get("status") == "active" else "missed"
     await db.video_calls.update_one(
         {"id": call_id},
-        {"$set": {"status": "ended", "ended_at": datetime.now(timezone.utc).isoformat()}},
+        {"$set": {"status": final, "ended_at": datetime.now(timezone.utc).isoformat()}},
     )
+    await _log_call_message(call, final, current_user.id)
     try:
         await ws_manager.broadcast_to_users(
             {"type": "call_ended", "call_id": call_id},
@@ -240,4 +283,4 @@ async def end_call(
     except Exception as e:
         logger.warning(f"WS end broadcast failed: {e}")
 
-    return {"status": "ended"}
+    return {"status": final}

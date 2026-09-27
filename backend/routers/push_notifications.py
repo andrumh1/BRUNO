@@ -167,6 +167,10 @@ async def send_push_notification(user_id: str, notification: NotificationPayload
     if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
         logging.warning("VAPID keys not configured, skipping push notification")
         return
+
+    from utils.dnd import is_dnd_active
+    if is_dnd_active(await _db.users.find_one({"id": user_id}, {"_id": 0, "dnd": 1})):
+        return
     
     subscriptions = await _db.push_subscriptions.find(
         {"user_id": user_id}

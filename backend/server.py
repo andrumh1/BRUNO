@@ -852,6 +852,25 @@ async def login(user_input: UserLogin):
     
     return Token(access_token=access_token, token_type="bearer", user=user_obj)
 
+@api_router.get("/auth/me/dnd")
+async def get_dnd(current_user: User = Depends(get_current_user)):
+    from utils.dnd import is_dnd_active
+    doc = await db.users.find_one({"id": current_user.id}, {"_id": 0, "dnd": 1})
+    dnd = (doc or {}).get("dnd") or {"enabled": False, "start": "22:00", "end": "07:00", "tz_offset_min": 0}
+    return {**dnd, "active": is_dnd_active(doc)}
+
+@api_router.put("/auth/me/dnd")
+async def update_dnd(payload: dict, current_user: User = Depends(get_current_user)):
+    from utils.dnd import is_dnd_active
+    dnd = {
+        "enabled": bool(payload.get("enabled")),
+        "start": str(payload.get("start") or "22:00")[:5],
+        "end": str(payload.get("end") or "07:00")[:5],
+        "tz_offset_min": int(payload.get("tz_offset_min") or 0),
+    }
+    await db.users.update_one({"id": current_user.id}, {"$set": {"dnd": dnd}})
+    return {**dnd, "active": is_dnd_active({"dnd": dnd})}
+
 @api_router.get("/auth/me")
 async def get_me(current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
     user_dict = current_user.dict()

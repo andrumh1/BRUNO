@@ -189,6 +189,12 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (response.data.dnd) {
+        const { brunoToast } = await import("@/components/bruno/BrunoToast");
+        brunoToast.info("No disponible ahora", { description: "Tiene activado No molestar. La llamada quedó registrada como perdida." });
+        return;
+      }
       
       setVideoCallState({
         isOpen: true,
@@ -526,7 +532,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
     <div className="h-full flex flex-col bg-background">
       {/* Modern Header */}
       <div className="px-3 py-2.5 border-b bg-background/80 backdrop-blur-xl flex items-center gap-3 sticky top-0 z-10">
-        <Button variant="ghost" size="icon" onClick={onBack} className="md:hidden rounded-full h-9 w-9">
+        <Button variant="ghost" size="icon" onClick={onBack} className="md:hidden rounded-full h-9 w-9" aria-label="Volver" data-testid="chat-back-btn">
           <ArrowLeft className="w-4 h-4" />
         </Button>
         
@@ -608,6 +614,21 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
               {msgs.map((message) => {
                 const isOwn = message.sender_id === currentUserId;
                 const reactionsList = aggregateReactions(message.reactions || []);
+                // ── Call log (system message) ──
+                if (message.message_type === "call") {
+                  const a = message.attachments?.[0] || {};
+                  const missed = a.status === "missed" || a.status === "dnd" || a.status === "declined";
+                  const CallIcon = a.call_type === "video" ? Video : Phone;
+                  return (
+                    <div key={message.id} className="flex justify-center my-2" data-testid={`chat-call-${message.id}`}>
+                      <button onClick={() => startVideoCall(a.call_type === "video" ? "video" : "audio")} className={`inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium backdrop-blur-sm active:scale-95 transition-transform ${missed ? "bg-red-500/10 text-red-600 dark:text-red-400" : "bg-muted/70 text-foreground/80"}`} data-testid="chat-call-redial">
+                        <CallIcon className={`w-3.5 h-3.5 ${missed ? "" : "text-emerald-500"}`} />
+                        <span>{message.content}</span>
+                        <span className="text-[10px] text-muted-foreground">· Volver a llamar</span>
+                      </button>
+                    </div>
+                  );
+                }
                 // ── Video note (circular bubble) — special rendering ──
                 if (message.message_type === "video_note" && message.attachments?.[0]?.url) {
                   return (

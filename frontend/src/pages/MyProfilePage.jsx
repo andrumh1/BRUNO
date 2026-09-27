@@ -16,6 +16,7 @@ import MyLikedPostsModal from "@/components/bruno/MyLikedPostsModal";
 import useActiveStories from "@/hooks/useActiveStories";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTour } from "@/components/WelcomeTour";
+import DndSettings from "@/components/DndSettings";
 import axios from "axios";
 import { 
   ArrowLeft,
@@ -424,6 +425,8 @@ const MyProfilePage = () => {
                 <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </button>
 
+              <DndSettings token={token} />
+
               <Link to="/website" onClick={() => setShowSettings(false)} data-testid="profile-website-link">
                 <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
                   <Globe className="w-5 h-5 text-orange-500" />
@@ -662,6 +665,11 @@ const MyProfilePage = () => {
               {posts.map(post => (
                 <Link key={post.id} to={post.video_url ? `/reels?id=${post.id}` : `/post/${post.id}`} data-testid={`profile-post-${post.id}`}>
                   <div className="aspect-square bg-muted rounded-lg overflow-hidden relative no-glass">
+                    {post.visibility === "scheduled" && (
+                      <span className="absolute top-1 left-1 z-10 rounded-full bg-amber-500 text-white text-[9px] font-semibold px-1.5 py-0.5 inline-flex items-center gap-0.5" data-testid={`profile-post-scheduled-${post.id}`}>
+                        <Clock className="w-2.5 h-2.5" /> Programado
+                      </span>
+                    )}
                     {post.thumbnail_url || post.image_url ? (
                       <img src={post.thumbnail_url || post.image_url} alt="" className="w-full h-full object-cover" />
                     ) : post.video_url ? (

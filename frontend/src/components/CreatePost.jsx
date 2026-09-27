@@ -14,7 +14,8 @@ import {
   Loader2,
   CreditCard,
   AtSign,
-  Palette
+  Palette,
+  CalendarClock
 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -30,6 +31,9 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
   const [selectedCard, setSelectedCard] = useState(null);
   const [textStyle, setTextStyle] = useState({ bg: TEXT_BGS[0].id, font: TEXT_FONTS[0].id, align: "center", emoji: null });
   const [showStyle, setShowStyle] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
+  const minSchedule = new Date(Date.now() + 15 * 60000 - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -148,6 +152,7 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
         visibility: "public",
         hashtags: content.match(/#\w+/g)?.map(h => h.slice(1)) || [],
         text_style: media.length === 0 ? textStyle : null,
+        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
       };
       const response = await axios.post(`${API}/posts`, postData, {
         headers: { Authorization: `Bearer ${token}` }
@@ -155,8 +160,13 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
       setContent("");
       setMedia([]);
       setSelectedCard(null);
-      if (onPostCreated) onPostCreated(response.data);
       const { brunoToast } = await import("@/components/bruno/BrunoToast");
+      if (response.data?.visibility === "scheduled") {
+        brunoToast.publish("Publicación programada", { description: `Se publicará el ${new Date(response.data.scheduled_at).toLocaleString("es", { dateStyle: "medium", timeStyle: "short" })}. Solo tú la ves hasta entonces.` });
+        if (onPostCreated) onPostCreated({ ...response.data, _scheduled: true });
+        return;
+      }
+      if (onPostCreated) onPostCreated(response.data);
       brunoToast.publish("Publicación creada", { description: "Ya aparece en tu perfil y en el feed." });
     } catch (error) {
       const { brunoToast } = await import("@/components/bruno/BrunoToast");
@@ -224,6 +234,18 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
                 )}
               </div>
               
+              {/* Schedule */}
+              {showSchedule && (
+                <div className="rounded-2xl bg-muted/40 p-3 space-y-2" data-testid="create-post-schedule">
+                  <div className="flex items-center gap-2 text-sm font-medium"><CalendarClock className="w-4 h-4 text-primary" /> Programar publicación</div>
+                  <input type="datetime-local" value={scheduledAt} min={minSchedule} onChange={(e) => setScheduledAt(e.target.value)} className="w-full h-10 rounded-xl bg-background border border-border/60 px-3 text-sm" data-testid="create-post-schedule-input" />
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{scheduledAt ? `Se publicará el ${new Date(scheduledAt).toLocaleString("es", { dateStyle: "medium", timeStyle: "short" })}` : "Elige fecha y hora (mínimo 15 min)"}</span>
+                    {scheduledAt && <button type="button" onClick={() => setScheduledAt("")} className="text-primary font-medium" data-testid="create-post-schedule-clear">Quitar</button>}
+                  </div>
+                </div>
+              )}
+
               {/* Text style (only for text-only posts) */}
               {media.length === 0 && showStyle && <TextStylePicker value={textStyle} onChange={setTextStyle} text={content} />}
 
@@ -278,6 +300,10 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
                       <Palette className="w-5 h-5" />
                     </Button>
                   )}
+
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowSchedule((v) => !v)} className={scheduledAt || showSchedule ? "text-primary bg-primary/10" : "text-primary"} data-testid="create-post-schedule-btn" aria-label="Programar">
+                    <CalendarClock className="w-5 h-5" />
+                  </Button>
                   
                   {userCards.length > 0 && (
                     <Button type="button" variant="ghost" size="sm" onClick={() => setShowCardPicker(!showCardPicker)} className="text-primary">

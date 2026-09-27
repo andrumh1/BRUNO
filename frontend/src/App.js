@@ -22,6 +22,7 @@ import PictureInPicture from "@/components/PictureInPicture";
 import CameraFloatingButton from "@/components/CameraFloatingButton";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import FloatingBackButton from "@/components/FloatingBackButton";
 
 // Pages
 import LandingPage from "@/pages/LandingPage";
@@ -200,6 +201,7 @@ function App() {
                 <PictureInPicture />
                 <CameraFloatingButton />
                 <MobileBottomNav />
+                <FloatingBackButton />
                 <TourOverlay />
                 <PWAInstallPrompt />
                 <Toaster

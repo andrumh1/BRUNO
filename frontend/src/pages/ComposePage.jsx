@@ -24,7 +24,7 @@ export default function ComposePage() {
         <h1 className="font-bold text-base">Nueva publicación</h1>
       </header>
       <main className="max-w-xl mx-auto p-3 pb-32">
-        <CreatePost userCards={userCards} onPostCreated={(post) => navigate(post?.id ? `/reels?id=${post.id}` : "/reels")} />
+        <CreatePost userCards={userCards} onPostCreated={(post) => navigate(post?._scheduled ? "/my-profile" : post?.id ? `/reels?id=${post.id}` : "/reels")} />
       </main>
     </div>
   );

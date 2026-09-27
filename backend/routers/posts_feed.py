@@ -1,7 +1,9 @@
 """Posts, Feed, Chat, Users, Notifications, and Settings routes.
 Extracted from server.py to reduce monolith size.
 """
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
+import os
+import hmac
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
@@ -74,6 +76,7 @@ class PostCreate(BaseModel):
     remix: Optional[dict] = None
     audio: Optional[dict] = None
     text_style: Optional[dict] = None  # {bg, font} for text-only posts
+    scheduled_at: Optional[str] = None  # ISO datetime → post stays hidden until then
 
 class Like(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -268,6 +271,19 @@ async def create_post(
     post_doc = post.model_dump()
     post_doc['created_at'] = post_doc['created_at'].isoformat()
     post_doc['updated_at'] = post_doc['updated_at'].isoformat()
+
+    # Scheduled publishing: hide under visibility="scheduled" until the cron flips it
+    if post_data.scheduled_at:
+        try:
+            when = datetime.fromisoformat(post_data.scheduled_at.replace("Z", "+00:00"))
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Fecha de programación inválida")
+        if when > datetime.now(timezone.utc):
+            post_doc["scheduled_at"] = when.isoformat()
+            post_doc["scheduled_visibility"] = post_doc.get("visibility", "public")
+            post_doc["visibility"] = "scheduled"
     
     await db.posts.insert_one(post_doc)
     if audio:
@@ -490,6 +506,35 @@ async def get_post_remixes(post_id: str, limit: int = 60, current_user: Optional
     """Duets + stitches made from this post."""
     out = [p async for p in db.posts.find({"remix.source_post_id": post_id, "visibility": "public"}, {"_id": 0}).sort("created_at", -1).limit(limit)]
     return await _hydrate_video_posts(out, current_user.id if current_user else None)
+
+
+async def _publish_due_scheduled_posts():
+    now = datetime.now(timezone.utc)
+    published = 0
+    async for p in db.posts.find({"visibility": "scheduled", "scheduled_at": {"$lte": now.isoformat()}}, {"_id": 0, "id": 1, "scheduled_visibility": 1}):
+        await db.posts.update_one({"id": p["id"]}, {"$set": {"visibility": p.get("scheduled_visibility") or "public", "created_at": now.isoformat(), "updated_at": now.isoformat(), "published_at": now.isoformat()}, "$unset": {"scheduled_visibility": ""}})
+        published += 1
+    if published:
+        logger.info(f"Scheduled posts published: {published}")
+    return published
+
+
+@router.post("/cron/publish-scheduled")
+async def cron_publish_scheduled(request: Request, background: BackgroundTasks):
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    secret = os.environ.get("WEBHOOK_CRON_SECRET")
+    auth = request.headers.get("authorization", "")
+    token = auth[7:] if auth.lower().startswith("bearer ") else ""
+    if not secret or not token or not hmac.compare_digest(token, secret):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    background.add_task(_publish_due_scheduled_posts)
+    return {"accepted": True, "run_id": request.headers.get("x-webhook-id")}
+
+
+@router.get("/posts/scheduled/mine")
+async def my_scheduled_posts(current_user: User = Depends(get_current_user)):
+    posts = await db.posts.find({"user_id": current_user.id, "visibility": "scheduled"}, {"_id": 0}).sort("scheduled_at", 1).to_list(100)
+    return posts
 
 
 @router.delete("/posts/history/videos")
