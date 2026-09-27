@@ -60,7 +60,7 @@ const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws:
 
 
 // Chat View Component with bubble design
-const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
+const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = null }) => {
   const { token } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -105,13 +105,12 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
   // Auto-dial when arriving from "Devolver llamada" (/chat/:id?call=audio|video)
   const autoDialed = useRef(false);
   useEffect(() => {
-    const kind = new URLSearchParams(window.location.search).get("call");
+    const kind = autoCall;
     if (!kind || autoDialed.current || !chat?.id) return;
-    autoDialed.current = true;
-    const t = setTimeout(() => startVideoCall(kind === "video" ? "video" : "audio"), 600);
+    const t = setTimeout(() => { autoDialed.current = true; startVideoCall(kind === "video" ? "video" : "audio"); }, 600);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chat?.id]);
+  }, [chat?.id, autoCall]);
   
   const { isRecording, audioBlob, recordingTime, startRecording, stopRecording, cancelRecording, clearAudio } = useAudioRecorder();
 
@@ -997,6 +996,8 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage }) => {
 // New Chat Modal
 // Main ChatPage Component
 const ChatPage = () => {
+  // Captured once: the parent later rewrites the URL (replace) and would drop ?call=
+  const autoCallRef = useRef(new URLSearchParams(window.location.search).get("call"));
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const { chatId } = useParams();
@@ -1207,6 +1208,7 @@ const ChatPage = () => {
             onBack={handleBack}
             currentUserId={user.id}
             ws={ws}
+            autoCall={autoCallRef.current}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center bg-muted/10">

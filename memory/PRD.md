@@ -1390,3 +1390,11 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - **Programar publicación**: `PostCreate.scheduled_at`; se guarda `visibility:"scheduled"` + `scheduled_visibility`; `POST /api/cron/publish-scheduled` (Bearer `WEBHOOK_CRON_SECRET`) → `.emergent/crons.yml` cada 15 min; `GET /posts/scheduled/mine`. UI: botón calendario en CreatePost, badge "Programado" en perfil (Posts y Reels), `/my-profile?tab=posts`.
 - **Botón atrás global**: `FloatingBackButton.jsx` en rutas sin nav (/lives/:id, /camera, /website, /bruno, /chat/:id) si no hay control propio VISIBLE en el tercio superior.
 - Fix: `Clock` faltaba en imports de MyProfilePage (crash en badge).
+
+## 2026-06 — Llamadas grupales, recordatorio programado, silencio por chat, llamadas perdidas (iteration_84 + fixes)
+- **Silencio por chat**: `POST /chats/{id}/mute` (toggle `muted_by`), `is_muted` en GET /chats; `send_message` omite notificaciones/push a silenciados; `calls/start` trata silenciado como DND (perdida). UI: `chat-mute-btn` en header, `chat-muted-icon-<id>` en lista flotante.
+- **Llamadas perdidas hoy**: `GET /calls/missed/today` (24h, filtra por `started_at`); `MissedCallsToday.jsx` en /notifications con "Devolver" → `/chat/:id?call=audio|video`; ChatPage captura `?call=` en `autoCallRef` (padre) → prop `autoCall` → auto-marca (fix StrictMode: marcar `autoDialed` dentro del timeout).
+- **Recordatorio programado**: cron crea notificación `scheduled_published` + push; plantilla y URL en `notification_realtime.py`; icono/enlace en NotificationsPage.
+- **Grupal**: header de chat muestra nombre de grupo/"N participantes"; el fan-out de `incoming_call` ya llega a todos (sala Daily máx 8). API de creación de grupos aún es 1:1 (pendiente).
+- Fix: `find_one` con proyección vacía era falsy → usar `is None`.
+- ⚠️ Daily.co: la cuenta del usuario muestra "Missing payment method" → debe agregar tarjeta en dashboard.daily.co para que las salas conecten.

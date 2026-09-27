@@ -1,0 +1,48 @@
+{
+  "summary": "Iter 84: Backend for chat mute (POST /api/chats/{id}/mute), missed-calls-today (GET /api/calls/missed/today), scheduled_published notification (POST /api/cron/publish-scheduled → notification of type 'scheduled_published' with target_type='post'), and 404 on unknown chat all PASS (5/5, 1 skip). Group chat creation intentionally skipped: /api/chats only supports 1:1 (participant_id query param). Frontend: mute toggle button (chat-mute-btn) toggles amber Bell↔BellOff with correct toasts and persists across reload; floating chat list shows chat-muted-icon-<id>; chat-header-title renders the other user's name for 1:1. Missed-calls-today block renders on /notifications with count 11 and functional missed-call-redial-<id> that navigates to /chat/<chatId>?call=audio|video. TWO REAL BUGS FOUND: (a) Auto-dial from ?call= param does NOT open the call modal / Daily iframe (waited 10s at /chat/<id>?call=audio, no in-call-screen, no iframe). (b) scheduled_published notifications show generic 'Tienes una nueva notificación' instead of spec text 'Tu publicación programada ya está en línea' because notification_realtime.py has no message template for that type. Also confirmed iter83 regression: 'Programado' amber badge still absent on my-profile grid though scheduled posts are visible.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/chats", "issue": "Only 1:1 chat creation supported (query param participant_id). No API to create is_group=true chats, so 'ring everyone (max 8)' group-call spec cannot be validated end-to-end via API."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ChatPage auto-dial from ?call= param", "issue": "Navigating (or being navigated by 'Devolver' redial button) to /chat/<id>?call=audio (or ?call=video) does NOT auto-open the call modal. After 10s no [data-testid='in-call-screen'] nor daily.co iframe appears. Manual click of start-video-call-btn works, but the auto-dial useEffect in ChatView (line ~107) is not triggering startVideoCall in practice. Redial buttons therefore only navigate but don't call.", "selector": "[data-testid='in-call-screen']", "priority": "HIGH"},
+      {"component": "NotificationsPage scheduled_published text", "issue": "Notifications of type 'scheduled_published' render with generic body 'Tienes una nueva notificación' (fallback from utils/notification_realtime.py line 81). Spec requires the text 'Tu publicación programada ya está en línea'. Icon (Sparkles) and target url (/reels?id=<postId>) are correct in NotificationsPage.jsx, but backend never populates message/body for this type.", "selector": "[data-testid^='notif-']", "priority": "HIGH"},
+      {"component": "MyProfilePage Programado badge (regression from iter83)", "issue": "Scheduled tiles ARE shown in the Posts grid, but no [data-testid^='profile-post-scheduled-'] amber 'Programado' badge is rendered on those tiles.", "selector": "[data-testid^='profile-post-scheduled-']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Missed call → Devolver redial", "issue": "Redial navigates to /chat/<chatId>?call=<type> correctly, but the call is NOT auto-started, so the user still has to tap the phone/video button manually. This defeats the point of the 'Devolver' shortcut.", "affected_selectors": ["[data-testid^='missed-call-redial-']", "[data-testid='start-audio-call-btn']", "[data-testid='start-video-call-btn']"]}
+    ],
+    "design_issues": [
+      {"screen": "/map?explore=1", "issues": ["Google Maps returns BillingNotEnabledMapError in console (env/billing config, pre-existing; likely non-blocking for explore panel)."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration84_mute_missed_scheduled.py",
+    "/app/test_reports/pytest/iter84.xml"
+  ],
+  "action_items": [
+    "Fix ChatView auto-dial in /app/frontend/src/pages/ChatPage.jsx (lines ~105-114). The useEffect fires when chat?.id becomes defined and calls startVideoCall via setTimeout, but no call actually starts. Suspect: startVideoCall is defined AFTER the useEffect and captured stale in ref, OR the parent unmounts/remounts ChatView so autoDialed.current gets reset without chat.id truthy yet, OR startVideoCall itself throws silently. Add a console.log inside the setTimeout to confirm. Confirm via manual reproduction: open /chat/fe8ed855-...-b11b5f69?call=audio → no modal opens.",
+    "Add scheduled_published message template in /app/backend/utils/notification_realtime.py (dict at line ~72). Add key: 'scheduled_published': 'Tu publicación programada ya está en línea' so the alerts row shows the spec text.",
+    "Fix MyProfilePage Programado badge rendering (still broken since iter83). Scheduled tiles show up in the grid, but no profile-post-scheduled-<id> element is emitted.",
+    "Consider adding a group-chat creation endpoint (POST /api/chats with participant_ids[] + is_group) so the 'group calls ring all participants (max 8)' feature can be validated end-to-end and used by users."
+  ],
+  "critical_code_review_comments": [
+    "backend/routers/posts_feed.py toggle_chat_mute: uses $addToSet/$pull with returning muted flag — clean.",
+    "backend/routers/video_calls.py start_video_call correctly treats a receiver-set of only muted/dnd users as 'no-ring, register missed, room_url='', dnd=True'. Good.",
+    "backend/routers/video_calls.py missed_calls_today filters started_by != current_user and status in [missed, declined] within 24h — matches spec.",
+    "backend/utils/notification_realtime.py MISSING message template for 'scheduled_published' — falls back to generic string. Add it.",
+    "frontend/src/pages/ChatPage.jsx auto-dial useEffect is placed inside ChatView but startVideoCall may be defined after the effect. Since ESLint dep list is disabled (react-hooks/exhaustive-deps disabled), it's easy to miss a stale reference. Consider moving the effect after startVideoCall definition or referencing it via ref.",
+    "frontend/src/pages/NotificationsPage.jsx correctly maps scheduled_published → /reels?id=<postId> in click handler (line 228) and uses Sparkles icon with amber color — good."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration84_mute_missed_scheduled.py"],
+  "success_rate": {"backend": "100% (5/5 tests, 1 informational skip for group chat)", "frontend": "~62% (mute UI + header + missed-calls list + redial nav = pass; auto-dial + scheduled_published text + Programado badge = fail)"},
+  "test_credentials": "newtest@bruno.com / Test1234! (id b6a3059d-3c5c-4ffd-9fc2-b8dff4a420b9), viewer2@bruno.com / Test1234! (id 3636b29b-ae7d-49c4-8a1e-2312500d0eeb). WEBHOOK_CRON_SECRET and DAILY_API_KEY read from backend/.env.",
+  "seed_data_creation": "1 scheduled text post by newtest ('TEST_iter84 scheduled reminder'), auto-published by cron in the test run and left in /reels feed. 2 message rows in chat fe8ed855 (TEST_iter84 muted ping / unmuted ping). ~1 DND-missed call + 1 real Daily call (ended) from newtest→viewer2, plus 1 redial audio call attempt from viewer2→newtest during frontend test. viewer2 DND left DISABLED. chat fe8ed855 left UNMUTED for both users at the end.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression suite is /app/backend/tests/test_iteration84_mute_missed_scheduled.py (5 pass + 1 skip). Reproduction for auto-dial bug: login as viewer2 (or newtest), go to /notifications, tap any missed-call-redial-*. URL updates to /chat/<id>?call=<type> but no call modal opens — waited 10s. Alternative repro: paste /chat/fe8ed855-bf15-488f-bf20-5034b11b5f69?call=audio directly in URL. Reproduction for scheduled_published text: /notifications after cron publishes a scheduled post shows 'Tienes una nueva notificación' instead of the spec string. Reproduction for Programado badge: /my-profile?tab=posts as newtest — tiles show scheduled content but no data-testid^='profile-post-scheduled-' element. Chat mute + missed-calls-today + redial nav + chat-muted-icon in floating list all work.",
+  "rca of the issue": "Auto-dial bug RCA: ChatView useEffect ([chat?.id] dep) closes over startVideoCall which is defined LATER in the same component. Because ESLint hooks/deps is disabled at the file, the captured startVideoCall may be undefined at first render when the effect body runs (setTimeout preserves the reference at the time the callback function was created; if startVideoCall is a const arrow declared below the effect but hoisted-less, the reference is fine at call time — but the click may then be silently no-op because chat is still not fully hydrated with other_participants at that moment, and startVideoCall calls POST /api/calls/start with chat.id which is present but modal state isn't updated). Recommend logging inside the setTimeout to confirm and moving the effect below startVideoCall or replacing with a queueMicrotask that waits for chat to settle. scheduled_published text RCA: notification_realtime._enrich_notification builds notif['message'] from a dict keyed by ntype (line 72) and 'scheduled_published' is missing → falls back to notif.get('title') or 'Tienes una nueva notificación'. In posts_feed.py at line 518 the Notification is created without a message field, so the frontend receives the generic text. Fix: add 'scheduled_published': 'Tu publicación programada ya está en línea' to that dict OR set title/message when the Notification is created in _publish_due_scheduled_posts."
+}
