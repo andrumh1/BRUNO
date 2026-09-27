@@ -6,7 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { downloadVCard } from "@/pages/TransferReceivePage";
-import { ArrowLeft, Contact, Loader2, Nfc, Trash2, Wallet } from "lucide-react";
+import { ArrowLeft, Contact, Loader2, Nfc, Send, Trash2, Wallet } from "lucide-react";
+import ShareCardToChatSheet from "@/components/chat/ShareCardToChatSheet";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -15,6 +16,7 @@ export default function ReceivedCardsPage() {
   const navigate = useNavigate();
   const { token } = useAuth();
   const [cards, setCards] = useState(null);
+  const [shareCard, setShareCard] = useState(null);
 
   useEffect(() => {
     axios.get(`${API}/transfer/received/mine`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setCards(r.data)).catch(() => setCards([]));
@@ -51,7 +53,8 @@ export default function ReceivedCardsPage() {
                     <p className="text-[10px] text-muted-foreground mt-0.5">De {c.sender?.name} · {new Date(c.received_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}{c.via?.startsWith("nfc") ? " · NFC" : ""}</p>
                   </div>
                 </button>
-                <div className="flex flex-col justify-center pr-2 gap-1">
+                <div className="flex flex-col justify-center pr-2 gap-0.5">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-primary" onClick={() => setShareCard(c)} aria-label="Reenviar a un chat" data-testid={`received-share-${c.id}`}><Send className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => downloadVCard(c)} aria-label="Añadir a contactos" data-testid={`received-vcard-${c.id}`}><Contact className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-red-500" onClick={() => remove(c.id)} aria-label="Quitar" data-testid={`received-remove-${c.id}`}><Trash2 className="w-4 h-4" /></Button>
                 </div>
@@ -59,6 +62,7 @@ export default function ReceivedCardsPage() {
             );
           })}
       </div>
+      <ShareCardToChatSheet card={shareCard} isOpen={!!shareCard} onClose={() => setShareCard(null)} token={token} />
     </div>
   );
 }

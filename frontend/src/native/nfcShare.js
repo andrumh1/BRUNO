@@ -5,11 +5,27 @@
  *  • iPhone: cannot emulate NFC tags (Apple restriction); it CAN read tags/HCE in background,
  *    and shares via AirDrop through the Web Share sheet. QR + link always work everywhere.
  */
+import { registerPlugin } from "@capacitor/core";
 import { isNative, isAndroid, isIOS } from "./capacitor";
+
+/* Native Android HCE plugin (see /frontend/native-android/nfc-hce). Web/iOS fall back to a no-op. */
+const BrunoNfcHce = registerPlugin("BrunoNfcHce", {
+  web: () => Promise.resolve({
+    isSupported: async () => ({ supported: false, enabled: false }),
+    startEmulation: async () => ({ emulating: false }),
+    stopEmulation: async () => {},
+  }),
+});
+let hceSupported = null;
+export const checkHceSupport = async () => {
+  if (hceSupported !== null) return hceSupported;
+  try { hceSupported = isNative() && isAndroid() && !!(await BrunoNfcHce.isSupported())?.supported; } catch { hceSupported = false; }
+  return hceSupported;
+};
 
 export const nfcCapabilities = () => {
   const webNfc = typeof window !== "undefined" && "NDEFReader" in window;
-  const hce = !!window?.Capacitor?.Plugins?.BrunoNfcHce;
+  const hce = hceSupported === true || !!window?.Capacitor?.Plugins?.BrunoNfcHce;
   return {
     webNfc,
     hce,
@@ -47,11 +63,10 @@ export const readTagUrl = ({ signal } = {}) =>
 
 /** Android native HCE (phone acts as an NFC tag the iPhone can read). No-op if plugin missing. */
 export const startHceEmulation = async (url) => {
-  const plugin = window?.Capacitor?.Plugins?.BrunoNfcHce;
-  if (!plugin) return false;
-  try { await plugin.startEmulation({ url }); return true; } catch { return false; }
+  if (!(await checkHceSupport())) return false;
+  try { return !!(await BrunoNfcHce.startEmulation({ url }))?.emulating; } catch { return false; }
 };
 export const stopHceEmulation = async () => {
-  const plugin = window?.Capacitor?.Plugins?.BrunoNfcHce;
-  if (plugin) { try { await plugin.stopEmulation(); } catch { /* ignore */ } }
+  if (hceSupported !== true) return;
+  try { await BrunoNfcHce.stopEmulation(); } catch { /* ignore */ }
 };

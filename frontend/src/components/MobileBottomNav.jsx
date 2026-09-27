@@ -78,7 +78,7 @@ const MobileBottomNav = () => {
       <>
         <div className="h-3" />
         <div
-          className={`fixed left-0 right-0 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
+          className={`kb-hide fixed left-0 right-0 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
           style={{
             bottom: 'calc(env(safe-area-inset-bottom, 0px) + 6px)',
             pointerEvents: 'none',
@@ -123,7 +123,7 @@ const MobileBottomNav = () => {
     <>
       <div className="h-20" />
       <nav 
-        className={`fixed left-3 right-3 animate-in slide-in-from-bottom-4 duration-300 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
+        className={`kb-hide fixed left-3 right-3 animate-in slide-in-from-bottom-4 duration-300 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
         style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)', isolation: 'isolate' }}
         data-testid="mobile-bottom-nav"
         {...touchHandlers}

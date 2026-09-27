@@ -195,6 +195,7 @@ class MessageCreate(BaseModel):
     message_type: str = "text"
     attachments: List[dict] = []
     reply_to_id: Optional[str] = None
+    mentions: List[str] = []  # user ids @mentioned (break through mutes)
 
 class Notification(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1818,6 +1819,7 @@ async def send_message(
     )
     
     message_doc = message.model_dump()
+    message_doc["mentions"] = [m for m in (message_data.mentions or []) if m in chat["participants"]]
     message_doc['created_at'] = message_doc['created_at'].isoformat()
     message_doc['updated_at'] = message_doc['updated_at'].isoformat()
     
@@ -1835,32 +1837,10 @@ async def send_message(
         }
     )
     
-    # Create notification for other participants (skip users who muted this chat)
-    from routers.push_notifications import notify_new_message
-    from utils.chat_mute import muted_user_ids
-    muted_by = muted_user_ids(chat)
-    sender_label = current_user.name or "Alguien"
-    if chat.get("is_group") and chat.get("name"):
-        sender_label = f"{sender_label} · {chat['name']}"
-    for participant_id in chat["participants"]:
-        if participant_id != current_user.id and participant_id not in muted_by:
-            notification = Notification(
-                user_id=participant_id,
-                actor_id=current_user.id,
-                type="message",
-                target_id=chat_id,
-                target_type="chat",
-                content=message_data.content[:100] if message_data.content else "Sent an attachment"
-            )
-            notif_doc = notification.model_dump()
-            notif_doc['created_at'] = notif_doc['created_at'].isoformat()
-            await db.notifications.insert_one(notif_doc)
-            await emit_notification_ws(notif_doc)
-            
-            # Send push notification
-            msg_preview = message_data.content[:50] if message_data.content else "Envió un archivo"
-            await notify_new_message(participant_id, sender_label, msg_preview)
-    
+    # Notifications (muted participants skipped unless @mentioned)
+    from utils.chat_notify import notify_chat_message
+    await notify_chat_message(chat, current_user.id, current_user.name or "Alguien", message_data.content, message_data.mentions, bool(message_data.attachments))
+
     # Add sender info to response
     profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0})
     username = current_user.name or current_user.email.split("@")[0]

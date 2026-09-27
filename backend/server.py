@@ -2171,6 +2171,8 @@ async def websocket_chat(websocket: WebSocket, token: str):
                 content = data.get("content", "")
                 message_type = data.get("message_type", "text")
                 attachments = data.get("attachments", [])
+                mentions = [m for m in (data.get("mentions") or []) if isinstance(m, str)]
+                reply_to = data.get("reply_to")
                 
                 # Verify user is participant of the chat
                 chat = await db.chats.find_one({
@@ -2193,6 +2195,8 @@ async def websocket_chat(websocket: WebSocket, token: str):
                     "content": content,
                     "message_type": message_type,
                     "attachments": attachments,
+                    "mentions": [m for m in mentions if m in chat["participants"]],
+                    "reply_to": reply_to if isinstance(reply_to, dict) else None,
                     "is_read": False,
                     "read_by": [user.id],
                     "is_deleted": False,
@@ -2229,6 +2233,8 @@ async def websocket_chat(websocket: WebSocket, token: str):
                         "content": content,
                         "message_type": message_type,
                         "attachments": attachments,
+                        "mentions": message_doc["mentions"],
+                        "reply_to": message_doc["reply_to"],
                         "is_read": False,
                         "created_at": created_at,
                         "sender": sender_info
@@ -2237,6 +2243,11 @@ async def websocket_chat(websocket: WebSocket, token: str):
                 
                 # Send to all participants
                 await ws_manager.broadcast_to_users(message_response, chat["participants"])
+                try:
+                    from utils.chat_notify import notify_chat_message
+                    await notify_chat_message(chat, user.id, user.name or "Alguien", content, message_doc["mentions"], bool(attachments))
+                except Exception as e:
+                    logger.warning(f"WS chat notification failed: {e}")
             
             elif action == "typing":
                 chat_id = data.get("chat_id")

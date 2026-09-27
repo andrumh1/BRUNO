@@ -1,59 +1,69 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 /**
- * useVisualViewportHeight
+ * useVisualViewportHeight — keeps CSS vars in sync with the on-screen keyboard, without
+ * re-rendering React on every visualViewport event (that caused flicker on mobile).
  *
- * Tracks the actual visible area height as the on-screen keyboard opens/closes.
+ *   --app-vh      visible height (px)             --app-kb  keyboard height (px)
+ *   --app-vv-top  visualViewport.offsetTop (px)   html[data-keyboard="open|closed"]
  *
- *  • Modern mobile browsers expose `window.visualViewport`. When the keyboard
- *    appears, `visualViewport.height` shrinks; we sync it into a CSS variable
- *    (`--app-vh`) and an inline state value so the chat layout can avoid the
- *    typical 100vh-keyboard-overlap problem.
- *  • Falls back to `window.innerHeight` for browsers without visualViewport.
- *
- * Returns `{ vh, keyboardHeight }` where:
- *    vh             — visible area height (px)
- *    keyboardHeight — diff between document/window height and visible height (px)
+ * Emits `bruno:viewport` {open, kb, vh} when the keyboard state changes.
  */
-export function useVisualViewportHeight() {
-  const [vh, setVh] = useState(() =>
-    typeof window === "undefined"
-      ? 0
-      : window.visualViewport?.height || window.innerHeight
-  );
-  const [kb, setKb] = useState(0);
+const KB_MIN = 120;
+const isEditable = (el) => !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+const coarse = () => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
 
+export function useVisualViewportHeight() {
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return undefined;
+    const root = document.documentElement;
+    let raf = 0;
+    let lastOpen = null;
 
     const apply = () => {
+      raf = 0;
       const vv = window.visualViewport;
-      const next = vv?.height || window.innerHeight;
-      const full = window.innerHeight;
-      const diff = Math.max(full - next, 0);
-      setVh(next);
-      setKb(diff);
-      document.documentElement.style.setProperty("--app-vh", `${next}px`);
-      document.documentElement.style.setProperty("--app-kb", `${diff}px`);
+      const next = Math.round(vv?.height || window.innerHeight);
+      const diff = Math.max(Math.round(window.innerHeight - next), 0);
+      const focused = coarse() && isEditable(document.activeElement);
+      const open = diff > KB_MIN || focused;
+      root.style.setProperty("--app-vh", `${next}px`);
+      root.style.setProperty("--app-kb", `${diff}px`);
+      root.style.setProperty("--app-vv-top", `${Math.max(0, Math.round(vv?.offsetTop || 0))}px`);
+      if (open !== lastOpen) {
+        lastOpen = open;
+        root.dataset.keyboard = open ? "open" : "closed";
+        window.dispatchEvent(new CustomEvent("bruno:viewport", { detail: { open, kb: diff, vh: next } }));
+      }
     };
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(apply); };
 
     apply();
     const vv = window.visualViewport;
-    if (vv) {
-      vv.addEventListener("resize", apply);
-      vv.addEventListener("scroll", apply);
-    }
-    window.addEventListener("resize", apply);
-    window.addEventListener("orientationchange", apply);
+    vv?.addEventListener("resize", schedule);
+    vv?.addEventListener("scroll", schedule);
+    window.addEventListener("resize", schedule);
+    window.addEventListener("orientationchange", schedule);
+    // Focus-based detection (Chrome Android with interactive-widget=resizes-content shrinks innerHeight too)
+    const onFocus = () => setTimeout(schedule, 50);
+    const onBlur = () => setTimeout(schedule, 120);
+    document.addEventListener("focusin", onFocus);
+    document.addEventListener("focusout", onBlur);
     return () => {
-      if (vv) {
-        vv.removeEventListener("resize", apply);
-        vv.removeEventListener("scroll", apply);
-      }
-      window.removeEventListener("resize", apply);
-      window.removeEventListener("orientationchange", apply);
+      if (raf) cancelAnimationFrame(raf);
+      vv?.removeEventListener("resize", schedule);
+      vv?.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("orientationchange", schedule);
+      document.removeEventListener("focusin", onFocus);
+      document.removeEventListener("focusout", onBlur);
+      root.dataset.keyboard = "closed";
     };
   }, []);
+}
 
-  return { vh, keyboardHeight: kb };
+/** Mount once at app root so every page (search inputs, composer, chat) shares the same state. */
+export function KeyboardViewportManager() {
+  useVisualViewportHeight();
+  return null;
 }

@@ -1500,3 +1500,13 @@ video, canvas, img, .no-glass, .no-glass * {
 /* OSM fallback tiles tinted to the BRUNO warm palette */
 .bruno-osm-tiles { filter: sepia(0.28) saturate(1.15) hue-rotate(-8deg) brightness(1.03); }
 .bruno-osm-pin { background: transparent; border: 0; }
+
+/* ── Keyboard-aware layout (mobile) ─────────────────────────────────────── */
+/* While the on-screen keyboard is open, floating chrome (nav pill, AI/chat bubbles) is hidden
+   so it never jumps/flickers over the input; the chat panel resizes to the visual viewport. */
+html[data-keyboard="open"] .kb-hide { opacity: 0 !important; pointer-events: none !important; transition: opacity .15s ease; }
+html.chat-open, html.chat-open body { overflow: hidden !important; height: 100%; overscroll-behavior: none; }
+/* iOS Safari auto-zooms into inputs smaller than 16px → looks like a "flash" when the keyboard opens */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: max(16px, 1em) !important; }
+}

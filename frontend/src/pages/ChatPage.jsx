@@ -18,7 +18,6 @@ import TypingDots from "@/components/bruno/TypingDots";
 import BrunoAvatar from "@/components/bruno/BrunoAvatar";
 import { useStoryActivity } from "@/contexts/StoryActivityContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
-import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
 import VideoNoteRecorder from "@/components/bruno/VideoNoteRecorder";
 import useAudioRecorder from "@/hooks/useAudioRecorder";
 import AudioPlayer from "@/components/chat/AudioPlayer";
@@ -28,6 +27,7 @@ import NewChatModal from "@/components/chat/NewChatModal";
 import NewGroupModal from "@/components/chat/NewGroupModal";
 import GroupInfoSheet from "@/components/chat/GroupInfoSheet";
 import MuteMenu, { formatMutedUntil } from "@/components/chat/MuteMenu";
+import MentionPicker, { mentionHandle } from "@/components/chat/MentionPicker";
 import LocationMessagePreview from "@/components/chat/LocationMessagePreview";
 import axios from "axios";
 import { 
@@ -96,6 +96,20 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
   const groupName = chatTitle(chat);
   const [muteState, setMuteState] = useState({ muted: !!chat?.is_muted, until: chat?.muted_until || null });
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [groupMembers, setGroupMembers] = useState([]);
+  const mentionsRef = useRef([]); // [{id, handle}]
+  useEffect(() => {
+    if (!isGroup || !chat?.id) { setGroupMembers([]); return; }
+    axios.get(`${API}/chats/${chat.id}/info`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setGroupMembers(r.data?.members || [])).catch(() => {});
+  }, [isGroup, chat?.id, chat?.members_count, token]);
+  const mentionMatch = isGroup ? /(?:^|\s)@([^\s@]*)$/.exec(newMessage || "") : null;
+  const mentionQuery = mentionMatch ? mentionMatch[1] : null;
+  const pickMention = (m) => {
+    const handle = mentionHandle(m);
+    setNewMessage((prev) => prev.replace(/(^|\s)@[^\s@]*$/, `$1@${handle} `));
+    if (!mentionsRef.current.some((x) => x.id === m.id)) mentionsRef.current.push({ id: m.id, handle });
+  };
+  const collectMentions = (text) => mentionsRef.current.filter((x) => (text || "").includes(`@${x.handle}`)).map((x) => x.id);
   useEffect(() => { setMuteState({ muted: !!chat?.is_muted, until: chat?.muted_until || null }); }, [chat?.id, chat?.is_muted, chat?.muted_until]);
   // Auto-unmute in the UI when the temporary mute expires
   useEffect(() => {
@@ -207,9 +221,20 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
     };
   }, [ws, chat?.id, currentUserId, videoCallState.callId]);
 
+  const messagesBoxRef = useRef(null);
+  const scrollToBottom = useCallback((smooth = true) => {
+    const box = messagesBoxRef.current;
+    if (!box) return;
+    if (smooth && box.scrollTo) box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
+    else box.scrollTop = box.scrollHeight;
+  }, []);
+  useEffect(() => { scrollToBottom(true); }, [messages, scrollToBottom]);
+  // Keyboard opened/closed → keep the conversation pinned to the last message
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const onViewport = () => { scrollToBottom(false); setTimeout(() => scrollToBottom(false), 220); };
+    window.addEventListener("bruno:viewport", onViewport);
+    return () => window.removeEventListener("bruno:viewport", onViewport);
+  }, [scrollToBottom]);
 
   // Video call functions
   const startVideoCall = async (callType = "video") => {
@@ -452,8 +477,10 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
         content: newMessage.trim(),
         message_type: pendingMedia ? (pendingMedia.type.startsWith("image") ? "image" : pendingMedia.type.startsWith("video") ? "video" : "file") : "text",
         attachments: pendingMedia ? [pendingMedia] : [],
+        mentions: collectMentions(newMessage),
         ...(replyTo ? { reply_to: { id: replyTo.id, sender_name: replyTo.name, preview: replyTo.preview, content: replyTo.body } } : {})
       };
+      mentionsRef.current = [];
       
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: "send_message", chat_id: chat.id, ...messageData }));
@@ -652,7 +679,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
       />
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+      <div ref={messagesBoxRef} className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-4" style={{ WebkitOverflowScrolling: "touch" }} data-testid="chat-messages-box">
         {loading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -819,7 +846,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                       {/* Text content with @mention parsing */}
                       {message.content && message.message_type !== 'audio' && message.message_type !== 'sticker' && message.message_type !== 'card' && message.message_type !== 'location_share' && message.message_type !== 'reel' && (
                         <p className="text-sm whitespace-pre-wrap break-words">
-                          {message.content.split(/(@\w+)/g).map((part, pi) => {
+                          {message.content.split(/(@[\p{L}\p{N}_]+)/gu).map((part, pi) => {
                             if (part.startsWith("@")) {
                               const uname = part.slice(1);
                               return (
@@ -970,6 +997,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
 
       {/* Bruno Pill Input */}
       <div className="border-t bg-background/80 backdrop-blur-xl">
+        {isGroup && <MentionPicker members={groupMembers} query={mentionQuery} onPick={pickMention} currentUserId={currentUserId} />}
         <BrunoPillInput
           value={newMessage}
           onChange={setNewMessage}
@@ -1034,8 +1062,20 @@ const ChatPage = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
 
-  // Track visual viewport (keyboard avoidance on mobile)
-  useVisualViewportHeight();
+  // Lock the document while the chat is open: the chat is a fixed, keyboard-aware panel
+  // (height = visual viewport) so iOS/Android never scroll the page when the keyboard opens.
+  useEffect(() => {
+    const prev = { html: document.documentElement.style.overflow, body: document.body.style.overflow, pos: document.body.style.position };
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.documentElement.classList.add("chat-open");
+    return () => {
+      document.documentElement.style.overflow = prev.html;
+      document.body.style.overflow = prev.body;
+      document.body.style.position = prev.pos;
+      document.documentElement.classList.remove("chat-open");
+    };
+  }, []);
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1245,9 +1285,9 @@ const ChatPage = () => {
 
   return (
     <div
-      className="flex bg-background overflow-hidden"
+      className="flex bg-background overflow-hidden fixed left-0 right-0 w-full"
       data-testid="chat-page"
-      style={{ height: "var(--app-vh, 100dvh)" }}
+      style={{ top: "var(--app-vv-top, 0px)", height: "var(--app-vh, 100dvh)" }}
     >
       {/* Chat List - Hidden on mobile when chat is selected */}
       <div className={`${isMobile && selectedChat ? "hidden" : "flex"} w-full md:w-96 border-r`}>

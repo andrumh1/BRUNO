@@ -86,6 +86,7 @@ export const NavScrollProvider = ({ children }) => {
   // expand only on a clear upward scroll. The nav should disappear during
   // interactions and reappear only by intent (swipe-up or returning to feed).
   const handleScroll = useCallback(() => {
+    if (document.documentElement.dataset.keyboard === "open") return;
     const currentY = window.scrollY;
     if (currentY > lastScrollY + 8 && currentY > 24) setMinimized(true);
     else if (currentY < lastScrollY - 48) setMinimized(false);

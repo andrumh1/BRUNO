@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
-import { nfcCapabilities, writeUrlToTag, startHceEmulation, stopHceEmulation } from "@/native/nfcShare";
+import { nfcCapabilities, writeUrlToTag, startHceEmulation, stopHceEmulation, checkHceSupport } from "@/native/nfcShare";
 import { ArrowLeft, Check, Copy, Loader2, Nfc, QrCode, RefreshCw, Share2, Smartphone, Wallet, Wifi } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
@@ -30,7 +30,9 @@ export default function CardTransferPage() {
   const [copied, setCopied] = useState(false);
   const [receivers, setReceivers] = useState([]);
   const abortRef = useRef(null);
-  const caps = nfcCapabilities();
+  const [hce, setHce] = useState(false);
+  useEffect(() => { checkHceSupport().then(setHce); }, []);
+  const caps = { ...nfcCapabilities(), hce };
   const headers = { Authorization: `Bearer ${token}` };
 
   const createToken = useCallback(async () => {
@@ -70,7 +72,11 @@ export default function CardTransferPage() {
   }, [transfer, receivers.length]); // eslint-disable-line
 
   // Native Android: emulate a tag so iPhones/Androids read it with a tap
-  useEffect(() => { if (transfer?.url && caps.hce) startHceEmulation(transfer.url); }, [transfer?.url, caps.hce]);
+  useEffect(() => {
+    if (!transfer?.url || !hce) return undefined;
+    startHceEmulation(transfer.url).then((ok) => { if (ok) setNfcState((s) => (s === "idle" ? "emitting" : s)); });
+    return () => { stopHceEmulation(); };
+  }, [transfer?.url, hce]);
 
   const startNfc = async () => {
     if (!transfer?.url) return;
@@ -120,7 +126,7 @@ export default function CardTransferPage() {
             <motion.div animate={{ x: [0, -10, -10, 0] }} transition={{ repeat: Infinity, duration: 3, repeatDelay: 0.6 }}><Phone label="Android · iPhone" color="#fff" filled /></motion.div>
           </div>
           <div className="relative text-center">
-            <p className="font-bold text-lg leading-tight">{nfcState === "written" ? "¡Transferida!" : nfcState === "waiting" ? "Acerca los teléfonos…" : "Acerca tu teléfono al otro"}</p>
+            <p className="font-bold text-lg leading-tight">{nfcState === "written" ? "¡Transferida!" : nfcState === "waiting" ? "Acerca los teléfonos…" : nfcState === "emitting" ? "Emitiendo por NFC · acerca el otro teléfono" : "Acerca tu teléfono al otro"}</p>
             <p className="text-xs text-white/85 mt-1">
               {caps.hce ? "Tu teléfono está emitiendo la tarjeta por NFC. Cualquier Android o iPhone la recibe con un toque." :
                caps.webNfc ? "Pulsa Activar NFC y acerca el otro teléfono o un tag PIUP." :

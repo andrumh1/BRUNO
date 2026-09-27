@@ -595,7 +595,7 @@ const FloatingBubbles = () => {
 
           {/* AI pill — circular bubble aligned to LEFT of the nav pill.
               Gap of 12px between AI bubble edge and pill edge for breathing room. */}
-          <div className={`fixed z-[10000] transition-opacity duration-300 ease-out ${
+          <div className={`kb-hide fixed z-[10000] transition-opacity duration-300 ease-out ${
             idle ? 'opacity-40' : 'opacity-100'
           }`}
             style={{
@@ -628,7 +628,7 @@ const FloatingBubbles = () => {
 
       {/* === EXPANDED STATE: Colored circle above nav bar === */}
       {!minimized && (
-        <div className="fixed z-[10000] left-3 transition-all duration-300 ease-out"
+        <div className="kb-hide fixed z-[10000] left-3 transition-all duration-300 ease-out"
           style={{ bottom: 'calc(var(--nav-reserve, 88px) + 10px)' }}>
           <button
             onClick={() => setShowAIChat(!showAIChat)}

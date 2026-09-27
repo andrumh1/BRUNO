@@ -572,7 +572,7 @@ const FloatingChatBubble = () => {
 
       {/* === Floating chat bubble — EXPANDED state: full circle === */}
       {!minimized && (
-        <div className="fixed z-[10000] right-3 transition-all duration-300 ease-out"
+        <div className="kb-hide fixed z-[10000] right-3 transition-all duration-300 ease-out"
           style={{ bottom: 'calc(var(--nav-reserve, 88px) + 10px)' }}>
           <button
             onClick={() => setIsOpen(!isOpen)}

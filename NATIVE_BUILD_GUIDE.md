@@ -455,3 +455,10 @@ tiendas) no puedo hacerlos yo, pero puedo verificar código, endpoints,
 configuración Firebase y errores específicos.
 
 **Última actualización:** Fase 64 · Feb 2026
+
+
+## 13. NFC HCE Android — transferir tarjeta a un iPhone con un toque
+El código está en `frontend/native-android/nfc-hce/` (plugin `BrunoNfcHce` + `NdefHostApduService`).
+Sigue el `README.md` de esa carpeta: copiar los `.java`, el `apdu_service.xml`, el snippet del manifest,
+la cadena `nfc_service_desc` y registrar el plugin en `MainActivity`. Sin pasos extra en el frontend.
+Limitación de plataforma: iPhone solo **lee** (XS+, pantalla encendida); no puede emitir NFC a otros teléfonos.

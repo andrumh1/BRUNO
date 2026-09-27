@@ -12,6 +12,8 @@ import RealtimeNotificationProvider from "@/contexts/RealtimeNotificationContext
 import StoryActivityProvider from "@/contexts/StoryActivityContext";
 import { I18nProvider } from "@/contexts/I18nContext";
 import NativeBootstrap from "@/native/NativeBootstrap";
+import { KeyboardViewportManager } from "@/hooks/useVisualViewportHeight";
+import CardReminderBanner from "@/components/CardReminderBanner";
 
 // Components
 import FloatingBubbles from "@/components/FloatingBubbles";
@@ -209,6 +211,8 @@ function App() {
                 <MobileBottomNav />
                 <FloatingBackButton />
                 <TourOverlay />
+                <KeyboardViewportManager />
+                <CardReminderBanner />
                 <PWAInstallPrompt />
                 <Toaster
                   position="top-center"

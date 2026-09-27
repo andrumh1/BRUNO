@@ -1,0 +1,18 @@
+<!-- Añadir dentro de <manifest> -->
+<uses-permission android:name="android.permission.NFC" />
+<uses-feature android:name="android.hardware.nfc.hce" android:required="false" />
+
+<!-- Añadir dentro de <application> -->
+<service
+    android:name="com.brunocard.app.nfc.NdefHostApduService"
+    android:exported="true"
+    android:permission="android.permission.BIND_NFC_SERVICE">
+    <intent-filter>
+        <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+        <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+    <meta-data android:name="android.nfc.cardemulation.host_apdu_service" android:resource="@xml/apdu_service" />
+</service>
+
+<!-- strings.xml -->
+<!-- <string name="nfc_service_desc">BRUNO · transferencia de tarjeta por NFC</string> -->
