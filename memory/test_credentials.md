@@ -14,3 +14,9 @@
 ## Viewer secundario (lives privados)
 - viewer2@bruno.com / Test1234!  (creado 2026-06, para probar entrar a un live privado con código)
 - viewer3@bruno.com, viewer4@bruno.com, viewer5@bruno.com / Test1234! (creados para probar agrupación de notificaciones)
+
+## Tour tester (usuario nuevo, para ver el tour una sola vez)
+- tourtest1@bruno.com / Test1234! (ya vio el tour en este navegador; registrar tourtestN nuevo para volver a verlo)
+
+## Grupo de prueba
+- chat id 655d23d2-b133-4188-a95c-bd8a777c04f4 "Equipo BRUNO" (admin newtest)

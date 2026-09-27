@@ -162,6 +162,7 @@ async def remove_member(chat_id: str, user_id: str, current_user: User = Depends
         upd["admin_id"] = remaining[0]
     if not remaining:
         await db.chats.delete_one({"id": chat_id})
+        await db.messages.delete_many({"chat_id": chat_id})
         return {"left": True, "deleted": True}
     await db.chats.update_one({"id": chat_id}, {"$set": upd, "$pull": {"muted_by": user_id}})
     who = (await _users_brief([user_id])).get(user_id, {}).get("display_name", "Alguien")
