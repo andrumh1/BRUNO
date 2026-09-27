@@ -1510,3 +1510,6 @@ html.chat-open, html.chat-open body { overflow: hidden !important; height: 100%;
 @media (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: max(16px, 1em) !important; }
 }
+/* Reply quote → flash the original bubble */
+@keyframes bubble-flash { 0%,100% { box-shadow: 0 0 0 0 rgba(255,107,53,0); } 30% { box-shadow: 0 0 0 4px rgba(255,107,53,.55); } }
+.bubble-flash { animation: bubble-flash 1.5s ease-out; }

@@ -105,6 +105,29 @@ async def accept_transfer(token: str, via: str = "link", current_user: User = De
     return {"saved": True, "card_id": t["card_id"]}
 
 
+@router.post("/cards/{card_id}/save")
+async def save_card_to_wallet(card_id: str, via: str = "chat", current_user: User = Depends(get_current_user)):
+    """Save any card shared with me (e.g. in a group chat) into my received cards, one tap, no token."""
+    card = await db.cards.find_one({"id": card_id}, {"_id": 0, "id": 1, "user_id": 1})
+    if not card:
+        raise HTTPException(status_code=404, detail="Tarjeta no encontrada")
+    if card["user_id"] == current_user.id:
+        raise HTTPException(status_code=400, detail="Esta tarjeta ya es tuya")
+    now = datetime.now(timezone.utc).isoformat()
+    res = await db.received_cards.update_one(
+        {"user_id": current_user.id, "card_id": card_id},
+        {"$set": {"from_user_id": card["user_id"], "received_at": now, "via": via}, "$setOnInsert": {"first_received_at": now}},
+        upsert=True)
+    if res.upserted_id is not None:
+        try:
+            from routers.posts_feed import _push_notification
+            await _push_notification(user_id=card["user_id"], actor_id=current_user.id, ntype="card_received", target_id=card_id, target_type="card",
+                                     message=f"{current_user.name or 'Alguien'} guardó tu tarjeta")
+        except Exception as e:
+            logger.warning(f"card_received notification failed: {e}")
+    return {"saved": True, "card_id": card_id, "already": res.upserted_id is None}
+
+
 @router.get("/transfer/received/mine")
 async def my_received_cards(current_user: User = Depends(get_current_user)):
     rows = await db.received_cards.find({"user_id": current_user.id}, {"_id": 0}).sort("received_at", -1).to_list(200)

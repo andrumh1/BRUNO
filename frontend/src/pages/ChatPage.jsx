@@ -54,8 +54,12 @@ import {
   Download,
   Smile,
   CreditCard,
-  Camera
+  Camera,
+  Clock,
+  Wallet
 } from "lucide-react";
+import OfflineBanner from "@/components/chat/OfflineBanner";
+import { useChatOutbox } from "@/hooks/useChatOutbox";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -110,6 +114,50 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
     if (!mentionsRef.current.some((x) => x.id === m.id)) mentionsRef.current.push({ id: m.id, handle });
   };
   const collectMentions = (text) => mentionsRef.current.filter((x) => (text || "").includes(`@${x.handle}`)).map((x) => x.id);
+
+  // Offline outbox: messages typed without internet are queued and sent when back online
+  const outbox = useChatOutbox({
+    chatId: chat.id, token,
+    onSent: (tempId, real) => setMessages((prev) => (prev.some((m) => m.id === real.id) ? prev : [...prev, real])),
+    onFailed: () => { import("@/components/bruno/BrunoToast").then(({ brunoToast }) => brunoToast.error("Un mensaje pendiente no se pudo enviar")); },
+  });
+  const wsConnected = !!ws && ws.readyState === WebSocket.OPEN;
+  const wsEverRef = useRef(false);
+  const [wsLost, setWsLost] = useState(false);
+  useEffect(() => {
+    if (wsConnected) { wsEverRef.current = true; setWsLost(false); return undefined; }
+    if (!wsEverRef.current) return undefined;
+    const t = setTimeout(() => setWsLost(true), 2500); // grace period before showing "Reconectando"
+    return () => clearTimeout(t);
+  }, [wsConnected]);
+
+  // @mention → profile of the right member (group members or the 1:1 participant)
+  const mentionTarget = (handle, message) => {
+    const pool = isGroup ? groupMembers : [participant];
+    const ids = message?.mentions || [];
+    const byMention = pool.find((m) => m && ids.includes(m.id) && mentionHandle(m).toLowerCase() === handle.toLowerCase());
+    const byHandle = pool.find((m) => m && mentionHandle(m).toLowerCase() === handle.toLowerCase());
+    return (byMention || byHandle)?.id || null;
+  };
+
+  // Tap on a quote → jump to (and flash) the original message
+  const jumpToMessage = (id) => {
+    const el = document.getElementById(`bubble-${id}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("bubble-flash");
+    setTimeout(() => el.classList.remove("bubble-flash"), 1600);
+  };
+
+  const [savedCards, setSavedCards] = useState({});
+  const saveSharedCard = async (cardId) => {
+    const { brunoToast } = await import("@/components/bruno/BrunoToast");
+    try {
+      const r = await axios.post(`${API}/cards/${cardId}/save?via=chat`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      setSavedCards((p) => ({ ...p, [cardId]: true }));
+      brunoToast.success(r.data.already ? "Ya estaba en tus tarjetas recibidas" : "Tarjeta guardada en tu BRUNO", { description: "La encuentras en Perfil → Recibidas" });
+    } catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo guardar"); }
+  };
   useEffect(() => { setMuteState({ muted: !!chat?.is_muted, until: chat?.muted_until || null }); }, [chat?.id, chat?.is_muted, chat?.muted_until]);
   // Auto-unmute in the UI when the temporary mute expires
   useEffect(() => {
@@ -482,18 +530,26 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
       };
       mentionsRef.current = [];
       
-      if (ws && ws.readyState === WebSocket.OPEN) {
+      if (!navigator.onLine) {
+        outbox.queue({ ...messageData, sender_id: currentUserId });
+        setNewMessage(""); setPendingMedia(null); setReplyTo(null);
+      } else if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: "send_message", chat_id: chat.id, ...messageData }));
         setNewMessage("");
         setPendingMedia(null);
         setReplyTo(null);
       } else {
-        const response = await axios.post(
-          `${API}/chats/${chat.id}/messages`,
-          messageData,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setMessages([...messages, response.data]);
+        try {
+          const response = await axios.post(
+            `${API}/chats/${chat.id}/messages`,
+            messageData,
+            { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 }
+          );
+          setMessages([...messages, response.data]);
+        } catch (err) {
+          if (err?.response) throw err;
+          outbox.queue({ ...messageData, sender_id: currentUserId }); // network error → keep for later
+        }
         setNewMessage("");
         setPendingMedia(null);
         setReplyTo(null);
@@ -544,7 +600,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
   const handleSetReply = (message) => {
     setReplyTo({
       id: message.id,
-      name: message.sender_name || (message.sender_id === currentUserId ? "Tú" : participant?.display_name || "Mensaje"),
+      name: message.sender_id === currentUserId ? "Tú" : (message.sender?.display_name || message.sender?.username || message.sender_name || participant?.display_name || participant?.username || "Mensaje"),
       preview:
         (message.content && message.content.slice(0, 80)) ||
         (message.message_type === "image"
@@ -586,7 +642,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
     return groups;
   };
 
-  const messageGroups = groupMessagesByDate(messages);
+  const messageGroups = groupMessagesByDate([...messages, ...outbox.pending]);
 
   return (
     <div className="h-full w-full min-w-0 flex flex-col bg-background">
@@ -679,6 +735,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
       />
 
       {/* Messages */}
+      <OfflineBanner online={outbox.online} wsConnected={!wsLost} pendingCount={outbox.pending.length} onRetry={outbox.flush} />
       <div ref={messagesBoxRef} className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-4" style={{ WebkitOverflowScrolling: "touch" }} data-testid="chat-messages-box">
         {loading ? (
           <div className="flex justify-center py-8">
@@ -769,7 +826,8 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                       testId={`msg-${message.id}`}
                     >
                     <div
-                      className={`max-w-[78%] px-3.5 py-2 ${
+                      id={`bubble-${message.id}`}
+                      className={`max-w-[78%] px-3.5 py-2 transition-shadow ${message.status === "pending" ? "opacity-70" : ""} ${
                         isOwn
                           ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm shadow-sm shadow-primary/10"
                           : "bg-muted/60 rounded-2xl rounded-bl-sm"
@@ -780,7 +838,8 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                       )}
                       {/* Reply preview */}
                       {message.reply_to && (
-                        <div className={`mb-1.5 px-2 py-1 rounded-md border-l-2 ${isOwn ? "border-white/50 bg-white/10" : "border-orange-500 bg-orange-50/60 dark:bg-orange-500/10"}`}>
+                        <div role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); jumpToMessage(message.reply_to.id); }}
+                          className={`mb-1.5 px-2 py-1 rounded-md border-l-2 cursor-pointer active:scale-[0.98] transition-transform ${isOwn ? "border-white/50 bg-white/10" : "border-orange-500 bg-orange-50/60 dark:bg-orange-500/10"}`} data-testid={`reply-quote-${message.id}`}>
                           <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">
                             {message.reply_to.sender_name || "Mensaje"}
                           </p>
@@ -817,11 +876,20 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
 
                       {/* Card messages */}
                       {message.message_type === 'card' && message.attachments?.[0] && (
-                        <CardMessagePreview 
-                          card={message.attachments[0]}
-                          isOwn={isOwn}
-                          onClick={() => navigate(`/c/${message.attachments[0].card_id}`)}
-                        />
+                        <div>
+                          <CardMessagePreview 
+                            card={message.attachments[0]}
+                            isOwn={isOwn}
+                            onClick={() => navigate(`/c/${message.attachments[0].card_id}`)}
+                          />
+                          {!isOwn && (
+                            <button type="button" onClick={() => saveSharedCard(message.attachments[0].card_id)} disabled={!!savedCards[message.attachments[0].card_id]}
+                              className={`mt-1.5 w-full h-9 rounded-full text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${savedCards[message.attachments[0].card_id] ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-primary text-white active:scale-[0.98]"}`}
+                              data-testid={`save-card-btn-${message.id}`}>
+                              {savedCards[message.attachments[0].card_id] ? <><Check className="w-3.5 h-3.5" /> Guardada en tu BRUNO</> : <><Wallet className="w-3.5 h-3.5" /> Guardar en mi BRUNO</>}
+                            </button>
+                          )}
+                        </div>
                       )}
 
                       {/* Location share messages */}
@@ -849,8 +917,10 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                           {message.content.split(/(@[\p{L}\p{N}_]+)/gu).map((part, pi) => {
                             if (part.startsWith("@")) {
                               const uname = part.slice(1);
+                              const targetId = mentionTarget(uname, message);
+                              if (!targetId) return <span key={`m-${pi}-${uname}`} className="font-semibold">{part}</span>;
                               return (
-                                <Link key={`m-${pi}-${uname}`} to={`/profile/${uname}`} className={`font-semibold underline decoration-1 underline-offset-2 ${isOwn ? "text-primary-foreground" : "text-primary"}`}>
+                                <Link key={`m-${pi}-${uname}`} to={`/profile/${targetId}`} className={`font-semibold underline decoration-1 underline-offset-2 ${isOwn ? "text-primary-foreground" : "text-primary"}`} data-testid={`mention-link-${targetId}`}>
                                   {part}
                                 </Link>
                               );
@@ -866,7 +936,9 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                           {formatTime(message.created_at)}
                         </span>
                         {isOwn && (
-                          message.is_read ? (
+                          message.status === "pending" ? (
+                            <Clock className="w-3 h-3 text-primary-foreground/70" data-testid="msg-pending-icon" />
+                          ) : message.is_read ? (
                             <CheckCheck className="w-3.5 h-3.5 text-primary-foreground/60" />
                           ) : (
                             <Check className="w-3 h-3 text-primary-foreground/40" />
