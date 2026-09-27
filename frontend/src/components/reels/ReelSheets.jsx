@@ -169,7 +169,7 @@ export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDelete
   const report = () => { brunoToast.success("Gracias, revisaremos este contenido"); onClose(); };
   return (
     <BottomSheet open onClose={onClose} title="Opciones" testid="reel-options-sheet" height="auto">
-      <div className="px-4 pb-6 pt-1 space-y-1.5">
+      <div className="px-4 pt-1 space-y-1.5" style={{ paddingBottom: "calc(var(--nav-reserve, 72px) + 12px)" }}>
         {isOwner ? (
           confirm ? (
             <div className="rounded-2xl bg-destructive/10 p-3" data-testid="reel-delete-confirm">

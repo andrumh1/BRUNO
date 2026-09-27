@@ -1376,3 +1376,9 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - Chat flotante: minimizar = cerrar ventana y volver al listado (ordenado por `last_message_at`); nav-minimize cierra ventanas (sin burbujas). `fetchChats` hoisted a `useCallback`.
 - Llamadas: `video_calls.py` usa **Daily.co** si `DAILY_API_KEY` está en backend/.env (sala privada 2h + token por participante, `room_url?t=token` en el iframe existente); si no, fallback Jitsi (meet.jit.si exige login del anfitrión desde 2023 → causa de "no hace llamadas" en producción). `answer` devuelve `room_url` con token del receptor; `ChatPage`/`CallOrchestrator` lo usan.
 - **PENDIENTE USUARIO**: pegar `DAILY_API_KEY` (dashboard.daily.co → Developers) en backend/.env de producción y redesplegar.
+
+## 2026-06 — Timbre, historial borrable, editar publicación (iteration_82, 100%)
+- `VideoCallModal`: `useRingtone` (WebAudio sintetizado + `navigator.vibrate` patrón) mientras suena; botones Aceptar/Rechazar 96px con etiquetas; "Sonando…"; auto-rechazo a 45s.
+- Historial: `DELETE /posts/history/videos[?post_id=]`. `ReelHistorySheet`: X por item, swipe horizontal quita item, "Limpiar" con confirmación.
+- Editar: `PUT /posts/{id}` (dueño; content/hashtags/text_style solo sin media/visibility, `edited_at`). `ReelEditSheet` (textarea + `TextStylePicker` si es texto) desde `ReelOptionsSheet` → `reel-edit-btn`; `patchReel` actualiza in place.
+- Pendiente usuario: `DAILY_API_KEY` para llamadas reales.
