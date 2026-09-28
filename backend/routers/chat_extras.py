@@ -62,7 +62,7 @@ async def message_reactions(chat_id: str, message_id: str, current_user: User = 
     """Who reacted, grouped by emoji."""
     await _chat_for(chat_id, current_user.id)
     msg = await db.messages.find_one({"id": message_id, "chat_id": chat_id}, {"_id": 0, "reactions": 1})
-    if not msg:
+    if msg is None:
         raise HTTPException(status_code=404, detail="Mensaje no encontrado")
     reactions = msg.get("reactions") or []
     names = await _names([r.get("user_id") for r in reactions])
@@ -185,7 +185,7 @@ async def transcribe_message_audio(message_id: str):
 async def request_transcription(chat_id: str, message_id: str, current_user: User = Depends(get_current_user)):
     await _chat_for(chat_id, current_user.id)
     msg = await db.messages.find_one({"id": message_id, "chat_id": chat_id}, {"_id": 0, "transcript": 1, "transcript_status": 1})
-    if not msg:
+    if msg is None:
         raise HTTPException(status_code=404, detail="Mensaje no encontrado")
     if msg.get("transcript") is not None:
         return {"transcript": msg["transcript"], "status": "done"}

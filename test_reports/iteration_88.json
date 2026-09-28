@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 88 backend + frontend tested. Backend: 12/12 in test_iteration88_pin_forward_transcript_readby.py (pin admin/non-admin/404, GET /chats returns pinned_message, unpin admin/non-admin, 1:1 pin any participant, read-by seen/pending with viewer2 in seen after GET /messages, non-participant 404, forwarded true+forwarded_from persisted, audio message auto-transcribed within ~20s, /transcribe on already-done returns status=done + transcript, /transcribe on text message returns processing without crashing). Regression iter85+iter86+iter87 → 47/47 passing. Frontend (390x844): as newtest (admin) right-click popover shows Reply/Reenviar/Fijar; pinning sets [data-testid='pinned-banner'] 'Mensaje fijado · <sender>' + content; re-right-clicking shows 'Desfijar'; ✕ unpin removes the banner (server confirmed pinned_message cleared); forward opens [data-testid='share-card-sheet'] titled 'Reenviar mensaje' with 9 chats, sending to a 1:1 shows 'Enviar (1)' and in target chat the message appears with [data-testid='forwarded-label'] ' Reenviado de Test User'; read-status double-check opens [data-testid='readby-sheet'] with 'Visto por 0/3', 'Leído · 0' / 'Entregado · 3' sections and the 3 participant names; audio messages show [data-testid='audio-transcript'] populated ('Subtítulos realizados por la comunidad de Amara.org' — whisper hallucination on silence which is acceptable per spec). As viewer2 (non-admin) right-click on a bubble shows reply + forward but NO pin button (canPin=false).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Pin → Unpin ✕", "issue": "When the success toast 'Mensaje fijado' is still visible over the pinned banner, clicking [data-testid='pinned-banner-unpin'] via Playwright with force=True can be intercepted by the toast overlay so the API call is not fired (banner remains and server still has pinned_message). Once the toast auto-dismisses (~4s), the ✕ works as expected. Real users unlikely to hit this because touch dispatches through the toast; but z-index of BrunoToast could sit above pinned-banner.", "affected_selectors": ["[data-testid='pinned-banner-unpin']", "BrunoToast"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration88_pin_forward_transcript_readby.py",
+    "/app/test_reports/pytest/iter88.xml"
+  ],
+  "action_items": [
+    "IMPORTANT bug fix applied by tester: chat_extras.message_reactions and chat_extras.request_transcription used `if not msg` on a projected find_one result. When the message has no `reactions`/`transcript`/`transcript_status` fields yet, Motor returns `{}` (empty dict, falsy) → the endpoints wrongly returned 404 'Mensaje no encontrado' for every fresh message. Fixed by changing to `if msg is None`. Recommend reviewing other endpoints that use projected find_one + truthiness checks to avoid the same trap (e.g. any find_one with a single boolean-or-optional projected field). This was the root cause of the failing /reactions and /transcribe calls in production too, not just tests.",
+    "Consider raising BrunoToast z-index below pinned-banner (or lower it) so the ✕ hitbox is not intercepted while the toast is still animating."
+  ],
+  "critical_code_review_comments": [
+    "chat_extras.py find_one truthiness bug: Motor+pymongo projection returns `{}` when none of the projected fields exist on the doc. Combined with `if not msg:` this produces false 404s on brand-new messages. Fix applied for message_reactions and request_transcription; audit the rest of the codebase for `if not doc:` after find_one with restrictive projection.",
+    "transcribe_message_audio downloads the entire audio via httpx into a temp file — no size cap; consider adding a max content-length guard to avoid abuse.",
+    "pin_message stores a snippet cap of 160 chars but no HTML/emoji escaping; safe for now because it's rendered as text, but keep in mind if that field ever renders as HTML.",
+    "unpin_message does not verify the pinned_message actually exists before unsetting — idempotent but returns 200 even when nothing was pinned; ok but could return 404 for consistency with pin_message on unknown message.",
+    "In FE ChatPage.unpinMessage, errors are swallowed silently (`catch { /* ignore */ }`); if the API returns 403 (e.g. non-admin flow race), user sees no feedback."
+  ],
+  "updated_files": [
+    "/app/backend/routers/chat_extras.py",
+    "/app/backend/tests/test_iteration88_pin_forward_transcript_readby.py",
+    "/app/test_reports/iteration_88.json"
+  ],
+  "success_rate": {"backend": "100% (12/12 new + 47/47 regression)", "frontend": "100% for pin/forward/read-by/transcription/viewer2 permission checks"},
+  "test_credentials": "newtest@bruno.com / Test1234!  |  viewer2@bruno.com / Test1234!  |  viewer3@bruno.com / Test1234!",
+  "seed_data_creation": "None — tests use existing group 655d23d2-b133-4188-a95c-bd8a777c04f4; a 1:1 between admin+viewer2 is auto-created if missing (harmless).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "chat_extras.message_reactions/request_transcription had a false-404 bug caused by `if not msg` where find_one used a projection whose projected fields were absent on new messages. Fixed by using `if msg is None`. If new endpoints follow the same pattern, apply the same fix. Cloudinary audio URL used for transcription: https://res.cloudinary.com/dnov3nwy6/video/upload/v1779038353/bruno/audio/fec32669-edca-4a58-b3ea-2dbecb870078/nzkanqscqqn26zl0gg87.webm — whisper often outputs 'Subtítulos realizados por la comunidad de Amara.org' on silent audio; any non-null string is a pass. When testing the pinned-banner unpin ✕ in Playwright, wait ~4s so the success toast dismisses first, otherwise force=True clicks get intercepted by the toast overlay.",
+  "rca_of_the_issue": "Root cause: Motor's find_one with a restrictive projection returns an empty dict `{}` (not None) when the document exists but has none of the projected fields set. In FastAPI handlers, `if not msg: raise 404` treats `{}` as missing → wrongly returns 'Mensaje no encontrado' for every new message that hasn't had a reactions or transcript field added yet. Repro: POST /api/chats/{gid}/messages a fresh text → GET /reactions or POST /transcribe on that message returns 404. Mitigation: change `if not msg` → `if msg is None` (applied to chat_extras.message_reactions and chat_extras.request_transcription). Verified: after fix, both endpoints return 200 for fresh messages and the full test suite passes."
+}

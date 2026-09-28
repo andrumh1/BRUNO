@@ -1,5 +1,13 @@
 # BRUNO Social Network - PRD
 
+## Phase 79: Fijar mensajes · Reenviar · Notas de voz transcritas · Visto por (grupos) (2026-06)
+- **Fijar** (`chat_extras.py`): `POST /chats/{id}/pin/{mid}` (admin en grupos, cualquiera en 1:1) guarda `chats.pinned_message` {id, content(preview), sender_name, pinned_by...}; `DELETE /chats/{id}/pin`; WS `message_pinned`. UI `PinnedBanner.jsx` bajo la cabecera (tap → salto+destello, ✕ admin), acciones "Fijar/Desfijar" en el popover (`MessageReactionsBubble` prop `actions`, popover con scroll horizontal).
+- **Reenviar**: acción "Reenviar" → `ShareCardToChatSheet` en modo `message` (excluye chat actual), envía content+attachments con `forwarded:true, forwarded_from` (REST `MessageCreate` y WS); etiqueta "Reenviado de X" (`forwarded-label`).
+- **Transcripción de notas de voz**: `transcribe_message_audio()` (descarga adjunto → whisper-1 vía Emergent key, mismo patrón que `routers/ai.py`) lanzada en background al enviar audio (REST y WS); guarda `transcript`/`transcript_status`; WS `message_transcript`; `POST .../transcribe` bajo demanda. UI: texto bajo la onda (`audio-transcript`), "Transcribiendo…", botón "Ver texto"/reintentar.
+- **Visto por**: `GET /chats/{id}/messages/{mid}/read-by` → seen/pending; UI: doble check propio en grupos abre `ReadBySheet.jsx` ("Visto por x/n", Leído/Entregado). FIX WS `mark_read` usaba `is_read:false` (en grupos solo el primero quedaba en `read_by`) → ahora `read_by $nin`; WS `messages_read` actualiza `read_by` en cliente.
+- Verificado iteration_88: backend 12/12 + regresión 47/47; frontend móvil OK. Nota menor: el toast puede tapar el ✕ del banner unos segundos.
+
+
 ## Phase 78: Reacciones rápidas · Buscar en el chat · Borradores por chat (2026-06)
 - **Reacciones** (`routers/chat_extras.py`): `POST /chats/{id}/messages/{mid}/react?emoji=` toggle (mismo emoji quita, otro reemplaza; una por usuario) + WS `message_reaction`; `GET .../reactions` agrupado por emoji con nombres/is_me. UI: doble toque/doble clic en la burbuja = ❤️ con destello (`heart-burst`), fila de reacciones (`reactions-row`, la mía resaltada) → `ReactorsSheet.jsx` (Todas / por emoji, "Tú · Quitar reacción"). Handler `handleReactMessage` optimista + verdad del servidor; WS actualiza en vivo.
 - **Buscar en la conversación**: `GET /chats/{id}/messages/search?q=` (regex case-insensitive, snippet, sender, `offset` = mensajes más nuevos). UI `ChatSearchBar.jsx` (lupa en cabecera `chat-search-toggle`, input `chat-msg-search-input`, contador x/total, flechas, lista con resaltado). `jumpToSearchResult` carga historial (`limit=offset+40`) si hace falta y destella `#bubble-{id}` (también mensajes de sistema y llamadas).
