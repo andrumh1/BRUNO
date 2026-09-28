@@ -2197,6 +2197,8 @@ async def websocket_chat(websocket: WebSocket, token: str):
                     "attachments": attachments,
                     "mentions": [m for m in mentions if m in chat["participants"]],
                     "reply_to": reply_to if isinstance(reply_to, dict) else None,
+                    "forwarded": bool(data.get("forwarded")),
+                    "forwarded_from": (data.get("forwarded_from") or "")[:80] if data.get("forwarded") else None,
                     "is_read": False,
                     "read_by": [user.id],
                     "is_deleted": False,
@@ -2235,6 +2237,8 @@ async def websocket_chat(websocket: WebSocket, token: str):
                         "attachments": attachments,
                         "mentions": message_doc["mentions"],
                         "reply_to": message_doc["reply_to"],
+                        "forwarded": message_doc["forwarded"],
+                        "forwarded_from": message_doc["forwarded_from"],
                         "is_read": False,
                         "created_at": created_at,
                         "sender": sender_info
@@ -2243,6 +2247,9 @@ async def websocket_chat(websocket: WebSocket, token: str):
                 
                 # Send to all participants
                 await ws_manager.broadcast_to_users(message_response, chat["participants"])
+                if message_type == "audio" and attachments:
+                    from routers.chat_extras import transcribe_message_audio
+                    asyncio.create_task(transcribe_message_audio(message_id))
                 try:
                     from utils.chat_notify import notify_chat_message
                     await notify_chat_message(chat, user.id, user.name or "Alguien", content, message_doc["mentions"], bool(attachments))
@@ -2272,7 +2279,7 @@ async def websocket_chat(websocket: WebSocket, token: str):
                     {
                         "chat_id": chat_id,
                         "sender_id": {"$ne": user.id},
-                        "is_read": False
+                        "read_by": {"$nin": [user.id]}
                     },
                     {
                         "$set": {"is_read": True},

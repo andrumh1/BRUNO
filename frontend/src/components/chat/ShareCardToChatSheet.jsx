@@ -8,8 +8,8 @@ import { brunoToast } from "@/components/bruno/BrunoToast";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
-/** ShareCardToChatSheet — pick one or more chats/groups and send a card as a 'card' message */
-const ShareCardToChatSheet = ({ card, isOpen, onClose, token }) => {
+/** ShareCardToChatSheet — pick one or more chats/groups and send a card ('card' message) OR forward any message */
+const ShareCardToChatSheet = ({ card, message, isOpen, onClose, token, excludeChatId }) => {
   const [chats, setChats] = useState(null);
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState([]);
@@ -22,19 +22,27 @@ const ShareCardToChatSheet = ({ card, isOpen, onClose, token }) => {
   }, [isOpen]); // eslint-disable-line
 
   const title = (c) => (c.is_group ? c.name || "Grupo" : c.other_participants?.[0]?.display_name || c.other_participants?.[0]?.username || "Chat");
-  const list = (chats || []).filter((c) => title(c).toLowerCase().includes(q.toLowerCase()));
+  const list = (chats || []).filter((c) => c.id !== excludeChatId && title(c).toLowerCase().includes(q.toLowerCase()));
+  const heading = message ? "Reenviar mensaje" : "Reenviar tarjeta";
+  const subtitle = message ? (message.content || { image: "📷 Foto", video: "🎬 Video", audio: "🎤 Nota de voz", card: "📇 Tarjeta", file: "📎 Archivo", sticker: "Sticker" }[message.message_type] || "Mensaje") : card?.title;
 
   const send = async () => {
-    if (!picked.length || !card) return;
+    if (!picked.length || (!card && !message)) return;
     setSending(true);
-    const body = {
+    const body = message ? {
+      content: message.content || "",
+      message_type: message.message_type === "system" || message.message_type === "call" ? "text" : (message.message_type || "text"),
+      attachments: message.attachments || [],
+      forwarded: true,
+      forwarded_from: message.sender?.display_name || message.sender?.username || message.sender_name || "",
+    } : {
       content: `📇 Tarjeta compartida: ${card.title || "Tarjeta"}`,
       message_type: "card",
       attachments: [{ type: "card", card_id: card.id, card_title: card.title, card_subtitle: card.subtitle, card_type: card.card_type, primary_color: card.background_color, secondary_color: card.background_color }],
     };
     try {
       await Promise.all(picked.map((id) => axios.post(`${API}/chats/${id}/messages`, body, { headers })));
-      brunoToast.success(`Tarjeta enviada a ${picked.length} chat${picked.length > 1 ? "s" : ""}`);
+      brunoToast.success(`${message ? "Mensaje reenviado" : "Tarjeta enviada"} a ${picked.length} chat${picked.length > 1 ? "s" : ""}`);
       onClose();
     } catch { brunoToast.error("No se pudo enviar"); } finally { setSending(false); }
   };
@@ -46,7 +54,7 @@ const ShareCardToChatSheet = ({ card, isOpen, onClose, token }) => {
           <motion.div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col" style={{ maxHeight: "80vh" }}
             initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }} transition={{ type: "spring", damping: 26, stiffness: 300 }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 pt-4 pb-2">
-              <div><h3 className="font-bold">Reenviar tarjeta</h3><p className="text-xs text-muted-foreground truncate">{card?.title}</p></div>
+              <div className="min-w-0"><h3 className="font-bold">{heading}</h3><p className="text-xs text-muted-foreground truncate">{subtitle}</p></div>
               <button onClick={onClose} className="p-2 rounded-full hover:bg-muted" data-testid="share-card-close"><X className="w-5 h-5" /></button>
             </div>
             <div className="relative mx-5 mb-2">

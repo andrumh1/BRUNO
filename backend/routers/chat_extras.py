@@ -92,3 +92,103 @@ async def search_messages(chat_id: str, q: str, limit: int = 30, current_user: U
                         "sender": names.get(h["sender_id"], {"id": h["sender_id"], "name": "Usuario"}), "offset": offset})
     total = await db.messages.count_documents({"chat_id": chat_id, "is_deleted": False, "content": {"$regex": rx}})
     return {"total": total, "results": results}
+
+
+# ─── Pinned message (group admin / any 1:1 participant) ──────────────────────
+@router.post("/chats/{chat_id}/pin/{message_id}")
+async def pin_message(chat_id: str, message_id: str, current_user: User = Depends(get_current_user)):
+    chat = await _chat_for(chat_id, current_user.id)
+    if chat.get("is_group") and chat.get("admin_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo el administrador puede fijar mensajes")
+    msg = await db.messages.find_one({"id": message_id, "chat_id": chat_id, "is_deleted": False}, {"_id": 0})
+    if not msg:
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+    names = await _names([msg["sender_id"]])
+    preview = msg.get("content") or {"image": "📷 Foto", "video": "🎬 Video", "audio": "🎤 Nota de voz", "card": "📇 Tarjeta", "file": "📎 Archivo"}.get(msg.get("message_type"), "Mensaje")
+    pinned = {"id": message_id, "content": preview[:160], "message_type": msg.get("message_type"), "sender_name": names.get(msg["sender_id"], {}).get("name", "Usuario"),
+              "pinned_by": current_user.id, "pinned_by_name": current_user.name, "pinned_at": datetime.now(timezone.utc).isoformat()}
+    await db.chats.update_one({"id": chat_id}, {"$set": {"pinned_message": pinned}})
+    try:
+        await ws_manager.broadcast_to_users({"type": "message_pinned", "chat_id": chat_id, "pinned_message": pinned}, chat["participants"])
+    except Exception as e:
+        logger.warning(f"pin broadcast failed: {e}")
+    return {"pinned_message": pinned}
+
+
+@router.delete("/chats/{chat_id}/pin")
+async def unpin_message(chat_id: str, current_user: User = Depends(get_current_user)):
+    chat = await _chat_for(chat_id, current_user.id)
+    if chat.get("is_group") and chat.get("admin_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo el administrador puede quitar el mensaje fijado")
+    await db.chats.update_one({"id": chat_id}, {"$unset": {"pinned_message": ""}})
+    try:
+        await ws_manager.broadcast_to_users({"type": "message_pinned", "chat_id": chat_id, "pinned_message": None}, chat["participants"])
+    except Exception:
+        pass
+    return {"pinned_message": None}
+
+
+# ─── Read receipts: who has seen a message ───────────────────────────────────
+@router.get("/chats/{chat_id}/messages/{message_id}/read-by")
+async def message_read_by(chat_id: str, message_id: str, current_user: User = Depends(get_current_user)):
+    chat = await _chat_for(chat_id, current_user.id)
+    msg = await db.messages.find_one({"id": message_id, "chat_id": chat_id}, {"_id": 0, "read_by": 1, "sender_id": 1, "created_at": 1})
+    if not msg:
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+    read = set(msg.get("read_by") or [])
+    others = [p for p in chat["participants"] if p != msg["sender_id"]]
+    names = await _names(others)
+    seen = [names[p] for p in others if p in read and p in names]
+    pending = [names[p] for p in others if p not in read and p in names]
+    return {"seen": seen, "pending": pending, "seen_count": len(seen), "total": len(others)}
+
+
+# ─── Voice notes → text (whisper-1 via Emergent key) ─────────────────────────
+async def transcribe_message_audio(message_id: str):
+    """Background: download the audio attachment, transcribe, store `transcript`, broadcast."""
+    import os, tempfile, httpx
+    from emergentintegrations.llm.openai import OpenAISpeechToText
+    msg = await db.messages.find_one({"id": message_id}, {"_id": 0, "chat_id": 1, "attachments": 1, "transcript": 1})
+    if not msg or msg.get("transcript") is not None:
+        return
+    att = next((a for a in (msg.get("attachments") or []) if str(a.get("type", "")).startswith("audio") or a.get("url", "").endswith((".webm", ".m4a", ".mp3", ".wav", ".ogg"))), None)
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not att or not att.get("url") or not api_key:
+        return
+    await db.messages.update_one({"id": message_id}, {"$set": {"transcript_status": "processing"}})
+    path = None
+    try:
+        async with httpx.AsyncClient(timeout=40) as client:
+            r = await client.get(att["url"]); r.raise_for_status()
+        ctype = r.headers.get("content-type", "")
+        ext = "mp4" if "mp4" in ctype or att["url"].endswith((".m4a", ".mp4")) else "mp3" if "mpeg" in ctype or att["url"].endswith(".mp3") else "wav" if "wav" in ctype else "ogg" if "ogg" in ctype else "webm"
+        with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as tmp:
+            tmp.write(r.content); path = tmp.name
+        stt = OpenAISpeechToText(api_key=api_key)
+        with open(path, "rb") as f:
+            res = await stt.transcribe(file=f, model="whisper-1", response_format="json", language="es")
+        text = (getattr(res, "text", "") or "").strip()
+        await db.messages.update_one({"id": message_id}, {"$set": {"transcript": text, "transcript_status": "done"}})
+        chat = await db.chats.find_one({"id": msg["chat_id"]}, {"_id": 0, "participants": 1})
+        if chat:
+            await ws_manager.broadcast_to_users({"type": "message_transcript", "chat_id": msg["chat_id"], "message_id": message_id, "transcript": text}, chat["participants"])
+    except Exception as e:
+        logger.warning(f"transcription failed for {message_id}: {e}")
+        await db.messages.update_one({"id": message_id}, {"$set": {"transcript_status": "failed"}})
+    finally:
+        if path:
+            try: os.remove(path)
+            except Exception: pass
+
+
+@router.post("/chats/{chat_id}/messages/{message_id}/transcribe")
+async def request_transcription(chat_id: str, message_id: str, current_user: User = Depends(get_current_user)):
+    await _chat_for(chat_id, current_user.id)
+    msg = await db.messages.find_one({"id": message_id, "chat_id": chat_id}, {"_id": 0, "transcript": 1, "transcript_status": 1})
+    if not msg:
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+    if msg.get("transcript") is not None:
+        return {"transcript": msg["transcript"], "status": "done"}
+    import asyncio
+    asyncio.create_task(transcribe_message_audio(message_id))
+    return {"transcript": None, "status": "processing"}

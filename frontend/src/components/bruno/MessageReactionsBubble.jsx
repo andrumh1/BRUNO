@@ -28,6 +28,7 @@ export default function MessageReactionsBubble({
   testId = "msg-reactions",
   onShowReactors,
   myEmoji = null,
+  actions = [], // extra popover actions: [{ id, label, icon: Icon, onClick }]
 }) {
   const [open, setOpen] = useState(false);
   const [burst, setBurst] = useState(0);
@@ -144,7 +145,7 @@ export default function MessageReactionsBubble({
             transition={{ type: "spring", stiffness: 380, damping: 22 }}
             className={`absolute z-30 top-[-46px] ${
               isOwn ? "right-0" : "left-0"
-            } flex items-center gap-1 bg-white dark:bg-zinc-900 rounded-full px-1.5 py-1 shadow-xl border border-zinc-200 dark:border-zinc-800`}
+            } flex items-center gap-1 bg-white dark:bg-zinc-900 rounded-full px-1.5 py-1 shadow-xl border border-zinc-200 dark:border-zinc-800 max-w-[min(92vw,520px)] overflow-x-auto no-scrollbar`}
             data-testid={`${testId}-popover`}
           >
             {QUICK.map((emoji) => (
@@ -172,6 +173,13 @@ export default function MessageReactionsBubble({
               <Reply className="h-3.5 w-3.5" />
               Responder
             </motion.button>
+            {actions.map((a) => (
+              <motion.button key={a.id} whileTap={{ scale: 0.9 }} onClick={() => { a.onClick?.(); setOpen(false); }} data-testid={`${testId}-${a.id}-btn`}
+                className="inline-flex items-center gap-1 h-9 px-3 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-semibold whitespace-nowrap">
+                {a.icon && <a.icon className="h-3.5 w-3.5" />}
+                {a.label}
+              </motion.button>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>

@@ -1513,3 +1513,5 @@ html.chat-open, html.chat-open body { overflow: hidden !important; height: 100%;
 /* Reply quote → flash the original bubble */
 @keyframes bubble-flash { 0%,100% { box-shadow: 0 0 0 0 rgba(255,107,53,0); } 30% { box-shadow: 0 0 0 4px rgba(255,107,53,.55); } }
 .bubble-flash { animation: bubble-flash 1.5s ease-out; }
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

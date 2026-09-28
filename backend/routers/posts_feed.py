@@ -196,6 +196,8 @@ class MessageCreate(BaseModel):
     attachments: List[dict] = []
     reply_to_id: Optional[str] = None
     mentions: List[str] = []  # user ids @mentioned (break through mutes)
+    forwarded: bool = False
+    forwarded_from: Optional[str] = None
 
 class Notification(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1820,6 +1822,9 @@ async def send_message(
     
     message_doc = message.model_dump()
     message_doc["mentions"] = [m for m in (message_data.mentions or []) if m in chat["participants"]]
+    if message_data.forwarded:
+        message_doc["forwarded"] = True
+        message_doc["forwarded_from"] = (message_data.forwarded_from or "")[:80]
     message_doc['created_at'] = message_doc['created_at'].isoformat()
     message_doc['updated_at'] = message_doc['updated_at'].isoformat()
     
@@ -1837,6 +1842,11 @@ async def send_message(
         }
     )
     
+    if message_data.message_type == "audio" and message_data.attachments:
+        import asyncio
+        from routers.chat_extras import transcribe_message_audio
+        asyncio.create_task(transcribe_message_audio(message.id))
+
     # Notifications (muted participants skipped unless @mentioned)
     from utils.chat_notify import notify_chat_message
     await notify_chat_message(chat, current_user.id, current_user.name or "Alguien", message_data.content, message_data.mentions, bool(message_data.attachments))

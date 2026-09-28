@@ -61,6 +61,10 @@ import {
 import OfflineBanner from "@/components/chat/OfflineBanner";
 import ChatSearchBar from "@/components/chat/ChatSearchBar";
 import ReactorsSheet from "@/components/chat/ReactorsSheet";
+import ReadBySheet from "@/components/chat/ReadBySheet";
+import PinnedBanner from "@/components/chat/PinnedBanner";
+import ShareCardToChatSheet from "@/components/chat/ShareCardToChatSheet";
+import { Pin, Forward, FileText } from "lucide-react";
 import { useChatOutbox } from "@/hooks/useChatOutbox";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -75,6 +79,26 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
   const [newMessage, setNewMessage] = useState(() => { try { return localStorage.getItem(`bruno_draft_${chat?.id}`) || ""; } catch { return ""; } });
   const [showSearch, setShowSearch] = useState(false);
   const [reactorsFor, setReactorsFor] = useState(null);
+  const [readByFor, setReadByFor] = useState(null);
+  const [forwardMsg, setForwardMsg] = useState(null);
+  const [pinned, setPinned] = useState(chat?.pinned_message || null);
+  useEffect(() => { setPinned(chat?.pinned_message || null); }, [chat?.id, chat?.pinned_message]);
+  const canPin = !chat?.is_group || chat?.admin_id === currentUserId;
+  const pinMessage = async (message) => {
+    const { brunoToast } = await import("@/components/bruno/BrunoToast");
+    try {
+      const r = await axios.post(`${API}/chats/${chat.id}/pin/${message.id}`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      setPinned(r.data.pinned_message); onChatUpdated?.(chat.id, { pinned_message: r.data.pinned_message });
+      brunoToast.success("Mensaje fijado");
+    } catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo fijar"); }
+  };
+  const unpinMessage = async () => {
+    try { await axios.delete(`${API}/chats/${chat.id}/pin`, { headers: { Authorization: `Bearer ${token}` } }); setPinned(null); onChatUpdated?.(chat.id, { pinned_message: null }); } catch { /* ignore */ }
+  };
+  const requestTranscript = async (message) => {
+    setMessages((prev) => prev.map((m) => (m.id === message.id ? { ...m, transcript_status: "processing" } : m)));
+    try { await axios.post(`${API}/chats/${chat.id}/messages/${message.id}/transcribe`, {}, { headers: { Authorization: `Bearer ${token}` } }); } catch { /* ignore */ }
+  };
   // Draft per chat: persisted while typing, restored when you come back
   const draftChatRef = useRef(chat?.id);
   useEffect(() => {
@@ -236,6 +260,12 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
       try {
         const data = JSON.parse(event.data);
         
+        if (data.type === "message_pinned" && data.chat_id === chat.id) {
+          setPinned(data.pinned_message || null);
+        }
+        if (data.type === "message_transcript" && data.chat_id === chat.id) {
+          setMessages(prev => prev.map(m => (m.id === data.message_id ? { ...m, transcript: data.transcript, transcript_status: "done" } : m)));
+        }
         if (data.type === "message_reaction" && data.chat_id === chat.id) {
           setMessages(prev => prev.map(m => (m.id === data.message_id ? { ...m, reactions: data.reactions } : m)));
         }
@@ -255,7 +285,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
         
         if (data.type === "messages_read" && data.chat_id === chat.id) {
           setMessages(prev => prev.map(m => 
-            m.sender_id === currentUserId ? { ...m, is_read: true } : m
+            m.sender_id === currentUserId ? { ...m, is_read: true, read_by: Array.from(new Set([...(m.read_by || []), data.read_by])) } : m
           ));
         }
 
@@ -756,6 +786,8 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
         </div>
       </div>
 
+      <ReadBySheet chatId={chat.id} token={token} messageId={readByFor} isOpen={!!readByFor} onClose={() => setReadByFor(null)} />
+      <ShareCardToChatSheet message={forwardMsg} isOpen={!!forwardMsg} onClose={() => setForwardMsg(null)} token={token} excludeChatId={chat.id} />
       <ReactorsSheet chatId={chat.id} token={token} messageId={reactorsFor} isOpen={!!reactorsFor} onClose={() => setReactorsFor(null)}
         onToggle={(emoji) => { const m = messages.find((x) => x.id === reactorsFor); if (m) handleReactMessage(m, emoji); }} />
 
@@ -779,6 +811,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
 
       {/* Messages */}
       <ChatSearchBar chatId={chat.id} token={token} isOpen={showSearch} onClose={() => setShowSearch(false)} onJump={jumpToSearchResult} />
+      <PinnedBanner pinned={pinned} canUnpin={canPin} onJump={(id) => jumpToSearchResult({ id, offset: 0 })} onUnpin={unpinMessage} />
       <OfflineBanner online={outbox.online} wsConnected={!wsLost} pendingCount={outbox.pending.length} onRetry={outbox.flush} />
       <div ref={messagesBoxRef} className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-4" style={{ WebkitOverflowScrolling: "touch" }} data-testid="chat-messages-box">
         {loading ? (
@@ -869,6 +902,10 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                       onShowReactors={() => setReactorsFor(message.id)}
                       onReact={(emoji) => handleReactMessage(message, emoji)}
                       onReply={() => handleSetReply(message)}
+                      actions={[
+                        { id: "forward", label: "Reenviar", icon: Forward, onClick: () => setForwardMsg(message) },
+                        ...(canPin ? [{ id: "pin", label: pinned?.id === message.id ? "Desfijar" : "Fijar", icon: Pin, onClick: () => (pinned?.id === message.id ? unpinMessage() : pinMessage(message)) }] : []),
+                      ]}
                       testId={`msg-${message.id}`}
                     >
                     <div
@@ -881,6 +918,9 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                     >
                       {isGroup && !isOwn && message.sender?.username && (
                         <p className="text-[10px] font-bold text-primary mb-0.5" data-testid="group-msg-sender">{message.sender.username}</p>
+                      )}
+                      {message.forwarded && (
+                        <p className={`text-[10px] italic mb-0.5 flex items-center gap-1 ${isOwn ? "text-primary-foreground/70" : "text-muted-foreground"}`} data-testid="forwarded-label"><Forward className="w-3 h-3" /> Reenviado{message.forwarded_from ? ` de ${message.forwarded_from}` : ""}</p>
                       )}
                       {/* Reply preview */}
                       {message.reply_to && (
@@ -918,6 +958,16 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                             <FileAttachment key={`att-${idx}`} file={att} isOwn={isOwn} />
                           ))}
                         </div>
+                      )}
+
+                      {message.message_type === 'audio' && (
+                        message.transcript ? (
+                          <p className={`mt-1 text-xs leading-snug rounded-lg px-2 py-1.5 ${isOwn ? "bg-white/10" : "bg-background/60"}`} data-testid="audio-transcript"><FileText className="inline w-3 h-3 mr-1 opacity-70" />{message.transcript || "(sin voz detectada)"}</p>
+                        ) : message.transcript_status === "processing" ? (
+                          <p className="mt-1 text-[10px] opacity-70 flex items-center gap-1" data-testid="audio-transcript-processing"><Loader2 className="w-3 h-3 animate-spin" /> Transcribiendo…</p>
+                        ) : (
+                          <button type="button" onClick={() => requestTranscript(message)} className={`mt-1 text-[10px] underline underline-offset-2 ${isOwn ? "text-primary-foreground/80" : "text-primary"}`} data-testid="audio-transcript-btn"><FileText className="inline w-3 h-3 mr-1" />{message.transcript_status === "failed" ? "Reintentar transcripción" : "Ver texto"}</button>
+                        )
                       )}
 
                       {/* Card messages */}
@@ -984,10 +1034,14 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                         {isOwn && (
                           message.status === "pending" ? (
                             <Clock className="w-3 h-3 text-primary-foreground/70" data-testid="msg-pending-icon" />
-                          ) : message.is_read ? (
-                            <CheckCheck className="w-3.5 h-3.5 text-primary-foreground/60" />
                           ) : (
-                            <Check className="w-3 h-3 text-primary-foreground/40" />
+                            <button type="button" data-no-dbltap onClick={(e) => { if (!isGroup) return; e.stopPropagation(); setReadByFor(message.id); }} className={isGroup ? "p-0.5 -m-0.5 rounded" : "cursor-default"} aria-label="Ver quién lo leyó" data-testid={`read-status-${message.id}`}>
+                              {(message.read_by || []).some((u) => u !== currentUserId) || message.is_read ? (
+                                <CheckCheck className="w-3.5 h-3.5 text-primary-foreground/70" />
+                              ) : (
+                                <Check className="w-3 h-3 text-primary-foreground/40" />
+                              )}
+                            </button>
                           )
                         )}
                       </div>
