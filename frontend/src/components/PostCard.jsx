@@ -1,3 +1,4 @@
+import TranslateButton from "@/components/TranslateButton";
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import FeedVideo from "@/components/FeedVideo";
@@ -359,6 +360,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
 
         {/* Content with hashtags and @mentions */}
         <RenderContent content={post.content} />
+        <TranslateButton text={post.content} compact testId={`translate-post-${post.id}`} />
 
         {/* Hashtag pills */}
         {post.hashtags && post.hashtags.length > 0 && (
@@ -513,6 +515,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
                         {c.user?.display_name || c.user?.username}
                       </Link>
                       <RenderContent content={c.content} />
+                      <TranslateButton text={c.content} compact testId={`translate-comment-${c.id}`} />
                     </div>
                   </div>
                 ))}

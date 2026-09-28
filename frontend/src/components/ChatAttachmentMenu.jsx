@@ -6,8 +6,7 @@ import {
   CreditCard,
   Smile,
   X,
-  Video
-} from "lucide-react";
+  Video, BarChart3 } from "lucide-react";
 import { useBrunoCamera } from "@/contexts/BrunoCameraContext";
 import { isVideoFile } from "@/lib/media";
 
@@ -18,9 +17,10 @@ const ATTACHMENT_OPTIONS = [
   { id: "document", icon: FileText, label: "Documento", color: "bg-purple-500", accept: ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" },
   { id: "card", icon: CreditCard, label: "Tarjeta", color: "bg-green-500" },
   { id: "sticker", icon: Smile, label: "Sticker", color: "bg-orange-500" },
+  { id: "poll", icon: BarChart3, label: "Encuesta", color: "bg-indigo-500" },
 ];
 
-export const ChatAttachmentMenu = ({ isOpen, onClose, onFileSelect, onCardPick, onStickerPick, compact = false }) => {
+export const ChatAttachmentMenu = ({ isOpen, onClose, onFileSelect, onCardPick, onStickerPick, onPollPick, compact = false }) => {
   const fileRefs = useRef({});
   const { open: openBrunoCamera } = useBrunoCamera();
 
@@ -34,6 +34,11 @@ export const ChatAttachmentMenu = ({ isOpen, onClose, onFileSelect, onCardPick, 
     }
     if (option.id === "sticker") {
       onStickerPick?.();
+      onClose();
+      return;
+    }
+    if (option.id === "poll") {
+      onPollPick?.();
       onClose();
       return;
     }

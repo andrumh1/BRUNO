@@ -19,6 +19,15 @@ export default function BrunoAudioWaveform({ url, mp3Url, isOwn = false, testId 
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
+  const SPEEDS = [1, 1.5, 2];
+  const [speed, setSpeed] = useState(() => Number(localStorage.getItem("bruno_voice_speed") || 1));
+  useEffect(() => { if (audioRef.current) audioRef.current.playbackRate = speed; }, [speed, playing]);
+  const cycleSpeed = (e) => {
+    e.stopPropagation();
+    const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+    setSpeed(next);
+    try { localStorage.setItem("bruno_voice_speed", String(next)); } catch { /* ignore */ }
+  };
   const [duration, setDuration] = useState(0);
 
   // Build prioritized source list: MP3 (broadest support) → original webm/ogg/mp4 → cloudinary f_mp3 fallback
@@ -177,6 +186,7 @@ export default function BrunoAudioWaveform({ url, mp3Url, isOwn = false, testId 
             );
           })}
         </div>
+        <div className="flex items-center justify-between gap-2">
         <span
           className={`text-[10px] tabular-nums ${
             isOwn ? "text-white/70" : "text-muted-foreground"
@@ -184,6 +194,11 @@ export default function BrunoAudioWaveform({ url, mp3Url, isOwn = false, testId 
         >
           {fmt(playing || current > 0 ? remaining : duration)}
         </span>
+        <button type="button" onClick={cycleSpeed} data-no-dbltap aria-label="Velocidad de reproducción" data-testid={`${testId}-speed`}
+          className={`ml-auto shrink-0 h-5 min-w-[30px] px-1.5 rounded-full text-[10px] font-bold tabular-nums transition-colors ${isOwn ? "bg-white/20 text-white hover:bg-white/30" : "bg-primary/10 text-primary hover:bg-primary/20"}`}>
+          {speed}x
+        </button>
+        </div>
       </div>
     </div>
   );

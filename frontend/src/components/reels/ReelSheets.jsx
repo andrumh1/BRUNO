@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
+import TranslateButton from "@/components/TranslateButton";
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -81,6 +82,7 @@ export function ReelCommentsSheet({ reel, token, onClose, onPosted, onDeleted, c
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-foreground/80">{c.user?.display_name || c.user?.username || "Usuario"}</p>
                 <p className="text-sm leading-snug break-words">{c.content}</p>
+                <TranslateButton text={c.content} compact testId={`translate-comment-${c.id}`} />
               </div>
               {token && (c.user_id === currentUserId || (reel.author?.id || reel.user_id) === currentUserId) && (
                 <button

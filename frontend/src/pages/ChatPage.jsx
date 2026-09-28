@@ -65,6 +65,9 @@ import ReadBySheet from "@/components/chat/ReadBySheet";
 import PinnedBanner from "@/components/chat/PinnedBanner";
 import ShareCardToChatSheet from "@/components/chat/ShareCardToChatSheet";
 import { Pin, Forward, FileText } from "lucide-react";
+import TranslateButton from "@/components/TranslateButton";
+import GroupSummaryCard from "@/components/chat/GroupSummaryCard";
+import { PollMessage, CreatePollSheet } from "@/components/chat/Poll";
 import { useChatOutbox } from "@/hooks/useChatOutbox";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -81,6 +84,8 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
   const [reactorsFor, setReactorsFor] = useState(null);
   const [readByFor, setReadByFor] = useState(null);
   const [forwardMsg, setForwardMsg] = useState(null);
+  const [showPoll, setShowPoll] = useState(false);
+  const initialUnreadRef = useRef(chat?.unread_count || 0);
   const [pinned, setPinned] = useState(chat?.pinned_message || null);
   useEffect(() => { setPinned(chat?.pinned_message || null); }, [chat?.id, chat?.pinned_message]);
   const canPin = !chat?.is_group || chat?.admin_id === currentUserId;
@@ -260,6 +265,9 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
       try {
         const data = JSON.parse(event.data);
         
+        if (data.type === "poll_update" && data.chat_id === chat.id) {
+          window.dispatchEvent(new CustomEvent("bruno:poll", { detail: data.poll }));
+        }
         if (data.type === "message_pinned" && data.chat_id === chat.id) {
           setPinned(data.pinned_message || null);
         }
@@ -814,6 +822,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
       <PinnedBanner pinned={pinned} canUnpin={canPin} onJump={(id) => jumpToSearchResult({ id, offset: 0 })} onUnpin={unpinMessage} />
       <OfflineBanner online={outbox.online} wsConnected={!wsLost} pendingCount={outbox.pending.length} onRetry={outbox.flush} />
       <div ref={messagesBoxRef} className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-4" style={{ WebkitOverflowScrolling: "touch" }} data-testid="chat-messages-box">
+        <GroupSummaryCard chatId={chat.id} unreadCount={initialUnreadRef.current} token={token} />
         {loading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -952,7 +961,10 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                       )}
 
                       {/* Regular Attachments (non-sticker, non-card) */}
-                      {message.message_type !== 'sticker' && message.message_type !== 'card' && message.message_type !== 'reel' && message.message_type !== 'location_share' && message.attachments?.length > 0 && (
+                      {message.message_type === 'poll' && message.attachments?.[0]?.poll_id && (
+                        <PollMessage pollId={message.attachments[0].poll_id} isOwn={isOwn} token={token} currentUserId={currentUserId} isAdmin={chat?.admin_id === currentUserId} />
+                      )}
+                      {message.message_type !== 'sticker' && message.message_type !== 'card' && message.message_type !== 'reel' && message.message_type !== 'location_share' && message.message_type !== 'poll' && message.attachments?.length > 0 && (
                         <div className="mb-2">
                           {message.attachments.map((att, idx) => (
                             <FileAttachment key={`att-${idx}`} file={att} isOwn={isOwn} />
@@ -1008,7 +1020,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                       )}
                       
                       {/* Text content with @mention parsing */}
-                      {message.content && message.message_type !== 'audio' && message.message_type !== 'sticker' && message.message_type !== 'card' && message.message_type !== 'location_share' && message.message_type !== 'reel' && (
+                      {message.content && message.message_type !== 'audio' && message.message_type !== 'sticker' && message.message_type !== 'card' && message.message_type !== 'location_share' && message.message_type !== 'reel' && message.message_type !== 'poll' && (
                         <p className="text-sm whitespace-pre-wrap break-words">
                           {message.content.split(/(@[\p{L}\p{N}_]+)/gu).map((part, pi) => {
                             if (part.startsWith("@")) {
@@ -1026,6 +1038,9 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                         </p>
                       )}
                       
+                      {!isOwn && (message.message_type === 'text' || message.message_type === 'audio') && (message.content || message.transcript) && (
+                        <TranslateButton text={message.message_type === 'audio' ? (message.transcript || "") : message.content} tone={isOwn ? "own" : "muted"} testId={`translate-${message.id}`} />
+                      )}
                       {/* Time and read status */}
                       <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>
                         <span className={`text-[9px] ${isOwn ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
@@ -1102,7 +1117,9 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
         onFileSelect={(file, type) => handleFileSelect(file, type)}
         onCardPick={() => { setShowCardPicker(true); setShowAttachMenu(false); }}
         onStickerPick={() => { setShowStickerPicker(true); setShowAttachMenu(false); }}
+        onPollPick={() => { setShowPoll(true); setShowAttachMenu(false); }}
       />
+      <CreatePollSheet chatId={chat.id} token={token} isOpen={showPoll} onClose={() => setShowPoll(false)} onCreated={(m) => setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]))} />
 
       {/* Card Picker Modal */}
       <CardPicker
