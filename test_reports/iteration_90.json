@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 90 tests all PASS. Backend: 12/12 pytest for PIUP store (19 products, size codes, groups totals hogar=5/comercios=3/oficinas=10/mascotas=1), subscription plans (MEOW+DEAL with correct monthly/yearly), translate language preference PUT/GET (auto reset OK), poll cron reminders (poll_reminder notification created for viewer2, no duplicate on 2nd run, auth 401 without secret), poll auto-close with duration_hours=0.0001, daily digest cron (accepted, /digest/latest returns content, notification type daily_digest exists, auth 401 without secret). Regression: iterations 85-88 all green; iteration89 2/38 failures pre-existing (one flaky ConnectTimeout, one 'same_language' field renamed - unrelated to iteration 90). Frontend (390x844): /marketplace displays billing-toggle, plans-meow (4 plans) and plans-deal (4 plans), yearly toggle switches plan-price-deal-enterprise to '$2,490/año'; 4 piup-group-* sections with 19 piup-product-* cards, piup-sizes-piup-wifi shows C1C2U1U2R7, 'N opciones' rendered, no horizontal overflow. /settings translate-language-select is native SELECT; choosing 'en' fires PUT /api/settings/preferences and sets localStorage bruno_lang='en', persists after reload; selecting 'Del teléfono' (auto) removes the localStorage key. In /chat/<group>: chat-mute-btn opens menu with auto-translate-toggle; toggling shows toast 'Traducción automática activada' and sets localStorage bruno_autotranslate_<chatId>='1'. Poll creation flow: pill-attach-btn (paperclip) is visually overlapped by floating-ai-btn (z-[10000]) at bottom-left on 390x844, but element.click() opens the ChatAttachmentMenu; attach-option-poll opens CreatePollSheet with 5 poll-duration-* chips (none/1/24/72/168); publishing a 1h poll results in poll-total containing 'cierra en 59 min'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/store/products?group=hogar", "issue": "Query param is not part of the router filter (only category/for_card_type). It happens to return 5 hogar items because the filter is silently ignored and hogar has 5 products in the fixed catalog. The request phrasing '?group=hogar filters' works only by coincidence. Consider adding a proper `group` filter for consistency."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ChatPage BrunoPillInput (mobile 390x844)", "issue": "The floating BRUNO IA button (data-testid='floating-ai-btn', z-[10000]) is positioned at the same bottom-left spot as the pill's paperclip (data-testid='pill-attach-btn'), so real user taps on the attach paperclip trigger BRUNO IA instead of opening the ChatAttachmentMenu. Playwright works only when we call element.click() directly. This is a real user-visible tap-target overlap.", "selector": "[data-testid='pill-attach-btn'] vs [data-testid='floating-ai-btn']", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "SettingsPage /settings", "issues": ["The translate language control is rendered as a native <select> nested inside a <span>, producing repeated React hydration warnings: 'In HTML, <select> cannot be a child of <span>'. Should be moved out of the span wrapper."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration90_store_lang_crons.py",
+    "/app/test_reports/pytest/iteration90.xml"
+  ],
+  "action_items": [
+    "Move the floating BRUNO IA button away from the chat pill's attach paperclip (or lower its z-index / shift x-offset) so users on 390-wide screens can actually tap the paperclip.",
+    "Fix hydration warning on /settings: <select data-testid='translate-language-select'> is wrapped in a <span>; move outside the span.",
+    "Optional: add a proper `group` filter to GET /api/store/products (currently only category/for_card_type)."
+  ],
+  "critical_code_review_comments": [
+    "routers/polls.py run_poll_reminders sets reminded=True per-poll to avoid duplicates - OK; but if closes_at was pushed forward by later edit, no re-reminder logic. Not blocking.",
+    "routers/chat_ai.py run_daily_digest content joins group summaries but there is no 'Equipo BRUNO' literal in the template - test passed because the chat named 'Equipo BRUNO' had >=5 messages in 24h."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration90_store_lang_crons.py"
+  ],
+  "success_rate": {"backend": "100% (12/12 iter90) · regression 72/74", "frontend": "100% (marketplace, settings, mute-menu auto-translate, poll creation)"},
+  "test_credentials": "newtest@bruno.com/Test1234! and viewer2@bruno.com/Test1234! from request; WEBHOOK_CRON_SECRET read from /app/backend/.env",
+  "seed_data_creation": "Two polls created in group 655d23d2 (TEST_iter90 reminder + TEST_iter90 auto-close + TEST_iter90 ui poll). No cleanup required (polls attach as chat messages).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend cron endpoints require Bearer WEBHOOK_CRON_SECRET (in /app/backend/.env). When testing chat UI on 390-wide viewport, pill-attach-btn is overlapped by floating-ai-btn; use page.evaluate(\"...pill-attach-btn.click()\") to bypass. Attach menu poll option testid is 'attach-option-poll'. Poll duration chips: poll-duration-{none,1,24,72,168}. Regression suite iterations 85-88 all green; iteration89 has 2 pre-existing failures unrelated to iter90.",
+  "rca of the issue": "N/A — no blocking bugs found. Only two minor UX issues (attach-paperclip tap-target overlap with floating BRUNO IA button, and a settings <select>-in-<span> hydration warning). All iteration 90 acceptance criteria verified end-to-end."
+}

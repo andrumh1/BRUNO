@@ -203,10 +203,13 @@ async def get_subscription_plans():
 @router.get("/products")
 async def get_store_products(
     category: Optional[str] = None,
-    for_card_type: Optional[str] = None
+    for_card_type: Optional[str] = None,
+    group: Optional[str] = None
 ):
     """Get all store products with optional filters"""
     products = PIUP_PRODUCTS.copy()
+    if group:
+        products = [p for p in products if p.get("group") == group]
     
     if category:
         products = [p for p in products if p["category"] == category]

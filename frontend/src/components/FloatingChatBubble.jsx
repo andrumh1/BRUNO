@@ -439,7 +439,7 @@ const FloatingChatBubble = () => {
     [openChats]
   );
 
-  const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno'];
+  const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno', '/chat/'];
   const shouldHide = hiddenPaths.some(p => location.pathname.startsWith(p));
 
   const fetchChats = useCallback(async () => {

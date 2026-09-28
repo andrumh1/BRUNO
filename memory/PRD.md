@@ -1,5 +1,15 @@
 # BRUNO Social Network - PRD
 
+## Phase 81: Idioma preferido · Traducción automática · Resumen diario · Recordatorios de encuesta · Catálogo PIUP + Suscripciones MEOW/DEAL (2026-06)
+- **Idioma de traducción**: `SettingsPage` → select (auto/es/en/pt/fr/de/it/zh/ja/ar/ru/ko/hi) guarda `PUT /settings/preferences {language}` + `localStorage bruno_lang` (TranslateButton lo usa; "auto" = idioma del teléfono).
+- **Traducción automática por chat**: toggle "Traducir automáticamente" en el menú de la campana (`MuteMenu`, `auto-translate-toggle`), `localStorage bruno_autotranslate_{chatId}`; `TranslateButton auto` traduce mensajes ajenos al llegar y no muestra nada si ya están en tu idioma.
+- **Resumen diario** (`chat_ai.py`): `POST /cron/daily-digest` (Bearer `WEBHOOK_CRON_SECRET`, cron `0 13 * * *` en `.emergent/crons.yml`) → por usuario, grupos con ≥5 mensajes en 24h (máx. 3) → resumen IA guardado en `daily_digests` + notificación `daily_digest`; `GET /digest/latest`.
+- **Recordatorios de encuesta** (`polls.py`): `duration_hours` → `closes_at`; `POST /cron/poll-reminders` (cron horario) notifica `poll_reminder` a quienes no votaron cuando cierra en <2h (`reminded` evita duplicados) y cierra automáticamente las vencidas (WS `poll_update`). UI: chips "Cierra en" en `CreatePollSheet`, "cierra en X" en `PollMessage`.
+- **Marketplace / Store** (`routers/store.py`, `server.py /store/products` delega al catálogo): 19 productos oficiales PIUP con `group` (hogar 5 / comercios 3 / oficinas 10 / mascotas 1), `sizes` con códigos C/U/R 1-7 (`PIUP_SIZES`, precio por tamaño `SIZE_PRICE`, `size_options`), `GET /store/sizes`, `GET /store/plans` (MEOW Starter/Growth/Pro/Business 15/29/49/79 mensual ×10 anual; DEAL Starter/Professional/Business/Enterprise 39/79/149/249), `subscribe/{tier}` acepta ids `meow-*`/`deal-*`. `MarketplacePage`: toggle Mensual/Anual, 2 marcas × 4 planes, productos agrupados con chips de medidas y "N opciones"; leyenda de medidas.
+- FIX: burbujas flotantes (IA/Chat) ocultas en `/chat/*` — tapaban el clip del composer en móvil. `?group=` filtro real en el router store.
+- Verificado iteration_90: backend 12/12 + regresión; frontend OK.
+
+
 ## Phase 80: Resumen IA del grupo · Traducir con un toque · Velocidad de notas de voz · Encuestas (2026-06)
 - **Resumen "Lo que te perdiste"** (`routers/chat_ai.py`): `POST /chats/{id}/summary?count=N` (últimos N mensajes de otros, gpt-4o-mini vía Emergent key, viñetas en español; <3 → `reason:few`). UI `GroupSummaryCard.jsx` arriba de los mensajes cuando `unread_count ≥ 5` al abrir (sessionStorage evita repetir), soporta **negritas**.
 - **Traducir**: `POST /ai/translate {text,target}` (detecta idioma, caché por hash en `translations`). `components/TranslateButton.jsx` (idioma = `bruno_lang` o navegador) bajo mensajes ajenos y transcripciones en el chat, bajo el contenido de posts (`PostCard`) y comentarios (PostCard + `ReelSheets`); "Ver original" alterna.
