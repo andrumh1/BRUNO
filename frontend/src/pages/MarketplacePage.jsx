@@ -254,6 +254,8 @@ const MarketplacePage = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [piupProducts, setPiupProducts] = useState([]);
   const [subscriptions, setSubscriptions] = useState([]);
+  const [piupGroups, setPiupGroups] = useState([]);
+  const [billing, setBilling] = useState("monthly");
   const [showPiupSection, setShowPiupSection] = useState(true);
 
   // Fetch PIUP store products (featured)
@@ -262,14 +264,12 @@ const MarketplacePage = () => {
       try {
         const response = await axios.get(`${API}/store/products`);
         // Get first 6 featured products
-        setPiupProducts(response.data.slice(0, 6));
+        setPiupProducts(response.data);
         
-        // Subscription plans
-        setSubscriptions([
-          { id: "free", name: "BRUNO Free", price: 0, features: ["1 tarjeta digital", "QR básico", "Perfil público"], icon: "🆓" },
-          { id: "pro", name: "BRUNO Pro", price: 9.99, features: ["5 tarjetas", "NFC activado", "Analytics", "Sin marca de agua"], icon: "⭐", popular: true },
-          { id: "business", name: "BRUNO Business", price: 29.99, features: ["Tarjetas ilimitadas", "Equipo de 10", "API access", "Soporte prioritario"], icon: "🏢" }
-        ]);
+        const plansRes = await axios.get(`${API}/store/plans`);
+        setSubscriptions(plansRes.data || []);
+        const sizesRes = await axios.get(`${API}/store/sizes`);
+        setPiupGroups(sizesRes.data?.groups || []);
       } catch (error) {
         // error handled
       }
@@ -463,33 +463,32 @@ const MarketplacePage = () => {
                   Ver tienda <ChevronRight className="w-4 h-4" />
                 </Link>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {subscriptions.map((sub) => (
-                  <div 
-                    key={sub.id}
-                    className={`relative p-4 rounded-2xl border-2 transition-all hover:shadow-lg cursor-pointer ${
-                      sub.popular ? 'border-primary bg-primary/5' : 'border-border'
-                    }`}
-                    onClick={() => navigate('/store')}
-                  >
-                    {sub.popular && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-white text-xs font-bold rounded-full">
-                        POPULAR
-                      </div>
-                    )}
-                    <div className="text-3xl mb-2">{sub.icon}</div>
-                    <h3 className="font-bold">{sub.name}</h3>
-                    <div className="text-2xl font-bold text-primary mt-1">
-                      {sub.price === 0 ? "Gratis" : `$${sub.price}/mes`}
+              <div className="flex items-center gap-1 p-1 rounded-full bg-muted w-fit mb-4" data-testid="billing-toggle">
+                {[{ id: "monthly", label: "Mensual" }, { id: "yearly", label: "Anual · 2 meses gratis" }].map((b) => (
+                  <button key={b.id} onClick={() => setBilling(b.id)} className={`px-4 h-8 rounded-full text-xs font-semibold transition-colors ${billing === b.id ? "bg-primary text-white" : "text-muted-foreground"}`} data-testid={`billing-${b.id}`}>{b.label}</button>
+                ))}
+              </div>
+              <div className="space-y-6">
+                {subscriptions.map((brand) => (
+                  <div key={brand.brand_id} data-testid={`plans-${brand.brand_id}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xl">{brand.icon}</span>
+                      <h3 className="font-bold" style={{ color: brand.color }}>{brand.brand}</h3>
+                      <span className="text-xs text-muted-foreground">· {brand.tagline}</span>
                     </div>
-                    <ul className="mt-3 space-y-1">
-                      {sub.features.map((f, i) => (
-                        <li key={`f-${i}`} className="text-sm text-muted-foreground flex items-center gap-2">
-                          <Zap className="w-3 h-3 text-primary" />
-                          {f}
-                        </li>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {brand.plans.map((sub) => (
+                        <div key={sub.id} className={`relative p-4 rounded-2xl border-2 transition-all hover:shadow-lg cursor-pointer ${sub.popular ? "bg-primary/5" : "border-border"}`} style={sub.popular ? { borderColor: brand.color } : undefined} onClick={() => navigate("/store")} data-testid={`plan-${sub.id}`}>
+                        {sub.popular && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-white text-[10px] font-bold rounded-full" style={{ background: brand.color }}>POPULAR</div>}
+                        <h4 className="font-bold">{sub.name}</h4>
+                        <div className="text-2xl font-bold mt-1" style={{ color: brand.color }} data-testid={`plan-price-${sub.id}`}>
+                          ${(billing === "monthly" ? sub.monthly : sub.yearly).toLocaleString("en-US")}<span className="text-xs text-muted-foreground font-medium">/{billing === "monthly" ? "mes" : "año"}</span>
+                        </div>
+                        {billing === "yearly" && <p className="text-[10px] text-muted-foreground">≈ ${Math.round(sub.yearly / 12)}/mes</p>}
+                        <p className="text-xs text-muted-foreground mt-2 flex items-start gap-1.5"><Zap className="w-3 h-3 text-primary mt-0.5 shrink-0" />{sub.summary}</p>
+                      </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -507,23 +506,32 @@ const MarketplacePage = () => {
                     Ver todos <ChevronRight className="w-4 h-4" />
                   </Link>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  {piupProducts.map((product) => (
-                    <div 
-                      key={product.id}
-                      className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 rounded-xl p-3 cursor-pointer hover:shadow-lg transition-all border border-orange-200 dark:border-orange-800"
-                      onClick={() => navigate('/store')}
-                    >
-                      <div className="aspect-square rounded-lg bg-white/50 flex items-center justify-center mb-2">
-                        <Package className="w-8 h-8 text-orange-500" />
+                <p className="text-xs text-muted-foreground mb-3">Medidas: <b>C</b> círculo · <b>U</b> cuadrado · <b>R</b> rectángulo — 1 = 1x1 · 2 = 3x3 · 3 = 5x5 · 4 = 7x7 · 5 = 3x5 · 6 = 4x7 · 7 = tarjeta ID</p>
+                <div className="space-y-5">
+                  {piupGroups.map((g) => {
+                    const items = piupProducts.filter((p) => p.group === g.id);
+                    if (!items.length) return null;
+                    return (
+                      <div key={g.id} data-testid={`piup-group-${g.id}`}>
+                        <h3 className="font-semibold text-sm mb-2 flex items-center gap-1.5"><span>{g.icon}</span>{g.name}<span className="text-xs text-muted-foreground font-normal">· {items.length} productos</span></h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {items.map((product) => (
+                            <div key={product.id} className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/20 rounded-xl p-3 cursor-pointer hover:shadow-lg transition-all border border-orange-200 dark:border-orange-800 flex flex-col" onClick={() => navigate("/store")} data-testid={`piup-product-${product.id}`}>
+                              <p className="font-semibold text-sm leading-snug line-clamp-2">{product.name.replace(/^PIUP /, "")}</p>
+                              <p className="text-[11px] text-muted-foreground mt-1 line-clamp-3 flex-1">{product.description}</p>
+                              <div className="flex flex-wrap gap-1 mt-2" data-testid={`piup-sizes-${product.id}`}>
+                                {product.sizes.map((c) => <span key={c} className="px-1.5 h-5 rounded-md bg-white/70 dark:bg-black/30 text-[10px] font-bold tabular-nums border border-orange-300/60">{c}</span>)}
+                              </div>
+                              <div className="flex items-center justify-between mt-2">
+                                <span className="text-primary font-bold text-sm">desde ${product.price}</span>
+                                <span className="text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full">{product.options_count} {product.options_count === 1 ? "opción" : "opciones"}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <p className="font-medium text-sm line-clamp-2">{product.name}</p>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-primary font-bold">${product.price}</span>
-                        <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full">PIUP</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

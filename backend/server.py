@@ -1384,23 +1384,23 @@ async def get_my_orders(current_user: User = Depends(get_current_user)):
 
 # Get all products
 @api_router.get("/store/products")
-async def get_store_products(category: Optional[str] = None):
-    query = {"is_active": True}
+async def get_store_products(category: Optional[str] = None, group: Optional[str] = None):
+    """Catálogo oficial BRUNO PIUP (routers/store.py) con medidas C/U/R."""
+    from routers.store import PIUP_PRODUCTS
+    products = [dict(p) for p in PIUP_PRODUCTS]
     if category:
-        query["category"] = category
-    
-    products = await db.store_products.find(query, {"_id": 0}).to_list(1000)
-    
-    # If no products, seed with defaults
-    if not products:
-        await seed_store_products()
-        products = await db.store_products.find(query, {"_id": 0}).to_list(1000)
-    
+        products = [p for p in products if p["category"] == category]
+    if group:
+        products = [p for p in products if p.get("group") == group]
     return products
 
 # Get single product
 @api_router.get("/store/products/{product_id}")
 async def get_store_product(product_id: str):
+    from routers.store import PIUP_PRODUCTS
+    for p in PIUP_PRODUCTS:
+        if p["id"] == product_id:
+            return p
     product = await db.store_products.find_one({"id": product_id, "is_active": True}, {"_id": 0})
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -1415,6 +1415,10 @@ async def create_store_order(
 ):
     # Validate items and calculate totals — batch fetch products
     product_ids = [item["product_id"] for item in items]
+    from routers.store import PIUP_PRODUCTS
+    for _p in PIUP_PRODUCTS:
+        if _p["id"] in product_ids:
+            await db.store_products.update_one({"id": _p["id"]}, {"$set": {**_p, "is_active": True}}, upsert=True)
     products_cursor = db.store_products.find({"id": {"$in": product_ids}, "is_active": True}, {"_id": 0})
     products_map = {}
     async for p in products_cursor:

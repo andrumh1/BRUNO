@@ -24,8 +24,7 @@ import {
   Check,
   Loader2,
   Smartphone,
-  Settings as SettingsIcon
-} from "lucide-react";
+  Settings as SettingsIcon, Languages } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -89,6 +88,19 @@ const SettingsPage = () => {
       </button>
     </div>
   );
+
+  const [translateLang, setTranslateLang] = useState(() => { try { return localStorage.getItem("bruno_lang") || "auto"; } catch { return "auto"; } });
+  useEffect(() => {
+    axios.get(`${API}/settings/preferences`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => {
+      const lang = r.data?.language;
+      if (lang && lang !== "auto") { setTranslateLang(lang); try { localStorage.setItem("bruno_lang", lang); } catch { /* ignore */ } }
+    }).catch(() => {});
+  }, [token]);
+  const saveTranslateLang = async (v) => {
+    setTranslateLang(v);
+    try { if (v === "auto") localStorage.removeItem("bruno_lang"); else localStorage.setItem("bruno_lang", v); } catch { /* ignore */ }
+    try { await axios.put(`${API}/settings/preferences`, { language: v }, { headers: { Authorization: `Bearer ${token}` } }); } catch { /* ignore */ }
+  };
 
   const OptionRow = ({ icon: Icon, label, value, onClick, danger }) => (
     <button
@@ -288,6 +300,13 @@ const SettingsPage = () => {
                 <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Cuenta</h2>
                 <div className="divide-y">
                   <OptionRow icon={User} label="Editar perfil" onClick={() => navigate("/edit-profile")} />
+                  <div className="flex items-center gap-3 py-3.5 px-1" data-testid="setting-translate-language">
+                    <Languages className="w-5 h-5 shrink-0" />
+                    <div className="flex-1"><p className="text-sm font-medium">Idioma de traducción</p><p className="text-[11px] text-muted-foreground">Al que se traducen mensajes, posts y comentarios</p></div>
+                    <select value={translateLang} onChange={(e) => saveTranslateLang(e.target.value)} className="h-9 rounded-lg bg-muted px-2 text-sm outline-none" data-testid="translate-language-select">
+                      {[["auto", "Del teléfono"], ["es", "Español"], ["en", "English"], ["pt", "Português"], ["fr", "Français"], ["de", "Deutsch"], ["it", "Italiano"], ["zh", "中文"], ["ja", "日本語"], ["ar", "العربية"], ["ru", "Русский"], ["ko", "한국어"], ["hi", "हिन्दी"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </div>
                   <OptionRow icon={Lock} label="Cambiar contrasena" onClick={() => navigate("/change-password")} />
                   <OptionRow icon={Shield} label="Usuarios bloqueados" onClick={() => navigate("/settings/blocked")} />
                   <OptionRow icon={Smartphone} label="Dispositivos y sesiones" onClick={() => navigate("/settings/devices")} />

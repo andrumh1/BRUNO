@@ -6,6 +6,12 @@ import { BarChart3, Check, Loader2, Lock, Plus, Users, X } from "lucide-react";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
+const closesIn = (iso) => {
+  const ms = new Date(iso) - Date.now();
+  if (ms <= 0) return "ahora";
+  const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+  return h >= 24 ? `en ${Math.round(h / 24)} d` : h >= 1 ? `en ${h} h` : `en ${m} min`;
+};
 
 /** PollMessage — live poll inside a chat bubble (tap to vote, results with bars, who voted) */
 export const PollMessage = ({ pollId, isOwn, token, currentUserId, isAdmin }) => {
@@ -62,7 +68,7 @@ export const PollMessage = ({ pollId, isOwn, token, currentUserId, isAdmin }) =>
         })}
       </div>
       <div className="mt-1.5 flex items-center justify-between text-[10px] opacity-75">
-        <span className="flex items-center gap-1" data-testid="poll-total"><Users className="w-3 h-3" /> {poll.total_voters} voto{poll.total_voters === 1 ? "" : "s"}{poll.anonymous ? " · anónima" : ""}</span>
+        <span className="flex items-center gap-1" data-testid="poll-total"><Users className="w-3 h-3" /> {poll.total_voters} voto{poll.total_voters === 1 ? "" : "s"}{poll.anonymous ? " · anónima" : ""}{!poll.closed && poll.closes_at ? ` · cierra ${closesIn(poll.closes_at)}` : ""}</span>
         {canClose && <button type="button" onClick={close} className="underline flex items-center gap-1" data-testid="poll-close-btn"><Lock className="w-3 h-3" /> Cerrar</button>}
       </div>
     </div>
@@ -75,15 +81,16 @@ export const CreatePollSheet = ({ chatId, token, isOpen, onClose, onCreated }) =
   const [opts, setOpts] = useState(["", ""]);
   const [multiple, setMultiple] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
+  const [duration, setDuration] = useState(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (!isOpen) { setQ(""); setOpts(["", ""]); setMultiple(false); setAnonymous(false); } }, [isOpen]);
+  useEffect(() => { if (!isOpen) { setQ(""); setOpts(["", ""]); setMultiple(false); setAnonymous(false); setDuration(null); } }, [isOpen]);
   const valid = q.trim() && opts.filter((o) => o.trim()).length >= 2;
 
   const create = async () => {
     if (!valid) return;
     setBusy(true);
     try {
-      const r = await axios.post(`${API}/chats/${chatId}/polls`, { question: q.trim(), options: opts.filter((o) => o.trim()), multiple, anonymous }, { headers: { Authorization: `Bearer ${token}` } });
+      const r = await axios.post(`${API}/chats/${chatId}/polls`, { question: q.trim(), options: opts.filter((o) => o.trim()), multiple, anonymous, duration_hours: duration }, { headers: { Authorization: `Bearer ${token}` } });
       onCreated?.(r.data); onClose(); brunoToast.success("Encuesta publicada");
     } catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo crear la encuesta"); } finally { setBusy(false); }
   };
@@ -106,6 +113,15 @@ export const CreatePollSheet = ({ chatId, token, isOpen, onClose, onCreated }) =
               {opts.length < 10 && <button onClick={() => setOpts((p) => [...p, ""])} className="text-xs text-primary font-medium flex items-center gap-1" data-testid="poll-add-option"><Plus className="w-3.5 h-3.5" /> Añadir opción</button>}
             </div>
             <label className="flex items-center justify-between text-sm"><span>Permitir varias respuestas</span><input type="checkbox" checked={multiple} onChange={(e) => setMultiple(e.target.checked)} className="accent-primary w-4 h-4" data-testid="poll-multiple-toggle" /></label>
+            <div className="text-sm">
+              <p className="mb-1.5">Cierra en</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {[[null, "Sin límite"], [1, "1 hora"], [24, "24 horas"], [72, "3 días"], [168, "1 semana"]].map(([h, l]) => (
+                  <button key={String(h)} type="button" onClick={() => setDuration(h)} className={`px-3 h-8 rounded-full text-xs font-semibold ${duration === h ? "bg-primary text-white" : "bg-muted"}`} data-testid={`poll-duration-${h ?? "none"}`}>{l}</button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">Quienes no hayan votado recibirán un aviso antes del cierre.</p>
+            </div>
             <label className="flex items-center justify-between text-sm"><span>Votación anónima</span><input type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} className="accent-primary w-4 h-4" data-testid="poll-anonymous-toggle" /></label>
             <button onClick={create} disabled={!valid || busy} className="h-11 rounded-full bg-primary text-white font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2" data-testid="poll-create-btn">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publicar encuesta"}</button>
           </motion.div>

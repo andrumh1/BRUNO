@@ -85,6 +85,13 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
   const [readByFor, setReadByFor] = useState(null);
   const [forwardMsg, setForwardMsg] = useState(null);
   const [showPoll, setShowPoll] = useState(false);
+  const [autoTranslate, setAutoTranslate] = useState(() => { try { return localStorage.getItem(`bruno_autotranslate_${chat?.id}`) === "1"; } catch { return false; } });
+  useEffect(() => { try { setAutoTranslate(localStorage.getItem(`bruno_autotranslate_${chat?.id}`) === "1"); } catch { /* ignore */ } }, [chat?.id]);
+  const toggleAutoTranslate = (v) => {
+    setAutoTranslate(v);
+    try { if (v) localStorage.setItem(`bruno_autotranslate_${chat.id}`, "1"); else localStorage.removeItem(`bruno_autotranslate_${chat.id}`); } catch { /* ignore */ }
+    import("@/components/bruno/BrunoToast").then(({ brunoToast }) => brunoToast.success(v ? "Traducción automática activada" : "Traducción automática desactivada", { description: v ? "Los mensajes en otro idioma se traducen solos al llegar." : undefined }));
+  };
   const initialUnreadRef = useRef(chat?.unread_count || 0);
   const [pinned, setPinned] = useState(chat?.pinned_message || null);
   useEffect(() => { setPinned(chat?.pinned_message || null); }, [chat?.id, chat?.pinned_message]);
@@ -770,7 +777,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
           <Button variant="ghost" size="icon" className={`rounded-full h-9 w-9 ${showSearch ? "text-primary bg-primary/10" : "hover:bg-muted"}`} onClick={() => setShowSearch((v) => !v)} aria-label="Buscar en el chat" data-testid="chat-search-toggle">
             <Search className="w-4 h-4" />
           </Button>
-          <MuteMenu chatId={chat.id} token={token} muted={muted} mutedUntil={muteState.until} onChange={handleMuteChange} />
+          <MuteMenu chatId={chat.id} token={token} muted={muted} mutedUntil={muteState.until} onChange={handleMuteChange} autoTranslate={autoTranslate} onAutoTranslate={toggleAutoTranslate} />
           <Button 
             variant="ghost" size="icon" 
             className="rounded-full h-9 w-9 hover:bg-green-500/10 hover:text-green-500"
@@ -1039,7 +1046,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
                       )}
                       
                       {!isOwn && (message.message_type === 'text' || message.message_type === 'audio') && (message.content || message.transcript) && (
-                        <TranslateButton text={message.message_type === 'audio' ? (message.transcript || "") : message.content} tone={isOwn ? "own" : "muted"} testId={`translate-${message.id}`} />
+                        <TranslateButton text={message.message_type === 'audio' ? (message.transcript || "") : message.content} tone={isOwn ? "own" : "muted"} testId={`translate-${message.id}`} auto={autoTranslate} />
                       )}
                       {/* Time and read status */}
                       <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? "justify-end" : "justify-start"}`}>

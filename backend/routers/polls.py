@@ -1,8 +1,10 @@
 """Group polls: a poll is a chat message (message_type='poll') whose live state lives in `polls`."""
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
+import hmac
+import os
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import logging
 import uuid
 
@@ -23,6 +25,7 @@ class PollCreate(BaseModel):
     options: List[str]
     multiple: bool = False
     anonymous: bool = False
+    duration_hours: Optional[float] = None  # None = sin límite
 
 
 class VoteIn(BaseModel):
@@ -47,7 +50,7 @@ async def _poll_view(poll: dict, user_id: str) -> dict:
         who = [] if poll.get("anonymous") else [{"id": uid, "name": names.get(uid, "Usuario")} for uid, opts in votes.items() if o["id"] in opts]
         options.append({"id": o["id"], "text": o["text"], "votes": counts[o["id"]], "pct": round(counts[o["id"]] * 100 / total_voters) if total_voters else 0, "voters": who})
     return {"id": poll["id"], "chat_id": poll["chat_id"], "message_id": poll.get("message_id"), "question": poll["question"], "multiple": poll.get("multiple", False),
-            "anonymous": poll.get("anonymous", False), "closed": poll.get("closed", False), "created_by": poll["created_by"], "created_at": poll["created_at"],
+            "anonymous": poll.get("anonymous", False), "closed": poll.get("closed", False), "created_by": poll["created_by"], "created_at": poll["created_at"], "closes_at": poll.get("closes_at"),
             "options": options, "total_voters": total_voters, "my_votes": votes.get(user_id, [])}
 
 
@@ -74,7 +77,8 @@ async def create_poll(chat_id: str, data: PollCreate, current_user: User = Depen
         raise HTTPException(status_code=400, detail="Escribe una pregunta y al menos 2 opciones")
     now = datetime.now(timezone.utc).isoformat()
     poll = {"id": str(uuid.uuid4()), "chat_id": chat_id, "question": q[:200], "options": [{"id": str(uuid.uuid4())[:8], "text": o[:80]} for o in opts],
-            "multiple": data.multiple, "anonymous": data.anonymous, "votes": {}, "closed": False, "created_by": current_user.id, "created_at": now}
+            "multiple": data.multiple, "anonymous": data.anonymous, "votes": {}, "closed": False, "created_by": current_user.id, "created_at": now,
+            "closes_at": (datetime.now(timezone.utc) + timedelta(hours=float(data.duration_hours))).isoformat() if data.duration_hours else None, "reminded": False}
     msg = {"id": str(uuid.uuid4()), "chat_id": chat_id, "sender_id": current_user.id, "content": f"📊 Encuesta: {poll['question']}", "message_type": "poll",
            "attachments": [{"type": "poll", "poll_id": poll["id"]}], "is_read": False, "is_deleted": False, "read_by": [current_user.id], "created_at": now, "updated_at": now}
     poll["message_id"] = msg["id"]
@@ -138,3 +142,38 @@ async def close_poll(poll_id: str, current_user: User = Depends(get_current_user
     poll["closed"] = True
     await _broadcast(poll)
     return await _poll_view(poll, current_user.id)
+
+
+# ─── Cron: remind non-voters before close + auto-close expired polls ─────────
+async def run_poll_reminders():
+    from routers.posts_feed import _push_notification
+    now = datetime.now(timezone.utc)
+    soon = (now + timedelta(hours=2)).isoformat()
+    async for poll in db.polls.find({"closed": False, "closes_at": {"$ne": None, "$lte": soon}, "reminded": {"$ne": True}}, {"_id": 0}):
+        chat = await db.chats.find_one({"id": poll["chat_id"]}, {"_id": 0, "participants": 1, "name": 1})
+        if not chat:
+            continue
+        voters = set((poll.get("votes") or {}).keys())
+        pending = [p for p in chat["participants"] if p not in voters]
+        for uid in pending:
+            try:
+                await _push_notification(user_id=uid, actor_id=poll["created_by"], ntype="poll_reminder", target_id=poll["chat_id"], target_type="chat",
+                                         message=f"La encuesta «{poll['question'][:60]}» de {chat.get('name') or 'tu chat'} cierra pronto y aún no has votado")
+            except Exception as e:
+                logger.warning(f"poll reminder failed: {e}")
+        await db.polls.update_one({"id": poll["id"]}, {"$set": {"reminded": True}})
+    async for poll in db.polls.find({"closed": False, "closes_at": {"$ne": None, "$lte": now.isoformat()}}, {"_id": 0}):
+        await db.polls.update_one({"id": poll["id"]}, {"$set": {"closed": True}})
+        poll["closed"] = True
+        await _broadcast(poll)
+
+
+@router.post("/cron/poll-reminders")
+async def cron_poll_reminders(request: Request, background: BackgroundTasks):
+    secret = os.environ.get("WEBHOOK_CRON_SECRET")
+    auth = request.headers.get("authorization", "")
+    token = auth[7:] if auth.lower().startswith("bearer ") else ""
+    if not secret or not token or not hmac.compare_digest(token, secret):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    background.add_task(run_poll_reminders)
+    return {"accepted": True, "run_id": request.headers.get("x-webhook-id")}

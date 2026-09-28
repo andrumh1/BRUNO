@@ -6,3 +6,15 @@ crons:
     method: POST
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
     enabled: true
+  - name: daily-digest
+    description: "Resumen IA matutino de los grupos más activos (8:00 UTC-5 = 13:00 UTC)"
+    cron: "0 13 * * *"
+    endpoint: "{{BASE_URL}}/api/cron/daily-digest"
+    method: POST
+    enabled: true
+  - name: poll-reminders
+    description: "Avisa a quienes no han votado cuando una encuesta está por cerrarse y cierra las vencidas (cada hora)"
+    cron: "0 * * * *"
+    endpoint: "{{BASE_URL}}/api/cron/poll-reminders"
+    method: POST
+    enabled: true

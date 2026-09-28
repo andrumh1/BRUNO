@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, BellOff, Check, Loader2 } from "lucide-react";
+import { Bell, BellOff, Check, Loader2, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 
@@ -25,7 +25,7 @@ export const formatMutedUntil = (iso) => {
 };
 
 /** MuteMenu — bell button + popover with 1h / 8h / 1w / forever, auto-unmutes when expired */
-const MuteMenu = ({ chatId, token, muted, mutedUntil, onChange }) => {
+const MuteMenu = ({ chatId, token, muted, mutedUntil, onChange, autoTranslate = false, onAutoTranslate }) => {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(null);
 
@@ -59,6 +59,10 @@ const MuteMenu = ({ chatId, token, muted, mutedUntil, onChange }) => {
                   {busy === o.id ? <Loader2 className="w-4 h-4 animate-spin" /> : (muted && ((o.id === "forever" && !mutedUntil) ) ? <Check className="w-4 h-4 text-primary" /> : null)}
                 </button>
               ))}
+              <button onClick={() => { onAutoTranslate?.(!autoTranslate); setOpen(false); }} className="w-full mt-1 border-t px-3 py-2.5 text-sm hover:bg-muted text-left flex items-center justify-between gap-2" data-testid="auto-translate-toggle">
+                <span className="flex items-center gap-2"><Languages className="w-4 h-4 text-primary" /> Traducir automáticamente</span>
+                <span className={`w-9 h-5 rounded-full relative transition-colors ${autoTranslate ? "bg-primary" : "bg-muted-foreground/30"}`}><span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${autoTranslate ? "left-4" : "left-0.5"}`} /></span>
+              </button>
               {muted && (
                 <button onClick={() => apply("unmute")} disabled={!!busy} className="w-full mt-1 border-t px-3 py-2.5 rounded-b-xl text-sm text-primary font-medium hover:bg-muted text-left flex items-center gap-2" data-testid="mute-option-unmute">
                   <Bell className="w-4 h-4" /> Activar sonido

@@ -1,12 +1,13 @@
 """AI helpers for chat: catch-up summary of unread group messages + one-tap translation (any text)."""
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
+import hmac
 from pydantic import BaseModel
 from typing import Optional
 import hashlib
 import logging
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import sys
 sys.path.insert(0, '/app/backend')
@@ -97,3 +98,67 @@ async def summarize_unread(chat_id: str, limit: int = 120, since: Optional[str] 
         "Destaca decisiones, preguntas dirigidas al lector, fechas/planes y enlaces. Empieza cada viñeta con '• '. No inventes nada.",
         f"Conversación de «{title}» ({len(msgs)} mensajes nuevos que el lector no vio):\n\n{transcript}\n\nResumen:")
     return {"count": len(msgs), "summary": summary, "from": msgs[0]["created_at"], "to": msgs[-1]["created_at"]}
+
+
+# ─── Cron: daily digest of the most active groups (every morning) ───────────
+async def run_daily_digest():
+    from routers.posts_feed import _push_notification
+    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    pipeline = [{"$match": {"created_at": {"$gt": since}, "is_deleted": False, "message_type": {"$nin": ["system", "call"]}}},
+                {"$group": {"_id": "$chat_id", "n": {"$sum": 1}}}, {"$match": {"n": {"$gte": 5}}}, {"$sort": {"n": -1}}]
+    active = [a async for a in db.messages.aggregate(pipeline)]
+    if not active:
+        return
+    chats = {c["id"]: c async for c in db.chats.find({"id": {"$in": [a["_id"] for a in active]}, "is_group": True}, {"_id": 0, "id": 1, "name": 1, "participants": 1})}
+    per_user = {}
+    for a in active:
+        chat = chats.get(a["_id"])
+        if not chat:
+            continue
+        for uid in chat["participants"]:
+            per_user.setdefault(uid, []).append((chat, a["n"]))
+    for uid, items in per_user.items():
+        items = items[:3]
+        parts = []
+        for chat, n in items:
+            try:
+                res = await _summary_core(chat, uid, since)
+            except Exception as e:
+                logger.warning(f"digest summary failed: {e}")
+                continue
+            if res and res.get("summary"):
+                parts.append(f"{chat.get('name') or 'Grupo'} ({n} mensajes):\n{res['summary']}")
+        if not parts:
+            continue
+        text = "\n\n".join(parts)
+        await db.daily_digests.insert_one({"user_id": uid, "date": datetime.now(timezone.utc).date().isoformat(), "content": text, "created_at": datetime.now(timezone.utc).isoformat()})
+        try:
+            await _push_notification(user_id=uid, actor_id=uid, ntype="daily_digest", target_id=items[0][0]["id"], target_type="chat",
+                                     message=f"☀️ Tu resumen de hoy: {len(items)} grupo{'s' if len(items) > 1 else ''} activo{'s' if len(items) > 1 else ''}. " + parts[0].split("\n", 1)[1][:140])
+        except Exception as e:
+            logger.warning(f"digest notification failed: {e}")
+
+
+class _FakeUser:
+    def __init__(self, uid): self.id = uid
+
+
+async def _summary_core(chat: dict, user_id: str, since: str):
+    return await summarize_unread(chat["id"], 120, since, None, _FakeUser(user_id))
+
+
+@router.post("/cron/daily-digest")
+async def cron_daily_digest(request: Request, background: BackgroundTasks):
+    secret = os.environ.get("WEBHOOK_CRON_SECRET")
+    auth = request.headers.get("authorization", "")
+    token = auth[7:] if auth.lower().startswith("bearer ") else ""
+    if not secret or not token or not hmac.compare_digest(token, secret):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    background.add_task(run_daily_digest)
+    return {"accepted": True, "run_id": request.headers.get("x-webhook-id")}
+
+
+@router.get("/digest/latest")
+async def latest_digest(current_user: User = Depends(get_current_user)):
+    d = await db.daily_digests.find_one({"user_id": current_user.id}, {"_id": 0}, sort=[("created_at", -1)])
+    return d or {}

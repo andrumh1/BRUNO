@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { Languages, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,11 +10,14 @@ export const userLang = () => {
 };
 
 /** TranslateButton — one-tap translation of any text (chat, transcript, comment) to the user's language */
-const TranslateButton = ({ text, tone = "muted", className = "", compact = false, testId = "translate-btn" }) => {
+const TranslateButton = ({ text, tone = "muted", className = "", compact = false, testId = "translate-btn", auto = false }) => {
   const { token } = useAuth();
   const [state, setState] = useState("idle"); // idle | loading | shown | original | error
   const [result, setResult] = useState(null);
+  const autoRan = useRef(false);
+  useEffect(() => { if (auto && !autoRan.current && text && text.trim().length >= 2) { autoRan.current = true; run(); } }, [auto]); // eslint-disable-line
   if (!text || text.trim().length < 2) return null;
+  if (auto && result?.same_language) return null;
 
   const run = async () => {
     if (result) { setState((s) => (s === "shown" ? "original" : "shown")); return; }

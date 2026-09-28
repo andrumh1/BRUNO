@@ -120,64 +120,85 @@ class CreateOrderRequest(BaseModel):
 # PIUP PRODUCTS DATA
 # ============================================================================
 
-PIUP_PRODUCTS = [
-    # NFC Cards
-    {"id": "nfc-card-black", "name": "Tarjeta NFC BRUNO Negro", "description": "Tarjeta NFC premium color negro mate con chip de alta frecuencia.", "category": "nfc_card", "price": 29.99, "colors": ["black"], "features": ["NFC de alta frecuencia", "Diseño premium", "Compatible con iOS/Android", "Grabado láser incluido"], "for_card_type": "personal", "image_url": "/products/nfc-black.png"},
-    {"id": "nfc-card-white", "name": "Tarjeta NFC BRUNO Blanco", "description": "Tarjeta NFC elegante color blanco con acabado brillante.", "category": "nfc_card", "price": 29.99, "colors": ["white"], "features": ["NFC de alta frecuencia", "Acabado brillante", "Compatible con iOS/Android", "Grabado láser incluido"], "for_card_type": "personal", "image_url": "/products/nfc-white.png"},
-    {"id": "nfc-card-orange", "name": "Tarjeta NFC BRUNO Naranja", "description": "Tarjeta NFC signature color naranja BRUNO.", "category": "nfc_card", "price": 34.99, "colors": ["orange"], "features": ["Color signature BRUNO", "NFC premium", "Compatible universal", "Diseño exclusivo"], "for_card_type": "personal", "image_url": "/products/nfc-orange.png"},
-    {"id": "nfc-card-gold", "name": "Tarjeta NFC BRUNO Dorado", "description": "Tarjeta NFC de lujo con acabado dorado.", "category": "nfc_card", "price": 49.99, "colors": ["gold"], "features": ["Acabado dorado premium", "NFC de alta frecuencia", "Presentación de lujo", "Grabado personalizado"], "for_card_type": "negocio", "image_url": "/products/nfc-gold.png"},
-    {"id": "nfc-card-holographic", "name": "Tarjeta NFC BRUNO Holográfica", "description": "Tarjeta NFC con efecto holográfico único.", "category": "nfc_card", "price": 44.99, "colors": ["holographic"], "features": ["Efecto holográfico", "NFC premium", "Diseño futurista", "Edición limitada"], "for_card_type": "personal", "image_url": "/products/nfc-holo.png"},
-    {"id": "nfc-carnet", "name": "Carnet Empresarial NFC", "description": "Carnets corporativos con NFC integrado para empresas.", "category": "nfc_card", "price": 24.99, "colors": ["white", "black"], "features": ["Personalización corporativa", "NFC integrado", "Impresión full color", "Mínimo 10 unidades"], "for_card_type": "empresarial", "image_url": "/products/carnet.png"},
-    
-    # Home
-    {"id": "nfc-wifi-home", "name": "NFC WiFi Compartido", "description": "Tag NFC para compartir tu WiFi con visitantes.", "category": "nfc_card", "price": 14.99, "colors": ["white", "black"], "features": ["Conexión instantánea", "Sin revelar contraseña", "Diseño discreto"], "for_card_type": None, "image_url": "/products/wifi-tag.png"},
-    {"id": "nfc-despensa", "name": "Lista de Despensa NFC", "description": "Tag para lista de compras inteligente.", "category": "nfc_card", "price": 12.99, "colors": ["white"], "features": ["Lista compartida", "Actualización en tiempo real", "Integración con apps"], "for_card_type": None, "image_url": "/products/despensa.png"},
-    {"id": "nfc-alarma", "name": "Tag de Alarma", "description": "Activación/desactivación de alarma por NFC.", "category": "nfc_card", "price": 19.99, "colors": ["black", "white"], "features": ["Control de alarma", "Registro de accesos", "Compatible sistemas"], "for_card_type": None, "image_url": "/products/alarma.png"},
-    {"id": "nfc-emergencia", "name": "Tag de Emergencia", "description": "Información de emergencia para el hogar.", "category": "nfc_card", "price": 14.99, "colors": ["red"], "features": ["Info de emergencia", "Contactos prioritarios", "Información médica"], "for_card_type": "guardian", "image_url": "/products/emergencia.png"},
-    {"id": "nfc-llavero-gps", "name": "Llavero GPS Tracker", "description": "Llavero con GPS para localizar tus llaves.", "category": "nfc_pet_tag", "price": 39.99, "colors": ["black", "white"], "features": ["GPS integrado", "App de localización", "Batería 6 meses", "Resistente al agua"], "for_card_type": None, "image_url": "/products/llavero-gps.png"},
-    
-    # Commerce
-    {"id": "nfc-menu-qr", "name": "Menú Virtual QR/NFC", "description": "Solución completa para menú digital de restaurantes.", "category": "service", "price": 99.99, "colors": [], "features": ["Menú interactivo", "Actualización en tiempo real", "QR + NFC", "Soporte incluido"], "for_card_type": "lugares", "image_url": "/products/menu.png"},
-    {"id": "nfc-wifi-comercio", "name": "WiFi para Clientes", "description": "Sistema de WiFi para comercios.", "category": "nfc_card", "price": 24.99, "colors": ["white", "black"], "features": ["Portal cautivo", "Analytics de uso", "Diseño personalizable"], "for_card_type": None, "image_url": "/products/wifi-comercio.png"},
-    {"id": "nfc-redes-sociales", "name": "Síguenos en Redes", "description": "Tag para promocionar redes sociales del negocio.", "category": "nfc_card", "price": 19.99, "colors": ["white", "black", "orange"], "features": ["Links a todas las redes", "QR backup", "Diseño atractivo"], "for_card_type": "negocio", "image_url": "/products/redes.png"},
-    {"id": "nfc-ar-productos", "name": "AR para Productos", "description": "Experiencia de realidad aumentada para productos.", "category": "service", "price": 149.99, "colors": [], "features": ["Modelo 3D del producto", "Información interactiva", "Integración e-commerce"], "for_card_type": None, "image_url": "/products/ar.png"},
-    
-    # Offices
-    {"id": "nfc-citas", "name": "Agenda de Citas NFC", "description": "Sistema de agendamiento por NFC.", "category": "nfc_card", "price": 29.99, "colors": ["black", "white"], "features": ["Calendario integrado", "Confirmación automática", "Recordatorios"], "for_card_type": "servicios", "image_url": "/products/citas.png"},
-    {"id": "nfc-apps", "name": "Descarga de Apps", "description": "Tag para descarga directa de aplicaciones.", "category": "nfc_card", "price": 14.99, "colors": ["black", "white"], "features": ["Link a App Store", "Link a Play Store", "Analytics de descargas"], "for_card_type": None, "image_url": "/products/apps.png"},
-    {"id": "nfc-pagos", "name": "Métodos de Pago", "description": "Tag con todas las opciones de pago.", "category": "nfc_card", "price": 19.99, "colors": ["black", "white"], "features": ["Links de pago", "Múltiples métodos", "Confirmación instantánea"], "for_card_type": "negocio", "image_url": "/products/pagos.png"},
-    {"id": "nfc-inventario", "name": "Control de Inventario", "description": "Tags NFC para gestión de inventario.", "category": "nfc_card", "price": 9.99, "colors": ["white"], "features": ["Tracking de items", "App de gestión", "Reportes automáticos"], "for_card_type": None, "image_url": "/products/inventario.png"},
-    {"id": "nfc-acceso", "name": "Control de Acceso", "description": "Sistema de acceso por tarjeta NFC.", "category": "nfc_card", "price": 34.99, "colors": ["black", "white"], "features": ["Registro de accesos", "Múltiples usuarios", "Integración cerraduras"], "for_card_type": None, "image_url": "/products/acceso.png"},
-    
-    # Pets
-    {"id": "nfc-pet-basico", "name": "Tag Mascota Básico", "description": "Identificación básica para mascotas.", "category": "nfc_pet_tag", "price": 19.99, "colors": ["blue", "pink", "green"], "features": ["Datos del dueño", "Info de la mascota", "QR backup", "Resistente al agua"], "for_card_type": "mascotas", "image_url": "/products/pet-basic.png"},
-    {"id": "nfc-pet-gps", "name": "Tag Mascota con GPS", "description": "Tag con GPS para localizar tu mascota.", "category": "nfc_pet_tag", "price": 49.99, "colors": ["blue", "pink", "green"], "features": ["GPS en tiempo real", "Historial de ubicación", "Alertas de zona segura", "Batería 3 meses"], "for_card_type": "mascotas", "image_url": "/products/pet-gps.png"},
-    {"id": "nfc-collar-completo", "name": "Collar Inteligente", "description": "Collar completo con NFC, GPS y monitoreo.", "category": "nfc_pet_tag", "price": 79.99, "colors": ["black", "red", "blue"], "features": ["NFC + GPS", "Monitor de actividad", "Batería recargable", "App completa"], "for_card_type": "mascotas", "image_url": "/products/collar.png"},
-    
-    # Guardian
-    {"id": "nfc-guardian-adulto", "name": "Pulsera Guardian Adulto", "description": "Pulsera de identificación para adultos mayores.", "category": "nfc_bracelet", "price": 34.99, "colors": ["black", "brown", "silver"], "features": ["Info médica", "Contactos de emergencia", "QR + NFC", "Diseño elegante"], "for_card_type": "guardian", "image_url": "/products/guardian-adult.png"},
-    {"id": "nfc-guardian-infantil", "name": "Pulsera Guardian Infantil", "description": "Pulsera de seguridad para niños.", "category": "nfc_bracelet", "price": 29.99, "colors": ["blue", "pink", "green", "orange"], "features": ["Datos del niño", "Contactos de padres", "Diseño divertido", "Resistente"], "for_card_type": "guardian", "image_url": "/products/guardian-kid.png"},
-    
-    # Habladores / Signage
-    {"id": "hablador-mesa", "name": "Hablador de Mesa", "description": "Display de mesa con NFC para restaurantes.", "category": "service", "price": 24.99, "colors": ["black", "white"], "features": ["Diseño elegante", "NFC integrado", "QR visible", "Base estable"], "for_card_type": None, "image_url": "/products/hablador-mesa.png"},
-    {"id": "hablador-pared", "name": "Hablador de Pared", "description": "Display de pared con NFC.", "category": "service", "price": 29.99, "colors": ["black", "white"], "features": ["Montaje fácil", "NFC integrado", "Diseño profesional"], "for_card_type": None, "image_url": "/products/hablador-pared.png"},
-    {"id": "hablador-mostrador", "name": "Hablador de Mostrador", "description": "Display para punto de venta.", "category": "service", "price": 34.99, "colors": ["black", "white"], "features": ["Visible desde ambos lados", "NFC + QR", "Base pesada"], "for_card_type": None, "image_url": "/products/hablador-mostrador.png"},
-    {"id": "hablador-aframe", "name": "A-Frame con NFC", "description": "Caballete tipo A con NFC integrado.", "category": "service", "price": 79.99, "colors": ["black", "white"], "features": ["Doble cara", "Resistente exterior", "NFC en ambos lados", "Gráficas intercambiables"], "for_card_type": None, "image_url": "/products/aframe.png"},
-    
-    # Services
-    {"id": "service-design", "name": "Diseño Personalizado", "description": "Servicio de diseño gráfico para tu tarjeta.", "category": "service", "price": 49.99, "colors": [], "features": ["Diseño único", "3 revisiones", "Archivos originales", "Soporte incluido"], "for_card_type": None, "image_url": "/products/design.png"},
-    {"id": "service-enterprise", "name": "Configuración Empresarial", "description": "Setup completo para empresas.", "category": "service", "price": 299.99, "colors": [], "features": ["Hasta 50 tarjetas", "Portal empresarial", "Capacitación", "Soporte premium 1 año"], "for_card_type": "empresarial", "image_url": "/products/enterprise.png"},
-    
-    # MEOW APP Partner Products
-    {"id": "meow-redes", "name": "MEOW Gestión de Redes", "description": "Servicio de gestión de redes sociales por MEOW APP.", "category": "service", "price": 199.99, "colors": [], "features": ["Gestión mensual", "Contenido original", "Analytics", "Por MEOW APP"], "for_card_type": None, "image_url": "/products/meow-redes.png"},
-    {"id": "meow-branding", "name": "MEOW Branding Completo", "description": "Servicio de branding empresarial por MEOW APP.", "category": "service", "price": 499.99, "colors": [], "features": ["Logo", "Manual de marca", "Templates", "Por MEOW APP"], "for_card_type": None, "image_url": "/products/meow-branding.png"},
-    {"id": "meow-ads", "name": "MEOW Publicidad Digital", "description": "Campañas publicitarias por MEOW APP.", "category": "service", "price": 299.99, "colors": [], "features": ["Facebook Ads", "Google Ads", "Optimización", "Reportes semanales", "Por MEOW APP"], "for_card_type": None, "image_url": "/products/meow-ads.png"},
+# Medidas PIUP: C=Círculo, U=Cuadrado, R=Rectángulo · 1=1x1 2=3x3 3=5x5 4=7x7 (C/U) · 5=3x5 6=4x7 7=ID (R)
+PIUP_SIZES = {
+    "C1": {"shape": "Círculo", "dims": "1x1 cm"}, "C2": {"shape": "Círculo", "dims": "3x3 cm"}, "C3": {"shape": "Círculo", "dims": "5x5 cm"}, "C4": {"shape": "Círculo", "dims": "7x7 cm"},
+    "U1": {"shape": "Cuadrado", "dims": "1x1 cm"}, "U2": {"shape": "Cuadrado", "dims": "3x3 cm"}, "U3": {"shape": "Cuadrado", "dims": "5x5 cm"}, "U4": {"shape": "Cuadrado", "dims": "7x7 cm"},
+    "R5": {"shape": "Rectángulo", "dims": "3x5 cm"}, "R6": {"shape": "Rectángulo", "dims": "4x7 cm"}, "R7": {"shape": "Rectángulo", "dims": "Tarjeta ID (8.6x5.4 cm)"},
+}
+SIZE_PRICE = {"1": 9.99, "2": 12.99, "3": 15.99, "4": 19.99, "5": 14.99, "6": 17.99, "7": 24.99}
+
+PIUP_GROUPS = [
+    {"id": "hogar", "name": "Hogar", "icon": "🏠"},
+    {"id": "comercios", "name": "Restaurantes y Comercios", "icon": "🍽️"},
+    {"id": "oficinas", "name": "Oficinas", "icon": "🏢"},
+    {"id": "mascotas", "name": "Mascotas", "icon": "🐾"},
 ]
+
+def _piup(pid, name, group, desc, sizes, category="nfc_card", for_card_type=None, price=None, colors=None, image=None, features=None):
+    sizes = sizes.split()
+    base = price or min(SIZE_PRICE[c[1]] for c in sizes)
+    return {"id": pid, "name": name, "group": group, "description": desc, "category": category, "price": base,
+            "sizes": sizes, "size_options": [{"code": c, **PIUP_SIZES[c], "price": price or SIZE_PRICE[c[1]]} for c in sizes],
+            "options_count": len(sizes), "colors": colors or ["black", "white", "orange"], "features": features or ["Chip NFC NTAG", "QR de respaldo", "Compatible iOS/Android", "Configurable desde BRUNO PIUP"],
+            "for_card_type": for_card_type, "image_url": image or f"/products/{pid}.png"}
+
+PIUP_PRODUCTS = [
+    # ── HOGAR ──
+    _piup("piup-wifi", "PIUP Clave de WiFi", "hogar", "Ubica la red WiFi y conecta el celular al instante: solo hay que dar Aceptar para confirmar.", "C1 C2 U1 U2 R7"),
+    _piup("piup-despensa", "PIUP Lista de Despensa", "hogar", "Al acercar el celular abre notas con selector de productos y despensa, dentro de PIUP.", "C2 C3 U2 U3 R7"),
+    _piup("piup-alarmas", "PIUP Activación de Alarmas", "hogar", "Direcciona a las alarmas del celular y programa la alarma que desees.", "C1 C2 U1 U2 R7"),
+    _piup("piup-mensajes", "PIUP Envío Instantáneo de Mensajes", "hogar", "Configura acciones: abrir WhatsApp y enviar texto, ubicación o imagen a una persona específica.", "C1 C2 U1 U2 R7"),
+    _piup("piup-llavero-gps", "PIUP Llavero GPS", "hogar", "Mapa con ubicación en tiempo real, rutas realizadas e historial del dispositivo.", "C1 U1", category="nfc_pet_tag", price=39.99, colors=["black", "white"], features=["GPS en tiempo real", "Historial de rutas", "Batería 6 meses", "Resistente al agua"]),
+    # ── RESTAURANTES Y COMERCIOS ──
+    _piup("piup-menu", "PIUP Descarga de Menú Virtual", "comercios", "Hipervínculo que descarga un formato, app o página web con el menú.", "C2 C3 C4 U2 U3 U4 R5 R6", for_card_type="lugares"),
+    _piup("piup-redes-qr", "PIUP Redes Sociales con QR", "comercios", "Direcciona a las redes sociales o abre una BRUNO Card con todas las redes agregadas.", "C2 C3 C4 U2 U3 U4 R5 R6 R7", for_card_type="negocio"),
+    _piup("piup-ar", "PIUP QR para AR", "comercios", "Abre un documento 3D en realidad aumentada con la cámara (tamaño adaptable al documento).", "C1 U1", category="service", price=149.99, features=["Modelo 3D", "Simulador AR con cámara", "Adaptable al documento"]),
+    # ── OFICINAS ──
+    _piup("piup-citas", "PIUP Sacar Citas", "oficinas", "Calendario con el correo, calendario propio o links a sistemas externos.", "C2 C3 U2 U3 R5 R6 R7", for_card_type="servicios"),
+    _piup("piup-apps", "PIUP Descarga de Aplicaciones", "oficinas", "Links direccionadores a App Store y Play Store.", "C2 C3 C4 U2 U3 U4 R5 R6 R7"),
+    _piup("piup-calendario", "PIUP Calendario de Citas", "oficinas", "Calendario con el correo, calendario propio o links a sistemas externos.", "C2 C3 U2 U3 R5 R6 R7", for_card_type="servicios"),
+    _piup("piup-pagos", "PIUP Métodos de Pago", "oficinas", "Rutas y datos bancarios para transferencia, pagos directos por Stripe.", "C2 C3 C4 U2 U3 U4 R5 R6 R7", for_card_type="negocio"),
+    _piup("piup-web", "PIUP Páginas Web", "oficinas", "Links direccionadores a tu sitio web.", "C2 C3 C4 U2 U3 U4 R5 R6 R7"),
+    _piup("piup-inventario", "PIUP Control de Inventario", "oficinas", "Sistema profesional de inventario propio de PIUP o links a sistemas externos.", "C1 C2 U1 U2 R7"),
+    _piup("piup-acceso", "PIUP Claves de Acceso", "oficinas", "Códigos de acceso (puertas, llaves) y acciones de sistemas de seguridad de casa u oficina.", "C1 C2 U1 U2 R7"),
+    _piup("piup-archivos", "PIUP Presentación de Archivos", "oficinas", "Descarga de un archivo específico guardado directamente en PIUP.", "C1 C2 U1 U2 R7"),
+    _piup("piup-tarjetas", "PIUP Tarjetas de Presentación", "oficinas", "Direcciona a BRUNO Card con tus Digital Business Cards.", "R7", for_card_type="personal", colors=["black", "white", "orange", "gold", "holographic"]),
+    _piup("piup-carnets", "PIUP Carnets", "oficinas", "Carnets corporativos que funcionan junto con PIUP Claves de Acceso.", "R7", for_card_type="empresarial", colors=["white", "black"]),
+    # ── MASCOTAS ──
+    _piup("piup-collar-mascota", "PIUP Collar Mascota NFC + GPS", "mascotas", "Collares con placa NFC, GPS incluido y QR de respaldo.", "C1 U1", category="nfc_pet_tag", price=49.99, for_card_type="mascotas", colors=["blue", "pink", "green", "black"], features=["Placa NFC + QR", "GPS en tiempo real", "Zona segura", "Resistente al agua"]),
+]
+
+SUBSCRIPTION_PLANS = [
+    {"brand": "MEOW", "brand_id": "meow", "icon": "🔵", "color": "#2563EB", "tagline": "Marketing y automatización para tu marca", "plans": [
+        {"id": "meow-starter", "name": "Starter", "monthly": 15, "yearly": 150, "summary": "Marketing básico"},
+        {"id": "meow-growth", "name": "Growth", "monthly": 29, "yearly": 290, "summary": "Automatizaciones", "popular": True},
+        {"id": "meow-pro", "name": "Pro", "monthly": 49, "yearly": 490, "summary": "Marketing avanzado + IA"},
+        {"id": "meow-business", "name": "Business", "monthly": 79, "yearly": 790, "summary": "Empresas/equipos"},
+    ]},
+    {"brand": "DEAL", "brand_id": "deal", "icon": "🟢", "color": "#16A34A", "tagline": "CRM y ventas con IA NOAH", "plans": [
+        {"id": "deal-starter", "name": "Starter", "monthly": 39, "yearly": 390, "summary": "CRM para pequeños negocios"},
+        {"id": "deal-professional", "name": "Professional", "monthly": 79, "yearly": 790, "summary": "Ventas + clientes + IA NOAH", "popular": True},
+        {"id": "deal-business", "name": "Business", "monthly": 149, "yearly": 1490, "summary": "Equipos comerciales"},
+        {"id": "deal-enterprise", "name": "Enterprise", "monthly": 249, "yearly": 2490, "summary": "Operación comercial avanzada"},
+    ]},
+]
+PLAN_IDS = {p["id"] for b in SUBSCRIPTION_PLANS for p in b["plans"]} | {"pro", "business"}
 
 
 # ============================================================================
 # ROUTES
 # ============================================================================
+
+@router.get("/sizes")
+async def get_piup_sizes():
+    return {"sizes": PIUP_SIZES, "groups": PIUP_GROUPS}
+
+
+@router.get("/plans")
+async def get_subscription_plans():
+    return SUBSCRIPTION_PLANS
+
 
 @router.get("/products")
 async def get_store_products(
@@ -383,7 +404,7 @@ async def subscribe_to_tier(
     current_user: User = Depends(get_current_user)
 ):
     """Subscribe to a tier (Pro or Business)"""
-    if tier not in ["pro", "business"]:
+    if tier not in PLAN_IDS:
         raise HTTPException(status_code=400, detail="Invalid tier")
     
     # In production, this would create a Stripe subscription
