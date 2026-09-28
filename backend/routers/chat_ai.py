@@ -75,7 +75,9 @@ async def summarize_unread(chat_id: str, limit: int = 120, since: Optional[str] 
     if since:
         query["created_at"] = {"$gt": since}
     elif count:
-        limit = max(3, min(int(count), limit))
+        if int(count) < 3:
+            return {"count": int(count), "summary": None, "reason": "few"}
+        limit = min(int(count), limit)
     else:
         query["read_by"] = {"$nin": [current_user.id]}
     msgs = await db.messages.find(query, {"_id": 0, "sender_id": 1, "content": 1, "message_type": 1, "created_at": 1, "transcript": 1, "attachments": 1}).sort("created_at", -1).limit(limit).to_list(limit)

@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 89 e2e validated: AI translate, catch-up summary, group polls (create/vote/retract/close), voice-note speed button, translate button in group chat. 14/15 backend tests passing; 1 failure exposes a real backend bug in /api/chats/{id}/summary when count<3. All requested frontend flows work end-to-end.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/chats/{chat_id}/summary?count=2", "issue": "Spec requires returning {summary:null, reason:'few'} when count<3, but code sets `limit = max(3, min(count, limit))` which forces at least 3 messages to be fetched, so with ≥3 available msgs the endpoint returns a full summary instead of the 'few' short-circuit. Suggest: check `count and count < 3` -> return few, OR only apply the 'few' short-circuit before max()."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ChatPage group view", "issues": ["The FloatingBubbles (kb-hide fixed z-[10000]) overlay can intercept pointer events near the composer, blocking clicks on pill-attach-btn in some viewport states. In real usage this is generally fine because the FAB is above the pill; but automated clicks needed force=True. Consider narrowing pointer-events on the floating overlay when not expanded."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iteration89_ai_polls_speed.py", "/app/test_reports/pytest/iter89.xml"],
+  "action_items": [
+    "Fix summary 'few' logic: `limit = max(3, min(count, limit))` should not upgrade count<3 to 3. Return {'summary':None,'reason':'few'} when the requested count is <3 (or when fetched msgs<3 as it already does).",
+    "Optional: Make FloatingBubbles container not intercept pointer events when the compact bubble state is inactive, so pill-attach-btn is reachable without force clicks."
+  ],
+  "critical_code_review_comments": [
+    "chat_ai.py summary: `count` semantics are inconsistent with the spec (force-min of 3).",
+    "polls.py: single-choice `chosen = chosen[:1]` correct; multi-choice keeps unique order via dict.fromkeys — good. `_poll_view` returns non-anonymous voter names — good.",
+    "polls.py close_poll: only creator OR chat.admin_id can close (returns 403 otherwise) — verified.",
+    "TranslateButton.jsx: translation cached by hash on backend and shows 'Ya está en tu idioma' when same_language; toggle 'Ver original' works.",
+    "BrunoAudioWaveform speed button: cycles 1x → 1.5x → 2x → 1x correctly and persists to localStorage bruno_voice_speed; DOM audio.playbackRate reflects the setting."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration89_ai_polls_speed.py"],
+  "success_rate": {"backend": "93% (14/15)", "frontend": "100% of tested flows"},
+  "test_credentials": "newtest@bruno.com/Test1234! (admin), viewer2@bruno.com/Test1234! (member), viewer3@bruno.com/Test1234! (non-member)",
+  "seed_data_creation": "Seeded 6 group messages from viewer2 in group 655d23d2-b133-4188-a95c-bd8a777c04f4 to trigger the catch-up summary card. Created 3 test polls (single, multi, UI poll v2 which was then closed).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend URL from frontend/.env. Run tests with `REACT_APP_BACKEND_URL=<url> pytest backend/tests/test_iteration89_ai_polls_speed.py -v`. The FloatingBubbles overlay requires force=True for clicks near composer. The 'test_summary_few' failure is a genuine backend logic bug in /api/chats/{id}/summary count handling.",
+  "rca of the issue": "In /app/backend/routers/chat_ai.py line 78: `limit = max(3, min(int(count), limit))` — when caller passes count=2 (or 1), this evaluates to max(3, 2)=3, so the endpoint queries up to 3 messages and returns a full summary. Fix: replace with `if count and int(count) < 3: return {'count':0,'summary':None,'reason':'few'}` before the query, or explicitly set `limit=int(count)` without the max(3, ...) upgrade so len(msgs)<3 triggers the 'few' branch already present at line 83-84."
+}

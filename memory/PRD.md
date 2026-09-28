@@ -1,5 +1,13 @@
 # BRUNO Social Network - PRD
 
+## Phase 80: Resumen IA del grupo · Traducir con un toque · Velocidad de notas de voz · Encuestas (2026-06)
+- **Resumen "Lo que te perdiste"** (`routers/chat_ai.py`): `POST /chats/{id}/summary?count=N` (últimos N mensajes de otros, gpt-4o-mini vía Emergent key, viñetas en español; <3 → `reason:few`). UI `GroupSummaryCard.jsx` arriba de los mensajes cuando `unread_count ≥ 5` al abrir (sessionStorage evita repetir), soporta **negritas**.
+- **Traducir**: `POST /ai/translate {text,target}` (detecta idioma, caché por hash en `translations`). `components/TranslateButton.jsx` (idioma = `bruno_lang` o navegador) bajo mensajes ajenos y transcripciones en el chat, bajo el contenido de posts (`PostCard`) y comentarios (PostCard + `ReelSheets`); "Ver original" alterna.
+- **Velocidad notas de voz**: botón 1x/1.5x/2x en `BrunoAudioWaveform.jsx` (`playbackRate`, persistido `bruno_voice_speed`).
+- **Encuestas** (`routers/polls.py`): `POST /chats/{id}/polls` crea `polls` doc + mensaje `message_type=poll` (attachment `{type:poll, poll_id}`), `GET /polls/{id}`, `POST /polls/{id}/vote` (toggle/retirar, única o múltiple), `POST /polls/{id}/close` (creador o admin); WS `poll_update` → evento `bruno:poll`. UI `components/chat/Poll.jsx` (`PollMessage` con barras/%/votantes/cerrar, `CreatePollSheet`), opción "Encuesta" en `ChatAttachmentMenu`.
+- Verificado iteration_89: backend 14/15 → bug `count<3` corregido y re-verificado; frontend e2e OK.
+
+
 ## Phase 79: Fijar mensajes · Reenviar · Notas de voz transcritas · Visto por (grupos) (2026-06)
 - **Fijar** (`chat_extras.py`): `POST /chats/{id}/pin/{mid}` (admin en grupos, cualquiera en 1:1) guarda `chats.pinned_message` {id, content(preview), sender_name, pinned_by...}; `DELETE /chats/{id}/pin`; WS `message_pinned`. UI `PinnedBanner.jsx` bajo la cabecera (tap → salto+destello, ✕ admin), acciones "Fijar/Desfijar" en el popover (`MessageReactionsBubble` prop `actions`, popover con scroll horizontal).
 - **Reenviar**: acción "Reenviar" → `ShareCardToChatSheet` en modo `message` (excluye chat actual), envía content+attachments con `forwarded:true, forwarded_from` (REST `MessageCreate` y WS); etiqueta "Reenviado de X" (`forwarded-label`).
