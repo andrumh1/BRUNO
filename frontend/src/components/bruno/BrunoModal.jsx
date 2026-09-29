@@ -20,7 +20,7 @@ import { X, AlertTriangle, Send, Trash2, Info, CheckCircle2 } from "lucide-react
 const ICON_MAP = {
   info: { Icon: Info, color: "#3B82F6" },
   confirm: { Icon: AlertTriangle, color: "#F59E0B" },
-  publish: { Icon: Send, color: "#FF5A00" },
+  publish: { Icon: Send, color: "#FF6A00" },
   discard: { Icon: Trash2, color: "#6B7280" },
   success: { Icon: CheckCircle2, color: "#10B981" },
   danger: { Icon: AlertTriangle, color: "#EF4444" },
@@ -98,7 +98,7 @@ export const BrunoModal = ({
               <span
                 aria-hidden
                 className="absolute left-0 top-0 right-0 h-1"
-                style={{ backgroundColor: "#FF5A00" }}
+                style={{ backgroundColor: "#FF6A00" }}
               />
               <motion.img
                 src="/bruno-icon.png"

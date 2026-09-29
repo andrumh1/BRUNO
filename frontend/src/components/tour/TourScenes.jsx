@@ -69,7 +69,7 @@ export const CardBuildScene = () => (
 );
 
 /* ── Scene 3: customize ───────────────────────────────────────── */
-const SWATCHES = ["#FF6B35", "#0EA5E9", "#8B5CF6", "#10B981", "#111827"];
+const SWATCHES = ["#FF6A00", "#0EA5E9", "#8B5CF6", "#10B981", "#111827"];
 export const CustomizeScene = () => (
   <div className="relative h-40 flex flex-col items-center justify-center gap-4">
     <motion.div className="w-52 h-20 rounded-2xl shadow-xl p-3 text-white flex flex-col justify-between" animate={{ background: SWATCHES.map((c) => `linear-gradient(135deg, ${c}, ${c}99)`) }} transition={{ repeat: Infinity, duration: 7.5, ease: "easeInOut" }}>

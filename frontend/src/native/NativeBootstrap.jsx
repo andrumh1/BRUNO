@@ -36,7 +36,7 @@ export default function NativeBootstrap() {
     (async () => {
       try {
         await StatusBar.setStyle({ style: Style.Dark });
-        await StatusBar.setBackgroundColor({ color: '#FF6B35' });
+        await StatusBar.setBackgroundColor({ color: '#FF6A00' });
       } catch (_) { /* older iOS versions ignore setBackgroundColor */ }
       try { await SplashScreen.hide(); } catch (_) { /* ignore */ }
     })();

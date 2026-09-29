@@ -61,7 +61,7 @@ export default function TransferReceivePage() {
   if (!data) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
   const { card, sender, expired } = data;
-  const color = card.background_color || "#FF6B35";
+  const color = card.background_color || "#FF6A00";
   const ci = card.contact_info || {};
 
   return (

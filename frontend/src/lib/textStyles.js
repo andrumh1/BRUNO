@@ -1,5 +1,5 @@
 export const TEXT_BGS = [
-  { id: "ember", label: "Ámbar", a: "#FF5A00", b: "#7A1E00" },
+  { id: "ember", label: "Ámbar", a: "#FF6A00", b: "#7A1E00" },
   { id: "midnight", label: "Medianoche", a: "#1E3A8A", b: "#0B1120" },
   { id: "forest", label: "Bosque", a: "#065F46", b: "#022C22" },
   { id: "plum", label: "Ciruela", a: "#4C1D95", b: "#1E0B3B" },

@@ -120,7 +120,7 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
 
     // Dibujar área de recorte si está activo
     if (isCropping && cropStart && cropEnd) {
-      ctx.strokeStyle = "#FF5A00";
+      ctx.strokeStyle = "#FF6A00";
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 5]);
       ctx.strokeRect(

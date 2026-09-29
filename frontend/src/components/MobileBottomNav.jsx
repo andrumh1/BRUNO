@@ -136,7 +136,7 @@ const MobileBottomNav = () => {
           <div 
             className="absolute top-0 left-4 right-4 h-[1px] rounded-full"
             style={{
-              background: 'linear-gradient(90deg, transparent, rgba(255,107,53,0.25), rgba(236,72,153,0.2), transparent)'
+              background: 'linear-gradient(90deg, transparent, rgba(255,106,0,0.45), rgba(255,106,0,0.25), transparent)'
             }}
           />
 

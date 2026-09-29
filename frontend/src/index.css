@@ -4,7 +4,7 @@
 
 /* ============================================
    BRUNO - Global Styles
-   Paleta: #FFFFF3, #F5E7CA, #FF5A00, #2C2C27
+   Paleta corporativa: #FFFFFF, #F9F1EA, #FF6A00, #474747
    ============================================ */
 
 body {
@@ -171,60 +171,63 @@ code {
 
 @layer base {
   :root {
-    /* Paleta BRUNO - modo claro */
-    --background: 60 100% 97%; /* #FFFFF3 */
-    --foreground: 60 6% 16%; /* #2C2C27 */
-    --card: 45 70% 92%; /* cercano a #F5E7CA */
-    --card-foreground: 60 6% 16%;
-    --popover: 60 100% 98%;
-    --popover-foreground: 60 6% 16%;
-    --primary: 20 100% 50%; /* #FF5A00 */
+    /* Paleta corporativa BRUNO — modo claro
+       #ffffff fondo · #f9f1ea superficies · #ff6a00 acción · #474747 texto */
+    --background: 0 0% 100%; /* #ffffff */
+    --foreground: 0 0% 28%; /* #474747 */
+    --card: 28 56% 95%; /* #f9f1ea */
+    --card-foreground: 0 0% 28%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 28%;
+    --primary: 25 100% 50%; /* #ff6a00 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 42 70% 86%;
-    --secondary-foreground: 60 6% 16%;
-    --muted: 42 60% 92%;
-    --muted-foreground: 42 20% 40%;
-    --accent: 24 95% 60%;
-    --accent-foreground: 60 6% 16%;
+    --secondary: 28 45% 90%;
+    --secondary-foreground: 0 0% 28%;
+    --muted: 28 40% 93%;
+    --muted-foreground: 0 0% 46%;
+    --accent: 25 100% 94%;
+    --accent-foreground: 25 100% 32%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 42 40% 85%;
-    --input: 42 40% 85%;
-    --ring: 20 100% 50%;
-    --chart-1: 20 100% 50%;
-    --chart-2: 42 70% 86%;
-    --chart-3: 30 100% 50%;
-    --chart-4: 35 90% 55%;
-    --chart-5: 40 85% 60%;
+    --border: 28 30% 86%;
+    --input: 28 30% 86%;
+    --ring: 25 100% 50%;
+    --chart-1: 25 100% 50%;
+    --chart-2: 0 0% 28%;
+    --chart-3: 25 100% 70%;
+    --chart-4: 0 0% 60%;
+    --chart-5: 28 56% 85%;
     --radius: 0.75rem;
+    --reels-bg: 28 56% 95%;
   }
 
   .dark {
-    /* Paleta BRUNO - modo oscuro */
-    --background: 60 6% 10%;
-    --foreground: 0 0% 96%;
-    --card: 60 6% 14%;
-    --card-foreground: 0 0% 96%;
-    --popover: 60 6% 14%;
-    --popover-foreground: 0 0% 96%;
-    --primary: 20 100% 50%;
+    /* Paleta corporativa BRUNO — modo oscuro (gris #474747, nunca negro) */
+    --background: 0 0% 20%;
+    --foreground: 28 56% 95%; /* #f9f1ea */
+    --card: 0 0% 28%; /* #474747 */
+    --card-foreground: 28 56% 95%;
+    --popover: 0 0% 26%;
+    --popover-foreground: 28 56% 95%;
+    --primary: 25 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 60 6% 18%;
-    --secondary-foreground: 0 0% 96%;
-    --muted: 60 6% 18%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 24 95% 55%;
-    --accent-foreground: 0 0% 96%;
+    --secondary: 0 0% 34%;
+    --secondary-foreground: 28 56% 95%;
+    --muted: 0 0% 33%;
+    --muted-foreground: 28 20% 74%;
+    --accent: 25 70% 30%;
+    --accent-foreground: 28 56% 95%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 96%;
-    --border: 60 6% 24%;
-    --input: 60 6% 24%;
-    --ring: 20 100% 50%;
-    --chart-1: 20 100% 50%;
-    --chart-2: 24 95% 55%;
-    --chart-3: 30 100% 45%;
-    --chart-4: 35 90% 50%;
-    --chart-5: 40 85% 55%;
+    --border: 0 0% 38%;
+    --input: 0 0% 38%;
+    --ring: 25 100% 50%;
+    --chart-1: 25 100% 50%;
+    --chart-2: 28 56% 95%;
+    --chart-3: 25 100% 70%;
+    --chart-4: 0 0% 60%;
+    --chart-5: 0 0% 40%;
+    --reels-bg: 0 0% 16%;
   }
 }
 
@@ -275,13 +278,13 @@ code {
 @keyframes border-glow {
   0%,
   100% {
-    box-shadow: 0 0 15px rgba(255, 90, 0, 0.3),
-      0 0 30px rgba(255, 90, 0, 0.1),
+    box-shadow: 0 0 15px rgba(255, 106, 0, 0.3),
+      0 0 30px rgba(255, 106, 0, 0.1),
       inset 0 1px 1px rgba(255, 255, 255, 0.2);
   }
   50% {
-    box-shadow: 0 0 25px rgba(255, 90, 0, 0.5),
-      0 0 50px rgba(255, 90, 0, 0.2),
+    box-shadow: 0 0 25px rgba(255, 106, 0, 0.5),
+      0 0 50px rgba(255, 106, 0, 0.2),
       inset 0 1px 1px rgba(255, 255, 255, 0.3);
   }
 }
@@ -311,7 +314,7 @@ code {
     ),
     radial-gradient(
       ellipse at 80% 80%,
-      rgba(255, 90, 0, 0.15) 0%,
+      rgba(255, 106, 0, 0.15) 0%,
       transparent 50%
     );
   pointer-events: none;
@@ -327,7 +330,7 @@ code {
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.5) 0%,
-    rgba(255, 90, 0, 0.3) 50%,
+    rgba(255, 106, 0, 0.3) 50%,
     rgba(255, 255, 255, 0.2) 100%
   );
   z-index: -1;
@@ -381,7 +384,7 @@ code {
 }
 
 .dark .glass-card {
-  background: rgba(44, 44, 39, 0.7);
+  background: rgba(71, 71, 71, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
     inset 0 1px 1px rgba(255, 255, 255, 0.1);
@@ -398,7 +401,7 @@ code {
 
 .glass-button:hover {
   background: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 15px rgba(255, 90, 0, 0.2);
+  box-shadow: 0 4px 15px rgba(255, 106, 0, 0.2);
 }
 
 /* ============================================
@@ -414,7 +417,7 @@ code {
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   border-radius: 1rem !important;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15),
-    0 0 20px rgba(255, 90, 0, 0.1),
+    0 0 20px rgba(255, 106, 0, 0.1),
     inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
   overflow: hidden;
 }
@@ -422,10 +425,10 @@ code {
 .dark [data-radix-popper-content-wrapper] > div,
 .dark [role="listbox"],
 .dark [role="menu"] {
-  background: rgba(44, 44, 39, 0.85) !important;
+  background: rgba(71, 71, 71, 0.85) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(255, 90, 0, 0.15),
+    0 0 20px rgba(255, 106, 0, 0.15),
     inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -442,7 +445,7 @@ code {
 [role="option"]:hover,
 [role="menuitem"]:hover,
 [data-highlighted] {
-  background: rgba(255, 90, 0, 0.1) !important;
+  background: rgba(255, 106, 0, 0.1) !important;
 }
 
 /* ============================================
@@ -457,15 +460,15 @@ code {
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   border-radius: 1.5rem !important;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15),
-    0 0 30px rgba(255, 90, 0, 0.1) !important;
+    0 0 30px rgba(255, 106, 0, 0.1) !important;
 }
 
 .dark [role="dialog"] > div:first-child,
 .dark .dialog-content {
-  background: rgba(44, 44, 39, 0.9) !important;
+  background: rgba(71, 71, 71, 0.9) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4),
-    0 0 30px rgba(255, 90, 0, 0.15) !important;
+    0 0 30px rgba(255, 106, 0, 0.15) !important;
 }
 
 /* ============================================
@@ -473,7 +476,8 @@ code {
    ============================================ */
 
 [role="tooltip"] {
-  background: rgba(44, 44, 39, 0.9) !important;
+  background: rgba(71, 71, 71, 0.94) !important;
+  color: #f9f1ea !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -492,7 +496,7 @@ code {
 .card-hover-lift:hover {
   transform: translateY(-8px) scale(1.02);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15),
-    0 0 20px rgba(255, 90, 0, 0.1);
+    0 0 20px rgba(255, 106, 0, 0.1);
 }
 
 /* ============================================
@@ -518,12 +522,12 @@ code {
 }
 
 .dark .list-view-card {
-  background: rgba(44, 44, 39, 0.6);
+  background: rgba(71, 71, 71, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .dark .list-view-card:hover {
-  background: rgba(44, 44, 39, 0.8);
+  background: rgba(71, 71, 71, 0.8);
 }
 
 /* ============================================
@@ -540,12 +544,12 @@ code {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 90, 0, 0.3);
+  background: rgba(255, 106, 0, 0.3);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 90, 0, 0.5);
+  background: rgba(255, 106, 0, 0.5);
 }
 
 /* ============================================
@@ -555,8 +559,8 @@ code {
 input:focus,
 textarea:focus,
 select:focus {
-  box-shadow: 0 0 0 3px rgba(255, 90, 0, 0.2),
-    0 0 15px rgba(255, 90, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.2),
+    0 0 15px rgba(255, 106, 0, 0.1);
 }
 
 /* ============================================
@@ -564,8 +568,8 @@ select:focus {
    ============================================ */
 
 button[class*="bg-primary"]:hover {
-  box-shadow: 0 4px 20px rgba(255, 90, 0, 0.4),
-    0 0 30px rgba(255, 90, 0, 0.2);
+  box-shadow: 0 4px 20px rgba(255, 106, 0, 0.4),
+    0 0 30px rgba(255, 106, 0, 0.2);
 }
 
 /* ============================================
@@ -626,7 +630,7 @@ button[class*="bg-primary"]:hover {
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 2rem;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2),
-    0 0 40px rgba(255, 90, 0, 0.1),
+    0 0 40px rgba(255, 106, 0, 0.1),
     inset 0 2px 2px rgba(255, 255, 255, 0.8);
   max-width: 600px;
   max-height: 80vh;
@@ -635,10 +639,10 @@ button[class*="bg-primary"]:hover {
 }
 
 .dark .curriculum-bubble-content {
-  background: rgba(44, 44, 39, 0.95);
+  background: rgba(71, 71, 71, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4),
-    0 0 40px rgba(255, 90, 0, 0.15),
+    0 0 40px rgba(255, 106, 0, 0.15),
     inset 0 2px 2px rgba(255, 255, 255, 0.1);
 }
 
@@ -670,7 +674,7 @@ button[class*="bg-primary"]:hover {
 .view-toggle button.active {
   background: hsl(var(--primary));
   color: white;
-  box-shadow: 0 2px 10px rgba(255, 90, 0, 0.3);
+  box-shadow: 0 2px 10px rgba(255, 106, 0, 0.3);
 }
 
 .view-toggle button:not(.active) {
@@ -678,11 +682,11 @@ button[class*="bg-primary"]:hover {
 }
 
 .view-toggle button:not(.active):hover {
-  background: rgba(255, 90, 0, 0.1);
+  background: rgba(255, 106, 0, 0.1);
 }
 
 .dark .view-toggle {
-  background: rgba(44, 44, 39, 0.5);
+  background: rgba(71, 71, 71, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -713,7 +717,7 @@ form [class*="CardContent"] {
   border-radius: 1rem;
   box-shadow: 
     0 4px 20px rgba(0, 0, 0, 0.08),
-    0 0 15px rgba(255, 90, 0, 0.05),
+    0 0 15px rgba(255, 106, 0, 0.05),
     inset 0 1px 2px rgba(255, 255, 255, 0.8);
   color: hsl(var(--foreground));
   font-weight: 500;
@@ -721,43 +725,43 @@ form [class*="CardContent"] {
 
 .bubble-select-trigger:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(255, 90, 0, 0.3);
+  border-color: rgba(255, 106, 0, 0.3);
   box-shadow: 
     0 6px 25px rgba(0, 0, 0, 0.1),
-    0 0 20px rgba(255, 90, 0, 0.1),
+    0 0 20px rgba(255, 106, 0, 0.1),
     inset 0 1px 2px rgba(255, 255, 255, 0.9);
 }
 
 .bubble-select-trigger:focus {
   outline: none;
-  border-color: rgba(255, 90, 0, 0.5);
+  border-color: rgba(255, 106, 0, 0.5);
   box-shadow: 
-    0 0 0 4px rgba(255, 90, 0, 0.15),
+    0 0 0 4px rgba(255, 106, 0, 0.15),
     0 6px 25px rgba(0, 0, 0, 0.1),
-    0 0 20px rgba(255, 90, 0, 0.15),
+    0 0 20px rgba(255, 106, 0, 0.15),
     inset 0 1px 2px rgba(255, 255, 255, 0.9);
 }
 
 .bubble-select-trigger-open {
-  border-color: rgba(255, 90, 0, 0.4);
+  border-color: rgba(255, 106, 0, 0.4);
   box-shadow: 
     0 8px 30px rgba(0, 0, 0, 0.12),
-    0 0 25px rgba(255, 90, 0, 0.12),
+    0 0 25px rgba(255, 106, 0, 0.12),
     inset 0 1px 2px rgba(255, 255, 255, 0.9);
 }
 
 .dark .bubble-select-trigger {
-  background: rgba(44, 44, 39, 0.7);
+  background: rgba(71, 71, 71, 0.7);
   border-color: rgba(255, 255, 255, 0.15);
   box-shadow: 
     0 4px 20px rgba(0, 0, 0, 0.2),
-    0 0 15px rgba(255, 90, 0, 0.08),
+    0 0 15px rgba(255, 106, 0, 0.08),
     inset 0 1px 2px rgba(255, 255, 255, 0.1);
 }
 
 .dark .bubble-select-trigger:hover:not(:disabled) {
-  background: rgba(44, 44, 39, 0.85);
-  border-color: rgba(255, 90, 0, 0.4);
+  background: rgba(71, 71, 71, 0.85);
+  border-color: rgba(255, 106, 0, 0.4);
 }
 
 /* Options Container */
@@ -807,7 +811,7 @@ form [class*="CardContent"] {
   border-radius: 1.25rem;
   box-shadow: 
     0 15px 50px rgba(0, 0, 0, 0.15),
-    0 0 30px rgba(255, 90, 0, 0.08),
+    0 0 30px rgba(255, 106, 0, 0.08),
     inset 0 1px 2px rgba(255, 255, 255, 0.9);
   padding: 8px;
   max-height: 320px;
@@ -817,11 +821,11 @@ form [class*="CardContent"] {
 }
 
 .dark .bubble-select-options-inner {
-  background: rgba(44, 44, 39, 0.92);
+  background: rgba(71, 71, 71, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 
     0 15px 50px rgba(0, 0, 0, 0.4),
-    0 0 30px rgba(255, 90, 0, 0.12),
+    0 0 30px rgba(255, 106, 0, 0.12),
     inset 0 1px 2px rgba(255, 255, 255, 0.08);
 }
 
@@ -837,22 +841,22 @@ form [class*="CardContent"] {
 
 .bubble-select-option:hover,
 .bubble-select-option:focus {
-  background: rgba(255, 90, 0, 0.08);
+  background: rgba(255, 106, 0, 0.08);
   outline: none;
 }
 
 .bubble-select-option:active {
-  background: rgba(255, 90, 0, 0.15);
+  background: rgba(255, 106, 0, 0.15);
   transform: scale(0.98);
 }
 
 .bubble-select-option-selected {
-  background: rgba(255, 90, 0, 0.1);
+  background: rgba(255, 106, 0, 0.1);
   font-weight: 600;
 }
 
 .bubble-select-option-selected:hover {
-  background: rgba(255, 90, 0, 0.15);
+  background: rgba(255, 106, 0, 0.15);
 }
 
 /* Mobile Optimizations */
@@ -886,12 +890,12 @@ form [class*="CardContent"] {
 }
 
 .bubble-select-options-inner::-webkit-scrollbar-thumb {
-  background: rgba(255, 90, 0, 0.25);
+  background: rgba(255, 106, 0, 0.25);
   border-radius: 3px;
 }
 
 .bubble-select-options-inner::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 90, 0, 0.4);
+  background: rgba(255, 106, 0, 0.4);
 }
 
 /* ============================================
@@ -914,7 +918,7 @@ select.bubble-native-select {
   cursor: pointer;
   box-shadow: 
     0 4px 20px rgba(0, 0, 0, 0.08),
-    0 0 15px rgba(255, 90, 0, 0.05),
+    0 0 15px rgba(255, 106, 0, 0.05),
     inset 0 1px 2px rgba(255, 255, 255, 0.8);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -925,19 +929,19 @@ select.bubble-native-select {
 
 select.bubble-native-select:hover {
   background-color: rgba(255, 255, 255, 0.85);
-  border-color: rgba(255, 90, 0, 0.3);
+  border-color: rgba(255, 106, 0, 0.3);
 }
 
 select.bubble-native-select:focus {
   outline: none;
-  border-color: rgba(255, 90, 0, 0.5);
+  border-color: rgba(255, 106, 0, 0.5);
   box-shadow: 
-    0 0 0 4px rgba(255, 90, 0, 0.15),
+    0 0 0 4px rgba(255, 106, 0, 0.15),
     0 6px 25px rgba(0, 0, 0, 0.1);
 }
 
 .dark select.bubble-native-select {
-  background-color: rgba(44, 44, 39, 0.7);
+  background-color: rgba(71, 71, 71, 0.7);
   border-color: rgba(255, 255, 255, 0.15);
   color: hsl(var(--foreground));
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
@@ -1079,7 +1083,7 @@ select.bubble-native-select:focus {
 }
 
 .dark .leaflet-popup-content-wrapper {
-  background: rgba(44, 44, 39, 0.95) !important;
+  background: rgba(71, 71, 71, 0.95) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -1094,7 +1098,7 @@ select.bubble-native-select:focus {
 }
 
 .dark .leaflet-popup-tip {
-  background: rgba(44, 44, 39, 0.95) !important;
+  background: rgba(71, 71, 71, 0.95) !important;
 }
 
 .leaflet-popup-close-button {
@@ -1117,7 +1121,7 @@ select.bubble-native-select:focus {
 }
 
 .dark .leaflet-control-attribution {
-  background: rgba(44, 44, 39, 0.8) !important;
+  background: rgba(71, 71, 71, 0.8) !important;
   color: rgba(255, 255, 255, 0.6) !important;
 }
 
@@ -1184,8 +1188,8 @@ select.bubble-native-select:focus {
 .nav-bubble-active {
   background: radial-gradient(
     ellipse at center,
-    rgba(255, 107, 53, 0.2) 0%,
-    rgba(255, 107, 53, 0.1) 40%,
+    rgba(255, 106, 0, 0.2) 0%,
+    rgba(255, 106, 0, 0.1) 40%,
     transparent 70%
   );
   animation: bubbleFloat 3s ease-in-out infinite;
@@ -1200,17 +1204,17 @@ select.bubble-native-select:focus {
 }
 
 .light-orb-1 {
-  background: radial-gradient(circle, rgba(255, 107, 53, 0.6) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 106, 0, 0.6) 0%, transparent 70%);
   animation-delay: 0s;
 }
 
 .light-orb-2 {
-  background: radial-gradient(circle, rgba(236, 72, 153, 0.5) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(249, 241, 234, 0.6) 0%, transparent 70%);
   animation-delay: 1.5s;
 }
 
 .light-orb-3 {
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(71, 71, 71, 0.35) 0%, transparent 70%);
   animation-delay: 3s;
 }
 
@@ -1223,7 +1227,7 @@ select.bubble-native-select:focus {
   content: '';
   position: absolute;
   inset: -4px;
-  background: linear-gradient(135deg, #FF6B35, #EC4899, #3B82F6, #FF6B35);
+  background: linear-gradient(135deg, #FF6A00, #FF8A3D, #F9F1EA, #FF6A00);
   background-size: 300% 300%;
   border-radius: 50%;
   filter: blur(10px);
@@ -1264,7 +1268,7 @@ select.bubble-native-select:focus {
   position: absolute;
   width: 20px;
   height: 20px;
-  background: rgba(255, 107, 53, 0.3);
+  background: rgba(255, 106, 0, 0.3);
   border-radius: 50%;
   animation: touchRipple 0.6s ease-out forwards;
   pointer-events: none;
@@ -1291,7 +1295,7 @@ select.bubble-native-select:focus {
 .beacons-card[data-card-type="oferta_trabajo"],
 .beacons-card[data-card-type="busqueda_personal"],
 .beacons-card[data-card-type="solicitud_servicio"] {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(135deg, #474747 0%, #2e2e2e 100%);
 }
 
 /* Compact variant */
@@ -1430,7 +1434,7 @@ select.bubble-native-select:focus {
   --glass-blur-soft: blur(18px) saturate(160%);
   --glass-edge: rgba(255, 255, 255, 0.45);
   --glass-border: rgba(255, 255, 255, 0.35);
-  --glass-shadow: 0 12px 40px -12px rgba(44, 44, 39, 0.28);
+  --glass-shadow: 0 12px 40px -12px rgba(71, 71, 71, 0.28);
 }
 .dark {
   --glass-a: 0.55;
@@ -1511,7 +1515,60 @@ html.chat-open, html.chat-open body { overflow: hidden !important; height: 100%;
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select { font-size: max(16px, 1em) !important; }
 }
 /* Reply quote → flash the original bubble */
-@keyframes bubble-flash { 0%,100% { box-shadow: 0 0 0 0 rgba(255,107,53,0); } 30% { box-shadow: 0 0 0 4px rgba(255,107,53,.55); } }
+@keyframes bubble-flash { 0%,100% { box-shadow: 0 0 0 0 rgba(255,106,0,0); } 30% { box-shadow: 0 0 0 4px rgba(255,106,0,.55); } }
 .bubble-flash { animation: bubble-flash 1.5s ease-out; }
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ============================================================
+   BRUNO BRAND — utilidades corporativas
+   ============================================================ */
+/* Superficie de Reels: se adapta al tema (crema en claro, gris corporativo en oscuro) */
+.reels-surface { background-color: hsl(var(--reels-bg)); }
+.dark .reels-surface { background-color: hsl(var(--reels-bg)); }
+
+/* Logo del oso recoloreable via currentColor (máscara CSS) */
+.bruno-mark {
+  display: inline-block;
+  background-color: currentColor;
+  -webkit-mask: var(--brand-mark-url) no-repeat center / contain;
+  mask: var(--brand-mark-url) no-repeat center / contain;
+  aspect-ratio: 512 / 425;
+}
+.bruno-wordmark {
+  display: inline-block;
+  background-color: currentColor;
+  -webkit-mask: var(--brand-wordmark-url) no-repeat center / contain;
+  mask: var(--brand-wordmark-url) no-repeat center / contain;
+  aspect-ratio: 1200 / 193;
+}
+
+/* Marca de agua sutil del oso para fondos vacíos */
+.bruno-watermark::before {
+  content: "";
+  position: absolute;
+  inset: auto -10% -12% auto;
+  width: 60%;
+  aspect-ratio: 512 / 425;
+  background-color: hsl(var(--primary) / 0.06);
+  -webkit-mask: var(--brand-mark-url) no-repeat center / contain;
+  mask: var(--brand-mark-url) no-repeat center / contain;
+  pointer-events: none;
+}
+
+/* Selección de texto y foco con el naranja corporativo */
+::selection { background: rgba(255, 106, 0, 0.25); color: inherit; }
+:focus-visible { outline: 2px solid hsl(var(--primary) / 0.7); outline-offset: 2px; }
+
+/* Cabeceras: hairline naranja para reforzar la marca */
+header.sticky.top-0:not([data-no-glass])::after,
+header.fixed:not([data-no-glass])::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.55) 25%, hsl(var(--primary)) 50%, hsl(var(--primary) / 0.55) 75%, transparent 100%);
+  pointer-events: none;
+}
+/* Reels: iconos y textos blancos legibles sobre cualquier fondo (crema o gris) */
+.reel-chrome svg, .reel-chrome span, .reel-chrome button { filter: drop-shadow(0 1px 2px rgba(71, 71, 71, 0.55)); }

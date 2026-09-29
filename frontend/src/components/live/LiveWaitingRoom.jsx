@@ -18,7 +18,7 @@ export default function LiveWaitingRoom({ live, viewerCount, hostOnline }) {
         <div className="relative w-36 h-36 mb-5">
           <svg className="absolute inset-0 -rotate-90" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,.15)" strokeWidth="4" />
-            <circle cx="50" cy="50" r="46" fill="none" stroke="#ff5a00" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${pct * 2.89} 289`} className="transition-[stroke-dasharray] duration-1000" />
+            <circle cx="50" cy="50" r="46" fill="none" stroke="#ff6a00" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${pct * 2.89} 289`} className="transition-[stroke-dasharray] duration-1000" />
           </svg>
           <div className="absolute inset-3 rounded-full overflow-hidden bg-white/10 grid place-items-center ring-2 ring-white/30">
             {live?.host_avatar ? <img src={live.host_avatar} alt="" className="w-full h-full object-cover" /> : <Radio className="w-10 h-10" />}

@@ -185,7 +185,7 @@ export default function ActivarPiupTab({ tagsData, auth, onActivated }) {
             <>
               <motion.div
                 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 max-w-[70vw] max-h-[70vw] border-2 border-primary rounded-2xl"
-                animate={{ boxShadow: ["0 0 0 0 rgba(255,90,0,.4)", "0 0 0 14px rgba(255,90,0,0)"] }}
+                animate={{ boxShadow: ["0 0 0 0 rgba(255,106,0,.4)", "0 0 0 14px rgba(255,106,0,0)"] }}
                 transition={{ duration: 1.6, repeat: Infinity }}
               />
               <motion.div

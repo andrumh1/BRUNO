@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { BrunoHeaderMark } from "@/components/bruno/BrunoLogo";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -369,12 +370,12 @@ const MarketplacePage = () => {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-bold flex-1">Marketplace</h1>
+            <h1 className="text-xl font-bold flex-1 min-w-0 truncate flex items-center gap-2"><BrunoHeaderMark />Marketplace</h1>
             
             {user && (
               <>
-                <Link to="/marketplace/my-products">
-                  <Button variant="ghost" size="sm">Mis productos</Button>
+                <Link to="/marketplace/my-products" className="shrink-0">
+                  <Button variant="ghost" size="sm" className="whitespace-nowrap px-2">Mis productos</Button>
                 </Link>
                 <Link to="/marketplace/cart">
                   <Button variant="ghost" size="icon" className="relative">

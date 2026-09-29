@@ -12,7 +12,7 @@ export const MUSIC_LIBRARY = [
     artist: "Bruno Sound",
     duration: 28,
     cover: "🎵",
-    color: "#FF5A00",
+    color: "#FF6A00",
     url: "https://www.soundjay.com/buttons/sounds/button-09.mp3",
     category: "pop",
   },

@@ -27,7 +27,7 @@ const BeaconsStyleCard = ({
 
   const isJobCard = ["oferta_trabajo", "busqueda_personal", "solicitud_servicio"].includes(card.card_type);
   const jobDetails = card.custom_fields?.job_details || {};
-  const bg = card.background_color || "#FF5A00";
+  const bg = card.background_color || "#FF6A00";
   const fg = card.text_color || "#FFFFFF";
 
   const getUrgencyBadge = (urgency) => {

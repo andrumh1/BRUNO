@@ -136,7 +136,7 @@ export default function HighlightsSection({ userId, isOwner = false, userName = 
           >
             <span
               className="w-16 h-16 rounded-full p-[2px] grid place-items-center"
-              style={{ background: "conic-gradient(from 220deg, #b446ff, #ff2d75, #ff5a00, #b446ff)" }}
+              style={{ background: "conic-gradient(from 220deg, #b446ff, #ff2d75, #ff6a00, #b446ff)" }}
             >
               <span className="w-full h-full rounded-full bg-background grid place-items-center overflow-hidden">
                 {col.cover_url ? (

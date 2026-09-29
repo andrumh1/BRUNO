@@ -63,7 +63,7 @@ export const socialMediaConfig = {
   },
   website: {
     icon: Globe,
-    color: "#FF6B35",
+    color: "#FF6A00",
     label: "Sitio Web"
   },
   location: {

@@ -41,7 +41,7 @@ export default function ReceivedCardsPage() {
               <p className="text-sm text-muted-foreground mt-1">Cuando alguien acerque su teléfono al tuyo o escanees su QR, la tarjeta aparecerá aquí.</p>
             </div>
           ) : cards.map((c, i) => {
-            const color = c.background_color || "#FF6B35";
+            const color = c.background_color || "#FF6A00";
             return (
               <motion.div key={c.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-2xl border bg-card overflow-hidden flex" data-testid={`received-card-${c.id}`}>
                 <div className="w-2" style={{ background: color }} />

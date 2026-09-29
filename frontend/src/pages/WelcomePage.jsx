@@ -383,7 +383,7 @@ export default function WelcomePage() {
                     layout
                     animate={{
                       width: i === step ? 24 : 8,
-                      backgroundColor: i === step ? "#FF5A00" : "#D4D4D8",
+                      backgroundColor: i === step ? "#FF6A00" : "#D4D4D8",
                     }}
                     transition={{ duration: 0.3 }}
                     className="h-2 rounded-full"

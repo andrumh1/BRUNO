@@ -175,7 +175,7 @@ export default function ReactionBubble({ bubble, hover, onPick, testId = "reacti
           style={{
             background: "rgba(255, 247, 238, 0.97)",
             border: "1px solid rgba(255,127,0,0.25)",
-            boxShadow: "0 18px 40px -10px rgba(255,107,53,0.45), 0 8px 16px rgba(0,0,0,0.12)",
+            boxShadow: "0 18px 40px -10px rgba(255,106,0,0.45), 0 8px 16px rgba(0,0,0,0.12)",
           }}
         >
           {BRUNO_REACTIONS.map((r, i) => (

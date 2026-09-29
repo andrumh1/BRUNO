@@ -112,7 +112,7 @@ export default function ReelItem({
 
   return (
     <div
-      className="reels-stage relative h-full w-full bg-black snap-start snap-always overflow-hidden select-none"
+      className="reels-stage reels-surface relative h-full w-full snap-start snap-always overflow-hidden select-none"
       data-testid={`reel-item-${reel.id}`}
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
       onClick={(e) => { if (!("ontouchstart" in window)) handleTap(e.clientX, e.clientY); }}
@@ -175,7 +175,8 @@ export default function ReelItem({
         </div>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#474747]/90 via-[#474747]/35 to-transparent pointer-events-none" />
+      <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#474747]/45 to-transparent pointer-events-none" />
 
       {!hideChrome && (
         <>
@@ -260,12 +261,12 @@ export default function ReelItem({
 
 function Rail({ icon, label, onClick, testid, onLabelClick, labelTestid }) {
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center reel-chrome">
       <button onClick={(e) => { e.stopPropagation(); onClick?.(); }} className="active:scale-90 transition-transform" data-testid={testid}>{icon}</button>
       {onLabelClick ? (
-        <button onClick={(e) => { e.stopPropagation(); onLabelClick(); }} className="text-white text-[11px] font-semibold mt-1 drop-shadow px-2 -mx-2 py-0.5 active:opacity-70" data-testid={labelTestid}>{label}</button>
+        <button onClick={(e) => { e.stopPropagation(); onLabelClick(); }} className="text-white text-[11px] font-semibold mt-1 px-2 -mx-2 py-0.5 active:opacity-70" data-testid={labelTestid}>{label}</button>
       ) : (
-        <span className="text-white text-[11px] font-semibold mt-1 drop-shadow">{label}</span>
+        <span className="text-white text-[11px] font-semibold mt-1">{label}</span>
       )}
     </div>
   );

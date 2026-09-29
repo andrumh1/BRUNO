@@ -237,7 +237,7 @@ const NFCManagerPage = () => {
                   checked={configData[field.key] === card.id}
                   onChange={() => setConfigData({ ...configData, [field.key]: card.id })}
                 />
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: card.background_color || "#FF6B35" }}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: card.background_color || "#FF6A00" }}>
                   {card.title?.charAt(0) || "?"}
                 </div>
                 <div className="flex-1 min-w-0">

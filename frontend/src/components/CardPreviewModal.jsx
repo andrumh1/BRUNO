@@ -8,7 +8,7 @@ const CardPreviewModal = ({ card, isOpen, onClose }) => {
   const navigate = useNavigate();
   if (!isOpen || !card) return null;
 
-  const bg = card.background_color || "#FF5A00";
+  const bg = card.background_color || "#FF6A00";
   const fg = card.text_color || "#FFFFFF";
 
   return (

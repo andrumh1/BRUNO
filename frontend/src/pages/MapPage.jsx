@@ -295,7 +295,7 @@ function BrunoPin({ pin }) {
     >
       <div
         className="w-11 h-11 rounded-full border-[3px] border-white shadow-xl grid place-items-center text-base group-hover:scale-110 transition-transform"
-        style={{ backgroundColor: pin.category_color || "#FF5A00" }}
+        style={{ backgroundColor: pin.category_color || "#FF6A00" }}
       >
         <span className="leading-none">{pin.category_icon || "📍"}</span>
       </div>
@@ -304,7 +304,7 @@ function BrunoPin({ pin }) {
         style={{
           borderLeft: "6px solid transparent",
           borderRight: "6px solid transparent",
-          borderTop: `8px solid ${pin.category_color || "#FF5A00"}`,
+          borderTop: `8px solid ${pin.category_color || "#FF6A00"}`,
           filter: "drop-shadow(0 1px 1px rgba(0,0,0,.25))",
         }}
       />

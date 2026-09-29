@@ -73,7 +73,7 @@ export default function BrunoUIKitPage() {
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       {/* Hero */}
       <div className="relative overflow-hidden border-b border-zinc-200 dark:border-zinc-800">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,90,0,0.15),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,106,0,0.15),transparent_60%)]" />
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-12">
           <motion.div
             initial={{ opacity: 0, y: 10 }}

@@ -207,7 +207,7 @@ export const TourOverlay = () => {
       {spot && (
         <div
           className="absolute pointer-events-none rounded-2xl ring-4 ring-primary animate-pulse"
-          style={{ left: spot.x - 8, top: spot.y - 8, width: spot.w + 16, height: spot.h + 16, boxShadow: "0 0 0 9999px rgba(0,0,0,0.0), 0 0 30px 6px rgba(255,90,0,.55)" }}
+          style={{ left: spot.x - 8, top: spot.y - 8, width: spot.w + 16, height: spot.h + 16, boxShadow: "0 0 0 9999px rgba(0,0,0,0.0), 0 0 30px 6px rgba(255,106,0,.55)" }}
           data-testid="tour-spotlight"
         />
       )}

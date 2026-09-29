@@ -121,7 +121,7 @@ export default function BrunoAudioWaveform({ url, mp3Url, isOwn = false, testId 
     return `${m}:${sec.toString().padStart(2, "0")}`;
   };
 
-  const activeColor = isOwn ? "#FFFFFF" : "#FF5A00";
+  const activeColor = isOwn ? "#FFFFFF" : "#FF6A00";
   const inactiveColor = isOwn ? "rgba(255,255,255,0.35)" : "rgba(161,161,170,0.5)";
 
   return (

@@ -42,7 +42,7 @@ export default function StoryRing({
   const inner = size - thickness * 2;
   const ringGradient = watched
     ? "linear-gradient(135deg,#a1a1aa,#71717a)"
-    : "conic-gradient(from 220deg, #ff5a00, #ff2d75, #b446ff, #ff5a00)";
+    : "conic-gradient(from 220deg, #ff6a00, #ff2d75, #b446ff, #ff6a00)";
 
   return (
     <motion.button

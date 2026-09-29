@@ -19,7 +19,7 @@ export const ExpandableCard = ({
   summary,
   details,
   defaultOpen = false,
-  accent = "#FF5A00",
+  accent = "#FF6A00",
   onToggle,
   icon = null,
   className = "",

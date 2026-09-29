@@ -19,8 +19,8 @@ const pinIcon = (pin) =>
     iconAnchor: [22, 52],
     popupAnchor: [0, -48],
     html: `<div style="display:flex;flex-direction:column;align-items:center">
-      <div style="width:44px;height:44px;border-radius:9999px;border:3px solid #fff;background:${pin.category_color || "#FF5A00"};display:grid;place-items:center;font-size:18px;box-shadow:0 6px 16px rgba(0,0,0,.25)">${pin.category_icon || "📍"}</div>
-      <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid ${pin.category_color || "#FF5A00"};margin-top:-2px"></div>
+      <div style="width:44px;height:44px;border-radius:9999px;border:3px solid #fff;background:${pin.category_color || "#FF6A00"};display:grid;place-items:center;font-size:18px;box-shadow:0 6px 16px rgba(0,0,0,.25)">${pin.category_icon || "📍"}</div>
+      <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid ${pin.category_color || "#FF6A00"};margin-top:-2px"></div>
     </div>`,
   });
 

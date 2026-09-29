@@ -477,7 +477,7 @@ const MapPage = () => {
             <Marker
               key={card.id}
               position={[card.location.lat, card.location.lng]}
-              icon={createCustomIcon(card.background_color || '#FF6B35')}
+              icon={createCustomIcon(card.background_color || '#FF6A00')}
               eventHandlers={{
                 click: () => {
                   setSelectedCard(card);
@@ -497,7 +497,7 @@ const MapPage = () => {
                     ) : (
                       <div 
                         className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-                        style={{ backgroundColor: card.background_color || '#FF6B35' }}
+                        style={{ backgroundColor: card.background_color || '#FF6A00' }}
                       >
                         {card.title?.charAt(0) || '?'}
                       </div>
@@ -590,7 +590,7 @@ const MapPage = () => {
                   ) : (
                     <div 
                       className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold"
-                      style={{ backgroundColor: card.background_color || '#FF6B35' }}
+                      style={{ backgroundColor: card.background_color || '#FF6A00' }}
                     >
                       {card.title?.charAt(0) || '?'}
                     </div>
@@ -641,7 +641,7 @@ const MapPage = () => {
               ) : (
                 <div 
                   className="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-bold text-white"
-                  style={{ backgroundColor: selectedCard.background_color || '#FF6B35' }}
+                  style={{ backgroundColor: selectedCard.background_color || '#FF6A00' }}
                 >
                   {selectedCard.title?.charAt(0) || "?"}
                 </div>
@@ -670,7 +670,7 @@ const MapPage = () => {
             <div className="flex gap-3 mt-4">
               <Button 
                 className="flex-1"
-                style={{ backgroundColor: selectedCard.background_color || '#FF6B35' }}
+                style={{ backgroundColor: selectedCard.background_color || '#FF6A00' }}
                 onClick={() => openDirections(selectedCard)}
                 data-testid="card-directions-btn"
               >

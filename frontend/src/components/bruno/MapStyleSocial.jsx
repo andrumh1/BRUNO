@@ -2,7 +2,7 @@
  * MapStyleSocial — BRUNO-branded Google Maps JSON styling.
  *
  *  Palette philosophy (per user request):
- *    - PREDOMINANTLY ORANGE (#FF6B35 family) and BEIGE (#FFF1DF / #FBE4C2)
+ *    - PREDOMINANTLY ORANGE (#FF6A00 family) and BEIGE (#F9F1EA / #FBE4C2)
  *    - All BRUNO PIUP pins are pure orange → the rest of the map is muted
  *      cream/beige so they ALWAYS win attention
  *    - Public POIs (hospitals, government, transit) remain readable but
@@ -16,7 +16,7 @@ import { useMap } from "@vis.gl/react-google-maps";
 
 const SOCIAL_STYLE = [
   // Global base: warm beige
-  { elementType: "geometry", stylers: [{ color: "#FFF1DF" }] },
+  { elementType: "geometry", stylers: [{ color: "#F9F1EA" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#4B3321" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#FFF7EE" }, { weight: 2.5 }] },
 

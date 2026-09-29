@@ -56,7 +56,7 @@ const CreateCardPage = () => {
     description: "",
     avatar_url: "",
     banner_url: "",
-    background_color: "#FF5A00",
+    background_color: "#FF6A00",
     text_color: "#FFFFFF",
     social_links: [],
     location: null,

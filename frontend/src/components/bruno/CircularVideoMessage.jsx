@@ -122,7 +122,7 @@ export default function CircularVideoMessage({
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke="#FF5A00"
+          stroke="#FF6A00"
           strokeWidth={stroke}
           fill="none"
           strokeLinecap="round"

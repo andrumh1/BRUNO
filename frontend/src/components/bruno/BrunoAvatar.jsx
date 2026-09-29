@@ -15,7 +15,6 @@ import StoryRing from "@/components/bruno/StoryRing";
 import { useStoryActivity } from "@/contexts/StoryActivityContext";
 import { useAuth } from "@/contexts/AuthContext";
 import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
-import { User as UserIcon } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -53,11 +52,8 @@ export default function BrunoAvatar({
   }, [userId, name, src, token]);
 
   const fallbackEl = fallback || (
-    <div
-      className="w-full h-full grid place-items-center bg-gradient-to-br from-orange-100 to-orange-200 text-orange-600 font-bold"
-      style={{ fontSize: size * 0.4 }}
-    >
-      {name ? name[0]?.toUpperCase() : <UserIcon className="w-1/2 h-1/2 opacity-70" />}
+    <div className="w-full h-full grid place-items-center bg-card text-foreground/70" data-testid="avatar-fallback" aria-label={name || "Sin foto"}>
+      <span className="bruno-mark w-[64%]" />
     </div>
   );
 

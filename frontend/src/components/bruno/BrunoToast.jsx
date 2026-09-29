@@ -49,31 +49,31 @@ const VARIANTS = {
   },
   loading: {
     icon: Loader2,
-    color: "#FF5A00",
+    color: "#FF6A00",
     ring: "ring-orange-400/30",
     label: "Cargando",
   },
   follow: {
     icon: UserPlus,
-    color: "#FF5A00",
+    color: "#FF6A00",
     ring: "ring-orange-400/30",
     label: "Siguiendo",
   },
   publish: {
     icon: Send,
-    color: "#FF5A00",
+    color: "#FF6A00",
     ring: "ring-orange-400/30",
     label: "Publicado",
   },
   discard: {
     icon: Trash2,
-    color: "#6B7280",
+    color: "#474747",
     ring: "ring-gray-400/30",
     label: "Descartado",
   },
   like: {
     icon: Heart,
-    color: "#EC4899",
+    color: "#FF8A3D",
     ring: "ring-pink-400/30",
     label: "Me gusta",
   },
@@ -100,7 +100,7 @@ const BrunoToastCard = ({ variant, title, description, action, onClose, t }) => 
       <span
         aria-hidden
         className="absolute left-0 top-0 bottom-0 w-1"
-        style={{ backgroundColor: "#FF5A00" }}
+        style={{ backgroundColor: "#FF6A00" }}
       />
 
       <div className="flex items-start gap-3 pl-4 pr-3 py-3">

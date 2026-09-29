@@ -129,7 +129,7 @@ export default function LikesModal({ open, onClose }) {
         exit={{ y: 30, opacity: 0 }}
         transition={{ type: "spring", stiffness: 380, damping: 32 }}
         className="bg-card w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[80vh] flex flex-col overflow-hidden"
-        style={{ background: "linear-gradient(180deg,#FFFCF6 0%,#FFF1DF 100%)" }}
+        style={{ background: "linear-gradient(180deg,#FFFCF6 0%,#F9F1EA 100%)" }}
         onClick={e => e.stopPropagation()}
         data-testid="likes-modal"
       >

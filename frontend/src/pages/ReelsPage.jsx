@@ -14,6 +14,7 @@ import { useNavScroll } from "@/contexts/NavScrollContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import ReelItem from "@/components/reels/ReelItem";
 import { useReelsFeed } from "@/components/reels/useReelsFeed";
+import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet, ReelLikersSheet, ReelOptionsSheet, ReelEditSheet } from "@/components/reels/ReelSheets";
 import RemixStudio from "@/components/reels/RemixStudio";
 import ReelsStoriesStrip from "@/components/reels/ReelsStoriesStrip";
@@ -133,9 +134,9 @@ export default function ReelsPage() {
   const topPad = "calc(env(safe-area-inset-top, 0px) + 8px)";
 
   return (
-    <div className="fixed inset-0 bg-black overflow-hidden" data-testid="reels-page">
+    <div className="fixed inset-0 reels-surface overflow-hidden" data-testid="reels-page">
       {/* Header */}
-      <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-3 pb-2 bg-gradient-to-b from-black/60 to-transparent" style={{ paddingTop: topPad }} data-no-safe-top>
+      <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-3 pb-3 bg-gradient-to-b from-[#474747]/85 via-[#474747]/40 to-transparent reel-chrome" style={{ paddingTop: topPad }} data-no-safe-top>
         {profileMode ? (
           <button onClick={() => navigate(-1)} className="w-9 h-9 grid place-items-center rounded-full bg-black/35 text-white" data-testid="reels-back-btn"><ArrowLeft className="w-5 h-5" /></button>
         ) : (
@@ -163,7 +164,7 @@ export default function ReelsPage() {
 
       {tab !== "lives" ? (
         loading ? (
-          <div className="h-full grid place-items-center"><Loader2 className="w-10 h-10 text-white animate-spin" /></div>
+          <div className="h-full grid place-items-center"><Loader2 className="w-10 h-10 text-primary animate-spin" /></div>
         ) : reels.length === 0 ? (
           <EmptyReels profileMode={profileMode} following={tab === "following"} onCreate={() => navigate("/camera")} onForYou={() => setTab("for_you")} />
         ) : (
@@ -180,7 +181,7 @@ export default function ReelsPage() {
                     onSwipeLeft={swipeLeft} onSwipeRight={swipeRight}
                   />
                 ) : (
-                  <div className="h-full w-full bg-black bg-center bg-cover opacity-70" style={{ backgroundImage: reel.poster_url || reel.thumbnail_url ? `url(${reel.poster_url || reel.thumbnail_url})` : undefined }} />
+                  <div className="h-full w-full reels-surface bg-center bg-cover opacity-70" style={{ backgroundImage: reel.poster_url || reel.thumbnail_url ? `url(${reel.poster_url || reel.thumbnail_url})` : undefined }} />
                 )}
               </div>
             ))}
@@ -212,13 +213,16 @@ export default function ReelsPage() {
 
 function EmptyReels({ profileMode, following, onCreate, onForYou }) {
   return (
-    <div className="h-full flex flex-col items-center justify-center text-white p-8" data-testid="reels-empty">
-      <div className="w-20 h-20 bg-white/10 rounded-full grid place-items-center mb-4"><Film className="w-10 h-10" /></div>
+    <div className="h-full flex flex-col items-center justify-center text-foreground p-8 relative bruno-watermark" data-testid="reels-empty">
+      <div className="relative w-24 h-24 rounded-[28px] bg-card border border-border/60 shadow-sm grid place-items-center mb-5">
+        <span className="absolute inset-0 rounded-[28px] bg-primary/10 blur-xl" />
+        <BrunoLogo variant="icon" tone="orange" className="relative w-14 bubble-float" />
+      </div>
       <h2 className="text-xl font-bold mb-2">{profileMode ? "Sin reels todavía" : following ? "Sigue a creadores" : "No hay reels"}</h2>
-      <p className="text-white/50 text-sm text-center mb-6">{profileMode ? "Este perfil aún no publicó videos" : following ? "Los reels de quienes sigues aparecerán aquí" : "Sé el primero en compartir un video corto"}</p>
+      <p className="text-muted-foreground text-sm text-center mb-6">{profileMode ? "Este perfil aún no publicó videos" : following ? "Los reels de quienes sigues aparecerán aquí" : "Sé el primero en compartir un video corto"}</p>
       {!profileMode && (following
-        ? <button onClick={onForYou} className="px-5 h-10 rounded-full bg-white text-black text-sm font-semibold" data-testid="reels-goto-foryou">Explorar Para ti</button>
-        : <button onClick={onCreate} className="px-5 h-10 rounded-full bg-primary text-white text-sm font-semibold inline-flex items-center gap-2" data-testid="reels-create-first"><Plus className="w-4 h-4" /> Crear Reel</button>)}
+        ? <button onClick={onForYou} className="px-5 h-10 rounded-full bg-foreground text-background text-sm font-semibold" data-testid="reels-goto-foryou">Explorar Para ti</button>
+        : <button onClick={onCreate} className="px-5 h-10 rounded-full bg-primary text-white text-sm font-semibold inline-flex items-center gap-2 shadow-lg shadow-primary/25" data-testid="reels-create-first"><Plus className="w-4 h-4" /> Crear Reel</button>)}
     </div>
   );
 }

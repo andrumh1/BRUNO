@@ -221,7 +221,7 @@ const StorePage = () => {
     const colors = {
       black: "#1a1a1a",
       white: "#f5f5f5",
-      orange: "#FF5A00",
+      orange: "#FF6A00",
       gold: "#FFD700",
       silver: "#C0C0C0",
       blue: "#3B82F6",

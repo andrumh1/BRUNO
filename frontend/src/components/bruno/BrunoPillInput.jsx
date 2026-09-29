@@ -139,7 +139,7 @@ export const BrunoPillInput = forwardRef(function BrunoPillInput(
         <motion.div
           animate={{
             boxShadow: focused
-              ? "0 0 0 2px rgba(255,90,0,0.35), 0 6px 24px -8px rgba(255,90,0,0.25)"
+              ? "0 0 0 2px rgba(255,106,0,0.35), 0 6px 24px -8px rgba(255,106,0,0.25)"
               : "0 1px 3px rgba(0,0,0,0.06)",
           }}
           transition={{ duration: 0.25 }}

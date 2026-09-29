@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import BrunoLogo, { BrunoHeaderMark } from "@/components/bruno/BrunoLogo";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,7 +23,6 @@ import {
   Package,
   Tag,
   Loader2,
-  Inbox,
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -263,10 +263,11 @@ export default function NotificationsPage() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 flex-1">
+            <BrunoHeaderMark />
             {unreadCount > 0 ? (
-              <BellRing className="w-5 h-5 text-orange-500" />
+              <BellRing className="w-4 h-4 text-orange-500" />
             ) : (
-              <Bell className="w-5 h-5 text-orange-500" />
+              <Bell className="w-4 h-4 text-orange-500" />
             )}
             <h1 className="font-bold text-base">Notificaciones</h1>
             {realtimeConnected && (
@@ -426,8 +427,8 @@ export default function NotificationsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center py-16 px-4"
           >
-            <div className="mx-auto h-16 w-16 rounded-2xl bg-orange-500/10 grid place-items-center mb-3">
-              <Inbox className="h-8 w-8 text-orange-500" />
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-card border border-border/60 grid place-items-center mb-3">
+              <BrunoLogo variant="icon" tone="orange" className="w-9 bubble-float" />
             </div>
             <p className="font-semibold text-sm">
               {filter === "all" ? "Sin notificaciones" : "Nada por aquí"}

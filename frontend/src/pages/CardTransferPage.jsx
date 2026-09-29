@@ -103,7 +103,7 @@ export default function CardTransferPage() {
   const copy = async () => { if (!transfer?.url) return; await navigator.clipboard.writeText(transfer.url); setCopied(true); setTimeout(() => setCopied(false), 1800); };
 
   const mm = String(Math.floor(left / 60)).padStart(2, "0"), ss = String(left % 60).padStart(2, "0");
-  const color = card?.background_color || "#FF6B35";
+  const color = card?.background_color || "#FF6A00";
 
   return (
     <div className="min-h-screen bg-background pb-28" data-testid="card-transfer-page">

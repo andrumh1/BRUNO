@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { BrunoHeaderMark } from "@/components/bruno/BrunoLogo";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -335,7 +336,7 @@ const MyProfilePage = () => {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
-            <h1 className="text-lg font-bold">{profile?.name || user.name}</h1>
+            <h1 className="text-lg font-bold flex items-center gap-2"><BrunoHeaderMark className="h-5" />{profile?.name || user.name}</h1>
           </div>
           <div className="flex items-center gap-2">
             <Button 

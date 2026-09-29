@@ -4,25 +4,25 @@
   "description": "Crea, conecta y comparte. Tarjetas digitales NFC, feed social, reels, mapa y chat — todo en BRUNO.",
   "icons": [
     {
-      "src": "/bruno-mascot.png?v=9",
+      "src": "/bruno-app-icon-512.png?v=10",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/bruno-mascot.png?v=9",
+      "src": "/bruno-app-icon-512.png?v=10",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/bruno-mascot.png?v=9",
+      "src": "/bruno-app-icon-512.png?v=10",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/bruno-mascot.png?v=9",
+      "src": "/bruno-app-icon-512.png?v=10",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -32,8 +32,8 @@
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "theme_color": "#FF6B35",
-  "background_color": "#FFF1DF",
+  "theme_color": "#FF6A00",
+  "background_color": "#F9F1EA",
   "orientation": "portrait-primary",
   "categories": ["social", "lifestyle", "productivity"],
   "lang": "es",
@@ -43,33 +43,33 @@
       "short_name": "Feed",
       "description": "Abrir el feed social",
       "url": "/feed",
-      "icons": [{ "src": "/bruno-mascot.png?v=9", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/bruno-app-icon-512.png?v=10", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Mapa",
       "short_name": "Mapa",
       "description": "Mapa híbrido de Bruno",
       "url": "/map",
-      "icons": [{ "src": "/bruno-mascot.png?v=9", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/bruno-app-icon-512.png?v=10", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Chats",
       "short_name": "Chats",
       "description": "Tus conversaciones",
       "url": "/chat",
-      "icons": [{ "src": "/bruno-mascot.png?v=9", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/bruno-app-icon-512.png?v=10", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Mi perfil",
       "short_name": "Perfil",
       "description": "Mi tarjeta y stats",
       "url": "/my-profile",
-      "icons": [{ "src": "/bruno-mascot.png?v=9", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/bruno-app-icon-512.png?v=10", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "screenshots": [
     {
-      "src": "/bruno-mascot.png?v=9",
+      "src": "/bruno-app-icon-512.png?v=10",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow"

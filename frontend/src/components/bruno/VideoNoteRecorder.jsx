@@ -129,7 +129,7 @@ export default function VideoNoteRecorder({ open, onClose, onCapture }) {
             <circle cx="130" cy="130" r="124" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="none" />
             <circle
               cx="130" cy="130" r="124"
-              stroke="#FF6B35"
+              stroke="#FF6A00"
               strokeWidth="6"
               fill="none"
               strokeLinecap="round"

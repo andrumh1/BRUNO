@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { BrunoHeaderMark } from "@/components/bruno/BrunoLogo";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import {
   Check,
   Loader2,
   Smartphone,
-  Settings as SettingsIcon, Languages } from "lucide-react";
+  Languages } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -130,7 +131,7 @@ const SettingsPage = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <SettingsIcon className="w-5 h-5 text-primary" />
+          <BrunoHeaderMark />
           <h1 className="font-bold">Configuracion</h1>
           {saving && <Loader2 className="w-4 h-4 animate-spin text-primary ml-auto" />}
         </div>

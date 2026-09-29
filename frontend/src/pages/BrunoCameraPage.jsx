@@ -103,7 +103,7 @@ const TEXT_STYLES = [
   { id: "mono", name: "Tech", font: "monospace", weight: "600" },
 ];
 
-const TEXT_COLORS = ["#FFFFFF", "#000000", "#FF5A00", "#FF3366", "#00D4FF", "#39FF14", "#FFD700", "#FF00FF", "#00FFFF", "#FF6B6B"];
+const TEXT_COLORS = ["#FFFFFF", "#000000", "#FF6A00", "#FF3366", "#00D4FF", "#39FF14", "#FFD700", "#FF00FF", "#00FFFF", "#FF6B6B"];
 
 const MODES = [
   { id: "photo", label: "Foto" },

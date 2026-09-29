@@ -110,7 +110,7 @@ const ViewCardPage = () => {
     );
   }
 
-  const bg = card.background_color || "#FF5A00";
+  const bg = card.background_color || "#FF6A00";
   const fg = card.text_color || "#FFFFFF";
   const isFullBanner = card.template_id === "full_banner_bubble";
   const isEdge = card.template_id === "edge_actions";

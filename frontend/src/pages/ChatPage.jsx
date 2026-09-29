@@ -1,5 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -1510,10 +1511,10 @@ const ChatPage = () => {
             onLeftGroup={handleLeftGroup}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-muted/10">
-            <div className="text-center max-w-sm">
-              <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl flex items-center justify-center mx-auto mb-5 rotate-6">
-                <Send className="w-10 h-10 text-primary -rotate-6" />
+          <div className="flex-1 flex items-center justify-center bg-muted/10 relative overflow-hidden bruno-watermark">
+            <div className="text-center max-w-sm relative">
+              <div className="w-24 h-24 bg-card border border-border/60 rounded-[28px] flex items-center justify-center mx-auto mb-5 shadow-sm">
+                <BrunoLogo variant="icon" tone="orange" className="w-14 bubble-float" />
               </div>
               <h3 className="font-bold text-xl mb-2 tracking-tight">Tus Mensajes</h3>
               <p className="text-muted-foreground text-sm mb-5">Selecciona una conversacion o inicia una nueva</p>

@@ -240,7 +240,7 @@ const ActivateNFCPage = () => {
               />
               <div
                 className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold shrink-0 overflow-hidden"
-                style={{ backgroundColor: card.background_color || "#FF5A00" }}
+                style={{ backgroundColor: card.background_color || "#FF6A00" }}
               >
                 {card.avatar_url ? (
                   <img src={card.avatar_url} alt="" className="w-full h-full object-cover" />
