@@ -1461,3 +1461,13 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - **Grupal**: header de chat muestra nombre de grupo/"N participantes"; el fan-out de `incoming_call` ya llega a todos (sala Daily máx 8). API de creación de grupos aún es 1:1 (pendiente).
 - Fix: `find_one` con proyección vacía era falsy → usar `is None`.
 - ⚠️ Daily.co: la cuenta del usuario muestra "Missing payment method" → debe agregar tarjeta en dashboard.daily.co para que las salas conecten.
+
+## 2026-06 — Rebranding corporativo BRUNO (iteration_91, 100% frontend)
+- Paleta oficial: #ffffff (fondo) · #f9f1ea (superficies/cards) · #ff6a00 (acción/primary) · #474747 (texto y modo oscuro). Variables en `src/index.css` (`:root` y `.dark`, incl. `--reels-bg`).
+- Modo claro principal; modo oscuro en gris corporativo (fondo #333, cards #474747, texto crema). Nunca negro puro.
+- `tailwind.config.js` sobreescribe escalas `orange/pink/zinc/gray/stone/neutral/purple/violet/fuchsia` con tonos de marca → toda la app hereda la paleta sin tocar cada clase.
+- Assets: `public/brand/` (icon-{orange,white,gray,cream}.png, logo-h-*.png, logo-v-*.png). `bruno-logo.png`/`bruno-mascot.png`/`bruno-icon.png` reemplazados por versiones transparentes. Nuevo `bruno-app-icon-*.png` (PWA/manifest), `favicon-256.png`. theme-color naranja/gris.
+- Componentes: `components/bruno/BrunoLogo.jsx` (`BrunoLogo`, `BrunoHeaderMark` — data-testid brand-header-mark), `components/bruno/BrunoEmpty.jsx`. Máscara CSS `.bruno-mark` (currentColor) via `--brand-mark-url` en index.html.
+- Oso en cabeceras (Marketplace, Mi perfil, Notificaciones, Configuración), estados vacíos (Reels, Notificaciones, Chat) y avatar por defecto (`BrunoAvatar` → `[data-testid=avatar-fallback] .bruno-mark`).
+- Reels: fondo `.reels-surface` adaptativo (crema/gris); scrims en gris #474747 y `.reel-chrome` drop-shadow para legibilidad.
+- Pendiente (no elegido por el usuario): iconos nativos Capacitor (Android/iOS) con el nuevo icono; login/registro ya usan el oso transparente.
