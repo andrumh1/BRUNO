@@ -229,6 +229,15 @@ const MyProfilePage = () => {
     }
   };
 
+  const handleShareProfile = async () => {
+    const url = `${window.location.origin}/profile/${user.id}`;
+    const { brunoToast } = await import("@/components/bruno/BrunoToast");
+    if (navigator.share) {
+      try { await navigator.share({ title: profile?.name || user.name, text: "Mi perfil en BRUNO", url }); return; } catch (_) { /* cancelled */ }
+    }
+    try { await navigator.clipboard.writeText(url); brunoToast.success("Enlace copiado", { description: url }); } catch { brunoToast.error("No se pudo copiar el enlace"); }
+  };
+
   const handleShareCard = async (card) => {
     const url = `${window.location.origin}/c/${card.id}`;
     if (navigator.share) {
@@ -578,7 +587,7 @@ const MyProfilePage = () => {
             >
               <CreditCard className="w-4 h-4" />
             </Button>
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" onClick={handleShareProfile} title="Compartir perfil" data-testid="profile-share-btn">
               <Share2 className="w-4 h-4" />
             </Button>
             <QuickStoryButton variant="icon" testId="profile-quick-story" />

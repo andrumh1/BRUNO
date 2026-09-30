@@ -56,8 +56,8 @@ const CreateCardPage = () => {
     description: "",
     avatar_url: "",
     banner_url: "",
-    background_color: "#FF6A00",
-    text_color: "#FFFFFF",
+    background_color: "#F9F1EA",
+    text_color: "#474747",
     social_links: [],
     location: null,
     locations: [],
@@ -974,6 +974,15 @@ const CreateCardPage = () => {
                   <CardTitle>{t("cardForm.colors")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="flex flex-wrap gap-2" data-testid="brand-color-presets">
+                    {[["Crema BRUNO", "#F9F1EA", "#474747"], ["Naranja BRUNO", "#FF6A00", "#FFFFFF"], ["Gris BRUNO", "#474747", "#F9F1EA"], ["Blanco BRUNO", "#FFFFFF", "#474747"]].map(([label, bgc, fgc]) => (
+                      <button key={label} type="button" onClick={() => setFormData((p) => ({ ...p, background_color: bgc, text_color: fgc }))}
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-transform hover:scale-105 ${formData.background_color.toUpperCase() === bgc ? "border-primary ring-2 ring-primary/30" : "border-border"}`}
+                        data-testid={`preset-${bgc.slice(1).toLowerCase()}`}>
+                        <span className="w-4 h-4 rounded-full border border-black/10" style={{ backgroundColor: bgc }} /> {label}
+                      </button>
+                    ))}
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">{t("cardForm.backgroundColor")}</label>

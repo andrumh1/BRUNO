@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
+import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -232,10 +233,11 @@ const ViewCardPage = () => {
                   />
                 ) : (
                   <div
-                    className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-2xl lg:rounded-3xl flex items-center justify-center text-4xl sm:text-5xl font-bold border-4 shadow-xl overflow-hidden"
-                    style={{ backgroundColor: `${fg}20`, borderColor: bg }}
+                    className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-2xl lg:rounded-3xl flex items-center justify-center border-4 shadow-xl overflow-hidden bg-[#f9f1ea]"
+                    style={{ borderColor: bg }}
+                    data-testid="card-avatar-fallback"
                   >
-                    {(card.title || "?")[0].toUpperCase()}
+                    <BrunoLogo variant="icon" tone="orange" className="w-[62%]" />
                   </div>
                 )}
                 <div
@@ -366,6 +368,15 @@ const ViewCardPage = () => {
                 )}
               </div>
             </div>
+            {/* Sello BRUNO */}
+            <div className="px-5 sm:px-8 lg:px-12 pb-4 pt-1 flex items-center justify-between" data-testid="card-brand-seal">
+              <span className="h-px flex-1 mr-3" style={{ background: `linear-gradient(90deg, transparent, ${fg}55)` }} />
+              <Link to="/" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold tracking-wide backdrop-blur-md hover:scale-105 transition-transform" style={{ backgroundColor: `${fg}18`, color: fg }} title="Hecho con BRUNO">
+                <span className="bruno-mark h-3.5" style={{ color: fg }} aria-hidden />
+                Hecho con BRUNO
+              </Link>
+              <span className="h-px flex-1 ml-3" style={{ background: `linear-gradient(90deg, ${fg}55, transparent)` }} />
+            </div>
           </div>
         </div>
 
@@ -389,9 +400,9 @@ const ViewCardPage = () => {
           <Link to="/register">
             <Button size="lg" className="shadow-xl">Crear mi tarjeta BRUNO</Button>
           </Link>
-          <p className="text-xs text-muted-foreground mt-3">
-            Creado con <Link to="/" className="text-primary font-medium hover:underline">BRUNO</Link> - Tarjetas digitales del futuro
-          </p>
+          <Link to="/" className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground" data-testid="card-footer-brand">
+            <BrunoLogo variant="wordmark" tone="orange" className="h-4" /> · Tarjetas digitales del futuro
+          </Link>
         </div>
       </div>
 

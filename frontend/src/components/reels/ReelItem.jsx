@@ -6,6 +6,7 @@ import ReelTextCard from "@/components/reels/ReelTextCard";
 import ReelCarousel from "@/components/reels/ReelCarousel";
 import ReelPlaybackControls from "@/components/reels/ReelPlaybackControls";
 
+const fmtTime = (s) => { if (!isFinite(s) || s < 0) s = 0; const m = Math.floor(s / 60), r = Math.floor(s % 60); return `${m}:${String(r).padStart(2, "0")}`; };
 const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n || 0));
 
 /**
@@ -36,6 +37,10 @@ export default function ReelItem({
   const hideTimer = useRef(null);
   const [controlsVisible, setControlsVisible] = useState(false);
   const [seekHint, setSeekHint] = useState(null);
+  const [time, setTime] = useState({ cur: 0, dur: 0 });
+  const [rate, setRate] = useState(1);
+  const [boosting, setBoosting] = useState(false);
+  const rateRef = useRef(1);
   const longPress = useRef(null);
   const pausedByHold = useRef(false);
 
@@ -44,6 +49,7 @@ export default function ReelItem({
     if (!v) return;
     if (isActive) {
       v.muted = globalMuted;
+      v.playbackRate = rateRef.current;
       const p = v.play();
       p?.then(() => setIsPlaying(true)).catch(() => {
         if (!v.muted) { v.muted = true; v.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false)); }
@@ -80,6 +86,22 @@ export default function ReelItem({
     setTimeout(() => setSeekHint(null), 650);
     if (controlsVisible) showControls();
   };
+  const cycleRate = () => {
+    const next = rate >= 2 ? 1 : rate === 1 ? 1.5 : 2;
+    rateRef.current = next; setRate(next);
+    if (videoRef.current) videoRef.current.playbackRate = next;
+    showControls();
+  };
+  const startBoost = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    setBoosting(true); v.playbackRate = 2;
+    if (v.paused) v.play().then(() => setIsPlaying(true)).catch(() => {});
+  };
+  const stopBoost = () => {
+    setBoosting(false);
+    if (videoRef.current) videoRef.current.playbackRate = rateRef.current;
+  };
 
   // Freshly uploaded videos return 423 from Cloudinary while transcoding → auto-retry with backoff.
   const handleVideoError = (e) => {
@@ -107,9 +129,13 @@ export default function ReelItem({
   const onTouchStart = (e) => {
     const t = e.touches[0];
     touch.current = { ...touch.current, x: t.clientX, y: t.clientY, t: Date.now() };
+    const w = stageRef.current?.clientWidth || window.innerWidth;
+    const rightZone = t.clientX > w * 0.7;
     longPress.current = setTimeout(() => {
       const v = videoRef.current;
-      if (v && !v.paused) { v.pause(); setIsPlaying(false); pausedByHold.current = true; }
+      if (!v || !src) return;
+      if (rightZone) { pausedByHold.current = "boost"; startBoost(); return; }
+      if (!v.paused) { v.pause(); setIsPlaying(false); pausedByHold.current = true; }
     }, 380);
   };
   const onTouchMove = (e) => {
@@ -119,6 +145,7 @@ export default function ReelItem({
     clearTimeout(longPress.current); longPress.current = null;
     const c = e.changedTouches[0];
     const dx = c.clientX - touch.current.x, dy = c.clientY - touch.current.y, dt = Date.now() - touch.current.t;
+    if (pausedByHold.current === "boost") { pausedByHold.current = false; stopBoost(); return; }
     if (pausedByHold.current) { pausedByHold.current = false; videoRef.current?.play().then(() => setIsPlaying(true)).catch(() => {}); return; }
     if (Math.abs(dx) < 8 && Math.abs(dy) < 8 && dt < 280) return handleTap(c.clientX, c.clientY);
     if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.4) (dx < 0 ? onSwipeLeft : onSwipeRight)?.(reel);
@@ -148,6 +175,9 @@ export default function ReelItem({
       data-testid={`reel-item-${reel.id}`}
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
       onClick={(e) => { if (!("ontouchstart" in window)) handleTap(e.clientX, e.clientY); }}
+      onMouseDown={(e) => { if ("ontouchstart" in window || !src) return; const w = stageRef.current?.clientWidth || 1; if (e.clientX > w * 0.7) longPress.current = setTimeout(startBoost, 380); }}
+      onMouseUp={() => { if ("ontouchstart" in window) return; clearTimeout(longPress.current); longPress.current = null; if (boosting) stopBoost(); }}
+      onMouseLeave={() => { if (boosting) stopBoost(); }}
     >
       {/* Blurred backdrop so portrait/landscape mixes look premium */}
       {(reel.poster_url || reel.thumbnail_url) && (
@@ -162,7 +192,8 @@ export default function ReelItem({
           loop playsInline muted={globalMuted}
           preload={isActive || isNear ? "auto" : "metadata"}
           poster={reel.poster_url || reel.thumbnail_url || undefined}
-          onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) setProgress((v.currentTime / v.duration) * 100); }}
+          onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) { setProgress((v.currentTime / v.duration) * 100); setTime({ cur: v.currentTime, dur: v.duration }); } }}
+          onLoadedMetadata={(e) => { const v = e.currentTarget; setTime({ cur: v.currentTime, dur: v.duration || 0 }); v.playbackRate = rateRef.current; }}
           onWaiting={() => setBuffering(true)}
           onPlaying={() => { setBuffering(false); setError(false); setProcessing(false); autoRetries.current = 0; }}
           onCanPlay={() => { setBuffering(false); setProcessing(false); }}
@@ -185,8 +216,8 @@ export default function ReelItem({
       )}
       {src && !error && !processing && (
         <ReelPlaybackControls
-          visible={controlsVisible} isPlaying={isPlaying} muted={globalMuted} seekHint={seekHint}
-          onToggle={togglePlay} onSeek={seekBy} onToggleMute={() => { onToggleMute(); showControls(); }}
+          visible={controlsVisible} isPlaying={isPlaying} muted={globalMuted} seekHint={seekHint} rate={rate} boosting={boosting}
+          onToggle={togglePlay} onSeek={seekBy} onToggleMute={() => { onToggleMute(); showControls(); }} onCycleRate={cycleRate}
         />
       )}
       {processing && !error && (
@@ -285,6 +316,11 @@ export default function ReelItem({
           <div className="w-full h-[3px] bg-white/25">
             <div className="h-full bg-white transition-[width] duration-100" style={{ width: `${progress}%` }} />
           </div>
+        </div>
+      )}
+      {src && controlsVisible && (
+        <div className="absolute left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-1 h-5 px-2.5 rounded-full backdrop-blur-xl bg-white/[0.06] border border-white/35 text-white text-[10px] font-semibold tabular-nums reel-chrome pointer-events-none" style={{ bottom: "calc(var(--nav-reserve, 64px) + 3px)" }} data-testid="reel-time-bar">
+          <span data-testid="reel-time-current">{fmtTime(time.cur)}</span><span className="opacity-60">/</span><span data-testid="reel-time-duration">{fmtTime(time.dur)}</span>
         </div>
       )}
     </div>
