@@ -1,16 +1,18 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, Volume2, VolumeX, User, Plus, Check, Minimize2, RotateCcw, Layers, Scissors, Columns2, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, User, Plus, Check, Minimize2, RotateCcw, Layers, Scissors, Columns2, MoreHorizontal } from "lucide-react";
 import ReelTextCard from "@/components/reels/ReelTextCard";
 import ReelCarousel from "@/components/reels/ReelCarousel";
+import ReelPlaybackControls from "@/components/reels/ReelPlaybackControls";
 
 const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n || 0));
 
 /**
  * ReelItem — one full-screen reel. TikTok-grade playback + gestures.
  *  • isActive → play (retry muted if autoplay blocked); neighbors preload.
- *  • Tap = play/pause · Double-tap = like · Long-press = pause · Swipe L/R.
+ *  • Tap = play/pause + controles (−10 · ▶︎ · +10 · sonido) · Double-tap centro = like · Double-tap lados = ±10 s.
+ *  • Long-press = pause · Swipe L/R.
  *  • Bottom progress bar with drag-to-seek.
  */
 export default function ReelItem({
@@ -29,6 +31,11 @@ export default function ReelItem({
   const autoRetries = useRef(0);
   const retryTimer = useRef(null);
   const touch = useRef({ x: 0, y: 0, t: 0, lastTap: 0 });
+  const stageRef = useRef(null);
+  const tapTimer = useRef(null);
+  const hideTimer = useRef(null);
+  const [controlsVisible, setControlsVisible] = useState(false);
+  const [seekHint, setSeekHint] = useState(null);
   const longPress = useRef(null);
   const pausedByHold = useRef(false);
 
@@ -48,7 +55,31 @@ export default function ReelItem({
     }
   }, [isActive, globalMuted, retryKey]);
 
-  useEffect(() => () => clearTimeout(retryTimer.current), []);
+  useEffect(() => () => { clearTimeout(retryTimer.current); clearTimeout(tapTimer.current); clearTimeout(hideTimer.current); }, []);
+  useEffect(() => { if (!isActive) { setControlsVisible(false); clearTimeout(hideTimer.current); } }, [isActive]);
+
+  const showControls = () => {
+    setControlsVisible(true);
+    clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => setControlsVisible(false), 2500);
+  };
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play().then(() => setIsPlaying(true)).catch(() => {}); else { v.pause(); setIsPlaying(false); }
+    showControls();
+  };
+  const seekBy = (delta) => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.duration) {
+      v.currentTime = Math.min(v.duration - 0.05, Math.max(0, v.currentTime + delta));
+      setProgress((v.currentTime / v.duration) * 100);
+    }
+    setSeekHint({ side: delta < 0 ? "left" : "right", id: Date.now() });
+    setTimeout(() => setSeekHint(null), 650);
+    if (controlsVisible) showControls();
+  };
 
   // Freshly uploaded videos return 423 from Cloudinary while transcoding → auto-retry with backoff.
   const handleVideoError = (e) => {
@@ -92,18 +123,18 @@ export default function ReelItem({
     if (Math.abs(dx) < 8 && Math.abs(dy) < 8 && dt < 280) return handleTap(c.clientX, c.clientY);
     if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.4) (dx < 0 ? onSwipeLeft : onSwipeRight)?.(reel);
   };
+  // Single tap is deferred ~260 ms so a double tap on the sides (±10 s) or centre (like) never toggles playback.
   const handleTap = (x, y) => {
-    const now = Date.now();
-    if (now - touch.current.lastTap < 280) {
-      touch.current.lastTap = 0;
+    if (tapTimer.current) {
+      clearTimeout(tapTimer.current); tapTimer.current = null;
+      const w = stageRef.current?.clientWidth || window.innerWidth;
+      const zone = x < w * 0.3 ? "left" : x > w * 0.7 ? "right" : "center";
+      if (src && zone !== "center") return seekBy(zone === "left" ? -10 : 10);
       if (!reel.is_liked) onLike?.(reel, true);
       setBurst({ x, y }); setTimeout(() => setBurst(null), 700);
       return;
     }
-    touch.current.lastTap = now;
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) v.play().then(() => setIsPlaying(true)).catch(() => {}); else { v.pause(); setIsPlaying(false); }
+    tapTimer.current = setTimeout(() => { tapTimer.current = null; if (src) togglePlay(); }, 260);
   };
 
   const src = reel.video_url;
@@ -112,6 +143,7 @@ export default function ReelItem({
 
   return (
     <div
+      ref={stageRef}
       className="reels-stage reels-surface relative h-full w-full snap-start snap-always overflow-hidden select-none"
       data-testid={`reel-item-${reel.id}`}
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
@@ -146,10 +178,16 @@ export default function ReelItem({
       )}
 
       {/* Play glyph / buffering / error */}
-      {src && !isPlaying && !error && !processing && (
-        <div className="absolute inset-0 grid place-items-center pointer-events-none">
-          <div className="w-16 h-16 rounded-full bg-white/15 backdrop-blur-sm grid place-items-center"><Play className="w-8 h-8 text-white fill-white ml-1" /></div>
+      {src && !isPlaying && !error && !processing && !controlsVisible && (
+        <div className="absolute inset-0 grid place-items-center pointer-events-none" data-testid="reel-paused-glyph">
+          <div className="w-16 h-16 rounded-full backdrop-blur-xl bg-white/[0.06] border border-white/35 shadow-[inset_0_1px_0_rgba(255,255,255,.45)] grid place-items-center reel-chrome"><Play className="w-8 h-8 text-white fill-white ml-1" /></div>
         </div>
+      )}
+      {src && !error && !processing && (
+        <ReelPlaybackControls
+          visible={controlsVisible} isPlaying={isPlaying} muted={globalMuted} seekHint={seekHint}
+          onToggle={togglePlay} onSeek={seekBy} onToggleMute={() => { onToggleMute(); showControls(); }}
+        />
       )}
       {processing && !error && (
         <div className="absolute inset-0 grid place-items-center pointer-events-none" data-testid="reel-processing">
@@ -229,12 +267,6 @@ export default function ReelItem({
             )}
           </div>
 
-          {/* Mute */}
-          {src && (
-          <button onClick={(e) => { e.stopPropagation(); onToggleMute(); }} className="absolute right-3 z-20 p-2 rounded-full bg-black/35 backdrop-blur-sm" style={{ top: "calc(env(safe-area-inset-top, 0px) + 52px)" }} data-testid="reel-mute-toggle">
-            {globalMuted ? <VolumeX className="w-5 h-5 text-white" /> : <Volume2 className="w-5 h-5 text-white" />}
-          </button>
-          )}
         </>
       )}
 
