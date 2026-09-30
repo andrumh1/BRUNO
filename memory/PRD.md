@@ -1508,3 +1508,9 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - `lib/cardShareImage.js`: `format: "story"|"square"` (1080×1080), QR generado en cliente con `qrcode` si no viene del backend, `footer_text`. ViewCardPage: botones "Historia 9:16" y "Cuadrada 1:1" (`card-share-square-btn`). MyProfilePage: `profile-share-image-btn` genera la imagen del perfil (avatar, @usuario, bio, QR al perfil, sello).
 - BrunoLoader: `POSE_PREF_KEY` (`bruno_loader_pose_pref`: auto|wave|laptop|walk) + selector en Ajustes › Apariencia (`pose-<id>`).
 - Dependencia nueva: `qrcode@1.5.4`.
+
+## 2026-06 — Marca de agua en video · plantilla editable · portada de reel (auto-test)
+- Backend `routers/reel_share.py`: `GET /api/reels/{post_id}/download` → si el video está en nuestro Cloudinary inyecta overlay `l_bruno_watermark` (sube `brand/icon-white.png` como `bruno_watermark` la primera vez) y devuelve `{url, watermarked, filename}`; si no, URL original con `watermarked:false`.
+- Frontend `lib/videoWatermark.js`: fallback en cliente (canvas + MediaRecorder, mp4 si el navegador lo soporta, si no webm) con progreso. ReelShareSheet: opciones "Video + sello" (`reel-share-download`) y "Portada IG" (`reel-share-image`).
+- `components/bruno/ShareImageSheet.jsx`: plantilla editable (formato 9:16/1:1, 8 colores + personalizado, frase ≤120) antes de generar; usada en ViewCardPage (`card-share-image-btn`), MyProfilePage (`profile-share-image-btn`) y portada de reel. `renderCardImage` acepta `bgColor`/`phrase`; `renderReelCover` + `shareBlob` en cardShareImage.js.
+- Limitación: la marca de agua en cliente no se pudo ejecutar en el navegador headless (no decodifica mp4); overlay Cloudinary probado solo por lógica (videos de prueba no están en nuestro cloud).

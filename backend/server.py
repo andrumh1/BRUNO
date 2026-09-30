@@ -2533,6 +2533,8 @@ from routers.chat_ai import router as chat_ai_router
 api_router.include_router(chat_ai_router)
 from routers.polls import router as polls_router
 api_router.include_router(polls_router)
+from routers.reel_share import router as reel_share_router
+api_router.include_router(reel_share_router)
 from routers.card_transfer import router as card_transfer_router
 api_router.include_router(card_transfer_router)
 from routers.cards import router as cards_router, public_router as cards_public_router

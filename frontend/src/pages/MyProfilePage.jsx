@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import ShareImageSheet from "@/components/bruno/ShareImageSheet";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { BrunoHeaderMark } from "@/components/bruno/BrunoLogo";
 import { Link, useNavigate } from "react-router-dom";
@@ -237,10 +238,8 @@ const MyProfilePage = () => {
     try { await navigator.clipboard.writeText(url); brunoToast.success("Enlace copiado", { description: url }); } catch { brunoToast.error("No se pudo copiar el enlace"); }
   };
 
-  const [sharingProfileImg, setSharingProfileImg] = useState(false);
-  const handleShareProfileImage = async (format = "story") => {
-    if (sharingProfileImg) return;
-    setSharingProfileImg(true);
+  const [profileShareSheet, setProfileShareSheet] = useState(false);
+  const handleShareProfileImage = async ({ format = "story", bgColor, phrase } = {}) => {
     const { brunoToast } = await import("@/components/bruno/BrunoToast");
     try {
       const { shareCardImage } = await import("@/lib/cardShareImage");
@@ -248,11 +247,10 @@ const MyProfilePage = () => {
       const res = await shareCardImage({
         title: p.name || p.display_name || user.name, subtitle: p.username ? `@${p.username}` : "Perfil BRUNO", description: p.bio || "",
         avatar_url: p.avatar_url, banner_url: p.banner_url || p.cover_url, background_color: "#FF6A00", text_color: "#FFFFFF", footer_text: "Sígueme en BRUNO · brunocard.com",
-      }, { url: `${window.location.origin}/profile/${user.id}`, format });
+      }, { url: `${window.location.origin}/profile/${user.id}`, format, bgColor, phrase });
       if (res === "downloaded") brunoToast.success("Imagen de perfil lista", { description: "Compártela en Instagram, WhatsApp o LinkedIn." });
       else if (res === "shared") brunoToast.publish("Perfil compartido");
     } catch { brunoToast.error("No se pudo generar la imagen"); }
-    finally { setSharingProfileImg(false); }
   };
 
   const handleShareCard = async (card) => {
@@ -607,9 +605,10 @@ const MyProfilePage = () => {
             <Button variant="outline" size="icon" onClick={handleShareProfile} title="Compartir perfil" data-testid="profile-share-btn">
               <Share2 className="w-4 h-4" />
             </Button>
-            <Button variant="outline" size="icon" onClick={() => handleShareProfileImage("story")} disabled={sharingProfileImg} title="Imagen para redes (historia)" data-testid="profile-share-image-btn" className="border-primary/40 text-primary">
-              {sharingProfileImg ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageDown className="w-4 h-4" />}
+            <Button variant="outline" size="icon" onClick={() => setProfileShareSheet(true)} title="Imagen para redes" data-testid="profile-share-image-btn" className="border-primary/40 text-primary">
+              <ImageDown className="w-4 h-4" />
             </Button>
+            <ShareImageSheet open={profileShareSheet} onClose={() => setProfileShareSheet(false)} title="Imagen de tu perfil" defaultColor="#FF6A00" defaultPhrase={(profile || user)?.bio || ""} onGenerate={handleShareProfileImage} />
             <QuickStoryButton variant="icon" testId="profile-quick-story" />
           </div>
         )}

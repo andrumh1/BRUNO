@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import SocialLinkButton from "@/components/SocialLinkButton";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
-import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2, Nfc, Sun, Moon, ImageDown, Loader2 } from "lucide-react";
+import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2, Nfc, Sun, Moon, ImageDown } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { shareCardImage } from "@/lib/cardShareImage";
+import ShareImageSheet from "@/components/bruno/ShareImageSheet";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 
 const luminance = (hex) => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return 0; const n = parseInt(m[1], 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
@@ -67,18 +68,15 @@ const ViewCardPage = () => {
     }).catch(() => {});
   }, [cardId, token]);
 
-  const [sharingImg, setSharingImg] = useState(false);
-  const handleShareImage = async (format = "story") => {
-    if (sharingImg) return;
-    setSharingImg(format);
+  const [shareSheet, setShareSheet] = useState(false);
+  const handleShareImage = async ({ format = "story", bgColor, phrase } = {}) => {
     try {
       let qr = qrData?.qr_code;
       if (!qr) { try { const r = await axios.get(`${API}/cards/${cardId}/qr`); qr = r.data?.qr_code; setQrData(r.data); } catch { /* sin QR */ } }
-      const res = await shareCardImage(card, { qr, url: `${window.location.origin}/c/${cardId}`, dark: isDark, format });
-      if (res === "downloaded") brunoToast.success("Imagen lista", { description: "Se descargó tu tarjeta para Instagram o WhatsApp." });
+      const res = await shareCardImage(card, { qr, url: `${window.location.origin}/c/${cardId}`, dark: isDark, format, bgColor, phrase });
+      if (res === "downloaded") brunoToast.success("Imagen lista", { description: "Se descargó tu tarjeta para Instagram, WhatsApp o LinkedIn." });
       else if (res === "shared") brunoToast.publish("Tarjeta compartida");
     } catch (e) { brunoToast.error("No se pudo generar la imagen"); }
-    finally { setSharingImg(false); }
   };
 
   const fetchQRCode = async () => {
@@ -415,12 +413,10 @@ const ViewCardPage = () => {
           <Button variant="outline" size="sm" onClick={handleShare}>
             <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Compartir
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handleShareImage("story")} disabled={!!sharingImg} data-testid="card-share-image-btn" className="border-primary/40 text-primary hover:bg-primary/10" title="Instagram Stories · WhatsApp">
-            {sharingImg === "story" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <ImageDown className="w-3.5 h-3.5 mr-1.5" />} Historia 9:16
+          <Button variant="outline" size="sm" onClick={() => setShareSheet(true)} data-testid="card-share-image-btn" className="border-primary/40 text-primary hover:bg-primary/10" title="Historia 9:16 o cuadrada 1:1 · Instagram, WhatsApp, Facebook, TikTok, LinkedIn">
+            <ImageDown className="w-3.5 h-3.5 mr-1.5" /> Imagen para redes
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handleShareImage("square")} disabled={!!sharingImg} data-testid="card-share-square-btn" className="border-primary/40 text-primary hover:bg-primary/10" title="Instagram · Facebook · TikTok · LinkedIn">
-            {sharingImg === "square" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <ImageDown className="w-3.5 h-3.5 mr-1.5" />} Cuadrada 1:1
-          </Button>
+          <ShareImageSheet open={shareSheet} onClose={() => setShareSheet(false)} title="Imagen de tu tarjeta" defaultColor={card.background_color || "#FF6A00"} defaultPhrase={card.description || ""} onGenerate={handleShareImage} />
           {isOwner && (
             <Button size="sm" onClick={() => navigate(`/cards/${cardId}/transfer`)} className="rounded-full" data-testid="card-transfer-nfc-cta">
               <Nfc className="w-3.5 h-3.5 mr-1.5" /> Transferir por contacto

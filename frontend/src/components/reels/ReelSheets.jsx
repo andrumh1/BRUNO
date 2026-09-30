@@ -4,11 +4,14 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, Pause, User, Columns2, Scissors, Layers, Music2, Video, Check, Trash2, Flag, EyeOff, Pencil } from "lucide-react";
+import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, Pause, User, Columns2, Scissors, Layers, Music2, Video, Check, Trash2, Flag, EyeOff, Pencil, Image as ImageIcon, Download } from "lucide-react";
 import TextStylePicker from "@/components/TextStylePicker";
 import { useNavigate } from "react-router-dom";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { normalizeReel } from "./useReelsFeed";
+import ShareImageSheet from "@/components/bruno/ShareImageSheet";
+import { renderReelCover, shareBlob } from "@/lib/cardShareImage";
+import { canWatermarkInBrowser, watermarkVideo } from "@/lib/videoWatermark";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -201,6 +204,8 @@ export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDelete
 export function ReelShareSheet({ reel, token, onClose }) {
   const [chats, setChats] = useState(null);
   const [sentTo, setSentTo] = useState({});
+  const [imgSheet, setImgSheet] = useState(false);
+  const [dl, setDl] = useState(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   useEffect(() => {
     if (!token) { setChats([]); return; }
@@ -230,6 +235,34 @@ export function ReelShareSheet({ reel, token, onClose }) {
     } catch (_) { setSentTo((s) => ({ ...s, [chat.id]: undefined })); brunoToast.error("No se pudo enviar"); }
   };
   const shareText = `${(reel.content || "Mira este reel").slice(0, 80)} · vía BRUNO`;
+  const makeCover = async ({ bgColor, phrase }) => {
+    try {
+      const blob = await renderReelCover(reel, { url, phrase, bgColor });
+      const res = await shareBlob(blob, `bruno-reel-${reel.id.slice(0, 8)}.png`, `${shareText} ${url}`);
+      if (res === "downloaded") brunoToast.success("Portada lista", { description: "Publícala en tus historias." });
+      else if (res === "shared") brunoToast.publish("Portada compartida");
+      onClose();
+    } catch { brunoToast.error("No se pudo generar la portada"); }
+  };
+  const downloadWithSeal = async () => {
+    if (dl) return;
+    setDl(0);
+    try {
+      const { data } = await axios.get(`${API}/reels/${reel.id}/download`);
+      if (data.watermarked) {
+        const r = await fetch(data.url); const blob = await r.blob();
+        await shareBlob(blob, data.filename, shareText);
+      } else if (canWatermarkInBrowser()) {
+        const { blob, ext } = await watermarkVideo(data.url, { onProgress: (p) => setDl(Math.round(p * 100)) });
+        await shareBlob(blob, data.filename.replace(/\.mp4$/, `.${ext}`), shareText);
+      } else {
+        window.open(data.url, "_blank", "noopener");
+      }
+      brunoToast.success("Video con sello BRUNO listo");
+      onClose();
+    } catch (e) { brunoToast.error("No se pudo preparar el video", { description: e?.message }); }
+    finally { setDl(null); }
+  };
   const ext = (href) => () => { window.open(href, "_blank", "noopener"); onClose(); };
   const opts = [
     { id: "native", label: "Compartir…", Icon: Share2, run: native, color: "#ff6a00" },
@@ -240,6 +273,8 @@ export function ReelShareSheet({ reel, token, onClose }) {
     { id: "fb", label: "Facebook", Icon: Layers, run: ext(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`), color: "#1877F2" },
     { id: "mail", label: "Correo", Icon: Flag, run: ext(`mailto:?subject=${encodeURIComponent("Reel en BRUNO")}&body=${encodeURIComponent(`${shareText}\n${url}`)}`), color: "#7a7674" },
     { id: "sms", label: "SMS", Icon: MessageSquare, run: ext(`sms:?&body=${encodeURIComponent(`${shareText} ${url}`)}`), color: "#34C759" },
+    { id: "image", label: "Portada IG", Icon: ImageIcon, run: () => setImgSheet(true), color: "#E1306C" },
+    ...(reel.video_url ? [{ id: "download", label: dl == null ? "Video + sello" : `${dl}%`, Icon: Download, run: downloadWithSeal, color: "#474747" }] : []),
   ];
   return (
     <BottomSheet open onClose={onClose} title="Enviar a" testid="reel-share-sheet" height="auto">
@@ -267,6 +302,7 @@ export function ReelShareSheet({ reel, token, onClose }) {
       <div className="px-5 pt-1 pb-2 flex items-center gap-2 text-[11px] text-muted-foreground" data-testid="reel-share-brand">
         <img src="/brand/icon-orange.png" alt="" className="h-4 w-auto" /> Compartir rápido · el enlace lleva el sello BRUNO
       </div>
+      <ShareImageSheet open={imgSheet} onClose={() => setImgSheet(false)} title="Portada del reel" defaultColor="#474747" defaultPhrase={reel.content || ""} formats={["story"]} onGenerate={makeCover} />
       <div className="grid grid-cols-4 gap-2 px-4 pb-6" data-testid="reel-share-quick">
         {opts.map((o) => (
           <button key={o.id} onClick={o.run} className="flex flex-col items-center gap-1.5 rounded-2xl p-2 active:scale-95 transition-transform hover:bg-foreground/[0.04]" data-testid={`reel-share-${o.id}`}>
