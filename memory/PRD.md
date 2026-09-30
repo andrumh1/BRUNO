@@ -1471,3 +1471,8 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - Oso en cabeceras (Marketplace, Mi perfil, Notificaciones, Configuración), estados vacíos (Reels, Notificaciones, Chat) y avatar por defecto (`BrunoAvatar` → `[data-testid=avatar-fallback] .bruno-mark`).
 - Reels: fondo `.reels-surface` adaptativo (crema/gris); scrims en gris #474747 y `.reel-chrome` drop-shadow para legibilidad.
 - Pendiente (no elegido por el usuario): iconos nativos Capacitor (Android/iOS) con el nuevo icono; login/registro ya usan el oso transparente.
+
+## 2026-06 — Pantalla de carga con personaje + icono de app (iteration_92, 100% frontend)
+- `components/bruno/BrunoLoader.jsx`: loader corporativo con las 3 poses del personaje (`/brand/mascot-{wave,laptop,walk}.webp`) rotando en cada carga (sessionStorage `bruno_loader_pose`), fondo alterno tema (crema/gris) ↔ naranja, barra 0→92% (rAF) y al desmontar clon fantasma que salta a 100% y se desvanece (`data-testid=bruno-loader-finish`). Props: `message`, `fullScreen` (portal en body, z-10000), `className`.
+- Aplicado en ProtectedRoute (arranque "Iniciando BRUNO…") y en los `if (loading)` de ~22 páginas; inline (`fullScreen={false}`) en Marketplace (productos) y Reels. `BrunoLoading` (BrunoMascot) ahora delega en BrunoLoader.
+- Icono de app: imagen oficial del oso sobre crema → `favicon.ico`, `favicon-256.png`, `apple-touch-icon.png`, `bruno-app-icon{,-512,-192}.png` (manifest v=11). Para nativo: `frontend/resources/{icon,icon-foreground,icon-background,splash,splash-dark}.png` + script `yarn cap:assets` (@capacitor/assets) — el usuario debe ejecutarlo tras `cap add` en su máquina.
