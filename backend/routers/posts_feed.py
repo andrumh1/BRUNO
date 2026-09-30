@@ -514,6 +514,11 @@ async def get_post_remixes(post_id: str, limit: int = 60, current_user: Optional
 async def _publish_due_scheduled_posts():
     now = datetime.now(timezone.utc)
     published = 0
+    try:
+        from routers.stories import publish_due_scheduled_stories
+        await publish_due_scheduled_stories()
+    except Exception as e:
+        logger.warning("scheduled stories: %s", e)
     async for p in db.posts.find({"visibility": "scheduled", "scheduled_at": {"$lte": now.isoformat()}}, {"_id": 0, "id": 1, "user_id": 1, "content": 1, "scheduled_visibility": 1}):
         await db.posts.update_one({"id": p["id"]}, {"$set": {"visibility": p.get("scheduled_visibility") or "public", "created_at": now.isoformat(), "updated_at": now.isoformat(), "published_at": now.isoformat()}, "$unset": {"scheduled_visibility": ""}})
         published += 1

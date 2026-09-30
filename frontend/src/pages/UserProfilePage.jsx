@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useShareHit } from "@/lib/shareStats";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +47,7 @@ const UserProfilePage = () => {
   const [posts, setPosts] = useState([]);
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
+  useShareHit("profile");
   const [activeTab, setActiveTab] = useState("posts");
   const [isFollowing, setIsFollowing] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);

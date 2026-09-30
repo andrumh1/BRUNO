@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useShareHit } from "@/lib/shareStats";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -25,6 +26,7 @@ const ViewCardPage = () => {
   const { user, token } = useAuth();
   const { addMinimizedCard } = useNavScroll();
   const { resolved: resolvedTheme, setTheme } = useTheme();
+  useShareHit("card");
   const isDark = resolvedTheme === "dark";
   const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -69,12 +71,10 @@ const ViewCardPage = () => {
   }, [cardId, token]);
 
   const [shareSheet, setShareSheet] = useState(false);
-  const renderShareImage = async ({ format = "story", bgColor, phrase } = {}) => {
-    let qr = qrData?.qr_code;
-    if (!qr) { try { const r = await axios.get(`${API}/cards/${cardId}/qr`); qr = r.data?.qr_code; setQrData(r.data); } catch { /* sin QR */ } }
-    const link = `${window.location.origin}/c/${cardId}`;
-    const blob = await renderCardImage(card, { qr, url: link, dark: isDark, format, bgColor, phrase });
-    return { blob, name: `bruno-${(card.title || "tarjeta").replace(/[^\w-]+/g, "_")}-${format}.png`, text: `${card.title} · Mi tarjeta BRUNO`, link, label: card.title };
+  const renderShareImage = async ({ format = "story", bgColor, phrase, withRef } = {}) => {
+    const link = withRef ? withRef(`${window.location.origin}/c/${cardId}`) : `${window.location.origin}/c/${cardId}`;
+    const blob = await renderCardImage(card, { url: link, dark: isDark, format, bgColor, phrase });
+    return { blob, name: `bruno-${(card.title || "tarjeta").replace(/[^\w-]+/g, "_")}-${format}.png`, text: `${card.title} · Mi tarjeta BRUNO`, link, label: card.title, targetId: cardId };
   };
 
   const fetchQRCode = async () => {

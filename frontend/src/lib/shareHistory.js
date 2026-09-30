@@ -11,9 +11,9 @@ const tx = async (mode, fn) => { const db = await open(); return new Promise((re
 export async function listHistory() {
   try { const all = await tx("readonly", (s) => s.getAll()); return (all || []).sort((a, b) => b.createdAt - a.createdAt); } catch { return []; }
 }
-export async function saveToHistory({ blob, name, kind, label, link, text }) {
+export async function saveToHistory({ id, blob, name, kind, label, link, text }) {
   try {
-    const item = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, blob, name, kind, label, link, text, createdAt: Date.now() };
+    const item = { id: id || `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, blob, name, kind, label, link, text, createdAt: Date.now() };
     await tx("readwrite", (s) => s.put(item));
     const all = await listHistory();
     for (const old of all.slice(MAX)) await tx("readwrite", (s) => s.delete(old.id));

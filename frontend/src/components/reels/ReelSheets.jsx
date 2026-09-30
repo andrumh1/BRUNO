@@ -236,9 +236,10 @@ export function ReelShareSheet({ reel, token, onClose }) {
     } catch (_) { setSentTo((s) => ({ ...s, [chat.id]: undefined })); brunoToast.error("No se pudo enviar"); }
   };
   const shareText = `${(reel.content || "Mira este reel").slice(0, 80)} · vía BRUNO`;
-  const renderCover = async ({ bgColor, phrase }) => {
-    const blob = await renderReelCover(reel, { url, phrase, bgColor });
-    return { blob, name: `bruno-reel-${reel.id.slice(0, 8)}.png`, text: shareText, link: url, label: reel.content || "Reel" };
+  const renderCover = async ({ bgColor, phrase, withRef }) => {
+    const link = withRef ? withRef(url) : url;
+    const blob = await renderReelCover(reel, { url: link, phrase, bgColor });
+    return { blob, name: `bruno-reel-${reel.id.slice(0, 8)}.png`, text: shareText, link, label: reel.content || "Reel", targetId: reel.id };
   };
   const downloadWithSeal = async () => {
     if (dl) return;

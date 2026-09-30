@@ -6,6 +6,7 @@
  *  (only active ±2 reels mount a <video>) + IntersectionObserver snapping.
  */
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useShareHit } from "@/lib/shareStats";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
@@ -27,6 +28,7 @@ export default function ReelsPage() {
   const navigate = useNavigate();
   const { userId: profileUserId } = useParams();
   const [searchParams] = useSearchParams();
+  useShareHit("reel");
   const initialReelId = searchParams.get("id");
   const profileMode = !!profileUserId;
   const { token, user } = useAuth();

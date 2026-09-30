@@ -29,6 +29,7 @@ class StoryCreate(BaseModel):
     poll_id: Optional[str] = None  # attach a poll to story
     music: Optional[dict] = None  # { trackId, title, url, volume, start, end }
     location: Optional[dict] = None  # { lat, lng, name, address } — for map display
+    scheduled_at: Optional[str] = None  # ISO datetime → se publica por cron a esa hora
 
 
 class CardStoryCreate(BaseModel):
@@ -49,14 +50,26 @@ async def create_story(
     story: StoryCreate,
     current_user: User = Depends(get_current_user)
 ):
-    """Create a new 24h story"""
+    """Create a new 24h story (or schedule it for later)"""
+    data = story.model_dump()
+    scheduled_at = data.pop("scheduled_at", None)
+    if scheduled_at:
+        try:
+            when = datetime.fromisoformat(scheduled_at.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Fecha de programación inválida")
+        if when > datetime.now(timezone.utc) + timedelta(minutes=1):
+            doc = {"id": str(uuid.uuid4()), "user_id": current_user.id, "user_name": current_user.name, **data,
+                   "scheduled_at": when.isoformat(), "created_at": datetime.now(timezone.utc).isoformat()}
+            await db.scheduled_stories.insert_one(doc)
+            return {"id": doc["id"], "message": "Story scheduled", "scheduled": True, "scheduled_at": when.isoformat()}
     expires_at = datetime.now(timezone.utc) + timedelta(hours=STORY_DURATION_HOURS)
     
     story_doc = {
         "id": str(uuid.uuid4()),
         "user_id": current_user.id,
         "user_name": current_user.name,
-        **story.model_dump(),
+        **data,
         "views": [],
         "reactions": [],
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -74,6 +87,36 @@ async def create_story(
         "message": "Story created",
         "expires_at": expires_at.isoformat()
     }
+
+
+async def publish_due_scheduled_stories() -> int:
+    """Llamado por el cron publish-scheduled: mueve historias programadas vencidas a `stories`."""
+    now = datetime.now(timezone.utc)
+    published = 0
+    async for st in db.scheduled_stories.find({"scheduled_at": {"$lte": now.isoformat()}}, {"_id": 0}):
+        st.pop("scheduled_at", None)
+        st.update({"views": [], "reactions": [], "created_at": now.isoformat(), "expires_at": (now + timedelta(hours=STORY_DURATION_HOURS)).isoformat()})
+        await db.stories.insert_one(st)
+        await db.scheduled_stories.delete_one({"id": st["id"]})
+        try:
+            await _broadcast_story_published(st["user_id"], st["id"])
+        except Exception:
+            pass
+        published += 1
+    return published
+
+
+@router.get("/scheduled/mine")
+async def my_scheduled_stories(current_user: User = Depends(get_current_user)):
+    return await db.scheduled_stories.find({"user_id": current_user.id}, {"_id": 0}).sort("scheduled_at", 1).to_list(50)
+
+
+@router.delete("/scheduled/{story_id}")
+async def cancel_scheduled_story(story_id: str, current_user: User = Depends(get_current_user)):
+    res = await db.scheduled_stories.delete_one({"id": story_id, "user_id": current_user.id})
+    if not res.deleted_count:
+        raise HTTPException(status_code=404, detail="No encontrada")
+    return {"ok": True}
 
 
 async def _broadcast_story_published(user_id: str, story_id: str) -> None:

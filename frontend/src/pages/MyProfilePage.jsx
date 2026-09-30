@@ -239,15 +239,16 @@ const MyProfilePage = () => {
   };
 
   const [profileShareSheet, setProfileShareSheet] = useState(false);
-  const renderProfileImage = async ({ format = "story", bgColor, phrase } = {}) => {
+  const renderProfileImage = async ({ format = "story", bgColor, phrase, withRef } = {}) => {
     const { renderCardImage } = await import("@/lib/cardShareImage");
     const p = profile || user;
-    const link = `${window.location.origin}/profile/${user.id}`;
+    const base = `${window.location.origin}/profile/${user.id}`;
+    const link = withRef ? withRef(base) : base;
     const blob = await renderCardImage({
         title: p.name || p.display_name || user.name, subtitle: p.username ? `@${p.username}` : "Perfil BRUNO", description: p.bio || "",
         avatar_url: p.avatar_url, banner_url: p.banner_url || p.cover_url, background_color: "#FF6A00", text_color: "#FFFFFF", footer_text: "Sígueme en BRUNO · brunocard.com",
     }, { url: link, format, bgColor, phrase });
-    return { blob, name: `bruno-${(p.name || user.name || "perfil").replace(/[^\w-]+/g, "_")}-${format}.png`, text: `Mi perfil en BRUNO`, link, label: p.name || user.name };
+    return { blob, name: `bruno-${(p.name || user.name || "perfil").replace(/[^\w-]+/g, "_")}-${format}.png`, text: `Mi perfil en BRUNO`, link, label: p.name || user.name, targetId: user.id };
   };
 
   const handleShareCard = async (card) => {
