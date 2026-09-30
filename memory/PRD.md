@@ -1481,3 +1481,10 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - `components/reels/ReelPlaybackControls.jsx`: burbujas de vidrio ultra transparentes (sin color: `bg-white/[0.06]` + blur + borde blanco) con −10 s · Play/Pausa · +10 s y el icono de sonido centrado debajo. Indicador de salto (`reel-seek-hint-left/right`).
 - `ReelItem.jsx`: tap simple (diferido 260 ms) = play/pausa + muestra controles 2,5 s; doble tap lateral (30 % de cada borde) = ±10 s; doble tap centro = like (corazón). Se eliminó el botón de mute superior derecho (ahora bajo el play). testids: reel-playback-controls, reel-play-toggle, reel-seek-back, reel-seek-fwd, reel-mute-toggle, reel-paused-glyph.
 - Nota: el preview headless no decodifica mp4 (duration NaN); el salto real de 10 s hay que validarlo en dispositivo.
+
+## 2026-06 — Reels: tiempo + velocidad · Loader con frases · Tarjetas con marca (iteration_93)
+- ReelItem: pill de tiempo `m:ss / m:ss` (`reel-time-bar`) centrada sobre la barra mientras los controles están visibles; burbuja de velocidad 1x→1.5x→2x (`reel-rate-toggle`, persiste por reel via rateRef); mantener pulsado (≥380 ms) el 30 % derecho = 2x temporal con pill `reel-boost-pill` (touch y mouse); al soltar vuelve a la velocidad elegida.
+- BrunoLoader: 15 frases simpáticas en burbuja (`bruno-loader-phrase`), nunca repite la anterior (sessionStorage `bruno_loader_phrase`).
+- Tarjetas: sello "Hecho con BRUNO" dentro de la tarjeta (`card-brand-seal`, oso con máscara currentColor), avatar fallback con el oso, footer con logotipo (`card-footer-brand`); CreateCardPage: presets de color de marca (`brand-color-presets`, `preset-<hex>`) y defaults crema #F9F1EA / gris #474747.
+- Auditoría de iconos: el botón Compartir de Mi perfil no tenía acción → `handleShareProfile` (navigator.share o copia enlace + toast). Resto de iconos en Reels/Tarjetas/Marketplace/Chat verificados con handler o Link.
+- Nota: testing agent no pudo validar velocidad/tiempo porque el primer reel del dataset era texto; verificado manualmente por el agente con un reel de video (rate 1.5, boost 2x, pill de tiempo).

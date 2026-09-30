@@ -1,0 +1,33 @@
+{
+  "summary": "Frontend-only iteration 93 for BRUNO (reels time bar/rate/hold-boost, card brand seal+footer, create-card presets, BrunoLoader phrases, MyProfile share). 4 out of 5 feature areas fully verified. Reels rate-cycle / hold-boost / seek-hints / controls-visibility could not be verified end-to-end because the FIRST active reel in the current dataset is NOT a video (video.playbackRate query returned null → no <video> element rendered for that reel; it is a text/image card). The gesture-and-wiring layer is confirmed working via the double-tap-centre heart-burst which fired successfully.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/settings", "issues": ["React hydration warning: <span> cannot be a child of <select>/<option>. Caused by data-ve-dynamic wrapper spans inside the translate-language-select. Non-blocking but should be silenced."]},
+      {"screen": "/marketplace", "issues": ["Three 404 resource errors on page load (likely images/manifests). Non-blocking."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Reels test not fully verifiable: the reel returned as the first active item is a non-video card, so playbackRate, boost pill, seek-hint bubbles and time-bar labels could not be exercised. Please seed a VIDEO reel as the first item for automation, or expose a query-param such as /reels?force_video=1 that surfaces a mp4 reel first. Manual verification of code paths in ReelItem.jsx + ReelPlaybackControls.jsx shows the logic is correct.",
+    "SettingsPage: nested <span data-ve-dynamic> inside <select>/<option> triggers React hydration warnings. Wrap the language select in something other than the visual-edit span.",
+    "Marketplace page produces 3x 404 requests on load."
+  ],
+  "critical_code_review_comments": [
+    "ReelItem.jsx onMouseDown starts long-press only if e.clientX > w*0.7 (right 30%). This matches spec. Good.",
+    "handleTap defers single tap 260ms and only calls togglePlay when src truthy — non-video reels don't toggle/show controls, so tests targeting controls must run on a video reel.",
+    "BrunoLoader.jsx nextPhrase() session-storage anti-repeat works well (3/3 distinct in run).",
+    "MyProfilePage.handleShareProfile falls back to clipboard + brunoToast — verified toast 'Enlace copiado' shown.",
+    "ViewCardPage: card-brand-seal and card-footer-brand present with correct wordmark; QR modal opens successfully."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "≈85% (card+create+loader+share+regression 100%, reels UI blocked by non-video active reel)"},
+  "test_credentials": "newtest@bruno.com / Test1234!",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Reels control/time-bar/rate/boost tests require the first active reel to actually be a video. On this environment /reels served a non-video (text/image) card first, so <video> is absent and playbackRate is null. Use double-tap-centre on the stage to prove gesture wiring; use a video reel id via /reels?id=<videoReelId> to exercise the rate cycle, hold-boost pill, and seek hints. All other iteration-93 features passed: card seal + footer + top-bar icons + QR modal (/c/d16c2745-...); create-card default #F9F1EA/#474747 and preset-ff6a00 sets #FF6A00/#FFFFFF; BrunoLoader shows 3 distinct Spanish phrases across 3 loads; profile-share-btn produces 'Enlace copiado' toast.",
+  "rca of the issue": "Reels feature verification incomplete: the reel-item currently rendered first at /reels for user newtest@bruno.com does not have video_url (it is a text or image card). Consequently no <video> element mounts, videoRef is null, togglePlay is a no-op, playbackRate is unmeasurable and boost/seek pill triggers do not fire (they short-circuit on `!src`). Root cause is data ordering (not code). Mitigation: main agent should either (a) pin a video reel as first for automated testing, or (b) test by hitting /reels?id=<known video reel id>."
+}
