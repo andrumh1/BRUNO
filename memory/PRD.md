@@ -1530,3 +1530,9 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - Backend stories: `PATCH /stories/scheduled/{id}` (nueva hora), `POST /stories/scheduled/{id}/publish-now`. Frontend `components/bruno/ScheduledStories.jsx` en MyProfilePage (sobre las pestañas): lista con portada, fecha, música; editar hora inline, publicar ya, cancelar (`scheduled-story-*`).
 - Backend `GET /share-stats/daily?days=7|14|30` (escaneos por día + por red). Frontend `components/bruno/ScanStatsPanel.jsx` en CardAnalyticsPage (`/analytics`, ruta real; `AnalyticsPage.jsx` no está enrutado) con rango, barras por día y barras por red (`scan-stats-panel`, `scan-total`, `scan-range-*`); `?tab=scans` hace scroll al panel.
 - Aviso de escaneo: `share-stats/hit` → BackgroundTask `_notify_scan` (máx. 1 por ref cada 10 min): inserta notificación in-app tipo `share_scan` (+WS) y push vía `notify_user`. `enrich_notification` usa `content` como mensaje por defecto y url `/analytics?tab=scans`. NotificationsPage: icono QrCode para `share_scan`; `notifications.py` registra el tipo.
+
+## 2026-06 — Code review + correcciones (iteration_94 ✅)
+- HIGH corregido: `renderReelCover` sombreaba la función `cover` con la imagen destructurada → `coverImg`. Portada IG ya genera con miniatura y avatar.
+- MEDIUM corregido: `publish_due_scheduled_stories` reclama cada historia con `find_one_and_delete` (idempotente bajo cron + publish-now concurrentes; verificado 4 corridas concurrentes → 1 inserción). `scheduled_at` normalizado a UTC en crear y reprogramar.
+- LOW corregido: `/reels/{id}/download?seal=` solo aplica el sello si pertenece a un usuario con tier ≠ free (busca en `user_preferences.custom_seal_url`).
+- Pendiente LOW (no bloqueante): accesibilidad por teclado de la barra de progreso de Reels; timeouts de burst/seekHint sin limpiar al desmontar.

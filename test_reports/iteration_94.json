@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 94 verifies three fixes: (HIGH) reel Portada IG cover generation no longer crashes with 'cover is not a function' — PNG (bruno-reel-8a30ded3.png) downloaded from ShareImageSheet with no console TypeError and no error toast; (MEDIUM) scheduled stories are UTC-normalized on create, list, patch works, past dates rejected, publish-now atomically claims the doc (second call returns 404) and the published story appears exactly once in the feed; (LOW) /api/reels/{id}/download?seal=... returns 200 with watermarked=false for a non-cloudinary video without 500. Card share still generates a PNG and share-history-item appears on reopen. Regression pages /my-profile (scheduled-stories present), /reels, /chat, /notifications, /settings load without React error overlay or page errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/analytics (no cardId)", "issues": ["[data-testid=scan-stats-panel] not present at the top-level /analytics route. Panel is defined in CardAnalyticsPage.jsx and rendered at line 163; likely gated behind a tab or a selected card. Non-blocking — page loads without console errors — but review_request expected it visible directly."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_stories_share_reel.py",
+    "/app/test_reports/pytest/iter94_results.xml"
+  ],
+  "action_items": [
+    "Optional: expose scan-stats-panel on the default /analytics landing (or add a query-param) so automated checks can find it without picking a specific card."
+  ],
+  "critical_code_review_comments": [
+    "renderReelCover fix in /app/frontend/src/lib/cardShareImage.js is correct: the outer `cover` function is preserved while the loaded image is renamed to `coverImg`. Verified end-to-end (Portada IG generated a 1080x1920 PNG with no TypeError).",
+    "publish_due_scheduled_stories uses find_one_and_delete for atomic claim (line 99, stories.py). Concurrent cron+publish-now cannot double-publish. Confirmed by test_publish_now_once_then_404 and test_published_story_appears_exactly_once.",
+    "create_story normalizes scheduled_at to UTC via astimezone(timezone.utc). Confirmed: '2030-01-01T00:00:00-05:00' → '2030-01-01T05:00:00+00:00'.",
+    "reel_share.py checks owner's subscription_tier before applying custom seal overlay — correct scoping to premium users only."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_stories_share_reel.py (new)"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% (all target flows and regressions)"},
+  "test_credentials": "newtest@bruno.com / Test1234!",
+  "seed_data_creation": "Temporarily created and cleaned up scheduled stories with caption 'qa-sched' / 'qa-sched-del'. One 'qa-sched' story was published via publish-now during the test; it lives 24h in db.stories. Cleanup script only removes scheduled_stories docs; the published story cannot be safely deleted without owning-user auth on DELETE /api/stories/{id} (which is available if needed).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All three fixes for iteration 94 verified. Backend regression tests live at /app/backend/tests/test_stories_share_reel.py and can be re-run. If share-stats endpoint schema changes, update test_share_stats_daily (response fields are 'days', 'networks', 'refs', 'total'). Reel used for cover generation: 8a30ded3-3091-4300-9976-c4f8f54b7cc8. Reel used for download-seal: 1fc7dc64-48ae-49ef-9afb-85f1619951f0.",
+  "rca of the issue": "Original bug (HIGH): the const destructuring `const [cover, avatar, ...]` shadowed the top-level `cover` drawing function; when a reel had a thumbnail or avatar, the code path invoked `cover(ctx, avatar, ...)` which resolved to the loaded HTMLImageElement (or null) → 'cover is not a function'. Fix renamed the image variable to `coverImg` and kept the function intact. Verified: no such TypeError in the browser console during Portada IG generation, PNG downloaded successfully."
+}
