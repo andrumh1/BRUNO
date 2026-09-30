@@ -56,6 +56,7 @@ async def create_story(
     if scheduled_at:
         try:
             when = datetime.fromisoformat(scheduled_at.replace("Z", "+00:00"))
+            when = (when if when.tzinfo else when.replace(tzinfo=timezone.utc)).astimezone(timezone.utc)
         except ValueError:
             raise HTTPException(status_code=400, detail="Fecha de programación inválida")
         if when > datetime.now(timezone.utc) + timedelta(minutes=1):
@@ -93,11 +94,14 @@ async def publish_due_scheduled_stories() -> int:
     """Llamado por el cron publish-scheduled: mueve historias programadas vencidas a `stories`."""
     now = datetime.now(timezone.utc)
     published = 0
-    async for st in db.scheduled_stories.find({"scheduled_at": {"$lte": now.isoformat()}}, {"_id": 0}):
+    due_ids = [d["id"] async for d in db.scheduled_stories.find({"scheduled_at": {"$lte": now.isoformat()}}, {"_id": 0, "id": 1})]
+    for sid in due_ids:
+        st = await db.scheduled_stories.find_one_and_delete({"id": sid}, projection={"_id": 0})  # claim atómico: evita doble publicación
+        if not st:
+            continue
         st.pop("scheduled_at", None)
         st.update({"views": [], "reactions": [], "created_at": now.isoformat(), "expires_at": (now + timedelta(hours=STORY_DURATION_HOURS)).isoformat()})
         await db.stories.insert_one(st)
-        await db.scheduled_stories.delete_one({"id": st["id"]})
         try:
             await _broadcast_story_published(st["user_id"], st["id"])
         except Exception:
@@ -119,6 +123,7 @@ class RescheduleIn(BaseModel):
 async def reschedule_story(story_id: str, data: RescheduleIn, current_user: User = Depends(get_current_user)):
     try:
         when = datetime.fromisoformat(data.scheduled_at.replace("Z", "+00:00"))
+        when = (when if when.tzinfo else when.replace(tzinfo=timezone.utc)).astimezone(timezone.utc)
     except ValueError:
         raise HTTPException(status_code=400, detail="Fecha inválida")
     if when < datetime.now(timezone.utc) + timedelta(minutes=1):

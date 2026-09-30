@@ -124,11 +124,11 @@ export async function renderReelCover(reel, { url, phrase, bgColor } = {}) {
   const W = 1080, H = 1920;
   const c = document.createElement("canvas"); c.width = W; c.height = H; const ctx = c.getContext("2d");
   let qr = null; try { qr = await QRCode.toDataURL(url, { width: 520, margin: 1, color: { dark: "#474747", light: "#ffffff" } }); } catch { /* sin QR */ }
-  const [cover, avatar, bear, wordmark, qrImg, seal] = await Promise.all([
+  const [coverImg, avatar, bear, wordmark, qrImg, seal] = await Promise.all([
     loadImg(reel.thumbnail_url || reel.poster_url || reel.image_url), loadImg(reel.user?.avatar_url || reel.avatar_url), loadImg("/brand/icon-white.png"), loadImg("/brand/logo-h-white.png"), loadImg(qr), loadImg(getCustomSeal()),
   ]);
   ctx.fillStyle = bgColor || GRAY; ctx.fillRect(0, 0, W, H);
-  if (cover) { cover(ctx, cover, 0, 0, W, H); }
+  if (coverImg) cover(ctx, coverImg, 0, 0, W, H);
   const g = ctx.createLinearGradient(0, H * 0.35, 0, H); g.addColorStop(0, "rgba(71,71,71,0)"); g.addColorStop(0.55, `${bgColor || GRAY}cc`); g.addColorStop(1, bgColor || GRAY); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   const top = ctx.createLinearGradient(0, 0, 0, 300); top.addColorStop(0, "rgba(0,0,0,.45)"); top.addColorStop(1, "rgba(0,0,0,0)"); ctx.fillStyle = top; ctx.fillRect(0, 0, W, 300);
   if (wordmark) { const lh = 56, lw = lh * wordmark.width / wordmark.height; ctx.drawImage(tint(wordmark, "#ffffff"), 70, 80, lw, lh); }

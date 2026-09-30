@@ -71,7 +71,13 @@ async def reel_download_url(post_id: str, seal: Optional[str] = None):
     watermarked = False
     if cloud and marker in url and await _ensure_watermark():
         overlay = f"l_{WATERMARK_ID},w_0.16,fl_relative,o_75,g_south_east,x_36,y_36/"
-        seal_id = _public_id(seal, cloud) if seal else None
+        seal_id = None
+        if seal:
+            owner = await db.user_preferences.find_one({"custom_seal_url": seal}, {"_id": 0, "user_id": 1})
+            if owner:
+                u = await db.users.find_one({"id": owner["user_id"]}, {"_id": 0, "subscription_tier": 1})
+                if (u or {}).get("subscription_tier", "free") != "free":
+                    seal_id = _public_id(seal, cloud)
         if seal_id:
             overlay += f"l_{seal_id},w_0.14,fl_relative,o_85,g_south_west,x_36,y_36/"
         url = url.replace(marker, marker + overlay, 1)
