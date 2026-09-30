@@ -5,6 +5,10 @@ import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, User, Plus, Check
 import ReelTextCard from "@/components/reels/ReelTextCard";
 import ReelCarousel from "@/components/reels/ReelCarousel";
 import ReelPlaybackControls from "@/components/reels/ReelPlaybackControls";
+import ReelScrubPreview from "@/components/reels/ReelScrubPreview";
+
+const RATE_KEY = "bruno_reel_rate";
+const loadRate = () => { try { const r = parseFloat(localStorage.getItem(RATE_KEY)); return [1, 1.5, 2].includes(r) ? r : 1; } catch { return 1; } };
 
 const fmtTime = (s) => { if (!isFinite(s) || s < 0) s = 0; const m = Math.floor(s / 60), r = Math.floor(s % 60); return `${m}:${String(r).padStart(2, "0")}`; };
 const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n || 0));
@@ -38,9 +42,10 @@ export default function ReelItem({
   const [controlsVisible, setControlsVisible] = useState(false);
   const [seekHint, setSeekHint] = useState(null);
   const [time, setTime] = useState({ cur: 0, dur: 0 });
-  const [rate, setRate] = useState(1);
+  const [rate, setRate] = useState(loadRate);
   const [boosting, setBoosting] = useState(false);
-  const rateRef = useRef(1);
+  const rateRef = useRef(rate);
+  const [scrub, setScrub] = useState(null);
   const longPress = useRef(null);
   const pausedByHold = useRef(false);
 
@@ -89,6 +94,7 @@ export default function ReelItem({
   const cycleRate = () => {
     const next = rate >= 2 ? 1 : rate === 1 ? 1.5 : 2;
     rateRef.current = next; setRate(next);
+    try { localStorage.setItem(RATE_KEY, String(next)); } catch { /* ignore */ }
     if (videoRef.current) videoRef.current.playbackRate = next;
     showControls();
   };
@@ -125,6 +131,17 @@ export default function ReelItem({
     const pct = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
     v.currentTime = pct * v.duration; setProgress(pct * 100);
   };
+  const barPct = (clientX) => {
+    const bar = barRef.current; if (!bar) return 0;
+    const r = bar.getBoundingClientRect();
+    return Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+  };
+  const scrubMove = (clientX) => {
+    const v = videoRef.current; if (!v?.duration) return;
+    const pct = barPct(clientX);
+    setScrub({ pct, time: pct * v.duration }); setProgress(pct * 100);
+  };
+  const scrubEnd = (clientX) => { if (clientX != null) seekTo(clientX); setScrub(null); showControls(); };
 
   const onTouchStart = (e) => {
     const t = e.touches[0];
@@ -308,15 +325,20 @@ export default function ReelItem({
           className="absolute inset-x-0 z-20 h-6 flex items-end cursor-pointer"
           style={{ bottom: "calc(var(--nav-reserve, 64px) - 2px)" }}
           onClick={(e) => { e.stopPropagation(); seekTo(e.clientX); }}
-          onTouchStart={(e) => e.stopPropagation()}
-          onTouchMove={(e) => { e.stopPropagation(); seekTo(e.touches[0].clientX); }}
-          onTouchEnd={(e) => e.stopPropagation()}
+          onTouchStart={(e) => { e.stopPropagation(); scrubMove(e.touches[0].clientX); }}
+          onTouchMove={(e) => { e.stopPropagation(); scrubMove(e.touches[0].clientX); }}
+          onTouchEnd={(e) => { e.stopPropagation(); scrubEnd(e.changedTouches[0]?.clientX); }}
+          onMouseMove={(e) => { if (!("ontouchstart" in window)) { const v = videoRef.current; if (v?.duration) { const pct = barPct(e.clientX); setScrub({ pct, time: pct * v.duration }); } } }}
+          onMouseLeave={() => setScrub(null)}
           data-testid="reel-progress-bar"
         >
-          <div className="w-full h-[3px] bg-white/25">
+          <div className={`w-full ${scrub ? "h-[5px]" : "h-[3px]"} bg-white/25 transition-[height]`}>
             <div className="h-full bg-white transition-[width] duration-100" style={{ width: `${progress}%` }} />
           </div>
         </div>
+      )}
+      {src && (
+        <ReelScrubPreview visible={!!scrub} pct={scrub?.pct || 0} time={scrub?.time || 0} sources={sources} poster={reel.poster_url || reel.thumbnail_url} bottom="calc(var(--nav-reserve, 64px) + 14px)" />
       )}
       {src && controlsVisible && (
         <div className="absolute left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-1 h-5 px-2.5 rounded-full backdrop-blur-xl bg-white/[0.06] border border-white/35 text-white text-[10px] font-semibold tabular-nums reel-chrome pointer-events-none" style={{ bottom: "calc(var(--nav-reserve, 64px) + 3px)" }} data-testid="reel-time-bar">

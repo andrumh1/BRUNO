@@ -21,6 +21,7 @@ const PHRASES = [
   "Persiguiendo los últimos bytes…", "Moviendo las orejas para escuchar mejor…", "¡Ya casi! Solo un ladrido más…",
 ];
 const PKEY = "bruno_loader_phrase";
+export const greetingByHour = (h = new Date().getHours()) => (h >= 5 && h < 12 ? "¡Buenos días!" : h >= 12 && h < 19 ? "¡Buenas tardes!" : "¡Buenas noches!");
 function nextPhrase() {
   let last = -1; try { last = Number(sessionStorage.getItem(PKEY) ?? -1); } catch { /* ignore */ }
   let i = Math.floor(Math.random() * PHRASES.length);
@@ -85,6 +86,7 @@ export default function BrunoLoader({ message, fullScreen = true, className = ""
         <img src={pose.src} alt="" draggable={false} className="h-44 sm:h-52 w-auto object-contain bubble-float drop-shadow-[0_18px_28px_rgba(71,71,71,0.28)]" data-testid="bruno-loader-mascot" />
         <div className={`relative mt-3 max-w-[260px] rounded-2xl px-4 py-2 text-center text-[13px] font-semibold leading-snug ${orange ? "bg-white/15 text-white" : "bg-card text-foreground border border-border/60"} shadow-sm`} data-testid="bruno-loader-phrase">
           <span className={`absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 ${orange ? "bg-white/15" : "bg-card border-l border-t border-border/60"}`} />
+          <span className="block text-[11px] uppercase tracking-[0.14em] opacity-80 mb-0.5" data-testid="bruno-loader-greeting">{greetingByHour()}</span>
           {phrase}
         </div>
         <img src={orange ? "/brand/logo-h-white.png" : "/brand/logo-h-orange.png"} alt="BRUNO" draggable={false} className="h-5 mt-4 opacity-90" />

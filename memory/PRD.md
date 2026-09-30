@@ -1488,3 +1488,10 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - Tarjetas: sello "Hecho con BRUNO" dentro de la tarjeta (`card-brand-seal`, oso con máscara currentColor), avatar fallback con el oso, footer con logotipo (`card-footer-brand`); CreateCardPage: presets de color de marca (`brand-color-presets`, `preset-<hex>`) y defaults crema #F9F1EA / gris #474747.
 - Auditoría de iconos: el botón Compartir de Mi perfil no tenía acción → `handleShareProfile` (navigator.share o copia enlace + toast). Resto de iconos en Reels/Tarjetas/Marketplace/Chat verificados con handler o Link.
 - Nota: testing agent no pudo validar velocidad/tiempo porque el primer reel del dataset era texto; verificado manualmente por el agente con un reel de video (rate 1.5, boost 2x, pill de tiempo).
+
+## 2026-06 — Scrub preview · velocidad persistente · tarjeta modo oscuro · saludo por hora (auto-test)
+- `components/reels/ReelScrubPreview.jsx`: miniatura al arrastrar la barra (touch: scrub sin buscar hasta soltar; desktop: hover). Video oculto crossOrigin → canvas; portada debajo como respaldo y fallback si CORS bloquea (`reel-scrub-preview`, `reel-scrub-time`, `reel-scrub-canvas`).
+- Velocidad: `localStorage bruno_reel_rate` (1/1.5/2) aplicada a todos los reels al montar y al cambiar.
+- `ThemeProvider` ahora persiste (`localStorage bruno_theme`), expone `resolved` y escucha cambios del sistema. ViewCardPage: botón sol/luna (`card-theme-toggle`), `data-card-theme`; en oscuro las tarjetas claras (luminancia > 0.72) pasan a gris #474747 con texto crema; las oscuras/naranjas se mantienen.
+- BrunoLoader: saludo por hora (`greetingByHour`: días 5–12h, tardes 12–19h, noches) en la burbuja (`bruno-loader-greeting`).
+- Limitación de preview headless: mp4 no decodifica → canvas vacío; validar fotograma real en dispositivo.

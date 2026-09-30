@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import SocialLinkButton from "@/components/SocialLinkButton";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
-import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2, Nfc } from "lucide-react";
+import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2, Nfc, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeProvider";
+
+const luminance = (hex) => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return 0; const n = parseInt(m[1], 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
 import { useNavScroll } from "@/contexts/NavScrollContext";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -18,6 +21,8 @@ const ViewCardPage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
   const { addMinimizedCard } = useNavScroll();
+  const { resolved: resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -110,8 +115,11 @@ const ViewCardPage = () => {
     );
   }
 
-  const bg = card.background_color || "#FF6A00";
-  const fg = card.text_color || "#FFFFFF";
+  // Modo oscuro: las tarjetas claras (crema/blanco) pasan a gris corporativo con texto crema.
+  const rawBg = card.background_color || "#FF6A00";
+  const lightCard = luminance(rawBg) > 0.72;
+  const bg = isDark && lightCard ? "#474747" : rawBg;
+  const fg = isDark && lightCard ? "#F9F1EA" : (card.text_color || "#FFFFFF");
   const isFullBanner = card.template_id === "full_banner_bubble";
   const isEdge = card.template_id === "edge_actions";
   const isPremiumGlass = card.template_id === "premium_glass";
@@ -126,7 +134,7 @@ const ViewCardPage = () => {
   const hasGallery = card.gallery_photos && card.gallery_photos.length > 0;
 
   return (
-    <div className="min-h-screen bg-background pb-20" data-testid="view-card-page">
+    <div className="min-h-screen bg-background pb-20" data-testid="view-card-page" data-card-theme={isDark ? "dark" : "light"}>
       {/* Subtle background glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/3 left-1/3 w-[500px] h-[500px] rounded-full blur-[140px] opacity-10" style={{ backgroundColor: bg }} />
@@ -160,6 +168,9 @@ const ViewCardPage = () => {
               <Nfc className="w-4 h-4" />
             </Button>
           )}
+          <Button variant="ghost" size="icon" onClick={() => setTheme(isDark ? "light" : "dark")} data-testid="card-theme-toggle" title={isDark ? "Modo claro" : "Modo oscuro"} aria-pressed={isDark}>
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </Button>
           <Button variant="ghost" size="icon" onClick={handleShare} data-testid="card-share-btn">
             <Share2 className="w-4 h-4" />
           </Button>
@@ -200,7 +211,7 @@ const ViewCardPage = () => {
 
               {isFullBanner && (
                 <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 lg:p-8">
-                  <div className="bg-white/90 dark:bg-black/70 backdrop-blur-xl rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg max-w-3xl">
+                  <div className="bg-white/90 dark:bg-[#474747]/85 backdrop-blur-xl rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg max-w-3xl">
                     <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold" style={{ color: fg === "#FFFFFF" ? "inherit" : fg }}>{card.title}</h1>
                     {card.subtitle && <p className="text-sm sm:text-base text-muted-foreground mt-1">{card.subtitle}</p>}
                     {card.description && <p className="text-sm mt-2 line-clamp-3">{card.description}</p>}
