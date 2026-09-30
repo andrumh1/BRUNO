@@ -1495,3 +1495,8 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - `ThemeProvider` ahora persiste (`localStorage bruno_theme`), expone `resolved` y escucha cambios del sistema. ViewCardPage: botón sol/luna (`card-theme-toggle`), `data-card-theme`; en oscuro las tarjetas claras (luminancia > 0.72) pasan a gris #474747 con texto crema; las oscuras/naranjas se mantienen.
 - BrunoLoader: saludo por hora (`greetingByHour`: días 5–12h, tardes 12–19h, noches) en la burbuja (`bruno-loader-greeting`).
 - Limitación de preview headless: mp4 no decodifica → canvas vacío; validar fotograma real en dispositivo.
+
+## 2026-06 — Tema en Ajustes · frases por sección · imagen compartible de tarjeta (auto-test)
+- SettingsPage › Apariencia: selector Claro/Oscuro/Sistema (`theme-light|dark|system`) conectado a `useTheme().setTheme` (persistente) además de guardar en preferencias backend.
+- BrunoLoader: `SECTION_PHRASES` por ruta (chat, tienda/marketplace, mapa, reels, perfil, tarjetas, notificaciones, ajustes); fallback a frases generales.
+- `lib/cardShareImage.js`: `renderCardImage` (Canvas 1080×1920: fondo crema/gris, tarjeta con color propio, avatar u oso, título/subtítulo/descr., QR, URL, sello "Hecho con BRUNO", logotipo) y `shareCardImage` (Web Share con archivo → fallback descarga). Botón "Imagen para redes" (`card-share-image-btn`) en ViewCardPage.

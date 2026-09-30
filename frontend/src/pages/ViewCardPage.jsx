@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import SocialLinkButton from "@/components/SocialLinkButton";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
-import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2, Nfc, Sun, Moon } from "lucide-react";
+import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2, Nfc, Sun, Moon, ImageDown, Loader2 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeProvider";
+import { shareCardImage } from "@/lib/cardShareImage";
+import { brunoToast } from "@/components/bruno/BrunoToast";
 
 const luminance = (hex) => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return 0; const n = parseInt(m[1], 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
 import { useNavScroll } from "@/contexts/NavScrollContext";
@@ -64,6 +66,20 @@ const ViewCardPage = () => {
       params: { source_url: document.referrer || undefined }
     }).catch(() => {});
   }, [cardId, token]);
+
+  const [sharingImg, setSharingImg] = useState(false);
+  const handleShareImage = async () => {
+    if (sharingImg) return;
+    setSharingImg(true);
+    try {
+      let qr = qrData?.qr_code;
+      if (!qr) { try { const r = await axios.get(`${API}/cards/${cardId}/qr`); qr = r.data?.qr_code; setQrData(r.data); } catch { /* sin QR */ } }
+      const res = await shareCardImage(card, { qr, url: `${window.location.origin}/c/${cardId}`, dark: isDark });
+      if (res === "downloaded") brunoToast.success("Imagen lista", { description: "Se descargó tu tarjeta para Instagram o WhatsApp." });
+      else if (res === "shared") brunoToast.publish("Tarjeta compartida");
+    } catch (e) { brunoToast.error("No se pudo generar la imagen"); }
+    finally { setSharingImg(false); }
+  };
 
   const fetchQRCode = async () => {
     try {
@@ -398,6 +414,9 @@ const ViewCardPage = () => {
           </Button>
           <Button variant="outline" size="sm" onClick={handleShare}>
             <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Compartir
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleShareImage} disabled={sharingImg} data-testid="card-share-image-btn" className="border-primary/40 text-primary hover:bg-primary/10">
+            {sharingImg ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <ImageDown className="w-3.5 h-3.5 mr-1.5" />} Imagen para redes
           </Button>
           {isOwner && (
             <Button size="sm" onClick={() => navigate(`/cards/${cardId}/transfer`)} className="rounded-full" data-testid="card-transfer-nfc-cta">

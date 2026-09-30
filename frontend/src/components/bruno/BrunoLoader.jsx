@@ -20,14 +20,26 @@ const PHRASES = [
   "Calentando las zapatillas…", "Un momento, estoy tecleando con las patas…", "Conectando con la manada…", "Preparando el mejor plan…",
   "Persiguiendo los últimos bytes…", "Moviendo las orejas para escuchar mejor…", "¡Ya casi! Solo un ladrido más…",
 ];
+const SECTION_PHRASES = [
+  [/^\/chat/, ["Afinando el oído para tus mensajes…", "Buscando a la manada en el chat…", "Ordenando las conversaciones con la pata…", "¡Guau! Alguien te escribió…"]],
+  [/^\/(marketplace|store|cart|premium|product)/, ["Olfateando las mejores ofertas…", "Sacando brillo a los PIUP…", "Revisando el escaparate…", "Contando monedas con las patas…"]],
+  [/^\/map/, ["Marcando territorio en el mapa…", "Siguiendo el rastro de tus contactos…", "Desplegando el mapa con el hocico…", "¿Quién anda cerca? Ya lo huelo…"]],
+  [/^\/(reels|feed|lives|sound)/, ["Trayendo tus reels en la boca…", "Rebobinando con la cola…", "Buscando el video más guau…", "Encendiendo la cámara de las gafas…"]],
+  [/^\/(my-profile|profile|dashboard|edit-profile)/, ["Peinando tu perfil…", "Sacando la mejor foto…", "Contando tus seguidores con las patas…", "Puliendo tu tarjeta de presentación…"]],
+  [/^\/(c\/|cards|nfc|transfer|qr)/, ["Acercando la tarjeta al hocico…", "Programando el chip con las patas…", "Preparando tu tarjeta BRUNO…", "Cargando tu tarjeta para presumirla…"]],
+  [/^\/(notifications)/, ["Escuchando las alertas con las orejas…", "Revisando quién te ladró…", "Ordenando las novedades…"]],
+  [/^\/(settings)/, ["Ajustando las gafas…", "Girando los tornillos de la configuración…", "Personalizando tu BRUNO…"]],
+];
+const phrasesFor = (path) => { for (const [re, list] of SECTION_PHRASES) if (re.test(path)) return list; return PHRASES; };
 const PKEY = "bruno_loader_phrase";
 export const greetingByHour = (h = new Date().getHours()) => (h >= 5 && h < 12 ? "¡Buenos días!" : h >= 12 && h < 19 ? "¡Buenas tardes!" : "¡Buenas noches!");
 function nextPhrase() {
-  let last = -1; try { last = Number(sessionStorage.getItem(PKEY) ?? -1); } catch { /* ignore */ }
-  let i = Math.floor(Math.random() * PHRASES.length);
-  if (i === last) i = (i + 1) % PHRASES.length;
-  try { sessionStorage.setItem(PKEY, String(i)); } catch { /* ignore */ }
-  return PHRASES[i];
+  const list = phrasesFor(typeof window !== "undefined" ? window.location.pathname : "/");
+  let last = ""; try { last = sessionStorage.getItem(PKEY) || ""; } catch { /* ignore */ }
+  let i = Math.floor(Math.random() * list.length);
+  if (list[i] === last) i = (i + 1) % list.length;
+  try { sessionStorage.setItem(PKEY, list[i]); } catch { /* ignore */ }
+  return list[i];
 }
 
 const KEY = "bruno_loader_pose";

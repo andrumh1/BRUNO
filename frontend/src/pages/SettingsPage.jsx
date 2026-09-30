@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import CurrencySelector from "@/components/i18n/CurrencySelector";
+import { useTheme } from "@/contexts/ThemeProvider";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -26,7 +27,7 @@ import {
   Check,
   Loader2,
   Smartphone,
-  Languages } from "lucide-react";
+  Languages, Sun, Monitor } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -37,6 +38,7 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (!token) return;
@@ -242,19 +244,22 @@ const SettingsPage = () => {
                 <h2 className="font-bold">Apariencia</h2>
               </div>
               <div className="divide-y">
-                <div className="py-3">
+                <div className="py-3" data-testid="theme-selector">
                   <span className="text-sm block mb-2">Tema</span>
                   <div className="flex gap-2">
-                    {["light", "dark", "system"].map((opt) => (
+                    {[["light", "Claro", Sun], ["dark", "Oscuro", Moon], ["system", "Sistema", Monitor]].map(([opt, label, Icon]) => (
                       <button
                         key={opt}
-                        onClick={() => savePrefs({ theme: opt })}
-                        className={`flex-1 py-2.5 rounded-xl text-xs font-medium transition-all ${prefs.theme === opt ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+                        onClick={() => { setTheme(opt); savePrefs({ theme: opt }); }}
+                        aria-pressed={theme === opt}
+                        data-testid={`theme-${opt}`}
+                        className={`flex-1 py-2.5 rounded-xl text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-all ${theme === opt ? "bg-primary text-primary-foreground shadow-md shadow-primary/25" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
                       >
-                        {opt === "light" ? "Claro" : opt === "dark" ? "Oscuro" : "Sistema"}
+                        <Icon className="w-3.5 h-3.5" /> {label}
                       </button>
                     ))}
                   </div>
+                  <p className="text-[11px] text-muted-foreground mt-2">Oscuro usa el gris corporativo BRUNO; Sistema sigue el ajuste de tu dispositivo.</p>
                 </div>
                 <div className="py-3">
                   <span className="text-sm block mb-2">Idioma</span>
@@ -322,7 +327,7 @@ const SettingsPage = () => {
                   <OptionRow icon={Bell} label="Notificaciones" onClick={() => setActiveSection("notifications")} />
                   <OptionRow icon={Shield} label="Privacidad" onClick={() => setActiveSection("privacy")} value={prefs?.privacy?.profile_visibility === "public" ? "Publico" : "Privado"} />
                   <OptionRow icon={Eye} label="Contenido" onClick={() => setActiveSection("content")} />
-                  <OptionRow icon={Palette} label="Apariencia" onClick={() => setActiveSection("appearance")} value={prefs?.theme === "dark" ? "Oscuro" : prefs?.theme === "light" ? "Claro" : "Sistema"} />
+                  <OptionRow icon={Palette} label="Apariencia" onClick={() => setActiveSection("appearance")} value={theme === "dark" ? "Oscuro" : theme === "light" ? "Claro" : "Sistema"} />
                 </div>
               </CardContent>
             </Card>
