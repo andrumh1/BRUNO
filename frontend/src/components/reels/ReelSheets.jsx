@@ -229,10 +229,17 @@ export function ReelShareSheet({ reel, token, onClose }) {
       brunoToast.success(`Enviado a ${chat.other_participants[0]?.display_name || chat.other_participants[0]?.username}`);
     } catch (_) { setSentTo((s) => ({ ...s, [chat.id]: undefined })); brunoToast.error("No se pudo enviar"); }
   };
+  const shareText = `${(reel.content || "Mira este reel").slice(0, 80)} · vía BRUNO`;
+  const ext = (href) => () => { window.open(href, "_blank", "noopener"); onClose(); };
   const opts = [
-    { id: "native", label: "Compartir…", Icon: Share2, run: native },
-    { id: "copy", label: "Copiar link", Icon: Link2, run: copy },
-    { id: "wa", label: "WhatsApp", Icon: MessageSquare, run: () => { window.open(`https://wa.me/?text=${encodeURIComponent(url)}`, "_blank"); onClose(); } },
+    { id: "native", label: "Compartir…", Icon: Share2, run: native, color: "#ff6a00" },
+    { id: "copy", label: "Copiar link", Icon: Link2, run: copy, color: "#474747" },
+    { id: "wa", label: "WhatsApp", Icon: MessageSquare, run: ext(`https://wa.me/?text=${encodeURIComponent(`${shareText} ${url}`)}`), color: "#25D366" },
+    { id: "tg", label: "Telegram", Icon: Send, run: ext(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(shareText)}`), color: "#229ED9" },
+    { id: "x", label: "X", Icon: X, run: ext(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(shareText)}`), color: "#111111" },
+    { id: "fb", label: "Facebook", Icon: Layers, run: ext(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`), color: "#1877F2" },
+    { id: "mail", label: "Correo", Icon: Flag, run: ext(`mailto:?subject=${encodeURIComponent("Reel en BRUNO")}&body=${encodeURIComponent(`${shareText}\n${url}`)}`), color: "#7a7674" },
+    { id: "sms", label: "SMS", Icon: MessageSquare, run: ext(`sms:?&body=${encodeURIComponent(`${shareText} ${url}`)}`), color: "#34C759" },
   ];
   return (
     <BottomSheet open onClose={onClose} title="Enviar a" testid="reel-share-sheet" height="auto">
@@ -257,11 +264,14 @@ export function ReelShareSheet({ reel, token, onClose }) {
             )}
         </div>
       )}
-      <div className="grid grid-cols-3 gap-3 px-5 pb-6 pt-2">
+      <div className="px-5 pt-1 pb-2 flex items-center gap-2 text-[11px] text-muted-foreground" data-testid="reel-share-brand">
+        <img src="/brand/icon-orange.png" alt="" className="h-4 w-auto" /> Compartir rápido · el enlace lleva el sello BRUNO
+      </div>
+      <div className="grid grid-cols-4 gap-2 px-4 pb-6" data-testid="reel-share-quick">
         {opts.map((o) => (
-          <button key={o.id} onClick={o.run} className="flex flex-col items-center gap-2 rounded-2xl p-3 bg-foreground/[0.05] active:scale-95 transition-transform" data-testid={`reel-share-${o.id}`}>
-            <div className="w-11 h-11 rounded-full bg-foreground/[0.08] grid place-items-center"><o.Icon className="w-5 h-5" /></div>
-            <span className="text-[11px] font-medium">{o.label}</span>
+          <button key={o.id} onClick={o.run} className="flex flex-col items-center gap-1.5 rounded-2xl p-2 active:scale-95 transition-transform hover:bg-foreground/[0.04]" data-testid={`reel-share-${o.id}`}>
+            <div className="w-12 h-12 rounded-full grid place-items-center text-white shadow-md" style={{ backgroundColor: o.color, boxShadow: `0 6px 16px -6px ${o.color}99` }}><o.Icon className="w-5 h-5" /></div>
+            <span className="text-[10px] font-medium leading-none">{o.label}</span>
           </button>
         ))}
       </div>

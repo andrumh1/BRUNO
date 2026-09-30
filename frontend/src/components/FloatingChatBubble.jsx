@@ -582,10 +582,10 @@ const FloatingChatBubble = () => {
             <div className={`absolute inset-[-3px] bg-gradient-to-r from-primary/30 to-orange-500/30 rounded-full blur-md transition-all duration-300 ${
               isOpen ? 'opacity-90' : 'opacity-0 group-hover:opacity-60'
             }`} />
-            <div className={`relative w-10 h-10 rounded-full shadow-md flex items-center justify-center bg-gradient-to-br from-primary to-orange-600 transition-all duration-300 shadow-primary/25 hover:shadow-primary/40 hover:scale-110 active:scale-90 ${
+            <div className={`relative w-10 h-10 rounded-full flex items-center justify-center bg-background/85 backdrop-blur-2xl border border-border/40 shadow-xl shadow-black/10 text-primary transition-all duration-300 hover:scale-110 active:scale-90 ${
               isOpen ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''
             }`}>
-              <MessageCircle className="w-4 h-4 text-white" strokeWidth={2} />
+              <MessageCircle className="w-4 h-4 text-primary" strokeWidth={2} />
             </div>
             {unreadTotal > 0 && (
               <div className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] bg-red-500 rounded-full text-white text-[8px] font-bold shadow flex items-center justify-center px-0.5">

@@ -124,8 +124,8 @@ export default function ReelsPage() {
     try { const r = await axios.post(`${API}/posts/${reel.id}/bookmark`, {}, { headers }); patchReel(reel.id, { is_bookmarked: !!r.data?.bookmarked }); brunoToast.success(r.data?.bookmarked ? "Guardado en favoritos" : "Quitado de favoritos"); }
     catch (_) { patchReel(reel.id, { is_bookmarked: reel.is_bookmarked }); }
   }, [token]);
-  const handleMinimize = (reel) => {
-    addMinimizedItem({ id: reel.id, itemType: "reel", title: (reel.content || "").slice(0, 30) || "Reel", thumbnail: reel.thumbnail_url || reel.poster_url || null, videoUrl: reel.video_url });
+  const handleMinimize = (reel, mode = "float") => {
+    addMinimizedItem({ id: reel.id, itemType: "reel", title: (reel.content || "").slice(0, 30) || "Reel", thumbnail: reel.thumbnail_url || reel.poster_url || null, videoUrl: mode === "bar" ? null : reel.video_url });
     navigate(-1);
   };
   const swipeLeft = (reel) => { const uid = reel.author?.id || reel.user_id; if (uid) navigate(`/profile/${uid}/reels`); };

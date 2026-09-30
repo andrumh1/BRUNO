@@ -43,7 +43,10 @@ function nextPhrase() {
 }
 
 const KEY = "bruno_loader_pose";
+export const POSE_PREF_KEY = "bruno_loader_pose_pref";
+export const POSE_OPTIONS = [{ id: "auto", label: "Alternar" }, ...POSES.map((p) => ({ id: p.id, label: p.id === "wave" ? "Saludo" : p.id === "laptop" ? "Laptop" : "Caminando", src: p.src }))];
 function nextPose() {
+  try { const pref = localStorage.getItem(POSE_PREF_KEY); const fixed = POSES.find((p) => p.id === pref); if (fixed) return fixed; } catch { /* ignore */ }
   let i = 0;
   try { i = Number(sessionStorage.getItem(KEY) || 0) % POSES.length; sessionStorage.setItem(KEY, String(i + 1)); } catch { /* ignore */ }
   return POSES[i];

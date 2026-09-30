@@ -1500,3 +1500,11 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - SettingsPage › Apariencia: selector Claro/Oscuro/Sistema (`theme-light|dark|system`) conectado a `useTheme().setTheme` (persistente) además de guardar en preferencias backend.
 - BrunoLoader: `SECTION_PHRASES` por ruta (chat, tienda/marketplace, mapa, reels, perfil, tarjetas, notificaciones, ajustes); fallback a frases generales.
 - `lib/cardShareImage.js`: `renderCardImage` (Canvas 1080×1920: fondo crema/gris, tarjeta con color propio, avatar u oso, título/subtítulo/descr., QR, URL, sello "Hecho con BRUNO", logotipo) y `shareCardImage` (Web Share con archivo → fallback descarga). Botón "Imagen para redes" (`card-share-image-btn`) en ViewCardPage.
+
+## 2026-06 — Minimizar reel (3 modos) · compartir rápido · burbuja chat glass · imagen 1:1 · pose favorita · imagen de perfil (auto-test)
+- `components/reels/ReelMinimizeMenu.jsx`: al tocar PiP → menú glass: Ventana flotante (PictureInPicture.jsx arrastrable, sigue reproduciendo), Sobre otras apps (PiP nativo `requestPictureInPicture`/webkit; permanece en la página), A la barra (pastilla sin video). `ReelsPage.handleMinimize(reel, mode)`.
+- ReelShareSheet: 8 métodos rápidos con color (Compartir…, Copiar, WhatsApp, Telegram, X, Facebook, Correo, SMS), texto "· vía BRUNO", fila de marca (`reel-share-brand`, `reel-share-quick`).
+- FloatingChatBubble: botón con el mismo glass de la barra de navegación (bg-background/85 + blur + border-border/40), icono naranja.
+- `lib/cardShareImage.js`: `format: "story"|"square"` (1080×1080), QR generado en cliente con `qrcode` si no viene del backend, `footer_text`. ViewCardPage: botones "Historia 9:16" y "Cuadrada 1:1" (`card-share-square-btn`). MyProfilePage: `profile-share-image-btn` genera la imagen del perfil (avatar, @usuario, bio, QR al perfil, sello).
+- BrunoLoader: `POSE_PREF_KEY` (`bruno_loader_pose_pref`: auto|wave|laptop|walk) + selector en Ajustes › Apariencia (`pose-<id>`).
+- Dependencia nueva: `qrcode@1.5.4`.

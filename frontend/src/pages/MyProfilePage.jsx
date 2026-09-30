@@ -65,8 +65,7 @@ import {
   TrendingUp,
   LayoutGrid,
   ArrowUpDown,
-  Heart
-} from "lucide-react";
+  Heart, ImageDown } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -236,6 +235,24 @@ const MyProfilePage = () => {
       try { await navigator.share({ title: profile?.name || user.name, text: "Mi perfil en BRUNO", url }); return; } catch (_) { /* cancelled */ }
     }
     try { await navigator.clipboard.writeText(url); brunoToast.success("Enlace copiado", { description: url }); } catch { brunoToast.error("No se pudo copiar el enlace"); }
+  };
+
+  const [sharingProfileImg, setSharingProfileImg] = useState(false);
+  const handleShareProfileImage = async (format = "story") => {
+    if (sharingProfileImg) return;
+    setSharingProfileImg(true);
+    const { brunoToast } = await import("@/components/bruno/BrunoToast");
+    try {
+      const { shareCardImage } = await import("@/lib/cardShareImage");
+      const p = profile || user;
+      const res = await shareCardImage({
+        title: p.name || p.display_name || user.name, subtitle: p.username ? `@${p.username}` : "Perfil BRUNO", description: p.bio || "",
+        avatar_url: p.avatar_url, banner_url: p.banner_url || p.cover_url, background_color: "#FF6A00", text_color: "#FFFFFF", footer_text: "Sígueme en BRUNO · brunocard.com",
+      }, { url: `${window.location.origin}/profile/${user.id}`, format });
+      if (res === "downloaded") brunoToast.success("Imagen de perfil lista", { description: "Compártela en Instagram, WhatsApp o LinkedIn." });
+      else if (res === "shared") brunoToast.publish("Perfil compartido");
+    } catch { brunoToast.error("No se pudo generar la imagen"); }
+    finally { setSharingProfileImg(false); }
   };
 
   const handleShareCard = async (card) => {
@@ -589,6 +606,9 @@ const MyProfilePage = () => {
             </Button>
             <Button variant="outline" size="icon" onClick={handleShareProfile} title="Compartir perfil" data-testid="profile-share-btn">
               <Share2 className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => handleShareProfileImage("story")} disabled={sharingProfileImg} title="Imagen para redes (historia)" data-testid="profile-share-image-btn" className="border-primary/40 text-primary">
+              {sharingProfileImg ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageDown className="w-4 h-4" />}
             </Button>
             <QuickStoryButton variant="icon" testId="profile-quick-story" />
           </div>

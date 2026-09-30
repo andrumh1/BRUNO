@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import CurrencySelector from "@/components/i18n/CurrencySelector";
 import { useTheme } from "@/contexts/ThemeProvider";
+import { POSE_OPTIONS, POSE_PREF_KEY } from "@/components/bruno/BrunoLoader";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -39,6 +40,8 @@ const SettingsPage = () => {
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
   const { theme, setTheme } = useTheme();
+  const [posePref, setPosePref] = useState(() => { try { return localStorage.getItem(POSE_PREF_KEY) || "auto"; } catch { return "auto"; } });
+  const savePose = (id) => { setPosePref(id); try { localStorage.setItem(POSE_PREF_KEY, id); } catch { /* ignore */ } };
 
   useEffect(() => {
     if (!token) return;
@@ -260,6 +263,19 @@ const SettingsPage = () => {
                     ))}
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-2">Oscuro usa el gris corporativo BRUNO; Sistema sigue el ajuste de tu dispositivo.</p>
+                </div>
+                <div className="py-3" data-testid="pose-selector">
+                  <span className="text-sm block mb-2">Personaje en pantallas de carga</span>
+                  <div className="grid grid-cols-4 gap-2">
+                    {POSE_OPTIONS.map((o) => (
+                      <button key={o.id} onClick={() => savePose(o.id)} aria-pressed={posePref === o.id} data-testid={`pose-${o.id}`}
+                        className={`flex flex-col items-center gap-1 rounded-2xl p-2 text-[11px] font-medium transition-all ${posePref === o.id ? "bg-primary/10 ring-2 ring-primary text-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}>
+                        <span className="h-14 grid place-items-center">{o.src ? <img src={o.src} alt="" className="h-14 w-auto object-contain" /> : <span className="text-xl leading-none">⟳</span>}</span>
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-2">“Alternar” muestra una pose distinta en cada carga.</p>
                 </div>
                 <div className="py-3">
                   <span className="text-sm block mb-2">Idioma</span>

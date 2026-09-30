@@ -6,6 +6,7 @@ import ReelTextCard from "@/components/reels/ReelTextCard";
 import ReelCarousel from "@/components/reels/ReelCarousel";
 import ReelPlaybackControls from "@/components/reels/ReelPlaybackControls";
 import ReelScrubPreview from "@/components/reels/ReelScrubPreview";
+import ReelMinimizeMenu from "@/components/reels/ReelMinimizeMenu";
 
 const RATE_KEY = "bruno_reel_rate";
 const loadRate = () => { try { const r = parseFloat(localStorage.getItem(RATE_KEY)); return [1, 1.5, 2].includes(r) ? r : 1; } catch { return 1; } };
@@ -46,6 +47,22 @@ export default function ReelItem({
   const [boosting, setBoosting] = useState(false);
   const rateRef = useRef(rate);
   const [scrub, setScrub] = useState(null);
+  const [minOpen, setMinOpen] = useState(false);
+  const nativePipSupported = typeof document !== "undefined" && (!!document.pictureInPictureEnabled || typeof videoRef.current?.webkitSetPresentationMode === "function");
+  const pickMinimize = async (mode) => {
+    setMinOpen(false);
+    const v = videoRef.current;
+    if (mode === "native" && v) {
+      try {
+        if (v.requestPictureInPicture) await v.requestPictureInPicture();
+        else if (v.webkitSetPresentationMode) v.webkitSetPresentationMode("picture-in-picture");
+        if (v.paused) v.play().catch(() => {});
+        return;
+      } catch (_) { /* cae a ventana flotante */ }
+      mode = "float";
+    }
+    onMinimize?.(reel, mode);
+  };
   const longPress = useRef(null);
   const pausedByHold = useRef(false);
 
@@ -286,7 +303,7 @@ export default function ReelItem({
             <Rail icon={<Bookmark className={`w-7 h-7 ${reel.is_bookmarked ? "text-primary fill-primary" : "text-white"}`} />} label={reel.is_bookmarked ? "Guardado" : "Guardar"} testid="reel-save-btn" onClick={() => onSave?.(reel)} />
             <Rail icon={<Share2 className="w-7 h-7 text-white" />} label="Enviar" testid="reel-share-btn" onClick={() => onOpenShare?.(reel)} />
             {src && <Rail icon={<Layers className="w-7 h-7 text-white" />} label={reel.remix_count ? fmt(reel.remix_count) : "Remix"} testid="reel-remix-btn" onClick={() => onOpenRemix?.(reel)} />}
-            <Rail icon={<Minimize2 className="w-6 h-6 text-white" />} label="PiP" testid="reel-minimize-btn" onClick={() => onMinimize?.(reel)} />
+            <Rail icon={<Minimize2 className="w-6 h-6 text-white" />} label="PiP" testid="reel-minimize-btn" onClick={() => setMinOpen(true)} />
             <Rail icon={<MoreHorizontal className="w-6 h-6 text-white" />} label="Más" testid="reel-more-btn" onClick={() => onOpenOptions?.(reel)} />
             {src && (
             <button onClick={(e) => { e.stopPropagation(); onOpenSound?.(reel); }} className="mt-1 w-11 h-11 rounded-full bg-zinc-900 border-[3px] border-zinc-700 grid place-items-center overflow-hidden reel-disc active:scale-90" style={{ animationPlayState: isPlaying ? "running" : "paused" }} data-testid="reel-sound-disc" aria-label="Sonido">
@@ -337,6 +354,7 @@ export default function ReelItem({
           </div>
         </div>
       )}
+      <ReelMinimizeMenu open={minOpen} onClose={() => setMinOpen(false)} onPick={pickMinimize} nativeSupported={nativePipSupported} />
       {src && (
         <ReelScrubPreview visible={!!scrub} pct={scrub?.pct || 0} time={scrub?.time || 0} sources={sources} poster={reel.poster_url || reel.thumbnail_url} bottom="calc(var(--nav-reserve, 64px) + 14px)" />
       )}

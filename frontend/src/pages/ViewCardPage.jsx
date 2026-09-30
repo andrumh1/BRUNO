@@ -68,13 +68,13 @@ const ViewCardPage = () => {
   }, [cardId, token]);
 
   const [sharingImg, setSharingImg] = useState(false);
-  const handleShareImage = async () => {
+  const handleShareImage = async (format = "story") => {
     if (sharingImg) return;
-    setSharingImg(true);
+    setSharingImg(format);
     try {
       let qr = qrData?.qr_code;
       if (!qr) { try { const r = await axios.get(`${API}/cards/${cardId}/qr`); qr = r.data?.qr_code; setQrData(r.data); } catch { /* sin QR */ } }
-      const res = await shareCardImage(card, { qr, url: `${window.location.origin}/c/${cardId}`, dark: isDark });
+      const res = await shareCardImage(card, { qr, url: `${window.location.origin}/c/${cardId}`, dark: isDark, format });
       if (res === "downloaded") brunoToast.success("Imagen lista", { description: "Se descargó tu tarjeta para Instagram o WhatsApp." });
       else if (res === "shared") brunoToast.publish("Tarjeta compartida");
     } catch (e) { brunoToast.error("No se pudo generar la imagen"); }
@@ -415,8 +415,11 @@ const ViewCardPage = () => {
           <Button variant="outline" size="sm" onClick={handleShare}>
             <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Compartir
           </Button>
-          <Button variant="outline" size="sm" onClick={handleShareImage} disabled={sharingImg} data-testid="card-share-image-btn" className="border-primary/40 text-primary hover:bg-primary/10">
-            {sharingImg ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <ImageDown className="w-3.5 h-3.5 mr-1.5" />} Imagen para redes
+          <Button variant="outline" size="sm" onClick={() => handleShareImage("story")} disabled={!!sharingImg} data-testid="card-share-image-btn" className="border-primary/40 text-primary hover:bg-primary/10" title="Instagram Stories · WhatsApp">
+            {sharingImg === "story" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <ImageDown className="w-3.5 h-3.5 mr-1.5" />} Historia 9:16
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => handleShareImage("square")} disabled={!!sharingImg} data-testid="card-share-square-btn" className="border-primary/40 text-primary hover:bg-primary/10" title="Instagram · Facebook · TikTok · LinkedIn">
+            {sharingImg === "square" ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <ImageDown className="w-3.5 h-3.5 mr-1.5" />} Cuadrada 1:1
           </Button>
           {isOwner && (
             <Button size="sm" onClick={() => navigate(`/cards/${cardId}/transfer`)} className="rounded-full" data-testid="card-transfer-nfc-cta">
