@@ -377,7 +377,7 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
         {post.media && post.media.length > 0 && (
           <div className={`grid gap-1 ${post.media.length === 1 ? '' : 'grid-cols-2'}`}>
             {post.media.slice(0, 4).map((media, i) => (
-              <div key={`media-${i}`} className={`relative ${post.media.length === 1 ? 'aspect-video' : 'aspect-square'} bg-muted overflow-hidden`}>
+              <div key={`media-${i}`} className={`relative ${post.media.length === 1 ? (media.type === 'video' ? 'aspect-video' : (media.width && media.height ? '' : 'aspect-[4/5]')) : 'aspect-square'} bg-muted overflow-hidden`} style={post.media.length === 1 && media.type !== 'video' && media.width && media.height ? { aspectRatio: `${media.width} / ${Math.min(media.height, media.width * 1.25)}` } : undefined} data-testid="post-media-frame">
                 {media.type === "image" ? (
                   <img src={media.url} alt="" className="w-full h-full object-cover" loading="lazy" />
                 ) : media.type === "video" ? (

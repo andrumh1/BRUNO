@@ -25,6 +25,7 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
   const { user, token } = useAuth();
   const [content, setContent] = useState("");
   const [media, setMedia] = useState([]);
+  const [aspect, setAspect] = useState("4:5"); // estándar BRUNO: 1:1 1080×1080 · 4:5 1080×1350 · 9:16 1080×1920
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
   const [showCardPicker, setShowCardPicker] = useState(false);
@@ -57,7 +58,7 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
         const formData = new FormData();
         formData.append("file", file);
         const isVideo = isVideoFile(file);
-        const endpoint = isVideo ? "/upload/chat-file" : "/upload/image";
+        const endpoint = isVideo ? "/upload/chat-file" : `/upload/image?aspect=${encodeURIComponent(aspect)}`;
         const response = await axios.post(`${API}${endpoint}`, formData, {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
           timeout: 0,
@@ -66,6 +67,8 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
         setMedia(prev => [...prev, {
           type: mediaType,
           url: response.data.url,
+          width: response.data.width || null,
+          height: response.data.height || null,
           mp4_url: response.data.mp4_url || null,
           f_auto_url: response.data.f_auto_url || null,
           poster_url: response.data.poster_url || null,
@@ -250,10 +253,17 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
               {media.length === 0 && showStyle && <TextStylePicker value={textStyle} onChange={setTextStyle} text={content} />}
 
               {/* Media Preview */}
+              <div className="flex items-center gap-1.5 mb-2" data-testid="image-aspect-picker">
+                <span className="text-[11px] text-muted-foreground mr-1">Formato de fotos</span>
+                {[["1:1", "1:1"], ["4:5", "4:5"], ["9:16", "9:16"], ["free", "Libre"]].map(([id, label]) => (
+                  <button key={id} type="button" onClick={() => setAspect(id)} aria-pressed={aspect === id} data-testid={`aspect-${id.replace(":", "-")}`}
+                    className={`h-7 px-2.5 rounded-full text-[11px] font-semibold transition ${aspect === id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{label}</button>
+                ))}
+              </div>
               {media.length > 0 && (
                 <div className="grid grid-cols-2 gap-2">
                   {media.map((item, index) => (
-                    <div key={`item-${index}`} className="relative aspect-video rounded-lg overflow-hidden bg-muted">
+                    <div key={`item-${index}`} className={`relative ${item.type === "video" ? "aspect-video" : aspect === "1:1" ? "aspect-square" : aspect === "9:16" ? "aspect-[9/16] max-h-64" : "aspect-[4/5]"} rounded-lg overflow-hidden bg-muted`}>
                       {item.type === "image" ? (
                         <img src={item.url} alt="" className="w-full h-full object-cover" />
                       ) : (

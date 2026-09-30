@@ -29,11 +29,21 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/upload", tags=["uploads"])
 
+# Estándar BRUNO: todo video cabe en un marco vertical 9:16 de 1080×1920 (sin recortar: los 16:9 quedan
+# horizontales dentro del marco y el reproductor ofrece pantalla completa/giro).
+VIDEO_MAX_W, VIDEO_MAX_H = 1080, 1920
 VIDEO_EAGER = [
     {"format": "mp4", "video_codec": "h264", "audio_codec": "aac",
-     "bit_rate": "1500k", "width": 720, "crop": "limit"},
-    {"format": "jpg", "width": 720, "crop": "limit", "start_offset": "auto"},
+     "bit_rate": "2500k", "width": VIDEO_MAX_W, "height": VIDEO_MAX_H, "crop": "limit"},
+    {"format": "jpg", "width": VIDEO_MAX_W, "height": VIDEO_MAX_H, "crop": "limit", "start_offset": "auto"},
 ]
+# Estándar BRUNO de imágenes: 1:1 → 1080×1080 · 4:5 → 1080×1350 · 9:16 → 1080×1920 · libre → cabe en 1080×1350
+IMAGE_PRESETS = {
+    "1:1": {"width": 1080, "height": 1080, "crop": "fill", "gravity": "auto"},
+    "4:5": {"width": 1080, "height": 1350, "crop": "fill", "gravity": "auto"},
+    "9:16": {"width": 1080, "height": 1920, "crop": "fill", "gravity": "auto"},
+    "free": {"width": 1080, "height": 1350, "crop": "limit"},
+}
 
 
 MAX_VIDEO_BYTES = 100 * 1024 * 1024  # Cloudinary per-file video limit
@@ -55,6 +65,7 @@ def _upload_video(contents: bytes, folder: str, filename: str | None):
 async def upload_image(
     file: UploadFile = File(...),
     folder: str = "bruno",
+    aspect: str = "free",
     current_user: User = Depends(get_current_user),
 ):
     """Upload an image or video to Cloudinary.
@@ -94,9 +105,9 @@ async def upload_image(
             # Synth fallbacks while derivatives bake
             if "/upload/" in base_url:
                 if not mp4_url:
-                    mp4_url = base_url.replace("/upload/", "/upload/f_mp4,vc_h264,ac_aac,br_1500k,w_720,c_limit/").rsplit(".", 1)[0] + ".mp4"
+                    mp4_url = base_url.replace("/upload/", f"/upload/f_mp4,vc_h264,ac_aac,br_2500k,w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/").rsplit(".", 1)[0] + ".mp4"
                 if not poster_url:
-                    poster_url = base_url.replace("/upload/", "/upload/so_auto,w_720,c_limit/").rsplit(".", 1)[0] + ".jpg"
+                    poster_url = base_url.replace("/upload/", f"/upload/so_auto,w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/").rsplit(".", 1)[0] + ".jpg"
                 f_auto_url = base_url.replace("/upload/", "/upload/f_auto,q_auto/")
             else:
                 f_auto_url = base_url
@@ -106,7 +117,7 @@ async def upload_image(
                 folder=f"{folder}/{current_user.id}",
                 resource_type="image",
                 transformation=[
-                    {'width': 1200, 'height': 1200, 'crop': 'limit'},
+                    IMAGE_PRESETS.get(aspect, IMAGE_PRESETS["free"]),
                     {'quality': 'auto:good'},
                 ],
             )
@@ -217,7 +228,7 @@ async def upload_chat_file(
                 folder=f"bruno/chat/{current_user.id}",
                 resource_type="image",
                 transformation=[
-                    {'width': 1200, 'height': 1200, 'crop': 'limit'},
+                    IMAGE_PRESETS["free"],
                     {'quality': 'auto:good'},
                 ],
             )
@@ -227,8 +238,8 @@ async def upload_chat_file(
             )
             base_url = result.get("secure_url") or ""
             if "/upload/" in base_url:
-                mp4_url = base_url.replace("/upload/", "/upload/f_mp4,vc_h264,ac_aac,br_1500k,w_720,c_limit/").rsplit(".", 1)[0] + ".mp4"
-                poster_url = base_url.replace("/upload/", "/upload/so_auto,w_720,c_limit/").rsplit(".", 1)[0] + ".jpg"
+                mp4_url = base_url.replace("/upload/", "/upload/f_mp4,vc_h264,ac_aac,br_2500k,w_1080,h_1920,c_limit/").rsplit(".", 1)[0] + ".mp4"
+                poster_url = base_url.replace("/upload/", "/upload/so_auto,w_1080,h_1920,c_limit/").rsplit(".", 1)[0] + ".jpg"
                 f_auto_url = base_url.replace("/upload/", "/upload/f_auto,q_auto/")
         elif content_type.startswith("audio"):
             result = cloudinary.uploader.upload(

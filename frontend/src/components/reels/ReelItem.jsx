@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, User, Plus, Check, Minimize2, RotateCcw, Layers, Scissors, Columns2, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, User, Plus, Check, Minimize2, Maximize2, RotateCcw, Layers, Scissors, Columns2, MoreHorizontal } from "lucide-react";
 import ReelTextCard from "@/components/reels/ReelTextCard";
 import ReelCarousel from "@/components/reels/ReelCarousel";
 import ReelPlaybackControls from "@/components/reels/ReelPlaybackControls";
@@ -48,6 +48,32 @@ export default function ReelItem({
   const rateRef = useRef(rate);
   const [scrub, setScrub] = useState(null);
   const [minOpen, setMinOpen] = useState(false);
+  const [landscape, setLandscape] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  // 16:9 → pantalla completa girada (como Facebook); al salir se restaura la orientación.
+  const toggleFullscreen = async () => {
+    const v = videoRef.current, stage = stageRef.current;
+    if (!v) return;
+    try {
+      if (document.fullscreenElement || v.webkitDisplayingFullscreen) {
+        if (document.exitFullscreen) await document.exitFullscreen(); else v.webkitExitFullscreen?.();
+        try { window.screen.orientation?.unlock?.(); } catch (_) { /* ignore */ }
+        setFullscreen(false);
+        return;
+      }
+      const target = stage?.requestFullscreen ? stage : v;
+      if (target.requestFullscreen) await target.requestFullscreen({ navigationUI: "hide" });
+      else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+      if (landscape) { try { await window.screen.orientation?.lock?.("landscape"); } catch (_) { /* iOS no permite bloquear */ } }
+      setFullscreen(true);
+      if (v.paused) v.play().catch(() => {});
+    } catch (_) { /* sin soporte */ }
+  };
+  useEffect(() => {
+    const onFs = () => { if (!document.fullscreenElement) { setFullscreen(false); try { window.screen.orientation?.unlock?.(); } catch (_) { /* ignore */ } } };
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
   const nativePipSupported = typeof document !== "undefined" && (!!document.pictureInPictureEnabled || typeof videoRef.current?.webkitSetPresentationMode === "function");
   const pickMinimize = async (mode) => {
     setMinOpen(false);
@@ -222,12 +248,13 @@ export default function ReelItem({
         <video
           key={retryKey}
           ref={videoRef}
-          className="absolute inset-0 h-full w-full object-contain sm:object-cover"
+          className={`absolute inset-0 h-full w-full ${landscape || fullscreen ? "object-contain" : "object-contain sm:object-cover"}`}
+          data-landscape={landscape ? "true" : "false"}
           loop playsInline muted={globalMuted}
           preload={isActive || isNear ? "auto" : "metadata"}
           poster={reel.poster_url || reel.thumbnail_url || undefined}
           onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) { setProgress((v.currentTime / v.duration) * 100); setTime({ cur: v.currentTime, dur: v.duration }); } }}
-          onLoadedMetadata={(e) => { const v = e.currentTarget; setTime({ cur: v.currentTime, dur: v.duration || 0 }); v.playbackRate = rateRef.current; }}
+          onLoadedMetadata={(e) => { const v = e.currentTarget; setTime({ cur: v.currentTime, dur: v.duration || 0 }); v.playbackRate = rateRef.current; setLandscape(v.videoWidth > v.videoHeight); }}
           onWaiting={() => setBuffering(true)}
           onPlaying={() => { setBuffering(false); setError(false); setProcessing(false); autoRetries.current = 0; }}
           onCanPlay={() => { setBuffering(false); setProcessing(false); }}
@@ -248,9 +275,16 @@ export default function ReelItem({
           <div className="w-16 h-16 rounded-full backdrop-blur-xl bg-white/[0.06] border border-white/35 shadow-[inset_0_1px_0_rgba(255,255,255,.45)] grid place-items-center reel-chrome"><Play className="w-8 h-8 text-white fill-white ml-1" /></div>
         </div>
       )}
+      {src && landscape && !fullscreen && !controlsVisible && !error && (
+        <button onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }} onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); toggleFullscreen(); }}
+          className="absolute right-3 z-20 inline-flex items-center gap-1.5 h-8 px-3 rounded-full backdrop-blur-xl bg-white/[0.06] border border-white/35 text-white text-[11px] font-semibold reel-chrome active:scale-95"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 56px)" }} data-testid="reel-landscape-chip" aria-label="Ver en pantalla completa girando el teléfono">
+          <Maximize2 className="w-3.5 h-3.5" /> Pantalla completa
+        </button>
+      )}
       {src && !error && !processing && (
         <ReelPlaybackControls
-          visible={controlsVisible} isPlaying={isPlaying} muted={globalMuted} seekHint={seekHint} rate={rate} boosting={boosting}
+          visible={controlsVisible} isPlaying={isPlaying} muted={globalMuted} seekHint={seekHint} rate={rate} boosting={boosting} landscape={landscape} fullscreen={fullscreen} onFullscreen={toggleFullscreen}
           onToggle={togglePlay} onSeek={seekBy} onToggleMute={() => { onToggleMute(); showControls(); }} onCycleRate={cycleRate}
         />
       )}

@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Gauge } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, RotateCcw, RotateCw, Gauge, Maximize2, Minimize2 } from "lucide-react";
 
 /* Burbuja de vidrio ultra transparente: sin color, solo borde/luz y el icono blanco. */
 const glass = "backdrop-blur-xl bg-white/[0.06] border border-white/35 shadow-[inset_0_1px_0_rgba(255,255,255,.45),0_8px_24px_-8px_rgba(0,0,0,.45)] text-white active:scale-90 transition-transform";
@@ -17,7 +17,7 @@ const Bubble = ({ size = "w-14 h-14", onClick, testid, label, children }) => (
  * ReelPlaybackControls — controles centrales (−10 s · Play/Pausa · +10 s) + sonido centrado debajo.
  * seekHint: { side: "left"|"right" } muestra el indicador de salto de 10 s.
  */
-export default function ReelPlaybackControls({ visible, isPlaying, muted, onToggle, onSeek, onToggleMute, seekHint, rate = 1, onCycleRate, boosting }) {
+export default function ReelPlaybackControls({ visible, isPlaying, muted, onToggle, onSeek, onToggleMute, seekHint, rate = 1, onCycleRate, boosting, landscape, fullscreen, onFullscreen }) {
   return (
     <>
       <AnimatePresence>
@@ -44,6 +44,11 @@ export default function ReelPlaybackControls({ visible, isPlaying, muted, onTogg
               <Bubble size="w-11 h-11" onClick={onCycleRate} testid="reel-rate-toggle" label={`Velocidad ${rate}x`}>
                 <span className="flex flex-col items-center leading-none"><Gauge className="w-4 h-4" /><span className="text-[9px] font-bold mt-0.5">{rate}x</span></span>
               </Bubble>
+              {(landscape || fullscreen) && onFullscreen && (
+                <Bubble size="w-11 h-11" onClick={onFullscreen} testid="reel-fullscreen-toggle" label={fullscreen ? "Salir de pantalla completa" : "Pantalla completa (girar)"}>
+                  <span className="flex flex-col items-center leading-none">{fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}<span className="text-[8px] font-bold mt-0.5">{fullscreen ? "Salir" : "16:9"}</span></span>
+                </Bubble>
+              )}
             </div>
           </motion.div>
         )}

@@ -1536,3 +1536,8 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - MEDIUM corregido: `publish_due_scheduled_stories` reclama cada historia con `find_one_and_delete` (idempotente bajo cron + publish-now concurrentes; verificado 4 corridas concurrentes → 1 inserción). `scheduled_at` normalizado a UTC en crear y reprogramar.
 - LOW corregido: `/reels/{id}/download?seal=` solo aplica el sello si pertenece a un usuario con tier ≠ free (busca en `user_preferences.custom_seal_url`).
 - Pendiente LOW (no bloqueante): accesibilidad por teclado de la barra de progreso de Reels; timeouts de burst/seekHint sin limpiar al desmontar.
+
+## 2026-06 — Estándares de medios BRUNO (auto-test)
+- Backend `uploads.py`: videos → eager mp4 h264 `c_limit 1080×1920` (caben en marco 9:16 sin recorte; los 16:9 quedan horizontales) + poster 1080×1920; URLs sintéticas actualizadas. Imágenes: `?aspect=1:1|4:5|9:16|free` → 1080×1080 / 1080×1350 / 1080×1920 (`c_fill,g_auto`) o `c_limit 1080×1350`.
+- ReelItem: detecta `videoWidth > videoHeight` → `landscape` (object-contain), chip "Pantalla completa" (`reel-landscape-chip`) y burbuja 16:9 en los controles (`reel-fullscreen-toggle`): Fullscreen API sobre el stage + `screen.orientation.lock("landscape")` (Android; iOS usa webkitEnterFullscreen y no permite bloquear); al salir se desbloquea.
+- CreatePost: selector "Formato de fotos" 1:1 / 4:5 / 9:16 / Libre (`image-aspect-picker`, `aspect-*`), por defecto 4:5; preview con el aspecto elegido; guarda width/height en media. PostCard: una sola imagen respeta su aspecto real (máx. 4:5) en vez de forzar 16:9.

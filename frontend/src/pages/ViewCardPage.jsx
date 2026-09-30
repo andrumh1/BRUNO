@@ -212,24 +212,44 @@ const ViewCardPage = () => {
           {isPremiumFullImg ? (
             /* premium_fullimg: dark overlay on the background image for readability */
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/70 pointer-events-none" />
+          ) : isFullBanner && card.banner_url ? (
+            /* full_banner_bubble: la imagen llena el fondo y la burbuja fluye (nunca se recorta) */
+            <div className="relative w-full overflow-hidden" data-testid="card-full-banner">
+              <img src={card.banner_url} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/20 to-black/70" />
+              <div className="relative pt-40 sm:pt-56 lg:pt-72 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8">
+                <div className="bg-white/90 dark:bg-[#474747]/90 backdrop-blur-xl rounded-2xl p-4 sm:p-5 lg:p-6 shadow-xl max-w-3xl text-foreground" data-testid="card-banner-bubble">
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    {card.avatar_url ? (
+                      <img src={card.avatar_url} alt={card.title} className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shrink-0 border-2 shadow-md" style={{ borderColor: bg }} data-testid="card-avatar" />
+                    ) : (
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl shrink-0 border-2 shadow-md flex items-center justify-center bg-[#f9f1ea]" style={{ borderColor: bg }} data-testid="card-avatar-fallback">
+                        <BrunoLogo variant="icon" tone="orange" className="w-[62%]" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mb-1" style={{ backgroundColor: `${bg}22`, color: bg }}>{cardTypeLabel}</span>
+                      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight break-words" data-testid="card-title">{card.title}</h1>
+                      {card.subtitle && <p className="text-sm sm:text-base text-muted-foreground mt-0.5">{card.subtitle}</p>}
+                    </div>
+                    {card.user_id && (!user || card.user_id !== user.id) && (
+                      <button onClick={handleStartChat} className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white hover:scale-105 transition-transform shadow-md" style={{ backgroundColor: bg }} title="Mensaje" data-testid="card-chat-btn">
+                        <MessageCircle className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                  {card.description && <p className="text-sm sm:text-base mt-3 leading-relaxed opacity-90">{card.description}</p>}
+                </div>
+              </div>
+            </div>
           ) : card.banner_url ? (
-            <div className="relative w-full overflow-hidden" style={{ aspectRatio: isFullBanner ? "21/9" : "4/1" }}>
+            <div className="relative w-full overflow-hidden" style={{ aspectRatio: "4/1" }}>
               <img
                 src={card.banner_url}
                 alt="Banner"
                 className="absolute inset-0 w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/60" />
-
-              {isFullBanner && (
-                <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 lg:p-8">
-                  <div className="bg-white/90 dark:bg-[#474747]/85 backdrop-blur-xl rounded-2xl p-4 sm:p-5 lg:p-6 shadow-lg max-w-3xl">
-                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold" style={{ color: fg === "#FFFFFF" ? "inherit" : fg }}>{card.title}</h1>
-                    {card.subtitle && <p className="text-sm sm:text-base text-muted-foreground mt-1">{card.subtitle}</p>}
-                    {card.description && <p className="text-sm mt-2 line-clamp-3">{card.description}</p>}
-                  </div>
-                </div>
-              )}
             </div>
           ) : (
             <div className="w-full h-28 sm:h-36 md:h-44 lg:h-52" style={{ background: `linear-gradient(135deg, ${bg}, ${bg}cc)` }} />
@@ -243,7 +263,8 @@ const ViewCardPage = () => {
               color: fg
             }}
           >
-            {/* Avatar row */}
+            {/* Avatar row (la plantilla banner-burbuja ya muestra el avatar dentro de la burbuja) */}
+            {!(isFullBanner && card.banner_url) && (
             <div className="px-5 sm:px-8 lg:px-12 -mt-12 sm:-mt-14 lg:-mt-16 flex items-end justify-between">
               <div className="relative">
                 {card.avatar_url ? (
@@ -271,20 +292,19 @@ const ViewCardPage = () => {
                 </div>
               </div>
 
-              {!isFullBanner && (
-                <div className="flex gap-2 mb-3">
+              <div className="flex gap-2 mb-3">
                   {card.user_id && (!user || card.user_id !== user.id) && (
                     <button onClick={handleStartChat} className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center hover:scale-105 transition-transform" style={{ backgroundColor: `${fg}20` }} title="Mensaje" data-testid="card-chat-btn">
                       <MessageCircle className="w-5 h-5" />
                     </button>
                   )}
-                </div>
-              )}
+              </div>
             </div>
+            )}
 
             {/* Content - responsive grid on large screens */}
             <div className="px-5 sm:px-8 lg:px-12 pt-5 sm:pt-6 lg:pt-8 pb-6 sm:pb-8 lg:pb-10">
-              {!isFullBanner && (
+              {!(isFullBanner && card.banner_url) && (
                 <div className="mb-6">
                   <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 ${isPremiumFormal ? 'font-serif tracking-tight' : ''}`} data-testid="card-title">{card.title}</h1>
                   {card.subtitle && <p className="text-sm sm:text-base lg:text-lg opacity-85 font-medium mb-1.5">{card.subtitle}</p>}
