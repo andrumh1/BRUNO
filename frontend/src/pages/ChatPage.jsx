@@ -1,5 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1474,9 +1475,7 @@ const ChatPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <BrunoLoader />
     );
   }
 

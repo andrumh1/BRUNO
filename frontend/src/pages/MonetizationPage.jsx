@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -144,9 +145,7 @@ const MonetizationPage = () => {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <BrunoLoader />
     );
   }
 

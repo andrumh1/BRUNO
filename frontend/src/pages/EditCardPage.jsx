@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -14,7 +15,7 @@ import ProfileSpecificFields from "@/components/ProfileSpecificFields";
 import BubbleSelect from "@/components/BubbleSelect";
 import { CurriculumFields } from "@/components/CurriculumFields";
 import axios from "axios";
-import { ArrowLeft, Save, Upload, Image as ImageIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Upload, Image as ImageIcon } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -277,12 +278,7 @@ const EditCardPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">{t("common.loading")}</p>
-        </div>
-      </div>
+      <BrunoLoader />
     );
   }
 

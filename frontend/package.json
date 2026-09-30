@@ -86,6 +86,7 @@
     "build": "craco build",
     "test": "craco test",
     "cap:sync": "yarn build && npx cap sync",
+    "cap:assets": "npx @capacitor/assets generate --assetPath resources --iconBackgroundColor '#f9f1ea' --iconBackgroundColorDark '#474747' --splashBackgroundColor '#f9f1ea' --splashBackgroundColorDark '#474747'",
     "cap:open:ios": "npx cap open ios",
     "cap:open:android": "npx cap open android",
     "cap:add:ios": "npx cap add ios",

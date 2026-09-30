@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -89,9 +90,7 @@ const ViewCardPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
+      <BrunoLoader />
     );
   }
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { BrunoHeaderMark } from "@/components/bruno/BrunoLogo";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -553,9 +554,7 @@ const MarketplacePage = () => {
         
         {/* User Products */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
+          <BrunoLoader fullScreen={false} className="rounded-3xl min-h-[380px]" />
         ) : products.length === 0 ? (
           <div className="text-center py-20">
             <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />

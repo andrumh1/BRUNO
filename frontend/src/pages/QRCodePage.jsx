@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -62,12 +63,7 @@ const QRCodePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Generando código QR...</p>
-        </div>
-      </div>
+      <BrunoLoader message="Generando código QR…" />
     );
   }
 

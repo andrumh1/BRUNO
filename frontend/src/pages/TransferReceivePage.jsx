@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -58,7 +59,7 @@ export default function TransferReceivePage() {
       </div>
     );
   }
-  if (!data) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  if (!data) return <BrunoLoader />;
 
   const { card, sender, expired } = data;
   const color = card.background_color || "#FF6A00";

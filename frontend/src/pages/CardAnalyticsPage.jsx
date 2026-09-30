@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -138,9 +139,7 @@ const CardAnalyticsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <BrunoLoader />
     );
   }
 

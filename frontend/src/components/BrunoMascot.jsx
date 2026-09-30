@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
@@ -72,10 +73,7 @@ export const BrunoAvatar = ({
 
 // BRUNO Loading Screen
 export const BrunoLoading = ({ message = "Cargando..." }) => (
-  <div className="flex flex-col items-center justify-center gap-4 py-12">
-    <BrunoAvatar size="xl" mood="loading" />
-    <p className="text-muted-foreground animate-pulse">{message}</p>
-  </div>
+  <BrunoLoader fullScreen={false} message={message} />
 );
 
 // BRUNO Empty State

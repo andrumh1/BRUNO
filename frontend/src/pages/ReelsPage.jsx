@@ -6,6 +6,7 @@
  *  (only active ±2 reels mount a <video>) + IntersectionObserver snapping.
  */
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
 import { Loader2, Radio, Film, Plus, Eye, ArrowLeft, Clock, Camera, Lock, KeyRound } from "lucide-react";
@@ -164,7 +165,7 @@ export default function ReelsPage() {
 
       {tab !== "lives" ? (
         loading ? (
-          <div className="h-full grid place-items-center"><Loader2 className="w-10 h-10 text-primary animate-spin" /></div>
+          <BrunoLoader fullScreen={false} className="h-full" />
         ) : reels.length === 0 ? (
           <EmptyReels profileMode={profileMode} following={tab === "following"} onCreate={() => navigate("/camera")} onForYou={() => setTab("for_you")} />
         ) : (

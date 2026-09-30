@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
@@ -48,12 +49,7 @@ const AuthCallback = () => {
   }, [navigate, login]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-muted-foreground">Procesando autenticación...</p>
-      </div>
-    </div>
+    <BrunoLoader message="Procesando autenticación…" />
   );
 };
 

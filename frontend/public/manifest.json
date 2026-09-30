@@ -4,25 +4,25 @@
   "description": "Crea, conecta y comparte. Tarjetas digitales NFC, feed social, reels, mapa y chat — todo en BRUNO.",
   "icons": [
     {
-      "src": "/bruno-app-icon-512.png?v=10",
+      "src": "/bruno-app-icon-512.png?v=11",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/bruno-app-icon-512.png?v=10",
+      "src": "/bruno-app-icon-512.png?v=11",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/bruno-app-icon-512.png?v=10",
+      "src": "/bruno-app-icon-512.png?v=11",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/bruno-app-icon-512.png?v=10",
+      "src": "/bruno-app-icon-512.png?v=11",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -43,33 +43,33 @@
       "short_name": "Feed",
       "description": "Abrir el feed social",
       "url": "/feed",
-      "icons": [{ "src": "/bruno-app-icon-512.png?v=10", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/bruno-app-icon-512.png?v=11", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Mapa",
       "short_name": "Mapa",
       "description": "Mapa híbrido de Bruno",
       "url": "/map",
-      "icons": [{ "src": "/bruno-app-icon-512.png?v=10", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/bruno-app-icon-512.png?v=11", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Chats",
       "short_name": "Chats",
       "description": "Tus conversaciones",
       "url": "/chat",
-      "icons": [{ "src": "/bruno-app-icon-512.png?v=10", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/bruno-app-icon-512.png?v=11", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Mi perfil",
       "short_name": "Perfil",
       "description": "Mi tarjeta y stats",
       "url": "/my-profile",
-      "icons": [{ "src": "/bruno-app-icon-512.png?v=10", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/bruno-app-icon-512.png?v=11", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "screenshots": [
     {
-      "src": "/bruno-app-icon-512.png?v=10",
+      "src": "/bruno-app-icon-512.png?v=11",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow"
