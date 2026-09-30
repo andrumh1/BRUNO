@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import CurrencySelector from "@/components/i18n/CurrencySelector";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { POSE_OPTIONS, POSE_PREF_KEY } from "@/components/bruno/BrunoLoader";
+import { getCustomSeal, setCustomSeal } from "@/lib/shareHistory";
+import { brunoToast as toast } from "@/components/bruno/BrunoToast";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -28,7 +30,7 @@ import {
   Check,
   Loader2,
   Smartphone,
-  Languages, Sun, Monitor } from "lucide-react";
+  Languages, Sun, Monitor, Sparkles, Upload } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -42,6 +44,25 @@ const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const [posePref, setPosePref] = useState(() => { try { return localStorage.getItem(POSE_PREF_KEY) || "auto"; } catch { return "auto"; } });
   const savePose = (id) => { setPosePref(id); try { localStorage.setItem(POSE_PREF_KEY, id); } catch { /* ignore */ } };
+  const [seal, setSeal] = useState(getCustomSeal());
+  const [sealBusy, setSealBusy] = useState(false);
+  const [tier, setTier] = useState("free");
+  useEffect(() => { if (!token) return; axios.get(`${API}/store/subscription`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setTier(r.data?.tier || "free")).catch(() => {}); }, [token]);
+  useEffect(() => { if (prefs?.custom_seal_url !== undefined && prefs.custom_seal_url !== seal) { setSeal(prefs.custom_seal_url || ""); setCustomSeal(prefs.custom_seal_url || ""); } }, [prefs?.custom_seal_url]); // eslint-disable-line react-hooks/exhaustive-deps
+  const isPremium = tier && tier !== "free";
+  const uploadSeal = async (file) => {
+    if (!file) return;
+    setSealBusy(true);
+    try {
+      const fd = new FormData(); fd.append("file", file);
+      const up = await axios.post(`${API}/upload/image?folder=bruno/seals`, fd, { headers: { Authorization: `Bearer ${token}` } });
+      await savePrefs({ custom_seal_url: up.data.url });
+      setSeal(up.data.url); setCustomSeal(up.data.url);
+      toast.success("Sello personalizado guardado");
+    } catch (e) { toast.error(e?.response?.data?.detail || "No se pudo subir el logo"); }
+    finally { setSealBusy(false); }
+  };
+  const removeSeal = async () => { await savePrefs({ custom_seal_url: "" }); setSeal(""); setCustomSeal(""); };
 
   useEffect(() => {
     if (!token) return;
@@ -276,6 +297,28 @@ const SettingsPage = () => {
                     ))}
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-2">“Alternar” muestra una pose distinta en cada carga.</p>
+                </div>
+                <div className="py-3" data-testid="custom-seal">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm">Sello personalizado en imágenes y videos</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-primary/10 text-primary">Premium</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-2xl border border-border/60 bg-card grid place-items-center overflow-hidden shrink-0" data-testid="custom-seal-preview">
+                      {seal ? <img src={seal} alt="Sello" className="w-full h-full object-contain p-1.5" /> : <Sparkles className="w-5 h-5 text-muted-foreground" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground mb-2">Tu logo aparecerá junto al sello BRUNO en portadas, tarjetas y videos descargados.</p>
+                      <div className="flex gap-2">
+                        <label className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold cursor-pointer ${isPremium ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground cursor-not-allowed"}`} data-testid="custom-seal-upload">
+                          {sealBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />} {seal ? "Cambiar logo" : "Subir logo"}
+                          <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="sr-only" disabled={!isPremium || sealBusy} onChange={(e) => uploadSeal(e.target.files?.[0])} data-testid="custom-seal-input" />
+                        </label>
+                        {seal && <button onClick={removeSeal} className="h-9 px-3 rounded-full text-xs font-semibold bg-muted text-foreground" data-testid="custom-seal-remove">Quitar</button>}
+                      </div>
+                      {!isPremium && <button onClick={() => navigate("/premium")} className="text-[11px] text-primary font-semibold mt-2 underline-offset-2 hover:underline" data-testid="custom-seal-upgrade">Hazte Premium para activarlo →</button>}
+                    </div>
+                  </div>
                 </div>
                 <div className="py-3">
                   <span className="text-sm block mb-2">Idioma</span>

@@ -1624,8 +1624,12 @@ async def get_preferences(current_user: User = Depends(get_current_user)):
 @router.put("/settings/preferences")
 async def update_preferences(prefs_data: dict, current_user: User = Depends(get_current_user)):
     """Update user preferences"""
-    allowed_keys = {"feed_mode", "language", "theme", "notifications", "privacy", "content"}
+    allowed_keys = {"feed_mode", "language", "theme", "notifications", "privacy", "content", "auto_translate", "custom_seal_url"}
     update = {k: v for k, v in prefs_data.items() if k in allowed_keys}
+    if "custom_seal_url" in update:
+        u = await db.users.find_one({"id": current_user.id}, {"_id": 0, "subscription_tier": 1})
+        if update["custom_seal_url"] and (u or {}).get("subscription_tier", "free") == "free":
+            raise HTTPException(status_code=403, detail="El sello personalizado es exclusivo de suscriptores Premium")
     
     await db.user_preferences.update_one(
         {"user_id": current_user.id},

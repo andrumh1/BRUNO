@@ -1,6 +1,7 @@
 /* Genera una imagen de una tarjeta/perfil BRUNO con el sello corporativo.
    format: "story" 1080×1920 (IG/WhatsApp) · "square" 1080×1080 (feed IG/Facebook/TikTok/LinkedIn). */
 import QRCode from "qrcode";
+import { getCustomSeal } from "@/lib/shareHistory";
 const FORMATS = { story: { W: 1080, H: 1920, cy: 300, ch: 1180 }, square: { W: 1080, H: 1080, cy: 70, ch: 800 } };
 const ORANGE = "#ff6a00", CREAM = "#f9f1ea", GRAY = "#474747";
 
@@ -31,8 +32,8 @@ export async function renderCardImage(card, { qr, url, dark = false, format = "s
   const light = lum(rawBg) > 0.72;
   const bg = dark && light ? GRAY : rawBg;
   const fg = dark && light ? CREAM : (card.text_color || "#ffffff");
-  const [avatar, banner, bear, wordmark, qrImg] = await Promise.all([
-    loadImg(card.avatar_url), loadImg(card.banner_url), loadImg("/brand/icon-white.png"), loadImg("/brand/logo-h-white.png"), loadImg(qr),
+  const [avatar, banner, bear, wordmark, qrImg, seal] = await Promise.all([
+    loadImg(card.avatar_url), loadImg(card.banner_url), loadImg("/brand/icon-white.png"), loadImg("/brand/logo-h-white.png"), loadImg(qr), loadImg(getCustomSeal()),
   ]);
 
   // Fondo: gris/crema corporativo con glow del color de la tarjeta
@@ -81,6 +82,7 @@ export async function renderCardImage(card, { qr, url, dark = false, format = "s
   rr(ctx, px, py, pw, 56, 28); ctx.fillStyle = `${fg}26`; ctx.fill();
   if (bear) { const bh = 30, bw = bh * bear.width / bear.height; ctx.drawImage(tint(bear, fg), px + 28, py + 13, bw, bh); }
   ctx.fillStyle = fg; ctx.textBaseline = "middle"; ctx.fillText(label, px + 78, py + 29); ctx.restore();
+  drawSeal(ctx, seal, px - 90, py - 6, 68, fg);
 
   // Pie: logotipo
   const fy = cy + ch + (sq ? 40 : 110);
@@ -89,6 +91,14 @@ export async function renderCardImage(card, { qr, url, dark = false, format = "s
   ctx.fillText(card.footer_text || "Tarjetas digitales NFC · brunocard.com", W / 2, fy + (sq ? 66 : 90)); ctx.globalAlpha = 1;
 
   return new Promise((res) => c.toBlob((b) => res(b), "image/png"));
+}
+
+/* Sello personalizado (Premium): logo del usuario en una pastilla blanca junto al sello BRUNO. */
+function drawSeal(ctx, seal, x, y, size, ringColor) {
+  if (!seal) return;
+  ctx.save(); rr(ctx, x, y, size, size, size * 0.3); ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = `${ringColor}55`; ctx.stroke(); ctx.clip();
+  const s = Math.min((size - 12) / seal.width, (size - 12) / seal.height); const w = seal.width * s, h = seal.height * s;
+  ctx.drawImage(seal, x + (size - w) / 2, y + (size - h) / 2, w, h); ctx.restore();
 }
 
 function tint(img, color) {
@@ -114,8 +124,8 @@ export async function renderReelCover(reel, { url, phrase, bgColor } = {}) {
   const W = 1080, H = 1920;
   const c = document.createElement("canvas"); c.width = W; c.height = H; const ctx = c.getContext("2d");
   let qr = null; try { qr = await QRCode.toDataURL(url, { width: 520, margin: 1, color: { dark: "#474747", light: "#ffffff" } }); } catch { /* sin QR */ }
-  const [cover, avatar, bear, wordmark, qrImg] = await Promise.all([
-    loadImg(reel.thumbnail_url || reel.poster_url || reel.image_url), loadImg(reel.user?.avatar_url || reel.avatar_url), loadImg("/brand/icon-white.png"), loadImg("/brand/logo-h-white.png"), loadImg(qr),
+  const [cover, avatar, bear, wordmark, qrImg, seal] = await Promise.all([
+    loadImg(reel.thumbnail_url || reel.poster_url || reel.image_url), loadImg(reel.user?.avatar_url || reel.avatar_url), loadImg("/brand/icon-white.png"), loadImg("/brand/logo-h-white.png"), loadImg(qr), loadImg(getCustomSeal()),
   ]);
   ctx.fillStyle = bgColor || GRAY; ctx.fillRect(0, 0, W, H);
   if (cover) { cover(ctx, cover, 0, 0, W, H); }
@@ -142,6 +152,7 @@ export async function renderReelCover(reel, { url, phrase, bgColor } = {}) {
   rr(ctx, px, py, pw, 60, 30); ctx.fillStyle = "rgba(255,255,255,.18)"; ctx.fill();
   if (bear) { const bh = 32, bw = bh * bear.width / bear.height; ctx.drawImage(bear, px + 28, py + 14, bw, bh); }
   ctx.fillStyle = "#ffffff"; ctx.textBaseline = "middle"; ctx.fillText(label, px + 78, py + 31); ctx.restore();
+  drawSeal(ctx, seal, px + pw + 20, py - 6, 72, "#ffffff");
   ctx.font = "500 26px Inter, system-ui, sans-serif"; ctx.fillStyle = "#ffffff"; ctx.globalAlpha = .75; ctx.textBaseline = "top";
   const short = (url || "").replace(/^https?:\/\//, ""); ctx.fillText(short.length > 40 ? `${short.slice(0, 39)}…` : short, 70, H - 70); ctx.globalAlpha = 1;
   return new Promise((res) => c.toBlob((b) => res(b), "image/png"));

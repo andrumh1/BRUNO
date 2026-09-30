@@ -12,6 +12,7 @@ import { normalizeReel } from "./useReelsFeed";
 import ShareImageSheet from "@/components/bruno/ShareImageSheet";
 import { renderReelCover, shareBlob } from "@/lib/cardShareImage";
 import { canWatermarkInBrowser, watermarkVideo } from "@/lib/videoWatermark";
+import { getCustomSeal } from "@/lib/shareHistory";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -235,20 +236,15 @@ export function ReelShareSheet({ reel, token, onClose }) {
     } catch (_) { setSentTo((s) => ({ ...s, [chat.id]: undefined })); brunoToast.error("No se pudo enviar"); }
   };
   const shareText = `${(reel.content || "Mira este reel").slice(0, 80)} · vía BRUNO`;
-  const makeCover = async ({ bgColor, phrase }) => {
-    try {
-      const blob = await renderReelCover(reel, { url, phrase, bgColor });
-      const res = await shareBlob(blob, `bruno-reel-${reel.id.slice(0, 8)}.png`, `${shareText} ${url}`);
-      if (res === "downloaded") brunoToast.success("Portada lista", { description: "Publícala en tus historias." });
-      else if (res === "shared") brunoToast.publish("Portada compartida");
-      onClose();
-    } catch { brunoToast.error("No se pudo generar la portada"); }
+  const renderCover = async ({ bgColor, phrase }) => {
+    const blob = await renderReelCover(reel, { url, phrase, bgColor });
+    return { blob, name: `bruno-reel-${reel.id.slice(0, 8)}.png`, text: shareText, link: url, label: reel.content || "Reel" };
   };
   const downloadWithSeal = async () => {
     if (dl) return;
     setDl(0);
     try {
-      const { data } = await axios.get(`${API}/reels/${reel.id}/download`);
+      const { data } = await axios.get(`${API}/reels/${reel.id}/download`, { params: { seal: getCustomSeal() || undefined } });
       if (data.watermarked) {
         const r = await fetch(data.url); const blob = await r.blob();
         await shareBlob(blob, data.filename, shareText);
@@ -302,7 +298,7 @@ export function ReelShareSheet({ reel, token, onClose }) {
       <div className="px-5 pt-1 pb-2 flex items-center gap-2 text-[11px] text-muted-foreground" data-testid="reel-share-brand">
         <img src="/brand/icon-orange.png" alt="" className="h-4 w-auto" /> Compartir rápido · el enlace lleva el sello BRUNO
       </div>
-      <ShareImageSheet open={imgSheet} onClose={() => setImgSheet(false)} title="Portada del reel" defaultColor="#474747" defaultPhrase={reel.content || ""} formats={["story"]} onGenerate={makeCover} />
+      <ShareImageSheet open={imgSheet} onClose={() => setImgSheet(false)} title="Portada del reel" defaultColor="#474747" defaultPhrase={reel.content || ""} formats={["story"]} render={renderCover} kind="reel" />
       <div className="grid grid-cols-4 gap-2 px-4 pb-6" data-testid="reel-share-quick">
         {opts.map((o) => (
           <button key={o.id} onClick={o.run} className="flex flex-col items-center gap-1.5 rounded-2xl p-2 active:scale-95 transition-transform hover:bg-foreground/[0.04]" data-testid={`reel-share-${o.id}`}>

@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
 import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2, Nfc, Sun, Moon, ImageDown } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeProvider";
-import { shareCardImage } from "@/lib/cardShareImage";
+import { renderCardImage } from "@/lib/cardShareImage";
 import ShareImageSheet from "@/components/bruno/ShareImageSheet";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 
@@ -69,14 +69,12 @@ const ViewCardPage = () => {
   }, [cardId, token]);
 
   const [shareSheet, setShareSheet] = useState(false);
-  const handleShareImage = async ({ format = "story", bgColor, phrase } = {}) => {
-    try {
-      let qr = qrData?.qr_code;
-      if (!qr) { try { const r = await axios.get(`${API}/cards/${cardId}/qr`); qr = r.data?.qr_code; setQrData(r.data); } catch { /* sin QR */ } }
-      const res = await shareCardImage(card, { qr, url: `${window.location.origin}/c/${cardId}`, dark: isDark, format, bgColor, phrase });
-      if (res === "downloaded") brunoToast.success("Imagen lista", { description: "Se descargó tu tarjeta para Instagram, WhatsApp o LinkedIn." });
-      else if (res === "shared") brunoToast.publish("Tarjeta compartida");
-    } catch (e) { brunoToast.error("No se pudo generar la imagen"); }
+  const renderShareImage = async ({ format = "story", bgColor, phrase } = {}) => {
+    let qr = qrData?.qr_code;
+    if (!qr) { try { const r = await axios.get(`${API}/cards/${cardId}/qr`); qr = r.data?.qr_code; setQrData(r.data); } catch { /* sin QR */ } }
+    const link = `${window.location.origin}/c/${cardId}`;
+    const blob = await renderCardImage(card, { qr, url: link, dark: isDark, format, bgColor, phrase });
+    return { blob, name: `bruno-${(card.title || "tarjeta").replace(/[^\w-]+/g, "_")}-${format}.png`, text: `${card.title} · Mi tarjeta BRUNO`, link, label: card.title };
   };
 
   const fetchQRCode = async () => {
@@ -416,7 +414,7 @@ const ViewCardPage = () => {
           <Button variant="outline" size="sm" onClick={() => setShareSheet(true)} data-testid="card-share-image-btn" className="border-primary/40 text-primary hover:bg-primary/10" title="Historia 9:16 o cuadrada 1:1 · Instagram, WhatsApp, Facebook, TikTok, LinkedIn">
             <ImageDown className="w-3.5 h-3.5 mr-1.5" /> Imagen para redes
           </Button>
-          <ShareImageSheet open={shareSheet} onClose={() => setShareSheet(false)} title="Imagen de tu tarjeta" defaultColor={card.background_color || "#FF6A00"} defaultPhrase={card.description || ""} onGenerate={handleShareImage} />
+          <ShareImageSheet open={shareSheet} onClose={() => setShareSheet(false)} title="Imagen de tu tarjeta" defaultColor={card.background_color || "#FF6A00"} defaultPhrase={card.description || ""} render={renderShareImage} kind="card" />
           {isOwner && (
             <Button size="sm" onClick={() => navigate(`/cards/${cardId}/transfer`)} className="rounded-full" data-testid="card-transfer-nfc-cta">
               <Nfc className="w-3.5 h-3.5 mr-1.5" /> Transferir por contacto
