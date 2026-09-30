@@ -23,8 +23,7 @@ import {
   Package,
   Tag,
   Loader2,
-  Sparkles,
-} from "lucide-react";
+  Sparkles, QrCode } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeNotifications } from "@/contexts/RealtimeNotificationContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -35,6 +34,7 @@ const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
 const NOTIFICATION_ICONS = {
   scheduled_published: Sparkles,
+  share_scan: QrCode,
   like: Heart,
   comment: MessageCircle,
   reply: MessageCircle,
@@ -59,6 +59,7 @@ const NOTIFICATION_ICONS = {
 
 const NOTIFICATION_COLORS = {
   scheduled_published: "text-amber-500 bg-amber-500/10",
+  share_scan: "text-primary bg-primary/10",
   like: "text-pink-500 bg-pink-500/10",
   comment: "text-blue-500 bg-blue-500/10",
   reply: "text-blue-500 bg-blue-500/10",

@@ -111,6 +111,33 @@ async def my_scheduled_stories(current_user: User = Depends(get_current_user)):
     return await db.scheduled_stories.find({"user_id": current_user.id}, {"_id": 0}).sort("scheduled_at", 1).to_list(50)
 
 
+class RescheduleIn(BaseModel):
+    scheduled_at: str
+
+
+@router.patch("/scheduled/{story_id}")
+async def reschedule_story(story_id: str, data: RescheduleIn, current_user: User = Depends(get_current_user)):
+    try:
+        when = datetime.fromisoformat(data.scheduled_at.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Fecha inválida")
+    if when < datetime.now(timezone.utc) + timedelta(minutes=1):
+        raise HTTPException(status_code=400, detail="Elige una hora futura")
+    res = await db.scheduled_stories.update_one({"id": story_id, "user_id": current_user.id}, {"$set": {"scheduled_at": when.isoformat()}})
+    if not res.matched_count:
+        raise HTTPException(status_code=404, detail="No encontrada")
+    return {"ok": True, "scheduled_at": when.isoformat()}
+
+
+@router.post("/scheduled/{story_id}/publish-now")
+async def publish_scheduled_now(story_id: str, current_user: User = Depends(get_current_user)):
+    res = await db.scheduled_stories.update_one({"id": story_id, "user_id": current_user.id}, {"$set": {"scheduled_at": datetime.now(timezone.utc).isoformat()}})
+    if not res.matched_count:
+        raise HTTPException(status_code=404, detail="No encontrada")
+    n = await publish_due_scheduled_stories()
+    return {"ok": True, "published": n}
+
+
 @router.delete("/scheduled/{story_id}")
 async def cancel_scheduled_story(story_id: str, current_user: User = Depends(get_current_user)):
     res = await db.scheduled_stories.delete_one({"id": story_id, "user_id": current_user.id})

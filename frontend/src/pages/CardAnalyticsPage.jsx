@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
+import ScanStatsPanel from "@/components/bruno/ScanStatsPanel";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -159,6 +160,7 @@ const CardAnalyticsPage = () => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        <ScanStatsPanel token={token} />
         {/* Overview Stats */}
         {overview && (
           <>

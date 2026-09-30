@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import ShareImageSheet from "@/components/bruno/ShareImageSheet";
+import ScheduledStories from "@/components/bruno/ScheduledStories";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { BrunoHeaderMark } from "@/components/bruno/BrunoLogo";
 import { Link, useNavigate } from "react-router-dom";
@@ -624,6 +625,8 @@ const MyProfilePage = () => {
         userName={profile?.name || user?.name || ""}
         avatarUrl={profile?.avatar_url || ""}
       />
+
+      <ScheduledStories />
 
       {/* Tabs */}
       <div className="border-b sticky top-14 bg-background z-20">

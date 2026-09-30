@@ -65,7 +65,7 @@ async def enrich_notification(notif: dict) -> dict:
 
     if not url:
         url = {"follow": f"/profile/{notif.get('actor_id')}" if notif.get("actor_id") else "/my-profile",
-               "moderation_warning": "/settings", "new_message": "/chat", "scheduled_published": f"/reels?id={tid}" if tid else "/reels"}.get(ntype, "/notifications")
+               "moderation_warning": "/settings", "new_message": "/chat", "scheduled_published": f"/reels?id={tid}" if tid else "/reels", "share_scan": "/analytics?tab=scans"}.get(ntype, "/notifications")
 
     if not notif.get("message") and not notif.get("body"):
         what = label or "contenido"
@@ -79,7 +79,7 @@ async def enrich_notification(notif: dict) -> dict:
             "follow": f"{actor} comenzó a seguirte",
             "remix": f"{actor} hizo un remix de tu {what}",
             "scheduled_published": "Tu publicación programada ya está en línea",
-        }.get(ntype, notif.get("title") or "Tienes una nueva notificación")
+        }.get(ntype, notif.get("content") or notif.get("title") or "Tienes una nueva notificación")
 
     notif["url"] = url
     notif["preview_url"] = preview

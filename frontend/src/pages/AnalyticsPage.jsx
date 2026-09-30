@@ -20,8 +20,7 @@ import {
   Crown,
   Star,
   Lock,
-  RefreshCw
-} from "lucide-react";
+  RefreshCw } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -299,6 +298,7 @@ const AnalyticsPage = () => {
             <h3 className="font-semibold mb-4">Vistas por día</h3>
             <SimpleBarChart data={analytics.views_by_day} height={150} />
           </div>
+
 
           {/* Two columns */}
           <div className="grid md:grid-cols-2 gap-6">
