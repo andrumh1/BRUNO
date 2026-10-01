@@ -1,0 +1,28 @@
+{
+  "summary": "Full backend + frontend testing of 'One Card Engine' redesign (iteration 95). Backend: 10/10 pytest tests passed covering lazy migration of 3 legacy cards (card_design v2, legacy_template preserved, all original fields intact), draft create/update/publish flow with card_design, draft hidden from /cards/explore and /public/cards, 403 for anonymous on draft and 200 for owner, QR endpoint still works, DELETE by owner works (204). Frontend: public card pages (legacy full_banner_bubble, photo, formal) render with new engine on both desktop 1920 and mobile 390 with all required data-testids (card-container[data-preset], card-title, card-avatar, card-type-chip, card-social-block, card-brand-seal) and ZERO runtime errors. Builder flow at /cards/new: style-step + preset-picker with all 8 presets (custom/classic/minimal/modern/glass/formal/photo/animated), preset click updates the main preview (verified data-preset=formal on main container after clicking preset-formal), use-style-btn transitions to editor with all 7 tabs (content/media/social/design/components/effects/type) and live-preview, title autosaves (~2.5s) and status becomes 'saved', draft auto-created with URL change to /cards/{id}/edit, contact fields (whatsapp/phone/email/website/company) generate card-action-* buttons live, publish-btn navigates to /c/{id} with same preset+title (WYSIWYG). Design tab controls present (brand-ff6a00, bg-type-gradient/animated, avatar-position/shape, font-elegant, button-style-outline, social-style-buttons, reset-design-btn). Components tab (toggle-bio, up/down-contact, toggle-qr -> card-qr-block appears). Effects tab (toggle-glass, glass-opacity slider, depth-floating, toggle-animation). Undo/redo buttons present. Mobile 390: mobile-preview-btn opens mobile-preview-sheet with QR card, undo/redo-btn-mobile present, no horizontal overflow (scrollWidth=clientWidth=390). Zero pageerrors across all flows.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration95_card_engine.py",
+    "/app/test_reports/pytest/iteration95.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Public /c/{id} card for photo preset correctly disables banner (expected - photo preset uses fullimage background with banner.enabled=false).",
+    "Formal preset legacy card had no location data, so card-location-block absent is expected (data-driven, not a bug).",
+    "Preset thumbnails inside preset-picker all expose data-testid='card-container' which produces 9 elements on /cards/new (8 thumbs + 1 main preview). This is fine for visual purpose but testing selectors need .last() or specific scoping; main preview is correctly reactive to preset clicks."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration95_card_engine.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "newtest@bruno.com / Test1234!",
+  "seed_data_creation": "Created and deleted draft card dc59d3b0-92f2-4816-ae78-fde235615af3 (via UI), plus one via pytest test_publish_update + one via test_delete_requires_owner (both auto-cleaned via DELETE in fixture/test). Pre-existing draft 3e09a314-fba7-447e-83f3-84861028aad3 reused for editor regression (not deleted).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The One Card Engine (iteration 95) is fully functional end-to-end. Backend pytest file at /app/backend/tests/test_iteration95_card_engine.py (10 tests, all green in ~4.5s) can be reused for regression. The builder uses data-testid heavily; note that preset thumbnails inside preset-picker also carry data-testid='card-container' so queries should scope to .last() or outside preset-picker when checking the main live preview. Legacy card IDs (do NOT delete): 1069a0ba..., 4d495c6e..., 85521e08... Pre-existing owned draft (safe to reuse): 3e09a314-fba7-447e-83f3-84861028aad3."
+}
