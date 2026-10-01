@@ -23,6 +23,7 @@ sys.path.insert(0, '/app/backend')
 
 from utils.database import db
 from utils.security import get_current_user, get_current_user_optional
+from utils.card_design import ensure_design, DESIGN_VERSION
 from models.user import User
 
 router = APIRouter(prefix="/cards", tags=["cards"])
@@ -42,6 +43,9 @@ class SocialLink(BaseModel):
 class ContactInfo(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
+    whatsapp: Optional[str] = None
+    website: Optional[str] = None
+    company: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
     country: Optional[str] = None
@@ -53,7 +57,7 @@ class Card(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
     card_type: str
-    title: str
+    title: str = ""
     subtitle: Optional[str] = None
     description: Optional[str] = None
     avatar_url: Optional[str] = None
@@ -70,6 +74,10 @@ class Card(BaseModel):
     is_public: bool = True
     show_in_feed: bool = True
     is_animated: bool = True
+    is_draft: bool = False
+    card_design: Optional[dict] = None
+    card_design_version: int = 1
+    legacy_template: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     views: int = 0
@@ -77,7 +85,7 @@ class Card(BaseModel):
 
 class CardCreate(BaseModel):
     card_type: str
-    title: str
+    title: str = ""
     subtitle: Optional[str] = None
     description: Optional[str] = None
     avatar_url: Optional[str] = None
@@ -94,6 +102,9 @@ class CardCreate(BaseModel):
     is_public: bool = True
     show_in_feed: bool = True
     is_animated: bool = True
+    is_draft: bool = False
+    card_design: Optional[dict] = None
+    card_design_version: int = 1
 
 
 class CardUpdate(BaseModel):
@@ -114,6 +125,9 @@ class CardUpdate(BaseModel):
     is_public: Optional[bool] = None
     show_in_feed: Optional[bool] = None
     is_animated: Optional[bool] = None
+    is_draft: Optional[bool] = None
+    card_design: Optional[dict] = None
+    card_design_version: Optional[int] = None
     card_type: Optional[str] = None
 
 
@@ -123,12 +137,16 @@ class ReorderRequest(BaseModel):
 
 # ─── Helpers ──────────────────────────────────────────────────────────
 
+NOT_DRAFT = {"is_draft": {"$ne": True}}
+
+
 def _deserialize(card: dict) -> dict:
     """Convert stored ISO strings back to datetimes for Pydantic hydration."""
     if isinstance(card.get('created_at'), str):
         card['created_at'] = datetime.fromisoformat(card['created_at'])
     if isinstance(card.get('updated_at'), str):
         card['updated_at'] = datetime.fromisoformat(card['updated_at'])
+    ensure_design(card)
     return card
 
 
@@ -138,6 +156,8 @@ def _deserialize(card: dict) -> dict:
 async def create_card(card_input: CardCreate, current_user: User = Depends(get_current_user)):
     card_dict = card_input.model_dump()
     card_dict['user_id'] = current_user.id
+    if card_dict.get('card_design'):
+        card_dict['card_design_version'] = DESIGN_VERSION
     card_obj = Card(**card_dict)
 
     card_doc = card_obj.model_dump()
@@ -167,6 +187,7 @@ async def explore_cards(limit: int = 20, offset: int = 0):
     """Public cards for discovery."""
     query = {
         "is_public": True,
+        **NOT_DRAFT,
         "$or": [
             {"show_in_feed": True},
             {"show_in_feed": {"$exists": False}},
@@ -196,9 +217,17 @@ async def get_card(
     if not card_dict:
         raise HTTPException(status_code=404, detail="Card not found")
 
-    if not card_dict.get('is_public', False):
+    if not card_dict.get('is_public', False) or card_dict.get('is_draft'):
         if not current_user or card_dict['user_id'] != current_user.id:
             raise HTTPException(status_code=403, detail="Access denied")
+
+    card_dict, migrated = ensure_design(card_dict)
+    if migrated:
+        await db.cards.update_one({"id": card_id}, {"$set": {
+            "card_design": card_dict["card_design"],
+            "card_design_version": DESIGN_VERSION,
+            "legacy_template": card_dict["legacy_template"],
+        }})
 
     await db.cards.update_one({"id": card_id}, {"$inc": {"views": 1}})
     card_dict['views'] = card_dict.get('views', 0) + 1
@@ -217,6 +246,10 @@ async def update_card(
         raise HTTPException(status_code=404, detail="Card not found")
 
     update_data = {k: v for k, v in card_input.model_dump().items() if v is not None}
+    if "card_design" in update_data:
+        update_data["card_design_version"] = DESIGN_VERSION
+        if not existing.get("legacy_template"):
+            update_data["legacy_template"] = existing.get("template_id") or "default"
     update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
 
     await db.cards.update_one({"id": card_id}, {"$set": update_data})
@@ -303,6 +336,7 @@ async def get_public_cards(skip: int = 0, limit: int = 50):
     """Public cards for the Feed."""
     query = {
         "is_public": True,
+        **NOT_DRAFT,
         "$or": [
             {"show_in_feed": True},
             {"show_in_feed": {"$exists": False}},

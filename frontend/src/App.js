@@ -32,7 +32,7 @@ import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import AuthCallback from "@/pages/AuthCallback";
 import Dashboard from "@/pages/Dashboard";
-import CreateCardPage from "@/pages/CreateCardPage";
+import CardBuilderPage from "@/pages/CardBuilderPage";
 import ViewCardPage from "@/pages/ViewCardPage";
 import QRCodePage from "@/pages/QRCodePage";
 import CardTransferPage from "@/pages/CardTransferPage";
@@ -50,7 +50,6 @@ import ComposePage from "@/pages/ComposePage";
 import PostDetailPage from "@/pages/PostDetailPage";
 import SoundPage from "@/pages/SoundPage";
 import MapPage from "@/pages/MapPage";
-import EditCardPage from "@/pages/EditCardPage";
 import StorePage from "@/pages/StorePage";
 import ChatPage from "@/pages/ChatPage";
 import UserProfilePage from "@/pages/UserProfilePage";
@@ -159,8 +158,8 @@ function AppRouter() {
       <Route path="/marketplace/my-products" element={<ProtectedRoute><MyProductsPage /></ProtectedRoute>} />
       <Route path="/marketplace/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Navigate to="/my-profile" replace /></ProtectedRoute>} />
-      <Route path="/cards/new" element={<ProtectedRoute><CreateCardPage /></ProtectedRoute>} />
-      <Route path="/cards/:cardId/edit" element={<ProtectedRoute><EditCardPage /></ProtectedRoute>} />
+      <Route path="/cards/new" element={<ProtectedRoute><CardBuilderPage /></ProtectedRoute>} />
+      <Route path="/cards/:cardId/edit" element={<ProtectedRoute><CardBuilderPage /></ProtectedRoute>} />
       <Route path="/cards/:cardId/qr" element={<ProtectedRoute><QRCodePage /></ProtectedRoute>} />
       <Route path="/nfc/activate" element={<ProtectedRoute><ActivateNFCPage /></ProtectedRoute>} />
       <Route path="/nfc/manage" element={<ProtectedRoute><NFCManagerPage /></ProtectedRoute>} />

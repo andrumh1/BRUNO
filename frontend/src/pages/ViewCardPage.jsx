@@ -5,16 +5,14 @@ import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import SocialLinkButton from "@/components/SocialLinkButton";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
-import { Share2, QrCode, Eye, Globe, Phone, Mail, MapPin, MessageCircle, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2, Nfc, Sun, Moon, ImageDown } from "lucide-react";
+import { Share2, QrCode, Globe, ArrowLeft, Pencil, Copy, ExternalLink, Minimize2, Nfc, Sun, Moon, ImageDown } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { renderCardImage } from "@/lib/cardShareImage";
 import ShareImageSheet from "@/components/bruno/ShareImageSheet";
-import { brunoToast } from "@/components/bruno/BrunoToast";
-
-const luminance = (hex) => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return 0; const n = parseInt(m[1], 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
+import CardRenderer from "@/components/cards/CardRenderer";
+import { resolveDesign, deepMerge, luminance } from "@/lib/cardDesign";
 import { useNavScroll } from "@/contexts/NavScrollContext";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -127,23 +125,11 @@ const ViewCardPage = () => {
     );
   }
 
-  // Modo oscuro: las tarjetas claras (crema/blanco) pasan a gris corporativo con texto crema.
-  const rawBg = card.background_color || "#FF6A00";
-  const lightCard = luminance(rawBg) > 0.72;
-  const bg = isDark && lightCard ? "#474747" : rawBg;
-  const fg = isDark && lightCard ? "#F9F1EA" : (card.text_color || "#FFFFFF");
-  const isFullBanner = card.template_id === "full_banner_bubble";
-  const isEdge = card.template_id === "edge_actions";
-  const isPremiumGlass = card.template_id === "premium_glass";
-  const isPremiumFormal = card.template_id === "premium_formal";
-  const isPremiumFullImg = card.template_id === "premium_fullimg";
-  const isPremiumAnimated = card.template_id === "premium_animated";
-
-  const cardTypeLabel = card.card_type === "personal" ? "Personal" : card.card_type === "empresarial" ? "Empresarial" : card.card_type === "negocio" ? "Negocio" : card.card_type === "servicios" ? "Servicios" : card.card_type === "lugares" ? "Lugar" : card.card_type === "guardian" ? "Guardian" : card.card_type === "curriculum" ? "CV" : card.card_type === "mascotas" ? "Mascota" : card.card_type;
-
-  const hasContact = card.contact_info && (card.contact_info.phone || card.contact_info.email || card.contact_info.address);
-  const hasSocial = card.social_links && card.social_links.length > 0;
-  const hasGallery = card.gallery_photos && card.gallery_photos.length > 0;
+  // Modo oscuro: fondos claros (crema/blanco) pasan a gris corporativo con texto crema.
+  const baseDesign = resolveDesign(card);
+  const lightCard = ["color", "gradient"].includes(baseDesign.background.type) && luminance(baseDesign.background.color) > 0.72;
+  const design = isDark && lightCard ? deepMerge(baseDesign, { background: { color: "#474747", color2: "#2f2f2f" }, colors: { text: "#F9F1EA" } }) : baseDesign;
+  const bg = design.background.color;
 
   return (
     <div className="min-h-screen bg-background pb-20" data-testid="view-card-page" data-card-theme={isDark ? "dark" : "light"}>
@@ -194,235 +180,8 @@ const ViewCardPage = () => {
 
       {/* Full-width card container */}
       <div className="relative z-10 w-full px-3 sm:px-6 lg:px-10 xl:px-16">
-        {/* ===== MAIN CARD - full width ===== */}
-        <div
-          className={`rounded-2xl lg:rounded-3xl shadow-2xl overflow-hidden border ${isPremiumGlass ? 'backdrop-blur-xl bg-white/10' : ''} ${isPremiumFormal ? 'border-amber-400/40' : ''}`}
-          style={{
-            borderColor: isPremiumFormal ? undefined : `${bg}30`,
-            ...(isPremiumAnimated ? { background: `linear-gradient(135deg, ${bg}, ${bg}CC, ${bg}88, ${bg})`, backgroundSize: '400% 400%', animation: 'gradientShift 8s ease infinite' } : {}),
-            ...(isPremiumFullImg && card.banner_url ? { backgroundImage: `url(${card.banner_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
-          }}
-          data-testid="card-container"
-        >
-          {/* Premium animated gradient keyframes */}
-          {isPremiumAnimated && (
-            <style>{`@keyframes gradientShift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }`}</style>
-          )}
-          {/* Banner / Header */}
-          {isPremiumFullImg ? (
-            /* premium_fullimg: dark overlay on the background image for readability */
-            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/70 pointer-events-none" />
-          ) : isFullBanner && card.banner_url ? (
-            /* full_banner_bubble: la imagen llena el fondo y la burbuja fluye (nunca se recorta) */
-            <div className="relative w-full overflow-hidden" data-testid="card-full-banner">
-              <img src={card.banner_url} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/20 to-black/70" />
-              <div className="relative pt-40 sm:pt-56 lg:pt-72 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8">
-                <div className="bg-white/90 dark:bg-[#474747]/90 backdrop-blur-xl rounded-2xl p-4 sm:p-5 lg:p-6 shadow-xl max-w-3xl text-foreground" data-testid="card-banner-bubble">
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    {card.avatar_url ? (
-                      <img src={card.avatar_url} alt={card.title} className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover shrink-0 border-2 shadow-md" style={{ borderColor: bg }} data-testid="card-avatar" />
-                    ) : (
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl shrink-0 border-2 shadow-md flex items-center justify-center bg-[#f9f1ea]" style={{ borderColor: bg }} data-testid="card-avatar-fallback">
-                        <BrunoLogo variant="icon" tone="orange" className="w-[62%]" />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mb-1" style={{ backgroundColor: `${bg}22`, color: bg }}>{cardTypeLabel}</span>
-                      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold leading-tight break-words" data-testid="card-title">{card.title}</h1>
-                      {card.subtitle && <p className="text-sm sm:text-base text-muted-foreground mt-0.5">{card.subtitle}</p>}
-                    </div>
-                    {card.user_id && (!user || card.user_id !== user.id) && (
-                      <button onClick={handleStartChat} className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white hover:scale-105 transition-transform shadow-md" style={{ backgroundColor: bg }} title="Mensaje" data-testid="card-chat-btn">
-                        <MessageCircle className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                  {card.description && <p className="text-sm sm:text-base mt-3 leading-relaxed opacity-90">{card.description}</p>}
-                </div>
-              </div>
-            </div>
-          ) : card.banner_url ? (
-            <div className="relative w-full overflow-hidden" style={{ aspectRatio: "4/1" }}>
-              <img
-                src={card.banner_url}
-                alt="Banner"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/60" />
-            </div>
-          ) : (
-            <div className="w-full h-28 sm:h-36 md:h-44 lg:h-52" style={{ background: `linear-gradient(135deg, ${bg}, ${bg}cc)` }} />
-          )}
-
-          {/* Card body */}
-          <div
-            className={`relative ${isPremiumGlass ? 'backdrop-blur-xl' : ''}`}
-            style={{
-              background: isPremiumFullImg ? 'transparent' : isPremiumGlass ? `${bg}40` : `linear-gradient(180deg, ${bg}, ${bg}ee)`,
-              color: fg
-            }}
-          >
-            {/* Avatar row (la plantilla banner-burbuja ya muestra el avatar dentro de la burbuja) */}
-            {!(isFullBanner && card.banner_url) && (
-            <div className="px-5 sm:px-8 lg:px-12 -mt-12 sm:-mt-14 lg:-mt-16 flex items-end justify-between">
-              <div className="relative">
-                {card.avatar_url ? (
-                  <img
-                    src={card.avatar_url}
-                    alt={card.title}
-                    className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-2xl lg:rounded-3xl object-cover border-4 shadow-xl overflow-hidden"
-                    style={{ borderColor: bg }}
-                    data-testid="card-avatar"
-                  />
-                ) : (
-                  <div
-                    className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-2xl lg:rounded-3xl flex items-center justify-center border-4 shadow-xl overflow-hidden bg-[#f9f1ea]"
-                    style={{ borderColor: bg }}
-                    data-testid="card-avatar-fallback"
-                  >
-                    <BrunoLogo variant="icon" tone="orange" className="w-[62%]" />
-                  </div>
-                )}
-                <div
-                  className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold whitespace-nowrap"
-                  style={{ backgroundColor: `${fg}25`, backdropFilter: "blur(8px)" }}
-                >
-                  {cardTypeLabel}
-                </div>
-              </div>
-
-              <div className="flex gap-2 mb-3">
-                  {card.user_id && (!user || card.user_id !== user.id) && (
-                    <button onClick={handleStartChat} className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center hover:scale-105 transition-transform" style={{ backgroundColor: `${fg}20` }} title="Mensaje" data-testid="card-chat-btn">
-                      <MessageCircle className="w-5 h-5" />
-                    </button>
-                  )}
-              </div>
-            </div>
-            )}
-
-            {/* Content - responsive grid on large screens */}
-            <div className="px-5 sm:px-8 lg:px-12 pt-5 sm:pt-6 lg:pt-8 pb-6 sm:pb-8 lg:pb-10">
-              {!(isFullBanner && card.banner_url) && (
-                <div className="mb-6">
-                  <h1 className={`text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 ${isPremiumFormal ? 'font-serif tracking-tight' : ''}`} data-testid="card-title">{card.title}</h1>
-                  {card.subtitle && <p className="text-sm sm:text-base lg:text-lg opacity-85 font-medium mb-1.5">{card.subtitle}</p>}
-                  {card.description && <p className="text-sm sm:text-base opacity-75 leading-relaxed max-w-4xl">{card.description}</p>}
-                </div>
-              )}
-
-              {/* Bubble grid - distributed content sections */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5">
-                {/* Contact Info Bubble */}
-                {hasContact && (
-                  <div className="rounded-2xl p-4 lg:p-5 space-y-2.5" style={{ backgroundColor: `${fg}10` }} data-testid="card-contact-bubble">
-                    <h3 className="text-xs font-bold uppercase tracking-wider opacity-60 mb-3">Contacto</h3>
-                    {card.contact_info.phone && (
-                      <a href={`tel:${card.contact_info.phone}`} className="flex items-center gap-3 p-2.5 rounded-xl hover:scale-[1.02] transition-transform" style={{ backgroundColor: `${fg}10` }}>
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${fg}15` }}>
-                          <Phone className="w-4 h-4" />
-                        </div>
-                        <span className="text-sm truncate">{card.contact_info.phone}</span>
-                      </a>
-                    )}
-                    {card.contact_info.email && (
-                      <a href={`mailto:${card.contact_info.email}`} className="flex items-center gap-3 p-2.5 rounded-xl hover:scale-[1.02] transition-transform" style={{ backgroundColor: `${fg}10` }}>
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${fg}15` }}>
-                          <Mail className="w-4 h-4" />
-                        </div>
-                        <span className="text-sm truncate">{card.contact_info.email}</span>
-                      </a>
-                    )}
-                    {card.contact_info.address && (
-                      <div className="flex items-center gap-3 p-2.5 rounded-xl" style={{ backgroundColor: `${fg}10` }}>
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${fg}15` }}>
-                          <MapPin className="w-4 h-4" />
-                        </div>
-                        <span className="text-sm">
-                          {card.contact_info.address}
-                          {card.contact_info.city && `, ${card.contact_info.city}`}
-                          {card.contact_info.country && `, ${card.contact_info.country}`}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Social Links Bubble */}
-                {hasSocial && (
-                  <div className="rounded-2xl p-4 lg:p-5" style={{ backgroundColor: `${fg}10` }} data-testid="card-social-bubble">
-                    <h3 className="text-xs font-bold uppercase tracking-wider opacity-60 mb-3">Conecta conmigo</h3>
-                    <div className="flex flex-wrap gap-2.5">
-                      {card.social_links.map((link) => (
-                        <SocialLinkButton key={`${link.platform}-${link.url}`} link={link} size="default" theme="dark" onlyIcon={true} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Gallery Bubble */}
-                {hasGallery && (
-                  <div className="rounded-2xl p-4 lg:p-5 md:col-span-2 xl:col-span-1" style={{ backgroundColor: `${fg}10` }} data-testid="card-gallery-bubble">
-                    <h3 className="text-xs font-bold uppercase tracking-wider opacity-60 mb-3">Galeria</h3>
-                    <div className="grid grid-cols-3 gap-2">
-                      {card.gallery_photos.map((photo, i) => (
-                        <div key={photo} className="aspect-square rounded-xl overflow-hidden">
-                          <img src={photo} alt={`Foto ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Location bubble (if separate from contact) */}
-                {card.location && (card.location.city || card.location.address) && (
-                  <div className="rounded-2xl p-4 lg:p-5" style={{ backgroundColor: `${fg}10` }} data-testid="card-location-bubble">
-                    <h3 className="text-xs font-bold uppercase tracking-wider opacity-60 mb-3">Ubicacion</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${card.location.lat},${card.location.lng}`, '_blank')}>
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${fg}15` }}>
-                          <MapPin className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          {card.location.place_name && <span className="text-xs font-semibold block">{card.location.place_name}</span>}
-                          <span className="text-sm opacity-80">{card.location.city || card.location.address}</span>
-                        </div>
-                      </div>
-                      {/* Additional locations */}
-                      {card.locations?.length > 0 && card.locations.map((loc, idx) => (
-                        loc.address && (
-                          <div key={`loc-${loc.address}-${idx}`} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => loc.lat && loc.lng && window.open(`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`, '_blank')}
-                            data-testid={`card-location-${idx}`}>
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${fg}10` }}>
-                              <MapPin className="w-4 h-4" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              {loc.label && <span className="text-xs font-semibold block">{loc.label}</span>}
-                              <span className="text-xs opacity-70">{loc.address}</span>
-                            </div>
-                          </div>
-                        )
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            {/* Sello BRUNO */}
-            <div className="px-5 sm:px-8 lg:px-12 pb-4 pt-1 flex items-center justify-between" data-testid="card-brand-seal">
-              <span className="h-px flex-1 mr-3" style={{ background: `linear-gradient(90deg, transparent, ${fg}55)` }} />
-              <Link to="/" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-semibold tracking-wide backdrop-blur-md hover:scale-105 transition-transform" style={{ backgroundColor: `${fg}18`, color: fg }} title="Hecho con BRUNO">
-                <span className="bruno-mark h-3.5" style={{ color: fg }} aria-hidden />
-                Hecho con BRUNO
-              </Link>
-              <span className="h-px flex-1 ml-3" style={{ background: `linear-gradient(90deg, ${fg}55, transparent)` }} />
-            </div>
-          </div>
-        </div>
-
+        {/* ===== ONE CARD ENGINE ===== */}
+        <CardRenderer data={card} design={design} cardId={cardId} onChat={card.user_id && (!user || card.user_id !== user.id) ? handleStartChat : null} className="lg:rounded-3xl" />
         {/* Share bar */}
         <div className="mt-5 flex items-center justify-center gap-3 flex-wrap">
           <Button variant="outline" size="sm" onClick={copyLink} data-testid="card-copy-link">
