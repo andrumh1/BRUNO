@@ -39,7 +39,7 @@ export default function ReelCarousel({ reel, images }) {
       </div>
       {images.length > 1 && (
         <>
-          <span className="absolute right-3 z-10 rounded-full bg-black/45 px-2 py-0.5 text-[11px] text-white" style={{ top: "calc(env(safe-area-inset-top, 0px) + 100px)" }} data-testid="reel-carousel-counter">{index + 1}/{images.length}</span>
+          <span className="absolute right-3 z-10 rounded-full bg-black/45 px-2 py-0.5 text-[11px] text-white" style={{ top: "calc(var(--safe-top) + 100px)" }} data-testid="reel-carousel-counter">{index + 1}/{images.length}</span>
           <div className="absolute inset-x-0 z-10 flex justify-center gap-1.5" style={{ bottom: "calc(var(--nav-reserve, 64px) + 8px)" }} data-testid="reel-carousel-dots">
             {images.map((_, i) => <span key={i} className={`h-1.5 rounded-full transition-all ${i === index ? "w-4 bg-white" : "w-1.5 bg-white/45"}`} />)}
           </div>

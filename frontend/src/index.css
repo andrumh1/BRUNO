@@ -7,6 +7,16 @@
    Paleta corporativa: #FFFFFF, #F9F1EA, #FF6A00, #474747
    ============================================ */
 
+:root {
+  /* Zona segura real del dispositivo (notch / status bar / barra de gestos).
+     En Android (Capacitor) env() puede devolver 0: @capacitor-community/safe-area
+     inyecta --safe-area-inset-* y aqui tomamos el mayor de ambos. */
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  --safe-left: max(env(safe-area-inset-left, 0px), var(--safe-area-inset-left, 0px));
+  --safe-right: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px));
+}
+
 body {
   margin: 0;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
@@ -16,7 +26,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   /* Safe area for mobile devices */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: var(--safe-bottom);
   /* Reduced base font size for better mobile ergonomics */
   font-size: 14px;
   line-height: 1.5;
@@ -47,11 +57,11 @@ select {
 
 /* Safe area utilities for mobile */
 .safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: var(--safe-bottom);
 }
 
 .safe-area-top {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: var(--safe-top);
 }
 
 /* ============================================================
@@ -64,7 +74,7 @@ header.sticky.top-0,
 header.fixed,
 .sticky.top-0,
 .fixed.top-0 {
-  padding-top: max(var(--sticky-header-pt, 0px), env(safe-area-inset-top, 0px));
+  padding-top: max(var(--sticky-header-pt, 0px), var(--safe-top));
 }
 
 /* Opt-out for elements that manage their own safe area (like the

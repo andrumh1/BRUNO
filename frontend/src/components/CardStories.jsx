@@ -273,13 +273,13 @@ const CardStoryViewer = ({ stories, initialIndex = 0, onClose }) => {
     <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
       <button 
         onClick={onClose}
-        className="absolute top-4 right-4 z-20 p-2 bg-white/10 rounded-full text-white hover:bg-white/20"
+        className="absolute right-4 z-20 p-2 bg-white/10 rounded-full text-white hover:bg-white/20" style={{ top: "calc(var(--safe-top) + 1rem)" }}
       >
         <X className="w-6 h-6" />
       </button>
 
       {/* Counter */}
-      <div className="absolute top-4 left-4 z-20 px-3 py-1 bg-white/10 rounded-full text-white text-sm">
+      <div className="absolute left-4 z-20 px-3 py-1 bg-white/10 rounded-full text-white text-sm" style={{ top: "calc(var(--safe-top) + 1rem)" }}>
         {currentIndex + 1} / {stories.length}
       </div>
 

@@ -89,7 +89,7 @@ export default function ShareImageSheet({ open, onClose, title = "Imagen para re
     <Sheet open={open} onOpenChange={(o) => { if (!o && !musicOpen) onClose(); }}>
       <SheetContent side="bottom" className="rounded-t-3xl max-h-[90vh] overflow-y-auto" data-testid="share-image-sheet">
         <SheetHeader className="text-left"><SheetTitle className="flex items-center gap-2"><BrunoLogo variant="icon" tone="orange" className="h-5" />{title}</SheetTitle></SheetHeader>
-        <div className="space-y-5 pt-3" style={{ paddingBottom: "calc(var(--nav-reserve, 64px) + env(safe-area-inset-bottom, 0px) + 16px)" }}>
+        <div className="space-y-5 pt-3" style={{ paddingBottom: "calc(var(--nav-reserve, 64px) + var(--safe-bottom) + 16px)" }}>
           {formats.length > 1 && (
             <div className="flex gap-2" data-testid="share-format">
               {formats.map((f) => (

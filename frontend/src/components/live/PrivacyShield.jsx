@@ -76,7 +76,7 @@ export default function PrivacyShield({ active, label, children }) {
         </div>
       )}
 
-      <div className="absolute z-[7] left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/45 text-[10px] text-white/90" style={{ top: "calc(env(safe-area-inset-top, 0px) + 56px)" }} data-testid="privacy-badge">
+      <div className="absolute z-[7] left-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/45 text-[10px] text-white/90" style={{ top: "calc(var(--safe-top) + 56px)" }} data-testid="privacy-badge">
         <ShieldCheck className="w-3 h-3 text-emerald-400" /> {nativeInfo?.blocksScreenshots ? "Capturas bloqueadas" : "Live privado protegido"}
       </div>
     </div>

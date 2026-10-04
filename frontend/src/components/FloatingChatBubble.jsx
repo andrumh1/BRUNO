@@ -538,7 +538,7 @@ const FloatingChatBubble = () => {
             idle ? 'opacity-40' : 'opacity-100'
           }`}
           style={{
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+            bottom: 'calc(var(--safe-bottom) + 8px)',
             left: 'calc(50% + 76px)',
           }}
         >

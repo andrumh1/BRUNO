@@ -41,8 +41,18 @@ const config: CapacitorConfig = {
       splashImmersive: true,
     },
     StatusBar: {
-      style: 'DARK',
-      backgroundColor: '#FF6B35',
+      style: 'LIGHT',
+      overlaysWebView: true,
+      backgroundColor: '#00000000',
+    },
+    SafeArea: {
+      enabled: true,
+      customColorsForSystemBars: true,
+      statusBarColor: '#00000000',
+      statusBarContent: 'dark',
+      navigationBarColor: '#00000000',
+      navigationBarContent: 'dark',
+      offset: 0,
     },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],

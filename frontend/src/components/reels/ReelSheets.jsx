@@ -24,7 +24,7 @@ export function BottomSheet({ open, onClose, title, children, testid, height = "
           <motion.div
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 400, damping: 36 }}
             className="bruno-glass absolute inset-x-0 bottom-0 rounded-t-[28px] border flex flex-col overflow-hidden"
-            style={{ height, paddingBottom: "env(safe-area-inset-bottom, 0px)", maxWidth: 560, marginInline: "auto" }}
+            style={{ height, paddingBottom: "var(--safe-bottom)", maxWidth: 560, marginInline: "auto" }}
             onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}
             data-testid={testid}
           >

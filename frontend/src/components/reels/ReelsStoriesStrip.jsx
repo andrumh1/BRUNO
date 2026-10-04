@@ -29,7 +29,7 @@ export default function ReelsStoriesStrip({ token, user, visible }) {
         {visible && (
           <motion.div
             initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.22 }}
-            className="absolute inset-x-0 z-20 pointer-events-none" style={{ top: "calc(env(safe-area-inset-top, 0px) + 52px)" }}
+            className="absolute inset-x-0 z-20 pointer-events-none" style={{ top: "calc(var(--safe-top) + 52px)" }}
             data-testid="reels-stories-strip"
           >
             <div className="flex gap-3 overflow-x-auto scrollbar-none px-3 py-2 pointer-events-auto" onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>

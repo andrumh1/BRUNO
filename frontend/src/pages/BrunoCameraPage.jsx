@@ -699,12 +699,12 @@ const BrunoCameraPage = () => {
   // ==================== RENDER ====================
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 50, paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom, 0px))" }} data-testid="camera-page" data-no-safe-top>
+    <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 50, paddingBottom: "calc(3.5rem + var(--safe-bottom))" }} data-testid="camera-page" data-no-safe-top>
       {/* Camera / recording error overlay — dismissible, non-blocking */}
       {cameraError && (
         <div
           className="absolute left-3 right-3 z-[60] rounded-xl bg-red-500/95 text-white px-4 py-3 shadow-2xl flex items-start gap-3 backdrop-blur-md"
-          style={{ top: "calc(env(safe-area-inset-top, 12px) + 12px)" }}
+          style={{ top: "calc(var(--safe-top) + 12px)" }}
           data-testid="camera-error-banner"
         >
           <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -751,7 +751,7 @@ const BrunoCameraPage = () => {
         <canvas ref={canvasRef} className="hidden" />
 
         {/* ---- TOP BAR ---- */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3 pb-8 bg-gradient-to-b from-black/60 via-black/20 to-transparent" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top, 12px))" }}>
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-3 pb-8 bg-gradient-to-b from-black/60 via-black/20 to-transparent" style={{ paddingTop: "max(0.75rem, var(--safe-top))" }}>
           <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-full bg-black/30 backdrop-blur-sm" data-testid="camera-close-btn">
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
@@ -1190,7 +1190,7 @@ const BrunoCameraPage = () => {
                 </button>
               </div>
 
-              <div className="overflow-y-auto p-4 pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
+              <div className="overflow-y-auto p-4 pb-[calc(5rem+var(--safe-bottom))]">
                 {interactivePanel === "stickers" && (
                   <div className="grid grid-cols-8 gap-2" data-testid="interactive-stickers">
                     {STICKERS.map((emoji, i) => (

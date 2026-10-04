@@ -134,7 +134,7 @@ export default function ReelsPage() {
   const swipeRight = () => navigate(-1);
   const openFromHistory = (r) => { setHistoryOpen(false); navigate(`/reels?id=${r.id}`); };
 
-  const topPad = "calc(env(safe-area-inset-top, 0px) + 8px)";
+  const topPad = "calc(var(--safe-top) + 8px)";
 
   return (
     <div className="fixed inset-0 reels-surface overflow-hidden" data-testid="reels-page">
@@ -249,7 +249,7 @@ function LivesGrid({ token, navigate }) {
   };
 
   return (
-    <div className="h-full overflow-y-auto px-4 pb-32" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 64px)" }} data-testid="lives-grid">
+    <div className="h-full overflow-y-auto px-4 pb-32" style={{ paddingTop: "calc(var(--safe-top) + 64px)" }} data-testid="lives-grid">
       {/* Private access */}
       <div className="bruno-glass rounded-[22px] border p-3 mb-4 flex items-center gap-2" data-testid="lives-private-join">
         <Lock className="w-4 h-4 text-primary shrink-0" />

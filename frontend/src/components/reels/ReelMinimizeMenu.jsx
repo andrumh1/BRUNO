@@ -22,7 +22,7 @@ export default function ReelMinimizeMenu({ open, onClose, onPick, nativeSupporte
       {open && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[10500] flex items-end sm:items-center justify-center bg-[#474747]/40 backdrop-blur-[3px]" onClick={onClose} data-testid="reel-minimize-menu" onTouchEnd={(e) => e.stopPropagation()}>
           <motion.div initial={{ y: 40, opacity: 0, scale: 0.96 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 30, opacity: 0 }} transition={{ type: "spring", stiffness: 380, damping: 30 }}
-            className={`w-full max-w-sm mx-3 mb-[calc(env(safe-area-inset-bottom,0px)+16px)] sm:mb-0 rounded-[28px] p-3 ${glass} reel-chrome`} onClick={(e) => e.stopPropagation()}>
+            className={`w-full max-w-sm mx-3 mb-[calc(var(--safe-bottom)+16px)] sm:mb-0 rounded-[28px] p-3 ${glass} reel-chrome`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-2 pt-1 pb-2">
               <span className="text-sm font-bold">Minimizar reel</span>
               <button onClick={onClose} className="w-8 h-8 rounded-full grid place-items-center bg-white/10 active:scale-90" aria-label="Cerrar" data-testid="reel-min-close"><X className="w-4 h-4" /></button>

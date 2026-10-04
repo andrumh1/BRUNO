@@ -99,13 +99,13 @@ export default function StartLivePage() {
           right={live.is_private && <button onClick={() => setCodePanel((v) => !v)} className="h-9 px-3 rounded-full bg-primary text-white text-xs font-bold inline-flex items-center gap-1" data-testid="live-code-toggle"><KeyRound className="w-3.5 h-3.5" /> Código</button>} />
 
         {/* Host controls */}
-        <div className="absolute right-3 z-30 flex flex-col gap-2" style={{ top: "calc(env(safe-area-inset-top, 0px) + 64px)" }}>
+        <div className="absolute right-3 z-30 flex flex-col gap-2" style={{ top: "calc(var(--safe-top) + 64px)" }}>
           <button onClick={flip} className="w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-flip-btn"><FlipHorizontal className="w-5 h-5" /></button>
           <button onClick={() => setMuted((m) => !m)} className={`w-10 h-10 rounded-full grid place-items-center ${muted ? "bg-red-500 text-white" : "bg-black/45 text-white"}`} data-testid="live-mute-btn">{muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}</button>
         </div>
 
         {live.is_private && codePanel && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="absolute left-3 right-3 z-30 bruno-glass rounded-[24px] border p-4" style={{ top: "calc(env(safe-area-inset-top, 0px) + 64px)", maxWidth: 420 }} data-testid="live-code-panel">
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="absolute left-3 right-3 z-30 bruno-glass rounded-[24px] border p-4" style={{ top: "calc(var(--safe-top) + 64px)", maxWidth: 420 }} data-testid="live-code-panel">
             <div className="flex items-center gap-2 mb-2"><Lock className="w-4 h-4 text-primary" /><p className="text-sm font-semibold">Live privado</p><span className="ml-auto text-[10px] text-muted-foreground inline-flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-emerald-500" /> Anti-captura</span></div>
             <p className="text-[11px] text-muted-foreground mb-2">Solo quien tenga este código puede entrar. Compártelo únicamente con tus invitados.</p>
             <div className="flex items-center gap-2">
@@ -128,13 +128,13 @@ export default function StartLivePage() {
     <div className="fixed inset-0 bg-black overflow-hidden" data-testid="live-setup-page">
       {stage}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
-      <div className="absolute inset-x-0 z-30 flex items-center px-3" style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
+      <div className="absolute inset-x-0 z-30 flex items-center px-3" style={{ top: "calc(var(--safe-top) + 10px)" }}>
         <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-setup-back"><ArrowLeft className="w-5 h-5" /></button>
         <p className="mx-auto text-white font-bold text-sm inline-flex items-center gap-1.5"><Radio className="w-4 h-4 text-red-500" /> Nuevo live</p>
         <button onClick={flip} className="w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-setup-flip"><FlipHorizontal className="w-5 h-5" /></button>
       </div>
 
-      <div className="absolute inset-x-3 z-30 bruno-glass rounded-[28px] border p-4 space-y-3" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)", maxWidth: 480, marginInline: "auto" }} data-testid="live-setup-card">
+      <div className="absolute inset-x-3 z-30 bruno-glass rounded-[28px] border p-4 space-y-3" style={{ bottom: "calc(var(--safe-bottom) + 16px)", maxWidth: 480, marginInline: "auto" }} data-testid="live-setup-card">
         <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={80} placeholder="Título del live"
           className="w-full h-11 rounded-2xl bg-foreground/[0.06] px-4 text-sm outline-none focus:ring-2 ring-primary/40" data-testid="live-title-input" />
         <div className="flex gap-1.5 overflow-x-auto scrollbar-none">

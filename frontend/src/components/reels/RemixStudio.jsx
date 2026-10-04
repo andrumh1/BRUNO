@@ -200,7 +200,7 @@ export default function RemixStudio({ reel, mode, token, onClose, onPublished })
       </div>
 
       {/* top bar */}
-      <div className="absolute inset-x-0 z-10 flex items-center px-3" style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
+      <div className="absolute inset-x-0 z-10 flex items-center px-3" style={{ top: "calc(var(--safe-top) + 10px)" }}>
         <button onClick={onClose} className="w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="remix-close"><X className="w-5 h-5" /></button>
         <div className="mx-auto inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-black/45 text-white text-xs font-bold">
           {isDuet ? <Columns2 className="w-3.5 h-3.5" /> : <Scissors className="w-3.5 h-3.5" />} {isDuet ? "Dúo" : "Stitch"} · @{reel.author?.username || reel.author?.name}
@@ -219,7 +219,7 @@ export default function RemixStudio({ reel, mode, token, onClose, onPublished })
       {error && <div className="absolute top-32 inset-x-6 z-10 text-center text-white text-sm bg-red-500/80 rounded-2xl p-3" data-testid="remix-error">{error}</div>}
 
       {/* bottom controls */}
-      <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 to-transparent px-5 pb-6 pt-10" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}>
+      <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 to-transparent px-5 pb-6 pt-10" style={{ paddingBottom: "calc(var(--safe-bottom) + 20px)" }}>
         {step === "trim" && (
           <div className="space-y-3" data-testid="remix-trim">
             <p className="text-white text-xs text-center">Elige hasta {MAX_CLIP}s del original · <b>{clipLen.toFixed(1)}s</b> seleccionados</p>

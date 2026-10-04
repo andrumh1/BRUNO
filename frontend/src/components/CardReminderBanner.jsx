@@ -41,7 +41,7 @@ export default function CardReminderBanner() {
     <AnimatePresence>
       {show && (
         <motion.div initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -80, opacity: 0 }} transition={{ type: "spring", stiffness: 260, damping: 24 }}
-          className="fixed inset-x-3 z-[10400] no-glass" style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }} data-testid="card-reminder-banner">
+          className="fixed inset-x-3 z-[10400] no-glass" style={{ top: "calc(var(--safe-top) + 10px)" }} data-testid="card-reminder-banner">
           <div className="max-w-md mx-auto rounded-2xl shadow-2xl border border-primary/20 p-3 flex items-center gap-3" style={{ background: "hsl(var(--card))" }}>
             <motion.div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-orange-400 text-white flex items-center justify-center shrink-0" animate={{ rotate: [0, -6, 6, 0] }} transition={{ repeat: Infinity, repeatDelay: 2.5, duration: 0.8 }}>
               <CreditCard className="w-5 h-5" />

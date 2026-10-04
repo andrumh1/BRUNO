@@ -523,7 +523,7 @@ const FloatingBubbles = () => {
                 idle ? 'opacity-40' : 'opacity-100'
               }`}
               style={{
-                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+                bottom: 'calc(var(--safe-bottom) + 8px)',
                 right: 'calc(50% + 108px)',
                 maxWidth: 'calc(50% - 108px)',
               }}
@@ -599,7 +599,7 @@ const FloatingBubbles = () => {
             idle ? 'opacity-40' : 'opacity-100'
           }`}
             style={{
-              bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+              bottom: 'calc(var(--safe-bottom) + 8px)',
               right: 'calc(50% + 76px)',
             }}>
             <button
@@ -635,15 +635,13 @@ const FloatingBubbles = () => {
             className="relative group transition-all duration-300"
             data-testid="floating-ai-btn"
           >
-            <div className={`absolute inset-[-3px] bg-gradient-to-r from-violet-500/30 to-fuchsia-500/30 rounded-full blur-md transition-all duration-300 ${
+            <div className={`absolute inset-[-3px] bg-gradient-to-r from-[#FF6A00]/35 to-amber-400/30 rounded-full blur-md transition-all duration-300 ${
               showAIChat ? 'opacity-90' : 'opacity-0 group-hover:opacity-60'
             }`} />
-            <div className={`relative w-10 h-10 rounded-full overflow-hidden shadow-md transition-all duration-300 shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-110 active:scale-90 ${
-              showAIChat ? 'ring-2 ring-violet-400 ring-offset-1 ring-offset-background' : ''
+            <div className={`relative w-10 h-10 rounded-full overflow-hidden shadow-md transition-all duration-300 shadow-[#FF6A00]/25 hover:shadow-[#FF6A00]/40 hover:scale-110 active:scale-90 ${
+              showAIChat ? 'ring-2 ring-[#FF6A00] ring-offset-1 ring-offset-background' : ''
             }`}>
-              <div className="w-full h-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
+              <img src="/bruno-app-icon.png" alt="Bruno IA" className="w-full h-full object-cover" draggable={false} data-testid="floating-ai-logo" />
             </div>
             <div className="absolute -top-0.5 -right-0.5 px-1 py-0 text-[7px] bg-gradient-to-r from-amber-400 to-orange-500 rounded-full text-white font-bold shadow">
               IA

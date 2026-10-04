@@ -96,7 +96,7 @@ export default function LiveViewerPage() {
     return (
       <div className="fixed inset-0 bg-black overflow-hidden" data-testid="live-code-gate">
         <div className="absolute inset-0 bg-center bg-cover opacity-30" style={{ backgroundImage: live.host_avatar ? `url(${live.host_avatar})` : undefined, filter: "blur(28px)" }} />
-        <button onClick={() => navigate(-1)} className="absolute left-3 z-10 w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }} data-testid="live-gate-back"><ArrowLeft className="w-5 h-5" /></button>
+        <button onClick={() => navigate(-1)} className="absolute left-3 z-10 w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" style={{ top: "calc(var(--safe-top) + 10px)" }} data-testid="live-gate-back"><ArrowLeft className="w-5 h-5" /></button>
         <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 bruno-glass rounded-[28px] border p-6 text-center" style={{ maxWidth: 400, marginInline: "auto" }}>
           <div className="w-14 h-14 mx-auto rounded-full bg-primary/15 grid place-items-center mb-3"><Lock className="w-6 h-6 text-primary" /></div>
           <p className="font-bold">Live privado</p>

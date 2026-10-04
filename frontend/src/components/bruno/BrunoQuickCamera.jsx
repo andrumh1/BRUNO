@@ -434,7 +434,7 @@ export default function BrunoQuickCamera({
           data-testid="bruno-quick-camera"
         >
           {/* Top bar */}
-          <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent">
+          <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent" style={{ paddingTop: "calc(var(--safe-top) + 0.75rem)" }}>
             <button
               onClick={onClose}
               className="grid place-items-center h-10 w-10 rounded-full bg-white/10 backdrop-blur text-white hover:bg-white/20"

@@ -13,6 +13,12 @@ import { useNativePush } from '@/native/useNativePush';
 import { isNative } from '@/native/capacitor';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { SafeArea } from '@capacitor-community/safe-area';
+
+const syncStatusBarStyle = () => {
+  const dark = document.documentElement.classList.contains('dark');
+  StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light }).catch(() => {});
+};
 
 export default function NativeBootstrap() {
   const { token } = useAuth() || {};
@@ -29,17 +35,25 @@ export default function NativeBootstrap() {
     }
   );
 
-  // Native chrome polish: hide the splash screen after the first render,
-  // paint the status bar in BRUNO orange.
+  // Native chrome: edge-to-edge with real safe-area insets (notch / status bar / gesture bar).
+  // @capacitor-community/safe-area injects --safe-area-inset-* on Android where env() reports 0;
+  // index.css combines both into --safe-top / --safe-bottom used by every top/bottom bar.
   useEffect(() => {
     if (!isNative()) return;
+    let observer;
     (async () => {
       try {
-        await StatusBar.setStyle({ style: Style.Dark });
-        await StatusBar.setBackgroundColor({ color: '#FF6A00' });
-      } catch (_) { /* older iOS versions ignore setBackgroundColor */ }
+        await SafeArea.enable({ config: { customColorsForSystemBars: true, statusBarColor: '#00000000', navigationBarColor: '#00000000', offset: 0 } });
+      } catch (_) { /* iOS handles insets natively */ }
+      try {
+        await StatusBar.setOverlaysWebView({ overlay: true });
+        syncStatusBarStyle();
+        observer = new MutationObserver(syncStatusBarStyle);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+      } catch (_) { /* ignore */ }
       try { await SplashScreen.hide(); } catch (_) { /* ignore */ }
     })();
+    return () => observer?.disconnect();
   }, []);
 
   return null;

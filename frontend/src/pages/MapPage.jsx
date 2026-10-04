@@ -191,7 +191,7 @@ export default function MapPage() {
             <motion.div
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 260 }}
               className="absolute inset-x-0 bottom-0 z-[70] bg-background/95 backdrop-blur-2xl rounded-t-[28px] border-t border-border/50 shadow-2xl flex flex-col"
-              style={{ top: "calc(env(safe-area-inset-top, 0px) + 64px)" }}
+              style={{ top: "calc(var(--safe-top) + 64px)" }}
               data-testid="map-explore-panel"
             >
               <div className="flex items-center justify-between px-4 pt-3 pb-2">

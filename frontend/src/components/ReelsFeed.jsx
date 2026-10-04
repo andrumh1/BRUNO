@@ -115,7 +115,7 @@ const ReelItem = ({ reel, isActive, onLike, onComment, onShare, onSave }) => {
       {/* Mute button */}
       <button
         onClick={toggleMute}
-        className="absolute top-4 right-4 p-2 bg-black/40 rounded-full z-10"
+        className="absolute right-4 p-2 bg-black/40 rounded-full z-10" style={{ top: "calc(var(--safe-top) + 1rem)" }}
       >
         {isMuted ? (
           <VolumeX className="w-5 h-5 text-white" />
@@ -383,7 +383,7 @@ const ReelsFeed = () => {
       </div>
 
       {/* Progress indicator */}
-      <div className="absolute top-4 left-4 right-16 flex gap-1 z-20">
+      <div className="absolute left-4 right-16 flex gap-1 z-20" style={{ top: "calc(var(--safe-top) + 1rem)" }}>
         {reels.map((_, index) => (
           <div
             key={`_-${index}`}

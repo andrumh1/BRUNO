@@ -116,7 +116,7 @@ export default function VideoNoteRecorder({ open, onClose, onCapture }) {
         {/* Close */}
         <button
           onClick={() => { stop(); onClose?.(); }}
-          className="absolute top-4 right-4 grid place-items-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white"
+          className="absolute right-4 grid place-items-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white" style={{ top: "calc(var(--safe-top) + 1rem)" }}
           aria-label="Cerrar"
           data-testid="video-note-close"
         >

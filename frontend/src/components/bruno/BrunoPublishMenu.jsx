@@ -104,7 +104,7 @@ export default function BrunoPublishMenu({ open, onClose, onPick }) {
               backdropFilter: "blur(28px) saturate(180%)",
               WebkitBackdropFilter: "blur(28px) saturate(180%)",
               boxShadow: "0 12px 40px -8px rgba(0,0,0,0.25), inset 0 1px 0 0 rgba(255,255,255,0.4)",
-              paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+              paddingBottom: "calc(var(--safe-bottom) + 8px)",
               maxWidth: "480px",
               marginInline: "auto",
               left: 12, right: 12,

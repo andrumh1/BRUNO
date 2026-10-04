@@ -19,7 +19,7 @@ export default function ComposePage() {
 
   return (
     <div className="min-h-screen bg-background" data-testid="compose-page">
-      <header className="sticky top-0 z-40 bg-card/70 backdrop-blur-xl border-b border-border/50 flex items-center gap-2 px-3 py-2" style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top, 8px))" }}>
+      <header className="sticky top-0 z-40 bg-card/70 backdrop-blur-xl border-b border-border/50 flex items-center gap-2 px-3 py-2" style={{ paddingTop: "max(0.5rem, var(--safe-top))" }}>
         <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full grid place-items-center hover:bg-muted" data-testid="compose-back-btn" aria-label="Volver"><ArrowLeft className="w-5 h-5" /></button>
         <h1 className="font-bold text-base">Nueva publicación</h1>
       </header>

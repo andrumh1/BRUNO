@@ -118,7 +118,7 @@ function CaptionOverlay({ file, filterId, onPublished, onCancel }) {
       </div>
 
       {/* Bruno header */}
-      <div className="absolute top-0 inset-x-0 z-10 px-4 py-3 bg-gradient-to-b from-black/60 to-transparent flex items-center justify-between">
+      <div className="absolute top-0 inset-x-0 z-10 px-4 py-3 bg-gradient-to-b from-black/60 to-transparent flex items-center justify-between" style={{ paddingTop: "calc(var(--safe-top) + 0.75rem)" }}>
         <button
           onClick={onCancel}
           disabled={publishing}

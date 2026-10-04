@@ -34,7 +34,7 @@ export default function FloatingBackButton() {
     <button
       onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/reels"))}
       className="fixed left-3 z-[9000] w-10 h-10 rounded-full bg-black/45 text-white backdrop-blur-md grid place-items-center active:scale-90 transition-transform shadow-lg"
-      style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }}
+      style={{ top: "calc(var(--safe-top) + 10px)" }}
       aria-label="Volver"
       data-testid="global-back-btn"
     >

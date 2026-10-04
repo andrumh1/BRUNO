@@ -278,7 +278,7 @@ export default function ReelItem({
       {src && landscape && !fullscreen && !controlsVisible && !error && (
         <button onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }} onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); toggleFullscreen(); }}
           className="absolute right-3 z-20 inline-flex items-center gap-1.5 h-8 px-3 rounded-full backdrop-blur-xl bg-white/[0.06] border border-white/35 text-white text-[11px] font-semibold reel-chrome active:scale-95"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 56px)" }} data-testid="reel-landscape-chip" aria-label="Ver en pantalla completa girando el teléfono">
+          style={{ top: "calc(var(--safe-top) + 56px)" }} data-testid="reel-landscape-chip" aria-label="Ver en pantalla completa girando el teléfono">
           <Maximize2 className="w-3.5 h-3.5" /> Pantalla completa
         </button>
       )}

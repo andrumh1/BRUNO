@@ -196,7 +196,7 @@ export const TourOverlay = () => {
   };
 
   return (
-    <div className={`fixed inset-0 z-[10500] flex justify-center p-4 ${anchorTop ? "items-start pt-[max(1rem,env(safe-area-inset-top))]" : "items-center"}`} data-testid="tour-overlay">
+    <div className={`fixed inset-0 z-[10500] flex justify-center p-4 ${anchorTop ? "items-start pt-[max(1rem,var(--safe-top))]" : "items-center"}`} data-testid="tour-overlay">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"

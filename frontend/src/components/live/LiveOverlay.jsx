@@ -26,7 +26,7 @@ export function LiveEvents({ events, hearts }) {
           <Heart key={h.id} className="live-heart absolute bottom-0 left-4 w-7 h-7 text-red-500 fill-red-500" style={{ "--dx": `${h.dx}px` }} />
         ))}
       </div>
-      <div ref={ref} className="absolute left-3 right-20 z-20 max-h-56 overflow-y-auto scrollbar-none space-y-1.5 pointer-events-none" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)", maskImage: "linear-gradient(to bottom, transparent, black 18%)" }} data-testid="live-events">
+      <div ref={ref} className="absolute left-3 right-20 z-20 max-h-56 overflow-y-auto scrollbar-none space-y-1.5 pointer-events-none" style={{ bottom: "calc(var(--safe-bottom) + 76px)", maskImage: "linear-gradient(to bottom, transparent, black 18%)" }} data-testid="live-events">
         {events.map((e) => (
           <div key={e.id} className="inline-flex max-w-full items-start gap-2 rounded-2xl bg-black/35 backdrop-blur-sm px-3 py-1.5 text-white text-[12px]">
             {e.kind === "join" && <span className="text-white/70">{e.user_name || "Alguien"} se unió 👋</span>}
@@ -58,7 +58,7 @@ export function LiveInputRow({ liveId, token, allowGifts, onHeart, isHost }) {
   };
 
   return (
-    <div className="absolute inset-x-0 z-30 px-3" style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}>
+    <div className="absolute inset-x-0 z-30 px-3" style={{ bottom: "calc(var(--safe-bottom) + 14px)" }}>
       {giftsOpen && (
         <div className="bruno-glass rounded-[22px] border p-3 mb-2 grid grid-cols-6 gap-1" data-testid="live-gifts-panel">
           {GIFTS.map((g) => (
@@ -84,7 +84,7 @@ export function LiveInputRow({ liveId, token, allowGifts, onHeart, isHost }) {
 
 export function LiveTopBar({ live, viewerCount, hostOnline, onClose, right }) {
   return (
-    <div className="absolute inset-x-0 z-30 flex items-center gap-2 px-3" style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
+    <div className="absolute inset-x-0 z-30 flex items-center gap-2 px-3" style={{ top: "calc(var(--safe-top) + 10px)" }}>
       <div className="flex items-center gap-2 bruno-glass rounded-full border pl-1 pr-3 h-10 min-w-0">
         <div className="w-8 h-8 rounded-full overflow-hidden bg-foreground/10 shrink-0">{live?.host_avatar && <img src={live.host_avatar} alt="" className="w-full h-full object-cover" />}</div>
         <div className="min-w-0 leading-tight">

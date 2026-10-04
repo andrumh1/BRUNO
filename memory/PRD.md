@@ -1550,3 +1550,8 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - **Contacto directo**: `contact_info` ahora incluye whatsapp, website, company → botones de acción automáticos (WhatsApp, Llamar, SMS, Email, Web).
 - Páginas legacy `CreateCardPage.jsx`, `EditCardPage.jsx`, `TemplateSelector.jsx` quedan sin ruta (se pueden borrar tras validación del usuario).
 - Pendiente/backlog: estandarización de medios 9:16 / 16:9 / selector de aspecto (preguntas enviadas al usuario, sin respuesta); refactor ChatPage/posts_feed; Google Maps billing.
+
+## 2026-06 — Zona segura (notch) en toda la app · logo Bruno en burbuja IA (auto-test)
+- `--safe-top/--safe-bottom` globales en `index.css` = max(env(safe-area-inset-*), var(--safe-area-inset-*)). Los 24 archivos que usaban `env()` directo ahora usan la variable; barras `absolute top-0` sin margen (ReelsFeed, BrunoQuickCamera, QuickStoryButton, CardStories, VideoNoteRecorder) reciben `calc(var(--safe-top) + …)`.
+- Nativo: `@capacitor-community/safe-area@7` (inyecta insets reales en Android donde env() da 0) + StatusBar overlay transparente con estilo según tema (`NativeBootstrap.jsx`, `capacitor.config.ts`). **Al generar el proyecto Android** (`npx cap add android`): añadir `EdgeToEdge.enable(this)` en `MainActivity.onCreate` y no usar `adjustMarginsForEdgeToEdge`.
+- Burbuja flotante IA usa `/bruno-app-icon.png` (icono de inicio del dispositivo) con glow naranja.

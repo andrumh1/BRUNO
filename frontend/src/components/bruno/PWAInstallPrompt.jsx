@@ -109,7 +109,7 @@ export default function PWAInstallPrompt() {
            Compact on phones — full sheet width minus 12px padding. */
         className="fixed z-[10001] left-2 right-2 sm:left-auto sm:right-4 sm:max-w-[360px] pointer-events-auto"
         style={{
-          bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))",
+          bottom: "calc(5.5rem + var(--safe-bottom))",
         }}
         data-testid="pwa-install-prompt"
       >

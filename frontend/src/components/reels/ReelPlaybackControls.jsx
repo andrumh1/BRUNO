@@ -55,7 +55,7 @@ export default function ReelPlaybackControls({ visible, isPlaying, muted, onTogg
       </AnimatePresence>
       <AnimatePresence>
         {boosting && (
-          <motion.div key="boost" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none reel-chrome" style={{ top: "calc(env(safe-area-inset-top, 0px) + 96px)" }} data-testid="reel-boost-pill">
+          <motion.div key="boost" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none reel-chrome" style={{ top: "calc(var(--safe-top) + 96px)" }} data-testid="reel-boost-pill">
             <span className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-white text-xs font-bold ${glass}`}><Gauge className="w-3.5 h-3.5" /> 2x</span>
           </motion.div>
         )}
