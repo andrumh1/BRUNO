@@ -222,7 +222,7 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
       fd.append("file", file);
       try {
         const isVid = isVideoFile(file);
-        const r = await axios.post(`${API}${isVid ? "/upload/chat-file" : "/upload/image"}`, fd, {
+        const r = await axios.post(`${API}${isVid ? "/upload/chat-file" : "/upload/image?aspect=9:16"}`, fd, {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
           timeout: 0,
         });

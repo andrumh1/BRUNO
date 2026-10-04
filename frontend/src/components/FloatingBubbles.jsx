@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavScroll } from "@/contexts/NavScrollContext";
-import { Sparkles, X, Send, Loader2, Trash2, Paperclip, FileText, Search, ArrowRight, ChevronRight, Minimize2, Mic, Square, Volume2, VolumeX, ImagePlus } from "lucide-react";
+import { X, Send, Loader2, Trash2, Paperclip, FileText, Search, ArrowRight, ChevronRight, Minimize2, Mic, Square, Volume2, VolumeX, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import useDragToMinimize from "@/hooks/useDragToMinimize";
@@ -159,11 +159,11 @@ const AIChatWindow = ({
       }}
     >
       {/* Header — drag handle */}
-      <div {...dragBind} className="relative flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-violet-600/10 to-fuchsia-600/10 cursor-grab active:cursor-grabbing select-none touch-none">
+      <div {...dragBind} className="relative flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-[#FF6A00]/10 to-amber-400/10 cursor-grab active:cursor-grabbing select-none touch-none">
         <span className="absolute top-1 left-1/2 -translate-x-1/2 h-1 w-10 rounded-full bg-foreground/15" />
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-full flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-[#FF6A00]/30 shadow-sm">
+            <img src="/bruno-app-icon.png" alt="BRUNO IA" className="w-full h-full object-cover" draggable={false} data-testid="ai-chat-header-logo" />
           </div>
           <div className="relative">
             <h4 className="font-semibold text-xs">BRUNO IA</h4>
@@ -263,7 +263,7 @@ const AIChatWindow = ({
             className="flex-1 h-7 text-xs rounded-full bg-muted/50 border-0 px-3" disabled={aiLoading} data-testid="ai-chat-input" />
           <Button type="submit" size="sm"
             disabled={(!aiInput.trim() && !attachment) || aiLoading}
-            className="h-7 w-7 p-0 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 shrink-0" data-testid="ai-send-btn">
+            className="h-7 w-7 p-0 rounded-full bg-[#FF6A00] hover:bg-[#e65f00] shrink-0" data-testid="ai-send-btn">
             <Send className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -612,13 +612,13 @@ const FloatingBubbles = () => {
               aria-label="Abrir BRUNO IA"
             >
               <div className={`w-7 h-7 rounded-full bg-background/90 backdrop-blur-2xl border shadow-lg overflow-hidden grid place-items-center transition-all hover:scale-110 active:scale-90 ${
-                showAIChat ? 'border-violet-400 ring-2 ring-violet-400/40' : 'border-border/50'
+                showAIChat ? 'border-[#FF6A00] ring-2 ring-[#FF6A00]/40' : 'border-border/50'
               }`}>
-                <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+                <img src="/bruno-app-icon.png" alt="BRUNO IA" className="w-full h-full object-cover" draggable={false} data-testid="floating-ai-logo-compact" />
               </div>
               {/* Type badge identical to other minimized items */}
               <div
-                className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-[1.5px] border-background shadow-sm bg-gradient-to-br from-violet-500 to-fuchsia-500"
+                className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-[1.5px] border-background shadow-sm bg-[#FF6A00]"
                 data-testid="item-badge-ai"
               />
             </button>
@@ -658,9 +658,9 @@ const FloatingBubbles = () => {
           data-testid="ai-chat-minimized"
           title="Abrir BRUNO IA"
         >
-          <span className="absolute inset-[-3px] rounded-full bg-gradient-to-br from-violet-500/45 to-fuchsia-500/45 blur-md opacity-80 group-hover:opacity-100" />
-          <span className="relative w-12 h-12 rounded-full ring-2 ring-background shadow-lg bg-gradient-to-br from-violet-600 to-fuchsia-600 grid place-items-center">
-            <Sparkles className="w-5 h-5 text-white" />
+          <span className="absolute inset-[-3px] rounded-full bg-gradient-to-br from-[#FF6A00]/45 to-amber-400/40 blur-md opacity-80 group-hover:opacity-100" />
+          <span className="relative block w-12 h-12 rounded-full ring-2 ring-background shadow-lg overflow-hidden">
+            <img src="/bruno-app-icon.png" alt="BRUNO IA" className="w-full h-full object-cover" draggable={false} data-testid="ai-chat-minimized-logo" />
           </span>
           <span
             onClick={(e) => { e.stopPropagation(); setShowAIChat(false); setAiMinimized(false); }}

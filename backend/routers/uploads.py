@@ -42,6 +42,7 @@ IMAGE_PRESETS = {
     "1:1": {"width": 1080, "height": 1080, "crop": "fill", "gravity": "auto"},
     "4:5": {"width": 1080, "height": 1350, "crop": "fill", "gravity": "auto"},
     "9:16": {"width": 1080, "height": 1920, "crop": "fill", "gravity": "auto"},
+    "story": {"width": 1080, "height": 1920, "crop": "limit"},
     "free": {"width": 1080, "height": 1350, "crop": "limit"},
 }
 

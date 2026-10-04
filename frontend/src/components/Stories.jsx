@@ -481,7 +481,7 @@ export const CreateStoryModal = ({ isOpen, onClose, onCreated }) => {
     formData.append("file", file);
     
     try {
-      const response = await axios.post(`${API}/upload/image`, formData, {
+      const response = await axios.post(`${API}/upload/image?aspect=9:16`, formData, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
       });
       setMediaUrl(response.data.url);

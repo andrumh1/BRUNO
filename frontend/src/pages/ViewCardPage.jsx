@@ -71,7 +71,7 @@ const ViewCardPage = () => {
   const [shareSheet, setShareSheet] = useState(false);
   const renderShareImage = async ({ format = "story", bgColor, phrase, withRef } = {}) => {
     const link = withRef ? withRef(`${window.location.origin}/c/${cardId}`) : `${window.location.origin}/c/${cardId}`;
-    const blob = await renderCardImage(card, { url: link, dark: isDark, format, bgColor, phrase });
+    const blob = await renderCardImage(card, { url: link, dark: isDark, format, bgColor, phrase, design });
     return { blob, name: `bruno-${(card.title || "tarjeta").replace(/[^\w-]+/g, "_")}-${format}.png`, text: `${card.title} · Mi tarjeta BRUNO`, link, label: card.title, targetId: cardId };
   };
 

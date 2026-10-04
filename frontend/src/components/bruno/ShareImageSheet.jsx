@@ -19,7 +19,7 @@ const PRESETS = [["#FF6A00", "Naranja"], ["#F9F1EA", "Crema"], ["#474747", "Gris
 /** Sube la imagen y la publica como historia BRUNO. */
 async function publishStory(blob, { token, caption, link, music, scheduledAt }) {
   const fd = new FormData(); fd.append("file", new File([blob], "bruno-story.png", { type: "image/png" }));
-  const up = await axios.post(`${API}/upload/image?folder=bruno/stories`, fd, { headers: { Authorization: `Bearer ${token}` } });
+  const up = await axios.post(`${API}/upload/image?folder=bruno/stories&aspect=story`, fd, { headers: { Authorization: `Bearer ${token}` } });
   const body = { media_url: up.data.url, media_type: "image", caption: (caption || "").slice(0, 200), link_url: link || null, link_text: link ? "Ver en BRUNO" : null, duration: music ? 15 : 7 };
   if (music) body.music = { trackId: music.track.id, title: music.track.title, artist: music.track.artist, url: music.track.url || music.track.preview_url || music.track.audio_url, volume: music.volume, start: music.start, end: music.end };
   if (scheduledAt) body.scheduled_at = new Date(scheduledAt).toISOString();

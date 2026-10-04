@@ -1555,3 +1555,10 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - `--safe-top/--safe-bottom` globales en `index.css` = max(env(safe-area-inset-*), var(--safe-area-inset-*)). Los 24 archivos que usaban `env()` directo ahora usan la variable; barras `absolute top-0` sin margen (ReelsFeed, BrunoQuickCamera, QuickStoryButton, CardStories, VideoNoteRecorder) reciben `calc(var(--safe-top) + …)`.
 - Nativo: `@capacitor-community/safe-area@7` (inyecta insets reales en Android donde env() da 0) + StatusBar overlay transparente con estilo según tema (`NativeBootstrap.jsx`, `capacitor.config.ts`). **Al generar el proyecto Android** (`npx cap add android`): añadir `EdgeToEdge.enable(this)` en `MainActivity.onCreate` y no usar `adjustMarginsForEdgeToEdge`.
 - Burbuja flotante IA usa `/bruno-app-icon.png` (icono de inicio del dispositivo) con glow naranja.
+
+## 2026-06 — Formatos de medios ✅ · páginas antiguas borradas · imagen de redes con el motor real · barra inferior segura
+- Estándar de medios verificado E2E (curl): `/upload/image?aspect=1:1|4:5|9:16|story|free` → 1080×1080 / 1080×1350 / 1080×1920 / limit 1080×1920 / limit 1080×1350. Video: eager c_limit 1080×1920 (16:9 queda horizontal dentro del marco; el reel ofrece pantalla completa con giro). Historias de imagen ahora suben con `aspect=9:16` (QuickStoryButton, StoryEditor, Stories) y las imágenes generadas para historias con `aspect=story` (sin recorte).
+- Eliminados `CreateCardPage.jsx`, `EditCardPage.jsx`, `TemplateSelector.jsx` (reemplazados por el Card Builder).
+- `renderCardImage` (cardShareImage.js) ahora rasteriza el `CardRenderer` real con `html-to-image` (`lib/cardRasterize.jsx`, 390px × pixelRatio) y lo compone con QR, URL, sello y pie → WYSIWYG con el diseño elegido (historia 9:16 y cuadrada 1:1 verificadas con descargas reales).
+- Barra inferior (`MobileBottomNav`) usa `calc(var(--safe-bottom) + …)` (barra de gestos) tras el barrido global de la zona segura.
+- Burbuja IA: logo oficial de Bruno en cabecera, minimizada y barra compacta; acentos naranja.

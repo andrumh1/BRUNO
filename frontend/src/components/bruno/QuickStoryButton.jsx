@@ -53,7 +53,7 @@ function CaptionOverlay({ file, filterId, onPublished, onCancel }) {
       // 1. Upload media
       const form = new FormData();
       form.append("file", file);
-      const uploadEndpoint = isVideo ? "/upload/chat-file" : "/upload/image";
+      const uploadEndpoint = isVideo ? "/upload/chat-file" : "/upload/image?aspect=9:16";
       const uploadRes = await axios.post(`${API}${uploadEndpoint}`, form, {
         headers: {
           Authorization: `Bearer ${token}`,
