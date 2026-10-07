@@ -1,0 +1,35 @@
+{
+  "summary": "Audited BRUNO reels feed and lives (Daily.co SFU) features. Backend: 5/5 pytest cases pass (full moderation flow including host/viewer tokens with p.cs/p.ca false, viewer field hiding, settings+blocked word 422, pin, mute/unmute, add_mod permissions (mod can pin but not settings), spam 429, kick→banned+403 join/comment, viewer end 403, host end+duration, viewer_count int + is_moderator flag). Feed endpoints verified: not-interested hides from recommended-videos and 404 for unknown, by-username resolves both 'Viewer Dos' and 'viewer_dos' to id 3636b29b..., reports POST 200, block hides author's posts from recommended-videos (unblocked to restore). Frontend: reels caption/author/follow-pill present (own reel has no pill as expected), description aria-expanded toggles, options sheet opens with reel-report-btn → reasons list → toast 'Reporte enviado...' ✓, not-interested & block buttons present, mentions/hashtag links routed. Host /lives/start: title input + go btn work; live-host-page renders with live-host-duration ticking and live-host-connection data-state='connected' (headless surprisingly connected to Daily); moderation sheet shows allow-comments toggle and blocked-words-input/save. Viewer /lives/{id}: live-viewer-page + follow(Siguiendo→Seguir persisted), share, report, comment-input all present; comment appears in overlay list. One frontend bug: reels scroll position is NOT restored after returning from /profile/:id (scrollTop resets to 0).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ReelsPage / useReelsFeed FEED_CACHE", "issue": "Position NOT restored on back-nav from /profile/:id — reels-scroller scrollTop resets to 0 and the active reel changes. Explicitly required by review request.", "selector": "[data-testid=\"reels-scroller\"]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_lives_feed_iteration96.py",
+    "/app/test_reports/pytest/iteration96.xml"
+  ],
+  "action_items": [
+    "Fix FEED_CACHE/scroll-restore in /app/frontend/src/components/reels/useReelsFeed.js + ReelsPage.jsx: after returning from /profile/:id, reels-scroller.scrollTop should remain >0 and the previously active reel should still be visible without a refetch spinner."
+  ],
+  "critical_code_review_comments": [
+    "lives.py `_blocked` enforces word-boundary (\\b) with regex escape — if blocked word contains unicode or punctuation, \\b may miss matches; acceptable for current scope.",
+    "lives.py spam rate limit uses `recent >= 3` → 429 triggers on the 4th message as specified. OK.",
+    "lives.py:496 `settings` action: when blocked_words is None we still $set an empty fields dict if allow_comments is also None → effectively a no-op update but still writes {}; acceptable.",
+    "LiveOverlay.jsx: `live-gifts-note` is only rendered when giftsOpen=true. Review wording 'Gifts panel shows live-gifts-note' matches this (visible only inside gifts panel) — not a bug, just note for next tester.",
+    "posts_feed.py /users/by-username: regex only matches exact username/name (case-insensitive) + underscores→spaces for name. 'viewerdos' (without underscore) would not resolve to id — matches scope since review only lists 'Viewer Dos' and 'viewer_dos'."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_lives_feed_iteration96.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "~90% (1 open: scroll restore)"},
+  "test_credentials": "newtest@bruno.com / Test1234! (host); viewer2@bruno.com / Test1234! (viewer, id 3636b29b-ae7d-49c4-8a1e-2312500d0eeb)",
+  "seed_data_creation": "Transient test lives were created and ended; hidden_posts entry for one recommended post for host newtest remains (no cleanup endpoint — noted).",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend chain is fully covered by /app/backend/tests/test_lives_feed_iteration96.py (5 cases, all pass). Remaining to re-verify after fix: reels position restore. Two-browser viewer↔host realtime events (pin bar on both sides, mute toast on viewer, kick→live-kicked-page, end→live-ended-page) were NOT exercised through two parallel Playwright contexts; they are already covered functionally by backend tests + viewer UI render test. If main agent needs full E2E verification, run two Playwright contexts simultaneously. One lingering `hidden_posts` row exists for newtest from the not-interested test.",
+  "rca of the issue": "Reels position-restore: ReelsPage returns to /reels after navigating to /profile/:id but useReelsFeed re-mounts cold; FEED_CACHE either (a) is not keyed with scroll offset, (b) is not read on mount, or (c) scroll is being reset by an effect after items are hydrated. Reproduction: login newtest → /reels → scroll to 2nd reel → tap reel-author-avatar (goes to /profile/:id) → browser back → reels-scroller.scrollTop === 0 (expected >0). Fix suggestion: persist {items, scrollTop, activeIndex} in FEED_CACHE on unmount/location change and on mount restore scrollTop via requestAnimationFrame after items render (avoid race with virtual list)."
+}

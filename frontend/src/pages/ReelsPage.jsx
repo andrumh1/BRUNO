@@ -60,10 +60,12 @@ export default function ReelsPage() {
   useEffect(() => {
     if (restoredRef.current || loading || !restoredIndex || !containerRef.current) return;
     restoredRef.current = true;
-    const el = itemRefs.current[restoredIndex];
-    if (el) { containerRef.current.scrollTop = el.offsetTop; setActiveIndex(restoredIndex); }
+    const apply = () => { const el = itemRefs.current[restoredIndex]; const c = containerRef.current; if (el && c) { c.scrollTop = el.offsetTop; } };
+    apply(); setActiveIndex(restoredIndex);
+    const raf = requestAnimationFrame(apply); const t = setTimeout(apply, 120);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); };
   }, [loading, restoredIndex]);
-  useEffect(() => { rememberFeedPosition(cacheKey, activeIndex); }, [activeIndex, cacheKey]);
+  useEffect(() => { if (restoredIndex && !restoredRef.current) return; rememberFeedPosition(cacheKey, activeIndex); }, [activeIndex, cacheKey]);
 
   /* Active reel tracking via IntersectionObserver */
   useEffect(() => {
@@ -87,8 +89,8 @@ export default function ReelsPage() {
     if (activeIndex >= reels.length - 3) loadMore();
   }, [activeIndex, reels.length]);
 
-  const firstTab = useRef(true);
-  useEffect(() => { if (firstTab.current) { firstTab.current = false; return; } setActiveIndex(0); if (containerRef.current) containerRef.current.scrollTop = 0; }, [tab]);
+  const prevTab = useRef(tab);
+  useEffect(() => { if (prevTab.current === tab) return; prevTab.current = tab; setActiveIndex(0); if (containerRef.current) containerRef.current.scrollTop = 0; }, [tab]);
 
   /* Deep-link from notifications: /reels?id=X&comments=1 opens the comments sheet */
   const openedCommentsRef = useRef(false);

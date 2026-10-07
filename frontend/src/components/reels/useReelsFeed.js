@@ -74,10 +74,13 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
     return list;
   }, [token, mode, profileUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const skipFirstFetch = useRef(fresh);
+  // Clave de la última carga: si el feed vino de caché y la clave no cambió, no refetch (seguro ante StrictMode).
+  const depsKey = `${cacheKey}|${initialReelId || ""}`;
+  const fetchedKey = useRef(fresh ? depsKey : null);
   useEffect(() => {
-    if (skipFirstFetch.current) { skipFirstFetch.current = false; return; }
-    let cancelled = false;
+    if (fetchedKey.current === depsKey) return;
+    fetchedKey.current = depsKey;
+    let cancelled = false, completed = false;
     seenRef.current = new Set();
     seedRef.current = Math.floor(Math.random() * 1e9);
     setLoading(true); setDone(false);
@@ -95,8 +98,9 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
       setReels(first);
       setDone(profileUserId ? true : first.length < PAGE);
       setLoading(false);
+      completed = true;
     })();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; if (!completed) fetchedKey.current = null; };
   }, [fetchPage, initialReelId, profileUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadingRef = useRef(false);
