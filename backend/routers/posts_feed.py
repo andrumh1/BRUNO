@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 import uuid
+import re
 import logging
 import re as re_module
 
@@ -384,7 +385,13 @@ async def get_recommended_videos(
     viewed_ids: set = set()
     follow_ids: set = set()
     affinity_authors: set = set()
+    hidden_authors: set = set()
     if user_id:
+        # "No me interesa" + bloqueos (en ambos sentidos) nunca aparecen en el feed
+        async for h in db.hidden_posts.find({"user_id": user_id}, {"_id": 0, "post_id": 1}):
+            exclude_ids.add(h["post_id"])
+        async for b in db.blocks.find({"$or": [{"blocker_id": user_id}, {"blocked_id": user_id}]}, {"_id": 0, "blocker_id": 1, "blocked_id": 1}):
+            hidden_authors.add(b["blocked_id"] if b["blocker_id"] == user_id else b["blocker_id"])
         async for v in db.video_views.find({"user_id": user_id}, {"_id": 0, "post_id": 1}).sort("created_at", -1).limit(500):
             viewed_ids.add(v["post_id"])
         async for f in db.follows.find({"follower_id": user_id}, {"_id": 0, "following_id": 1}):
@@ -400,13 +407,16 @@ async def get_recommended_videos(
             return []
         base_q["user_id"] = {"$in": list(follow_ids)}
 
+    if hidden_authors:
+        base_q["user_id"] = {**(base_q.get("user_id") or {}), "$nin": list(hidden_authors)}
+
     pool: list = []
     async for p in db.posts.find(base_q, {"_id": 0}).sort("created_at", -1).limit(600):
         if p.get("id") not in exclude_ids:
             pool.append(p)
 
     if not pool and mode != "following":
-        async for p in db.posts.find({"visibility": "public", "media": {"$ne": []}}, {"_id": 0}).sort("created_at", -1).limit(100):
+        async for p in db.posts.find({"visibility": "public", "media": {"$ne": []}, **({"user_id": {"$nin": list(hidden_authors)}} if hidden_authors else {})}, {"_id": 0}).sort("created_at", -1).limit(100):
             if p.get("id") not in exclude_ids: pool.append(p)
 
     # Follower counts for small-creator boost
@@ -478,6 +488,21 @@ async def _push_notification(user_id: str, actor_id: Optional[str], ntype: str, 
         await db.notifications.insert_one(dict(doc))
     await emit_notification_ws(doc)
     return doc
+
+
+@router.post("/posts/{post_id}/not-interested")
+async def not_interested(post_id: str, current_user: User = Depends(get_current_user)):
+    """Oculta la publicación del feed del usuario (persistente). Idempotente."""
+    post = await db.posts.find_one({"id": post_id}, {"_id": 0, "id": 1, "user_id": 1})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    await db.hidden_posts.update_one(
+        {"user_id": current_user.id, "post_id": post_id},
+        {"$set": {"user_id": current_user.id, "post_id": post_id, "author_id": post.get("user_id"), "created_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    await db.feed_interactions.insert_one({"id": str(uuid.uuid4()), "user_id": current_user.id, "post_id": post_id, "interaction_type": "not_interested", "created_at": datetime.now(timezone.utc).isoformat()})
+    return {"hidden": True}
 
 
 @router.get("/posts/sound/{post_id}")
@@ -1268,6 +1293,16 @@ async def _notify_mentions(content: str, actor_id: str, actor_name: str, target_
             ))
 
 # -------------------- USER SEARCH --------------------
+
+@router.get("/users/by-username/{username}")
+async def user_by_username(username: str):
+    """Resuelve @usuario → id (para menciones en reels)."""
+    rx = {"$regex": f"^{re.escape(username)}$", "$options": "i"}
+    u = await db.users.find_one({"$or": [{"username": rx}, {"name": rx}, {"name": {"$regex": f"^{re.escape(username.replace('_', ' '))}$", "$options": "i"}}]}, {"_id": 0, "id": 1, "username": 1, "name": 1, "avatar_url": 1})
+    if not u:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return u
+
 
 @router.get("/users/search")
 async def search_users(

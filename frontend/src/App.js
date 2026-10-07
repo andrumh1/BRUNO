@@ -80,6 +80,7 @@ import AlbumsPage from "@/pages/AlbumsPage";
 import CardAnalyticsPage from "@/pages/CardAnalyticsPage";
 import PremiumPage from "@/pages/PremiumPage";
 import HashtagPage from "@/pages/HashtagPage";
+import UsernameRedirect from "@/pages/UsernameRedirect";
 import SavedPostsPage from "@/pages/SavedPostsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import PartnerDashboardPage from "@/pages/PartnerDashboardPage";
@@ -133,6 +134,7 @@ function AppRouter() {
       <Route path="/marketplace/:productId" element={<ProductDetailPage />} />
       <Route path="/profile/:userId" element={<UserProfilePage />} />
       <Route path="/hashtag/:tag" element={<HashtagPage />} />
+      <Route path="/u/:username" element={<UsernameRedirect />} />
       
       {/* Protected routes */}
       <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />

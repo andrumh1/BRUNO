@@ -23,8 +23,9 @@ const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1
  */
 export default function ReelItem({
   reel, isActive, isNear, globalMuted, onToggleMute, onLike, onFollow, onSave,
-  onOpenComments, onOpenShare, onOpenRemix, onOpenRemixes, onOpenSound, onOpenLikers, onOpenOptions, onSwipeLeft, onSwipeRight, onMinimize, hideChrome,
+  onOpenComments, onOpenShare, onOpenRemix, onOpenRemixes, onOpenSound, onOpenLikers, onOpenOptions, onSwipeLeft, onSwipeRight, onMinimize, hideChrome, currentUserId,
 }) {
+  const [expanded, setExpanded] = useState(false);
   const videoRef = useRef(null);
   const barRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -110,6 +111,18 @@ export default function ReelItem({
   }, [isActive, globalMuted, retryKey]);
 
   useEffect(() => () => { clearTimeout(retryTimer.current); clearTimeout(tapTimer.current); clearTimeout(hideTimer.current); }, []);
+
+  // Pausa al enviar la app a segundo plano / cambiar de pestaña; reanuda solo el reel activo.
+  useEffect(() => {
+    const onVis = () => {
+      const v = videoRef.current; if (!v) return;
+      if (document.hidden) { v.pause(); setIsPlaying(false); }
+      else if (isActive) v.play().then(() => setIsPlaying(true)).catch(() => {});
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", onVis);
+    return () => { document.removeEventListener("visibilitychange", onVis); window.removeEventListener("pagehide", onVis); };
+  }, [isActive]);
   useEffect(() => { if (!isActive) { setControlsVisible(false); clearTimeout(hideTimer.current); } }, [isActive]);
 
   const showControls = () => {
@@ -227,6 +240,13 @@ export default function ReelItem({
   const src = reel.video_url;
   const sources = [...new Set([reel.mp4_url, reel.f_auto_url, reel.original_url, src].filter(Boolean))];
   const authorId = reel.author?.id || reel.user_id;
+  const isOwn = !!currentUserId && authorId === currentUserId;
+  const caption = reel.content || reel.description || "";
+  const renderCaption = (text) => text.split(/(#[\p{L}\p{N}_]+|@[\p{L}\p{N}_.]+)/u).map((part, i) => {
+    if (/^#/.test(part)) return <Link key={i} to={`/hashtag/${part.slice(1)}`} onClick={(e) => e.stopPropagation()} className="pointer-events-auto font-semibold text-white hover:underline" data-testid="reel-hashtag-link">{part}</Link>;
+    if (/^@/.test(part)) return <Link key={i} to={`/u/${part.slice(1)}`} onClick={(e) => e.stopPropagation()} className="pointer-events-auto font-semibold text-white hover:underline" data-testid="reel-mention-link">{part}</Link>;
+    return part;
+  });
 
   return (
     <div
@@ -323,13 +343,15 @@ export default function ReelItem({
               <Link to={`/profile/${authorId}`} onClick={(e) => e.stopPropagation()} className="block w-12 h-12 rounded-full border-2 border-white overflow-hidden bg-zinc-800" data-testid="reel-author-avatar">
                 {reel.author?.avatar_url ? <img src={reel.author.avatar_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full grid place-items-center text-white"><User className="w-5 h-5" /></div>}
               </Link>
+              {!isOwn && !reel.is_following && (
               <button
                 onClick={(e) => { e.stopPropagation(); onFollow?.(reel); }}
-                className={`absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full grid place-items-center border border-white/60 transition-colors ${reel.is_following ? "bg-white text-primary" : "bg-primary text-white"}`}
+                className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full grid place-items-center border border-white/60 bg-primary text-white"
                 data-testid="reel-follow-btn" aria-label="Seguir"
               >
-                {reel.is_following ? <Check className="w-3 h-3" strokeWidth={3} /> : <Plus className="w-3 h-3" strokeWidth={3} />}
+                <Plus className="w-3 h-3" strokeWidth={3} />
               </button>
+              )}
             </div>
 
             <Rail icon={<Heart className={`w-7 h-7 ${reel.is_liked ? "text-red-500 fill-red-500 scale-110" : "text-white"} transition-all`} />} label={fmt(reel.likes_count)} testid="reel-like-btn" onClick={() => onLike?.(reel, !reel.is_liked)} onLabelClick={() => onOpenLikers?.(reel)} labelTestid="reel-likes-count" />
@@ -346,23 +368,34 @@ export default function ReelItem({
             )}
           </div>
 
-          {/* Caption */}
-          <div className="absolute left-3 right-20 z-10 pointer-events-none" style={{ bottom: "calc(var(--nav-reserve, 64px) + 22px)" }}>
-            <Link to={`/profile/${authorId}`} onClick={(e) => e.stopPropagation()} className="pointer-events-auto text-white font-bold text-[15px] drop-shadow" data-testid="reel-author-name">
-              @{reel.author?.username || reel.author?.name || "usuario"}
-            </Link>
+          {/* Caption: creador + Seguir → audio → descripción */}
+          <div className="absolute left-3 right-20 z-10 pointer-events-none" style={{ bottom: "calc(var(--nav-reserve, 64px) + 22px)" }} data-testid="reel-caption">
+            <div className="flex items-center gap-2 min-w-0">
+              <Link to={`/profile/${authorId}`} onClick={(e) => e.stopPropagation()} className="pointer-events-auto text-white font-bold text-[15px] drop-shadow truncate" data-testid="reel-author-name">
+                @{reel.author?.username || reel.author?.name || "usuario"}
+              </Link>
+              {!isOwn && (
+                <button onClick={(e) => { e.stopPropagation(); onFollow?.(reel); }} className={`pointer-events-auto shrink-0 h-6 px-2.5 rounded-md text-[11px] font-semibold border transition-colors ${reel.is_following ? "border-white/40 text-white/90 bg-white/10" : "border-white/70 text-white"}`} data-testid="reel-follow-pill" aria-pressed={!!reel.is_following}>
+                  {reel.is_following ? "Siguiendo" : "Seguir"}
+                </button>
+              )}
+            </div>
             {reel.remix?.source_post_id && (
               <button onClick={(e) => { e.stopPropagation(); onOpenRemixes?.({ id: reel.remix.source_post_id }); }} className="pointer-events-auto mt-1 inline-flex items-center gap-1 rounded-full bg-white/15 backdrop-blur-sm px-2 py-0.5 text-white text-[11px]" data-testid="reel-remix-label">
                 {reel.remix.type === "duet" ? <Columns2 className="w-3 h-3" /> : <Scissors className="w-3 h-3" />}
                 {reel.remix.type === "duet" ? "Dúo con" : "Stitch de"} @{reel.remix.source_username}
               </button>
             )}
-            {(reel.content || reel.description) && reel.kind !== "text" && <p className="text-white/95 text-[13px] mt-1 line-clamp-2 drop-shadow">{reel.content || reel.description}</p>}
             {src && (
-            <button onClick={(e) => { e.stopPropagation(); onOpenSound?.(reel); }} className="pointer-events-auto flex items-center gap-1.5 mt-2 text-white/90 text-[11px] max-w-full" data-testid="reel-sound-label">
+            <button onClick={(e) => { e.stopPropagation(); onOpenSound?.(reel); }} className="pointer-events-auto flex items-center gap-1.5 mt-1.5 text-white/90 text-[12px] max-w-full drop-shadow" data-testid="reel-sound-label">
               <Music2 className="w-3 h-3 shrink-0" />
-              <span className="truncate">{reel.audio_name || `Sonido original · @${reel.author?.username || reel.author?.name || "usuario"}`}</span>
+              <span className="truncate">{reel.audio_name || `Audio original — ${reel.author?.name || reel.author?.username || "creador"}`}</span>
             </button>
+            )}
+            {caption && reel.kind !== "text" && (
+              <p onClick={(e) => { e.stopPropagation(); setExpanded((x) => !x); }} className={`pointer-events-auto text-white/95 text-[13px] mt-1.5 drop-shadow whitespace-pre-line ${expanded ? "max-h-[40vh] overflow-y-auto" : "line-clamp-2"}`} data-testid="reel-description" aria-expanded={expanded}>
+                {renderCaption(caption)}{!expanded && caption.length > 90 && <span className="text-white/70 font-semibold"> … más</span>}
+              </p>
             )}
           </div>
 

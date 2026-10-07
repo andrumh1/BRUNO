@@ -39,7 +39,7 @@ export function LiveEvents({ events, hearts }) {
   );
 }
 
-export function LiveInputRow({ liveId, token, allowGifts, onHeart, isHost }) {
+export function LiveInputRow({ liveId, token, allowGifts, allowComments = true, onHeart, isHost }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [giftsOpen, setGiftsOpen] = useState(false);
@@ -49,7 +49,7 @@ export function LiveInputRow({ liveId, token, allowGifts, onHeart, isHost }) {
     if (!text.trim()) return;
     setSending(true);
     try { await axios.post(`${API}/lives/${liveId}/comment`, { text: text.trim() }, { headers }); setText(""); }
-    catch (_) { brunoToast.error("No se pudo enviar"); }
+    catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo enviar"); }
     setSending(false);
   };
   const sendGift = async (g) => {
@@ -59,7 +59,8 @@ export function LiveInputRow({ liveId, token, allowGifts, onHeart, isHost }) {
 
   return (
     <div className="absolute inset-x-0 z-30 px-3" style={{ bottom: "calc(var(--safe-bottom) + 14px)" }}>
-      {giftsOpen && (
+      {giftsOpen && (<>
+        <div className="bruno-glass rounded-[22px] border px-3 py-1.5 mb-1" data-testid="live-gifts-note"><p className="text-[10px] text-muted-foreground text-center">Regalos con <b>puntos BRUNO</b> · sin valor monetario ni cobros reales</p></div>
         <div className="bruno-glass rounded-[22px] border p-3 mb-2 grid grid-cols-6 gap-1" data-testid="live-gifts-panel">
           {GIFTS.map((g) => (
             <button key={g.id} onClick={() => sendGift(g)} className="flex flex-col items-center gap-0.5 rounded-xl py-1.5 hover:bg-foreground/[0.06] active:scale-95" data-testid={`live-gift-${g.id}`}>
@@ -67,10 +68,10 @@ export function LiveInputRow({ liveId, token, allowGifts, onHeart, isHost }) {
             </button>
           ))}
         </div>
-      )}
+      </>)}
       <div className="flex items-center gap-2">
         <div className="flex-1 flex items-center bruno-glass rounded-full border h-11 px-4">
-          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Di algo…" className="flex-1 bg-transparent outline-none text-sm" data-testid="live-comment-input" />
+          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder={allowComments === false && !isHost ? "Comentarios desactivados por el anfitrión" : "Di algo…"} disabled={allowComments === false && !isHost} className="flex-1 bg-transparent outline-none text-sm disabled:opacity-60" data-testid="live-comment-input" />
           <button onClick={send} disabled={sending || !text.trim()} className="text-primary disabled:opacity-40" data-testid="live-comment-send">{sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}</button>
         </div>
         {!isHost && allowGifts && (

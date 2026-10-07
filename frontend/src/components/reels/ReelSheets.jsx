@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, Pause, User, Columns2, Scissors, Layers, Music2, Video, Check, Trash2, Flag, EyeOff, Pencil, Image as ImageIcon, Download } from "lucide-react";
+import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, Pause, User, Columns2, Scissors, Layers, Music2, Video, Check, Trash2, Flag, EyeOff, Ban, Pencil, Image as ImageIcon, Download } from "lucide-react";
 import TextStylePicker from "@/components/TextStylePicker";
 import { useNavigate } from "react-router-dom";
 import { brunoToast } from "@/components/bruno/BrunoToast";
@@ -160,19 +160,42 @@ export function ReelLikersSheet({ reel, token, onClose, onFollow }) {
   );
 }
 
-export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDeleted, onEdit }) {
+const REPORT_REASONS = [["spam", "Spam o engaño"], ["harassment", "Acoso o bullying"], ["hate", "Odio o discriminación"], ["violence", "Violencia"], ["nudity", "Desnudez o contenido sexual"], ["misinformation", "Información falsa"], ["ip", "Infringe derechos de autor"], ["other", "Otro"]];
+
+export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDeleted, onEdit, onHidden, onBlocked }) {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [blocking, setBlocking] = useState(false);
   if (!reel) return null;
-  const isOwner = (reel.author?.id || reel.user_id) === currentUserId;
+  const authorId = reel.author?.id || reel.user_id;
+  const isOwner = authorId === currentUserId;
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const needAuth = () => { if (!token) { brunoToast.error("Inicia sesión para continuar"); return false; } return true; };
   const del = async () => {
     setBusy(true);
     try { await axios.delete(`${API}/posts/${reel.id}`, { headers }); brunoToast.success("Publicación eliminada"); onDeleted?.(reel.id); onClose(); }
     catch (e) { brunoToast.error("No se pudo eliminar", { description: e?.response?.data?.detail }); }
     finally { setBusy(false); }
   };
-  const report = () => { brunoToast.success("Gracias, revisaremos este contenido"); onClose(); };
+  const report = async (reason) => {
+    if (!needAuth()) return; setBusy(true);
+    try { await axios.post(`${API}/reports`, { content_type: "post", content_id: reel.id, reason }, { headers }); brunoToast.success("Reporte enviado. Gracias por ayudar a cuidar BRUNO"); onClose(); }
+    catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo enviar el reporte"); }
+    finally { setBusy(false); }
+  };
+  const notInterested = async () => {
+    if (!needAuth()) return; setBusy(true);
+    try { await axios.post(`${API}/posts/${reel.id}/not-interested`, {}, { headers }); brunoToast.success("Verás menos contenido como este"); onHidden?.(reel.id); onClose(); }
+    catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo ocultar"); }
+    finally { setBusy(false); }
+  };
+  const block = async () => {
+    if (!needAuth()) return; setBusy(true);
+    try { const r = await axios.post(`${API}/users/${authorId}/block`, {}, { headers }); if (r.data?.blocked) { brunoToast.success(`Bloqueaste a @${reel.author?.username || "usuario"}`); onBlocked?.(authorId); } else brunoToast.info?.("Usuario desbloqueado"); onClose(); }
+    catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo bloquear"); }
+    finally { setBusy(false); }
+  };
   return (
     <BottomSheet open onClose={onClose} title="Opciones" testid="reel-options-sheet" height="auto">
       <div className="px-4 pt-1 space-y-1.5" style={{ paddingBottom: "calc(var(--nav-reserve, 72px) + 12px)" }}>
@@ -193,8 +216,24 @@ export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDelete
           )
         ) : (
           <>
-            <button onClick={report} className="w-full h-12 rounded-2xl bg-foreground/[0.05] flex items-center gap-3 px-4 text-sm" data-testid="reel-report-btn"><Flag className="w-4 h-4" /> Reportar</button>
-            <button onClick={() => { brunoToast.success("Verás menos contenido como este"); onClose(); }} className="w-full h-12 rounded-2xl bg-foreground/[0.05] flex items-center gap-3 px-4 text-sm" data-testid="reel-not-interested-btn"><EyeOff className="w-4 h-4" /> No me interesa</button>
+            {reporting ? (
+              <div className="rounded-2xl bg-foreground/[0.04] p-3 space-y-1.5" data-testid="reel-report-reasons">
+                <p className="text-xs font-semibold text-muted-foreground mb-1">¿Por qué reportas esta publicación?</p>
+                {REPORT_REASONS.map(([id, label]) => <button key={id} onClick={() => report(id)} disabled={busy} className="w-full h-10 rounded-xl bg-background text-sm text-left px-3 hover:bg-foreground/[0.06]" data-testid={`reel-report-reason-${id}`}>{label}</button>)}
+                <button onClick={() => setReporting(false)} className="w-full h-9 text-xs text-muted-foreground">Cancelar</button>
+              </div>
+            ) : blocking ? (
+              <div className="rounded-2xl bg-destructive/10 p-3" data-testid="reel-block-confirm">
+                <p className="text-sm font-medium mb-2">¿Bloquear a @{reel.author?.username || "usuario"}? Dejarán de verse mutuamente y no podrá contactarte.</p>
+                <div className="flex gap-2"><button onClick={() => setBlocking(false)} className="flex-1 h-10 rounded-full bg-foreground/[0.06] text-sm">Cancelar</button><button onClick={block} disabled={busy} className="flex-1 h-10 rounded-full bg-destructive text-white text-sm font-semibold" data-testid="reel-block-confirm-btn">{busy ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Bloquear"}</button></div>
+              </div>
+            ) : (
+              <>
+                <button onClick={() => setReporting(true)} className="w-full h-12 rounded-2xl bg-foreground/[0.05] flex items-center gap-3 px-4 text-sm" data-testid="reel-report-btn"><Flag className="w-4 h-4" /> Reportar</button>
+                <button onClick={notInterested} disabled={busy} className="w-full h-12 rounded-2xl bg-foreground/[0.05] flex items-center gap-3 px-4 text-sm" data-testid="reel-not-interested-btn"><EyeOff className="w-4 h-4" /> No me interesa</button>
+                <button onClick={() => setBlocking(true)} className="w-full h-12 rounded-2xl bg-foreground/[0.05] flex items-center gap-3 px-4 text-sm text-destructive" data-testid="reel-block-btn"><Ban className="w-4 h-4" /> Bloquear a @{reel.author?.username || "usuario"}</button>
+              </>
+            )}
           </>
         )}
       </div>

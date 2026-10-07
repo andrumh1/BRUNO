@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavScroll } from "@/contexts/NavScrollContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import ReelItem from "@/components/reels/ReelItem";
-import { useReelsFeed } from "@/components/reels/useReelsFeed";
+import { useReelsFeed, rememberFeedPosition } from "@/components/reels/useReelsFeed";
 import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet, ReelLikersSheet, ReelOptionsSheet, ReelEditSheet } from "@/components/reels/ReelSheets";
 import RemixStudio from "@/components/reels/RemixStudio";
@@ -52,8 +52,18 @@ export default function ReelsPage() {
   const itemRefs = useRef([]);
 
   const feedMode = tab === "following" ? "following" : "for_you";
-  const { reels, loading, loadingMore, loadMore, trackView, patchReel, removeReel } = useReelsFeed({ token, mode: feedMode, profileUserId, initialReelId });
+  const { reels, loading, loadingMore, loadMore, trackView, patchReel, removeReel, removeByAuthor, restoredIndex, cacheKey } = useReelsFeed({ token, mode: feedMode, profileUserId, initialReelId });
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  /* Restaurar la posición del feed al volver de un perfil / comentarios */
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || loading || !restoredIndex || !containerRef.current) return;
+    restoredRef.current = true;
+    const el = itemRefs.current[restoredIndex];
+    if (el) { containerRef.current.scrollTop = el.offsetTop; setActiveIndex(restoredIndex); }
+  }, [loading, restoredIndex]);
+  useEffect(() => { rememberFeedPosition(cacheKey, activeIndex); }, [activeIndex, cacheKey]);
 
   /* Active reel tracking via IntersectionObserver */
   useEffect(() => {
@@ -77,7 +87,8 @@ export default function ReelsPage() {
     if (activeIndex >= reels.length - 3) loadMore();
   }, [activeIndex, reels.length]);
 
-  useEffect(() => { setActiveIndex(0); if (containerRef.current) containerRef.current.scrollTop = 0; }, [tab]);
+  const firstTab = useRef(true);
+  useEffect(() => { if (firstTab.current) { firstTab.current = false; return; } setActiveIndex(0); if (containerRef.current) containerRef.current.scrollTop = 0; }, [tab]);
 
   /* Deep-link from notifications: /reels?id=X&comments=1 opens the comments sheet */
   const openedCommentsRef = useRef(false);
@@ -181,7 +192,7 @@ export default function ReelsPage() {
                     onLike={handleLike} onFollow={handleFollow} onSave={handleSave}
                     onOpenComments={setCommentsFor} onOpenShare={setShareFor} onMinimize={handleMinimize}
                     onOpenRemix={(r) => { if (requireAuth()) setRemixFor(r); }} onOpenRemixes={(r) => setRemixesOf(r.id)} onOpenSound={setSoundFor} onOpenLikers={setLikersFor} onOpenOptions={setOptionsFor}
-                    onSwipeLeft={swipeLeft} onSwipeRight={swipeRight}
+                    onSwipeLeft={swipeLeft} onSwipeRight={swipeRight} currentUserId={user?.id}
                   />
                 ) : (
                   <div className="h-full w-full reels-surface bg-center bg-cover opacity-70" style={{ backgroundImage: reel.poster_url || reel.thumbnail_url ? `url(${reel.poster_url || reel.thumbnail_url})` : undefined }} />
@@ -196,7 +207,7 @@ export default function ReelsPage() {
       )}
 
       <ReelCommentsSheet reel={commentsFor} token={token} currentUserId={user?.id} highlightId={commentsFor?.id === initialReelId ? highlightCommentId : null} onClose={() => setCommentsFor(null)} onPosted={(id) => patchReel(id, (r) => ({ comments_count: (r.comments_count || 0) + 1 }))} onDeleted={(id, count) => patchReel(id, (r) => ({ comments_count: count ?? Math.max(0, (r.comments_count || 0) - 1) }))} />
-      {optionsFor && <ReelOptionsSheet reel={optionsFor} token={token} currentUserId={user?.id} onClose={() => setOptionsFor(null)} onDeleted={(id) => removeReel(id)} onEdit={setEditFor} />}
+      {optionsFor && <ReelOptionsSheet reel={optionsFor} token={token} currentUserId={user?.id} onClose={() => setOptionsFor(null)} onDeleted={(id) => removeReel(id)} onEdit={setEditFor} onHidden={(id) => removeReel(id)} onBlocked={(uid) => removeByAuthor(uid)} />}
       {editFor && <ReelEditSheet reel={editFor} token={token} onClose={() => setEditFor(null)} onSaved={(id, patch) => patchReel(id, patch)} />}
       {soundFor && <ReelSoundSheet reel={soundFor} token={token} onClose={() => setSoundFor(null)} onPick={(r) => { setSoundFor(null); navigate(`/reels?id=${r.id}`); }} />}
       <ReelLikersSheet reel={likersFor} token={token} onClose={() => setLikersFor(null)} onFollow={(uid, next) => reels.forEach((r) => { if ((r.author?.id || r.user_id) === uid) patchReel(r.id, { is_following: next }); })} />

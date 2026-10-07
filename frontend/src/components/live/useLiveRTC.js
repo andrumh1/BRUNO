@@ -5,106 +5,71 @@ const BACKEND = process.env.REACT_APP_BACKEND_URL;
 const WS_BASE = BACKEND.replace("https://", "wss://").replace("http://", "ws://");
 
 /**
- * useLiveRTC — WebRTC live transport over the /api/lives/{id}/ws signaling socket.
- *  role "host":   localStream → one RTCPeerConnection per viewer (offers).
- *  role "viewer": receives the host's offer → remoteStream.
- * Also surfaces realtime events (comments, hearts, gifts, viewer count).
+ * useLiveRTC — canal de eventos en tiempo real del live (/api/lives/{id}/ws):
+ * comentarios, corazones, regalos, espectadores, fijados, moderación, fin del live.
+ * El audio/video viaja por Daily.co (ver useDailyLive). Reconecta con backoff.
  */
-export function useLiveRTC({ liveId, token, role, accessCode, localStream, enabled = true }) {
+export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) {
   const wsRef = useRef(null);
-  const pcs = useRef({});            // peerId → RTCPeerConnection
-  const iceRef = useRef([{ urls: "stun:stun.l.google.com:19302" }]);
-  const selfId = useRef(null);
-  const hostId = useRef(null);
-  const [remoteStream, setRemoteStream] = useState(null);
   const [connected, setConnected] = useState(false);
   const [hostOnline, setHostOnline] = useState(role === "host");
   const [viewerCount, setViewerCount] = useState(0);
-  const [events, setEvents] = useState([]);   // comments + gifts (newest last)
-  const [hearts, setHearts] = useState([]);   // transient floating hearts
+  const [events, setEvents] = useState([]);
+  const [hearts, setHearts] = useState([]);
+  const [pinned, setPinned] = useState(null);
+  const [settings, setSettings] = useState({});
+  const [mutedIds, setMutedIds] = useState([]);
   const [ended, setEnded] = useState(false);
   const [denied, setDenied] = useState(false);
+  const [kicked, setKicked] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   const send = useCallback((msg) => { const ws = wsRef.current; if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }, []);
-
-  const newPc = (peerId) => {
-    const pc = new RTCPeerConnection({ iceServers: iceRef.current });
-    pc.onicecandidate = (e) => { if (e.candidate) send({ type: "ice", to: peerId, candidate: e.candidate }); };
-    pc.onconnectionstatechange = () => { if (["failed", "closed", "disconnected"].includes(pc.connectionState) && role === "host") { pc.close(); delete pcs.current[peerId]; } };
-    pcs.current[peerId] = pc;
-    return pc;
-  };
-
-  const offerTo = async (peerId) => {
-    if (!localStream) return;
-    pcs.current[peerId]?.close();
-    const pc = newPc(peerId);
-    localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    send({ type: "offer", to: peerId, sdp: pc.localDescription });
-  };
-
-  const handleOffer = async (msg) => {
-    const pc = newPc(msg.from);
-    pc.ontrack = (e) => { setRemoteStream(e.streams[0]); setHostOnline(true); };
-    await pc.setRemoteDescription(msg.sdp);
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    send({ type: "answer", to: msg.from, sdp: pc.localDescription });
-  };
+  const pushEvent = (e) => setEvents((p) => [...p.slice(-80), e]);
 
   useEffect(() => {
-    if (!enabled || !liveId || !token) return;
-    if (role === "host" && !localStream) return;
+    if (!enabled || !liveId || !token || ended || kicked || denied) return;
     const url = `${WS_BASE}/api/lives/${liveId}/ws?token=${encodeURIComponent(token)}${accessCode ? `&code=${encodeURIComponent(accessCode)}` : ""}`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
-    ws.onopen = () => setConnected(true);
-    ws.onclose = (e) => { setConnected(false); if (e.code === 4003) setDenied(true); if (e.code === 4000) return; };
-    ws.onmessage = async (ev) => {
+    let closedByUs = false;
+    let retry;
+    ws.onopen = () => { setConnected(true); setAttempt(0); };
+    ws.onclose = (e) => {
+      setConnected(false);
+      if (e.code === 4003) return setDenied(true);
+      if (e.code === 4005) return setKicked(true);
+      if (e.code === 4004) return setEnded(true);
+      if (e.code === 4000 || closedByUs) return;
+      retry = setTimeout(() => setAttempt((a) => a + 1), Math.min(8000, 1000 * 2 ** Math.min(attempt, 3)));
+    };
+    ws.onmessage = (ev) => {
       let msg; try { msg = JSON.parse(ev.data); } catch (_) { return; }
       switch (msg.type) {
         case "error": if (msg.code === 4003) setDenied(true); break;
-        case "welcome":
-          selfId.current = msg.self_id; hostId.current = msg.host_id;
-          if (msg.rtc_config?.iceServers) iceRef.current = msg.rtc_config.iceServers;
-          setViewerCount(msg.viewer_count || 0);
-          if (role !== "host") setHostOnline(!!msg.host_online);
-          if (role === "host") (msg.viewers || []).forEach((v) => offerTo(v));
-          else send({ type: "request_stream" });
-          break;
-        case "viewer_joined":
-          setViewerCount(msg.viewer_count ?? 0);
-          if (role === "host" && msg.viewer?.id) offerTo(msg.viewer.id);
-          setEvents((p) => [...p.slice(-80), { id: `j-${Date.now()}`, kind: "join", user_name: msg.viewer?.name }]);
-          break;
-        case "viewer_left":
-          setViewerCount(msg.viewer_count ?? 0);
-          pcs.current[msg.viewer_id]?.close(); delete pcs.current[msg.viewer_id];
-          break;
-        case "host_online": setHostOnline(true); send({ type: "request_stream" }); break;
-        case "host_offline": setHostOnline(false); setRemoteStream(null); break;
-        case "offer": if (role === "viewer") await handleOffer(msg); break;
-        case "answer": { const pc = pcs.current[msg.from]; if (pc) await pc.setRemoteDescription(msg.sdp).catch(() => {}); break; }
-        case "ice": { const pc = pcs.current[msg.from]; if (pc && msg.candidate) await pc.addIceCandidate(msg.candidate).catch(() => {}); break; }
-        case "new_comment": setEvents((p) => [...p.slice(-80), { kind: "comment", ...msg.comment }]); break;
-        case "new_gift": setEvents((p) => [...p.slice(-80), { kind: "gift", id: msg.gift.id, user_name: msg.gift.sender_name, gift_type: msg.gift.gift_type, amount: msg.gift.amount }]); break;
+        case "welcome": setViewerCount(msg.viewer_count || 0); setPinned(msg.pinned_comment || null); if (role !== "host") setHostOnline(!!msg.host_online); break;
+        case "viewer_joined": setViewerCount(msg.viewer_count ?? 0); pushEvent({ id: `j-${Date.now()}`, kind: "join", user_name: msg.viewer?.name, user_id: msg.viewer?.id }); break;
+        case "viewer_left": setViewerCount(msg.viewer_count ?? 0); break;
+        case "host_online": setHostOnline(true); break;
+        case "host_offline": setHostOnline(false); break;
+        case "new_comment": pushEvent({ kind: "comment", ...msg.comment }); break;
+        case "new_gift": pushEvent({ kind: "gift", id: msg.gift.id, user_name: msg.gift.sender_name, gift_type: msg.gift.gift_type, amount: msg.gift.amount }); break;
         case "heart": { const id = `${Date.now()}-${Math.random()}`; setHearts((p) => [...p.slice(-20), { id, dx: Math.round(Math.random() * 80 - 40) }]); setTimeout(() => setHearts((p) => p.filter((h) => h.id !== id)), 2500); break; }
+        case "pinned": setPinned(msg.comment || null); break;
+        case "user_muted": setMutedIds((p) => [...new Set([...p, msg.user_id])]); break;
+        case "user_unmuted": setMutedIds((p) => p.filter((x) => x !== msg.user_id)); break;
+        case "user_kicked": setEvents((p) => p.filter((e) => e.user_id !== msg.user_id)); break;
+        case "kicked": setKicked(true); break;
+        case "settings": setSettings((s) => ({ ...s, ...msg })); break;
         case "live_ended": setEnded(true); break;
         default: break;
       }
     };
     const ping = setInterval(() => send({ type: "ping" }), 25000);
-    return () => {
-      clearInterval(ping);
-      Object.values(pcs.current).forEach((pc) => pc.close()); pcs.current = {};
-      try { ws.close(); } catch (_) { /* ignore */ }
-      wsRef.current = null;
-    };
-  }, [liveId, token, role, accessCode, localStream, enabled]);
+    return () => { closedByUs = true; clearInterval(ping); clearTimeout(retry); try { ws.close(); } catch (_) { /* ignore */ } wsRef.current = null; };
+  }, [liveId, token, role, accessCode, enabled, attempt, ended, kicked, denied]);
 
   const sendHeart = useCallback(() => send({ type: "heart" }), [send]);
 
-  return { remoteStream, connected, hostOnline, viewerCount, events, hearts, ended, denied, sendHeart };
+  return { connected, hostOnline, viewerCount, events, hearts, pinned, settings, mutedIds, ended, denied, kicked, sendHeart, reconnecting: !connected && attempt > 0 };
 }

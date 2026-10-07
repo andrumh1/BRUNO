@@ -35,13 +35,28 @@ export const normalizeReel = (post) => {
  * useReelsFeed — infinite, algorithmic reels feed with dedupe + history.
  *  mode: "for_you" | "following" | { userId }  (profile mode = chronological)
  */
+/* Caché en memoria del feed (por modo) para volver exactamente al mismo video al salir a un perfil/comentarios. */
+const FEED_CACHE = new Map();
+const CACHE_TTL = 15 * 60 * 1000;
+export const rememberFeedPosition = (key, index) => { const c = FEED_CACHE.get(key); if (c) { c.index = index; c.at = Date.now(); } };
+export const feedCacheKey = (mode, profileUserId) => `${mode}|${profileUserId || ""}`;
+
 export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
-  const [reels, setReels] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = feedCacheKey(mode, profileUserId);
+  const cached = !initialReelId && FEED_CACHE.get(cacheKey);
+  const fresh = cached && Date.now() - cached.at < CACHE_TTL && cached.reels.length > 0;
+  const [reels, setReels] = useState(fresh ? cached.reels : []);
+  const [loading, setLoading] = useState(!fresh);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [done, setDone] = useState(false);
-  const seenRef = useRef(new Set());
-  const seedRef = useRef(Math.floor(Math.random() * 1e9));
+  const [done, setDone] = useState(fresh ? cached.done : false);
+  const seenRef = useRef(fresh ? new Set(cached.seen) : new Set());
+  const seedRef = useRef(fresh ? cached.seed : Math.floor(Math.random() * 1e9));
+  const restoredIndex = fresh ? cached.index : 0;
+
+  useEffect(() => {
+    if (loading) return;
+    FEED_CACHE.set(cacheKey, { reels, seen: [...seenRef.current], seed: seedRef.current, done, index: FEED_CACHE.get(cacheKey)?.index || 0, at: Date.now() });
+  }, [reels, done, loading, cacheKey]);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
   const fetchPage = useCallback(async (reset = false) => {
@@ -59,9 +74,12 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
     return list;
   }, [token, mode, profileUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const skipFirstFetch = useRef(fresh);
   useEffect(() => {
+    if (skipFirstFetch.current) { skipFirstFetch.current = false; return; }
     let cancelled = false;
     seenRef.current = new Set();
+    seedRef.current = Math.floor(Math.random() * 1e9);
     setLoading(true); setDone(false);
     (async () => {
       const first = await fetchPage(true);
@@ -107,5 +125,6 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
   }, []);
 
   const removeReel = useCallback((id) => setReels((prev) => prev.filter((r) => r.id !== id)), []);
-  return { reels, loading, loadingMore, done, loadMore, trackView, patchReel, removeReel };
+  const removeByAuthor = useCallback((uid) => setReels((prev) => prev.filter((r) => (r.author?.id || r.user_id) !== uid)), []);
+  return { reels, loading, loadingMore, done, loadMore, trackView, patchReel, removeReel, removeByAuthor, restoredIndex, cacheKey };
 }

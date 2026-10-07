@@ -12,6 +12,9 @@ import { ArrowLeft, Radio, Lock, Globe, ShieldCheck, Copy, Share2, RefreshCw, Fl
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { useLiveRTC } from "@/components/live/useLiveRTC";
+import { useDailyLive } from "@/components/live/useDailyLive";
+import LiveModerationSheet from "@/components/live/LiveModerationSheet";
+import { Shield, Wifi, WifiOff, Pin } from "lucide-react";
 import { LiveEvents, LiveInputRow, LiveTopBar } from "@/components/live/LiveOverlay";
 import PrivacyShield from "@/components/live/PrivacyShield";
 
@@ -29,6 +32,8 @@ export default function StartLivePage() {
   const [muted, setMuted] = useState(false);
   const [camError, setCamError] = useState(null);
   const [codePanel, setCodePanel] = useState(false);
+  const [modOpen, setModOpen] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const videoRef = useRef(null);
   const headers = { Authorization: `Bearer ${token}` };
 
@@ -48,19 +53,32 @@ export default function StartLivePage() {
     } catch (e) { setCamError(e?.name === "NotAllowedError" ? "Permite el acceso a cámara y micrófono para transmitir" : "No se pudo acceder a la cámara"); }
   };
   useEffect(() => { openCamera(); return () => stream?.getTracks().forEach((t) => t.stop()); }, []);
-  useEffect(() => { if (videoRef.current && stream) videoRef.current.srcObject = stream; }, [stream, live]);
-  useEffect(() => { stream?.getAudioTracks().forEach((t) => (t.enabled = !muted)); }, [muted, stream]);
+  const rtc = useLiveRTC({ liveId: live?.id, token, role: "host", enabled: !!live });
+  const daily = useDailyLive({ url: live?.rtc?.url, token: live?.rtc?.token, role: "host", hostId: user?.id, enabled: !!live?.rtc });
 
-  const flip = () => { const f = facing === "user" ? "environment" : "user"; setFacing(f); openCamera(f); };
+  useEffect(() => {
+    const v = videoRef.current; if (!v) return;
+    const src = live ? daily.localStream : stream;
+    if (v.srcObject !== src) { v.srcObject = src || null; v.play?.().catch(() => {}); }
+  }, [stream, live, daily.localStream]);
+  useEffect(() => { if (live) { stream?.getTracks().forEach((t) => t.stop()); } }, [live]);
+  useEffect(() => { if (live) daily.setMic(!muted); else stream?.getAudioTracks().forEach((t) => (t.enabled = !muted)); }, [muted, stream, live, daily.state]);
+  useEffect(() => {
+    if (!live?.started_at) return;
+    const t0 = new Date(live.started_at).getTime();
+    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - t0) / 1000)));
+    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
+  }, [live?.started_at]);
+  const fmtDur = (s) => `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-  const rtc = useLiveRTC({ liveId: live?.id, token, role: "host", localStream: stream, enabled: !!live });
+  const flip = () => { if (live) return daily.cycleCamera(); const f = facing === "user" ? "environment" : "user"; setFacing(f); openCamera(f); };
 
   const start = async () => {
     if (!form.title.trim()) return brunoToast.error("Ponle un título a tu live");
     if (!stream) return brunoToast.error("Activa la cámara primero");
     setStarting(true);
-    try { const r = await axios.post(`${API}/lives`, form, { headers }); setLive(r.data); if (r.data.is_private) setCodePanel(true); }
-    catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo iniciar el live"); }
+    try { stream?.getTracks().forEach((t) => t.stop()); const r = await axios.post(`${API}/lives`, form, { headers }); setLive(r.data); if (r.data.is_private) setCodePanel(true); }
+    catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo iniciar el live"); openCamera(); }
     setStarting(false);
   };
   const end = async () => {
@@ -84,7 +102,8 @@ export default function StartLivePage() {
   const stage = (
     <div className="live-stage absolute inset-0 bg-black">
       <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" style={{ transform: facing === "user" ? "scaleX(-1)" : undefined }} data-testid="live-host-video" />
-      {camError && <div className="absolute inset-0 grid place-items-center text-white text-sm text-center px-8">{camError}</div>}
+      {camError && !live && <div className="absolute inset-0 grid place-items-center text-white text-sm text-center px-8">{camError}</div>}
+      {live && daily.error && <div className="absolute inset-0 grid place-items-center text-white text-sm text-center px-8" data-testid="live-host-error">{daily.error}</div>}
     </div>
   );
 
@@ -95,14 +114,30 @@ export default function StartLivePage() {
         <PrivacyShield active={!!live.is_private && !!live.anti_capture} label={`BRUNO · ${user?.name || "host"} · anfitrión`}>
           {stage}
         </PrivacyShield>
-        <LiveTopBar live={live} viewerCount={rtc.viewerCount} hostOnline={rtc.connected} onClose={end}
+        {/* Estado: duración + conexión */}
+        <div className="absolute left-3 z-30 flex items-center gap-2" style={{ top: "calc(var(--safe-top) + 64px)" }} data-testid="live-host-status">
+          <span className="h-7 px-2.5 rounded-full bg-black/50 text-white text-[11px] font-mono inline-flex items-center" data-testid="live-host-duration">{fmtDur(elapsed)}</span>
+          <span className={`h-7 px-2.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 ${daily.state === "connected" ? "bg-emerald-500/85 text-white" : daily.state === "error" ? "bg-red-500/85 text-white" : "bg-amber-500/90 text-black"}`} data-testid="live-host-connection" data-state={daily.state}>
+            {daily.state === "connected" ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+            {daily.state === "connected" ? (daily.quality === "good" ? "En vivo" : "Señal débil") : daily.state === "interrupted" ? "Reconectando…" : daily.state === "error" ? "Sin conexión" : "Conectando…"}
+          </span>
+        </div>
+        <LiveTopBar live={live} viewerCount={rtc.viewerCount} hostOnline={rtc.connected} onClose={() => { if (window.confirm("¿Finalizar el live para todos?")) end(); }}
           right={live.is_private && <button onClick={() => setCodePanel((v) => !v)} className="h-9 px-3 rounded-full bg-primary text-white text-xs font-bold inline-flex items-center gap-1" data-testid="live-code-toggle"><KeyRound className="w-3.5 h-3.5" /> Código</button>} />
 
         {/* Host controls */}
         <div className="absolute right-3 z-30 flex flex-col gap-2" style={{ top: "calc(var(--safe-top) + 64px)" }}>
           <button onClick={flip} className="w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-flip-btn"><FlipHorizontal className="w-5 h-5" /></button>
           <button onClick={() => setMuted((m) => !m)} className={`w-10 h-10 rounded-full grid place-items-center ${muted ? "bg-red-500 text-white" : "bg-black/45 text-white"}`} data-testid="live-mute-btn">{muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}</button>
+          <button onClick={() => setModOpen(true)} className="w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-moderation-btn" aria-label="Moderación"><Shield className="w-5 h-5" /></button>
+          {daily.devices.cameras.length > 1 && (
+            <select onChange={(e) => daily.setVideoDevice(e.target.value)} className="w-10 h-10 rounded-full bg-black/45 text-white text-[0px] appearance-none text-center" title="Elegir cámara" data-testid="live-camera-select">
+              {daily.devices.cameras.map((c) => <option key={c.deviceId} value={c.deviceId} className="text-sm text-black">{c.label || "Cámara"}</option>)}
+            </select>
+          )}
         </div>
+        {rtc.pinned && <div className="absolute left-3 right-16 z-30 rounded-2xl bg-primary/90 text-white px-3 py-2 text-xs flex items-start gap-2" style={{ top: "calc(var(--safe-top) + 100px)" }} data-testid="live-pinned-bar"><Pin className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span className="truncate"><b>{rtc.pinned.user_name}</b>: {rtc.pinned.text}</span></div>}
+        {modOpen && <LiveModerationSheet live={live} events={rtc.events} pinned={rtc.pinned} mutedIds={rtc.mutedIds} isHost token={token} onClose={() => setModOpen(false)} onLiveChange={(patch) => setLive((l) => ({ ...l, ...patch }))} />}
 
         {live.is_private && codePanel && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="absolute left-3 right-3 z-30 bruno-glass rounded-[24px] border p-4" style={{ top: "calc(var(--safe-top) + 64px)", maxWidth: 420 }} data-testid="live-code-panel">

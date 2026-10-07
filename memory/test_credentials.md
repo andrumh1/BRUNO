@@ -20,3 +20,8 @@
 
 ## Grupo de prueba
 - chat id 655d23d2-b133-4188-a95c-bd8a777c04f4 "Equipo BRUNO" (admin newtest)
+
+## Segunda cuenta (espectador de lives / pruebas con dos usuarios)
+- Email: viewer2@bruno.com
+- Password: Test1234!
+- username: viewerdos · id: 3636b29b-ae7d-49c4-8a1e-2312500d0eeb
