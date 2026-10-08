@@ -2552,6 +2552,8 @@ app.include_router(compliance_router)
 # Set database for lives router
 lives_set_db(db)
 app.include_router(lives_router)
+from routers.post_drafts import router as post_drafts_router  # noqa: E402
+api_router.include_router(post_drafts_router)
 
 # Set database for monetization router
 monetization_set_db(db)

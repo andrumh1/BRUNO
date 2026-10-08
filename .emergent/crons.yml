@@ -18,3 +18,9 @@ crons:
     endpoint: "{{BASE_URL}}/api/cron/poll-reminders"
     method: POST
     enabled: true
+  - name: live-reminders
+    description: "Avisa 10 min antes a quienes pidieron recordatorio de un live programado (cada 5 min)"
+    cron: "*/5 * * * *"
+    endpoint: "{{BASE_URL}}/api/cron/live-reminders"
+    method: POST
+    enabled: true

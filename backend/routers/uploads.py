@@ -2,6 +2,7 @@
 Extracted from server.py to reduce monolith size.
 """
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from typing import Optional
 import logging
 import uuid
 import os
@@ -67,6 +68,9 @@ async def upload_image(
     file: UploadFile = File(...),
     folder: str = "bruno",
     aspect: str = "free",
+    trim_start: Optional[float] = None,
+    trim_end: Optional[float] = None,
+    cover_at: Optional[float] = None,
     current_user: User = Depends(get_current_user),
 ):
     """Upload an image or video to Cloudinary.
@@ -98,17 +102,26 @@ async def upload_image(
             base_url = result.get("secure_url") or ""
             mp4_url = None
             poster_url = None
-            for d in result.get("eager", []) or []:
-                if d.get("format") == "mp4" and not mp4_url:
-                    mp4_url = d.get("secure_url")
-                elif d.get("format") == "jpg" and not poster_url:
-                    poster_url = d.get("secure_url")
+            # Recorte (so_/eo_) y portada (so_) elegidos en la vista previa: se aplican por URL de transformación,
+            # así el video publicado coincide exactamente con lo que el usuario vio.
+            trim = ""
+            if trim_start is not None and trim_start > 0:
+                trim += f"so_{trim_start:.2f},"
+            if trim_end is not None and trim_end > 0 and (trim_start is None or trim_end > trim_start):
+                trim += f"eo_{trim_end:.2f},"
+            cover = f"so_{max(0.0, cover_at):.2f}" if cover_at is not None else "so_auto"
+            if not trim and cover == "so_auto":
+                for d in result.get("eager", []) or []:
+                    if d.get("format") == "mp4" and not mp4_url:
+                        mp4_url = d.get("secure_url")
+                    elif d.get("format") == "jpg" and not poster_url:
+                        poster_url = d.get("secure_url")
             # Synth fallbacks while derivatives bake
             if "/upload/" in base_url:
                 if not mp4_url:
-                    mp4_url = base_url.replace("/upload/", f"/upload/f_mp4,vc_h264,ac_aac,br_2500k,w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/").rsplit(".", 1)[0] + ".mp4"
+                    mp4_url = base_url.replace("/upload/", f"/upload/{trim}f_mp4,vc_h264,ac_aac,br_2500k,w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/").rsplit(".", 1)[0] + ".mp4"
                 if not poster_url:
-                    poster_url = base_url.replace("/upload/", f"/upload/so_auto,w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/").rsplit(".", 1)[0] + ".jpg"
+                    poster_url = base_url.replace("/upload/", f"/upload/{cover},w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/").rsplit(".", 1)[0] + ".jpg"
                 f_auto_url = base_url.replace("/upload/", "/upload/f_auto,q_auto/")
             else:
                 f_auto_url = base_url

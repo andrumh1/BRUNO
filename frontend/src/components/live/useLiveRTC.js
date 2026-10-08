@@ -23,6 +23,12 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
   const [denied, setDenied] = useState(false);
   const [kicked, setKicked] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [guestRequests, setGuestRequests] = useState([]);
+  const [guests, setGuests] = useState([]);
+  const [guestStatus, setGuestStatus] = useState("none"); // none | pending | accepted | rejected
+  const [guestRtc, setGuestRtc] = useState(null);
+  const [poll, setPoll] = useState(null);
+  const [questions, setQuestions] = useState([]);
 
   const send = useCallback((msg) => { const ws = wsRef.current; if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }, []);
   const pushEvent = (e) => setEvents((p) => [...p.slice(-80), e]);
@@ -62,6 +68,15 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
         case "kicked": setKicked(true); break;
         case "settings": setSettings((s) => ({ ...s, ...msg })); break;
         case "live_ended": setEnded(true); break;
+        case "guest_request": setGuestRequests((p) => [...p.filter((g) => g.id !== msg.user.id), msg.user]); break;
+        case "guest_request_cancel": setGuestRequests((p) => p.filter((g) => g.id !== msg.user_id)); break;
+        case "guest_accepted": setGuestStatus("accepted"); setGuestRtc(msg.rtc); break;
+        case "guest_rejected": setGuestStatus("rejected"); break;
+        case "guest_added": setGuests((p) => [...p.filter((g) => g.id !== msg.user.id), msg.user]); setGuestRequests((p) => p.filter((g) => g.id !== msg.user.id)); break;
+        case "guest_removed": setGuests((p) => p.filter((g) => g.id !== msg.user_id)); break;
+        case "guest_removed_you": setGuestStatus("none"); setGuestRtc(null); break;
+        case "poll": setPoll(msg.poll); break;
+        case "question": setQuestions((p) => { const rest = p.filter((q) => q.id !== msg.question.id); return [...rest, msg.question].sort((a, b) => (a.answered - b.answered) || (b.upvotes - a.upvotes)); }); break;
         default: break;
       }
     };
@@ -71,5 +86,6 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
 
   const sendHeart = useCallback(() => send({ type: "heart" }), [send]);
 
-  return { connected, hostOnline, viewerCount, events, hearts, pinned, settings, mutedIds, ended, denied, kicked, sendHeart, reconnecting: !connected && attempt > 0 };
+  return { connected, hostOnline, viewerCount, events, hearts, pinned, settings, mutedIds, ended, denied, kicked, sendHeart, reconnecting: !connected && attempt > 0,
+    guestRequests, guests, guestStatus, setGuestStatus, guestRtc, setGuestRtc, poll, setPoll, questions, setQuestions };
 }

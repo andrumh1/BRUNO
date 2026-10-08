@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import InternalGalleryPicker from "@/components/bruno/InternalGalleryPicker";
 import axios from "axios";
 import * as faceapi from "face-api.js";
+import { VideoTrimCover, UploadProgress, DraftsSheet } from "@/components/camera/VideoPublishTools";
 import {
   Camera,
   Video,
@@ -175,6 +176,51 @@ const BrunoCameraPage = () => {
   // Publishing
   const [publishing, setPublishing] = useState(false);
   const [caption, setCaption] = useState("");
+  const [trim, setTrim] = useState({ start: 0, end: 0 });
+  const [coverAt, setCoverAt] = useState(null);
+  const [upload, setUpload] = useState({ pct: 0, phase: null, error: null });
+  const [draftsOpen, setDraftsOpen] = useState(false);
+  const [draftCount, setDraftCount] = useState(0);
+  const lastAction = useRef(null);
+  useEffect(() => { if (token) axios.get(`${API}/post-drafts`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setDraftCount(r.data.length)).catch(() => {}); }, [token]);
+
+  /* Sube el video/foto con progreso real; aplica recorte y portada elegidos en la vista previa. Reutiliza el media de un borrador. */
+  const uploadMedia = async () => {
+    if (capturedMedia.remote && capturedMedia.up) return capturedMedia.up;
+    const formData = new FormData();
+    const resp = await fetch(capturedMedia.data);
+    const blob = await resp.blob();
+    const ext = capturedMedia.type === "photo" ? "jpg" : (capturedMedia.ext || (blob.type.includes("mp4") ? "mp4" : "webm"));
+    formData.append("file", blob, `bruno_${Date.now()}.${ext}`);
+    const params = capturedMedia.type === "photo" ? {} : { ...(trim.start > 0 ? { trim_start: trim.start.toFixed(2) } : {}), ...(trim.end > 0 ? { trim_end: trim.end.toFixed(2) } : {}), ...(coverAt != null ? { cover_at: coverAt.toFixed(2) } : {}) };
+    setUpload({ pct: 0, phase: "upload", error: null });
+    const res = await axios.post(`${API}/upload/image`, formData, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }, params,
+      onUploadProgress: (e) => { const pct = e.total ? Math.round((e.loaded * 100) / e.total) : 0; setUpload({ pct, phase: pct >= 100 ? "process" : "upload", error: null }); },
+    });
+    return res.data || {};
+  };
+
+  const saveDraft = async () => {
+    if (!capturedMedia || !token) return;
+    lastAction.current = saveDraft; setPublishing(true);
+    try {
+      const up = await uploadMedia();
+      setUpload({ pct: 100, phase: "publish", error: null });
+      await axios.post(`${API}/post-drafts`, { media_url: up.url, media_type: capturedMedia.type === "photo" ? "image" : "video", media_meta: up, caption, trim_start: trim.start || null, trim_end: trim.end || null, cover_at: coverAt, poster_url: up.poster_url }, { headers: { Authorization: `Bearer ${token}` } });
+      if (capturedMedia.draftId) await axios.delete(`${API}/post-drafts/${capturedMedia.draftId}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+      const { brunoToast } = await import("@/components/bruno/BrunoToast");
+      brunoToast.success("Borrador guardado", { description: "Retómalo desde «Borradores» en la cámara." });
+      setUpload({ pct: 0, phase: null, error: null }); setCapturedMedia(null); setCaption(""); setDraftCount((n) => n + 1);
+    } catch (err) {
+      setUpload((u) => ({ ...u, phase: null, error: err?.response?.data?.detail || "No se pudo guardar el borrador. Revisa tu conexión." }));
+    } finally { setPublishing(false); }
+  };
+
+  const resumeDraft = (d) => {
+    setCapturedMedia({ type: d.media_type === "image" ? "photo" : "video", data: d.media_url, remote: true, up: d.media_meta || { url: d.media_url, poster_url: d.poster_url }, draftId: d.id });
+    setCaption(d.caption || ""); setDraftsOpen(false);
+  };
   const [showCaption, setShowCaption] = useState(false);
 
   // Actionable camera/recording errors (permission denied, unsupported codec, ...)
@@ -611,21 +657,13 @@ const BrunoCameraPage = () => {
 
   const handlePublish = async () => {
     if (!capturedMedia || !token) return;
+    lastAction.current = handlePublish;
     setPublishing(true);
     try {
-      // Step 1: Upload media to Cloudinary
-      const formData = new FormData();
-      const resp = await fetch(capturedMedia.data);
-      const blob = await resp.blob();
-      const ext = capturedMedia.type === "photo"
-        ? "jpg"
-        : (capturedMedia.ext || (blob.type.includes("mp4") ? "mp4" : "webm"));
-      formData.append("file", blob, `bruno_${Date.now()}.${ext}`);
-      const uploadRes = await axios.post(`${API}/upload/image`, formData, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-      });
-      const mediaUrl = uploadRes.data.url;
-      const up = uploadRes.data || {};
+      // Step 1: Upload media to Cloudinary (con progreso, recorte y portada)
+      const up = await uploadMedia();
+      const mediaUrl = up.url;
+      setUpload({ pct: 100, phase: "publish", error: null });
 
       // Step 2: If there's an embedded poll sticker, create the poll first so the story can link it.
       const pollSticker = stickers.find((s) => s.kind === "poll");
@@ -668,12 +706,14 @@ const BrunoCameraPage = () => {
           audio: sound && capturedMedia.type !== "photo" ? { source_post_id: sound.source_post_id, name: sound.name, url: sound.url } : null,
         }, { headers: { Authorization: `Bearer ${token}` } });
         const { brunoToast } = await import("@/components/bruno/BrunoToast");
+        if (capturedMedia.draftId) axios.delete(`${API}/post-drafts/${capturedMedia.draftId}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
         brunoToast.publish(capturedMedia.type === "photo" ? "Publicación creada" : "Reel publicado", { description: "Ya aparece en tu perfil, el feed y Reels." });
         navigate(capturedMedia.type === "photo" ? `/post/${created.data?.id || ""}` : `/reels?id=${created.data?.id || ""}`);
       }
     } catch (err) {
       const { brunoToast } = await import("@/components/bruno/BrunoToast");
       brunoToast.error("No se pudo publicar", { description: err?.response?.data?.detail || "Revisa tu conexión e inténtalo de nuevo." });
+      setUpload((u) => ({ ...u, phase: null, error: err?.response?.data?.detail || "Falló la subida. Puedes reintentar sin perder tu video." }));
     } finally {
       setPublishing(false);
     }
@@ -1006,6 +1046,7 @@ const BrunoCameraPage = () => {
       <div className="bg-black shrink-0">
         {!capturedMedia ? (
           <>
+            {draftCount > 0 && <div className="px-3 pt-2"><button onClick={() => setDraftsOpen(true)} className="h-8 px-3 rounded-full bg-white/15 text-white text-xs font-semibold" data-testid="camera-drafts-btn">Borradores ({draftCount})</button></div>}
             {/* Filter strip (live mode) - horizontal scroll */}
             {!activePanel && (
               <div className="px-2 pt-2">
@@ -1086,7 +1127,10 @@ const BrunoCameraPage = () => {
           </>
         ) : (
           /* POST-CAPTURE CONTROLS */
-          <div className="px-4 py-3">
+          <div className="px-4 py-3 space-y-2">
+            {capturedMedia.type !== "photo" && !capturedMedia.remote && <VideoTrimCover src={capturedMedia.data} trim={trim} onTrim={setTrim} coverAt={coverAt} onCover={setCoverAt} />}
+            <UploadProgress pct={upload.pct} phase={upload.phase} error={upload.error} onRetry={() => lastAction.current?.()} />
+            <button onClick={saveDraft} disabled={publishing} className="h-8 px-3 rounded-full bg-white/15 text-white text-xs font-semibold disabled:opacity-50" data-testid="camera-save-draft-btn">Guardar borrador</button>
             {showCaption ? (
               <div className="flex items-center gap-2 mb-2">
                 <Input
@@ -1325,6 +1369,7 @@ const BrunoCameraPage = () => {
           </div>
         )}
       </div>
+      {draftsOpen && <DraftsSheet token={token} onResume={resumeDraft} onClose={() => setDraftsOpen(false)} />}
     </div>
   );
 };

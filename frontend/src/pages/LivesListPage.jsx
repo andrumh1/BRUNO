@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { InlineVerifiedBadge } from "@/components/VerifiedBadge";
 import axios from "axios";
+import UpcomingLives from "@/components/live/UpcomingLives";
 import {
   Radio,
   ArrowLeft,
@@ -166,6 +167,7 @@ const LivesListPage = () => {
 
       {/* Content */}
       <div className="p-4">
+        <UpcomingLives token={token} />
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />

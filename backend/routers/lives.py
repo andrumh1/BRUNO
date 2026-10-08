@@ -308,6 +308,19 @@ async def resolve_live_by_code(code: str):
     return live
 
 
+@router.get("/api/lives/upcoming")
+async def list_scheduled(current_user: Optional[dict] = Depends(get_optional_user)):
+    q = {"status": "scheduled", "scheduled_at": {"$gt": datetime.fromtimestamp(time.time() - 3600, tz=timezone.utc).isoformat()}}
+    q["$or"] = [{"is_private": {"$ne": True}}] + ([{"host_id": current_user["id"]}] if current_user else [])
+    items = await db.lives.find(q, {"_id": 0, "access_code": 0, "muted_user_ids": 0, "banned_user_ids": 0, "blocked_words": 0}).sort("scheduled_at", 1).to_list(50)
+    if current_user:
+        mine = {r["live_id"] async for r in db.live_reminders.find({"user_id": current_user["id"]}, {"_id": 0, "live_id": 1})}
+        for it in items:
+            it["reminded"] = it["id"] in mine
+            it["is_host"] = it["host_id"] == current_user["id"]
+    return items
+
+
 @router.get("/api/lives/{live_id}")
 async def get_live_details(live_id: str, current_user: Optional[dict] = Depends(get_optional_user)):
     if db is None:
@@ -634,3 +647,322 @@ async def live_ws(websocket: WebSocket, live_id: str, token: str = Query(None), 
             await _broadcast(live_id, {"type": "viewer_left", "viewer_id": user["id"], "viewer_count": vc})
         else:
             await _broadcast(live_id, {"type": "host_offline"})
+
+
+# ═══════════════════════════ INVITADOS · ENCUESTAS · PREGUNTAS · PROGRAMACIÓN ═══════════════════════════
+from fastapi import BackgroundTasks, Request  # noqa: E402
+from routers.notifications import notify_user  # noqa: E402
+
+
+class UserRef(BaseModel):
+    user_id: str
+
+
+class PollCreate(BaseModel):
+    question: str
+    options: list[str]
+    duration_s: Optional[int] = 120
+
+
+class VoteBody(BaseModel):
+    option_id: str
+
+
+class QuestionBody(BaseModel):
+    text: str
+
+
+class ScheduleLiveRequest(CreateLiveRequest):
+    scheduled_at: str  # ISO 8601
+
+
+async def _live_or_404(live_id: str, status: str = "live") -> dict:
+    live = await db.lives.find_one({"id": live_id, **({"status": status} if status else {})}, {"_id": 0})
+    if not live:
+        raise HTTPException(status_code=404, detail="Live not found or ended")
+    return live
+
+
+async def _send_to(live_id: str, user_id: str, payload: dict):
+    ws = live_connections.get(live_id, {}).get(user_id)
+    if ws:
+        try:
+            await ws.send_json(payload)
+        except Exception:
+            pass
+
+
+def _mini(u: dict) -> dict:
+    return {"id": u["id"], "name": u.get("name", "Usuario"), "avatar": u.get("avatar_url")}
+
+
+# ─── Invitados (co-streaming) ────────────────────────────────────────────
+@router.post("/api/lives/{live_id}/guest/request")
+async def guest_request(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _live_or_404(live_id)
+    if current_user["id"] == live["host_id"]:
+        raise HTTPException(status_code=400, detail="Eres el anfitrión")
+    if current_user["id"] in (live.get("banned_user_ids") or []):
+        raise HTTPException(status_code=403, detail="Fuiste expulsado de este live")
+    if not live.get("allow_guests", True):
+        raise HTTPException(status_code=403, detail="El anfitrión no acepta invitados")
+    req = {**_mini(current_user), "at": datetime.now(timezone.utc).isoformat()}
+    await db.lives.update_one({"id": live_id}, {"$pull": {"guest_requests": {"id": current_user["id"]}}})
+    await db.lives.update_one({"id": live_id}, {"$push": {"guest_requests": req}})
+    await _send_to(live_id, live["host_id"], {"type": "guest_request", "user": req})
+    return {"requested": True}
+
+
+@router.post("/api/lives/{live_id}/guest/cancel")
+async def guest_cancel(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _live_or_404(live_id)
+    await db.lives.update_one({"id": live_id}, {"$pull": {"guest_requests": {"id": current_user["id"]}, "guests": {"id": current_user["id"]}}})
+    await _broadcast(live_id, {"type": "guest_removed", "user_id": current_user["id"]})
+    await _send_to(live_id, live["host_id"], {"type": "guest_request_cancel", "user_id": current_user["id"]})
+    return {"ok": True}
+
+
+@router.post("/api/lives/{live_id}/guest/accept")
+async def guest_accept(live_id: str, body: UserRef, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _live_or_404(live_id)
+    if current_user["id"] != live["host_id"]:
+        raise HTTPException(status_code=403, detail="Solo el anfitrión acepta invitados")
+    if len(live.get("guests") or []) >= 3:
+        raise HTTPException(status_code=400, detail="Máximo 3 invitados a la vez")
+    guest = next((g for g in live.get("guest_requests") or [] if g["id"] == body.user_id), None)
+    if not guest:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    await db.lives.update_one({"id": live_id}, {"$pull": {"guest_requests": {"id": body.user_id}}, "$addToSet": {"guests": guest}})
+    token = await _daily_token(live["room_name"], {"id": guest["id"], "name": guest["name"]}, False, live.get("room_exp") or int(time.time()) + 3600) if _daily_ready() else None
+    if token:
+        # token de invitado: puede publicar audio/video pero no administrar
+        res = await _daily("POST", "/meeting-tokens", {"properties": {"room_name": live["room_name"], "exp": min(live.get("room_exp") or int(time.time()) + 3600, int(time.time()) + 4 * 3600), "is_owner": False, "user_name": guest["name"], "user_id": guest["id"], "permissions": {"hasPresence": True, "canSend": True, "canAdmin": False}}})
+        token = res["token"]
+    await _send_to(live_id, body.user_id, {"type": "guest_accepted", "rtc": {"url": live.get("room_url"), "token": token}})
+    await _broadcast(live_id, {"type": "guest_added", "user": guest})
+    return {"accepted": True}
+
+
+@router.post("/api/lives/{live_id}/guest/reject")
+async def guest_reject(live_id: str, body: UserRef, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _live_or_404(live_id)
+    if not _can_moderate(live, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Sin permisos")
+    await db.lives.update_one({"id": live_id}, {"$pull": {"guest_requests": {"id": body.user_id}}})
+    await _send_to(live_id, body.user_id, {"type": "guest_rejected"})
+    return {"rejected": True}
+
+
+@router.post("/api/lives/{live_id}/guest/remove")
+async def guest_remove(live_id: str, body: UserRef, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _live_or_404(live_id)
+    if not _can_moderate(live, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Sin permisos")
+    await db.lives.update_one({"id": live_id}, {"$pull": {"guests": {"id": body.user_id}}})
+    await _send_to(live_id, body.user_id, {"type": "guest_removed_you"})
+    await _broadcast(live_id, {"type": "guest_removed", "user_id": body.user_id})
+    return {"removed": True}
+
+
+# ─── Encuestas en vivo ────────────────────────────────────────────────────
+def _poll_public(p: dict) -> dict:
+    total = sum(o["votes"] for o in p["options"])
+    return {"id": p["id"], "question": p["question"], "status": p["status"], "ends_at": p.get("ends_at"), "total": total,
+            "options": [{**o, "pct": round(o["votes"] * 100 / total) if total else 0} for o in p["options"]]}
+
+
+@router.post("/api/lives/{live_id}/polls")
+async def create_live_poll(live_id: str, body: PollCreate, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _live_or_404(live_id)
+    if not _can_moderate(live, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Sin permisos")
+    opts = [o.strip() for o in body.options if o.strip()][:4]
+    if len(opts) < 2 or not body.question.strip():
+        raise HTTPException(status_code=422, detail="Pregunta y al menos 2 opciones")
+    await db.live_polls.update_many({"live_id": live_id, "status": "open"}, {"$set": {"status": "closed"}})
+    poll = {"id": str(uuid.uuid4()), "live_id": live_id, "question": body.question.strip()[:140], "status": "open",
+            "options": [{"id": str(i), "text": t[:60], "votes": 0} for i, t in enumerate(opts)], "voters": {},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "ends_at": datetime.fromtimestamp(time.time() + max(15, min(body.duration_s or 120, 3600)), tz=timezone.utc).isoformat()}
+    await db.live_polls.insert_one(dict(poll))
+    pub = _poll_public(poll)
+    await _broadcast(live_id, {"type": "poll", "poll": pub})
+    return pub
+
+
+@router.post("/api/lives/{live_id}/polls/{poll_id}/vote")
+async def vote_live_poll(live_id: str, poll_id: str, body: VoteBody, current_user: dict = Depends(get_current_user_from_token)):
+    poll = await db.live_polls.find_one({"id": poll_id, "live_id": live_id}, {"_id": 0})
+    if not poll or poll["status"] != "open" or (poll.get("ends_at") and poll["ends_at"] < datetime.now(timezone.utc).isoformat()):
+        raise HTTPException(status_code=400, detail="La encuesta está cerrada")
+    if body.option_id not in {o["id"] for o in poll["options"]}:
+        raise HTTPException(status_code=422, detail="Opción inválida")
+    prev = poll["voters"].get(current_user["id"])
+    for o in poll["options"]:
+        if o["id"] == prev:
+            o["votes"] -= 1
+        if o["id"] == body.option_id:
+            o["votes"] += 1
+    poll["voters"][current_user["id"]] = body.option_id
+    await db.live_polls.update_one({"id": poll_id}, {"$set": {"options": poll["options"], "voters": poll["voters"]}})
+    pub = _poll_public(poll)
+    await _broadcast(live_id, {"type": "poll", "poll": pub})
+    return {**pub, "my_vote": body.option_id}
+
+
+@router.post("/api/lives/{live_id}/polls/{poll_id}/close")
+async def close_live_poll(live_id: str, poll_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _live_or_404(live_id)
+    if not _can_moderate(live, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Sin permisos")
+    await db.live_polls.update_one({"id": poll_id, "live_id": live_id}, {"$set": {"status": "closed"}})
+    poll = await db.live_polls.find_one({"id": poll_id}, {"_id": 0})
+    pub = _poll_public(poll)
+    await _broadcast(live_id, {"type": "poll", "poll": pub})
+    return pub
+
+
+@router.get("/api/lives/{live_id}/polls/current")
+async def current_live_poll(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    poll = await db.live_polls.find_one({"live_id": live_id}, {"_id": 0}, sort=[("created_at", -1)])
+    if not poll:
+        return {}
+    return {**_poll_public(poll), "my_vote": poll["voters"].get(current_user["id"])}
+
+
+# ─── Preguntas y respuestas ───────────────────────────────────────────────
+def _q_public(q: dict) -> dict:
+    return {k: v for k, v in q.items() if k != "upvoters"} | {"upvotes": len(q.get("upvoters") or [])}
+
+
+@router.get("/api/lives/{live_id}/questions")
+async def list_live_questions(live_id: str):
+    qs = await db.live_questions.find({"live_id": live_id}, {"_id": 0}).to_list(200)
+    qs.sort(key=lambda q: (q.get("answered", False), -len(q.get("upvoters") or [])))
+    return [_q_public(q) for q in qs]
+
+
+@router.post("/api/lives/{live_id}/questions")
+async def ask_live_question(live_id: str, body: QuestionBody, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _live_or_404(live_id)
+    if current_user["id"] in (live.get("banned_user_ids") or []) or current_user["id"] in (live.get("muted_user_ids") or []):
+        raise HTTPException(status_code=403, detail="No puedes participar en este live")
+    if _blocked(body.text, live.get("blocked_words")):
+        raise HTTPException(status_code=422, detail="Tu pregunta contiene palabras bloqueadas")
+    q = {"id": str(uuid.uuid4()), "live_id": live_id, "text": body.text.strip()[:200], "user_id": current_user["id"], "user_name": current_user.get("name", "Usuario"),
+         "user_avatar": current_user.get("avatar_url"), "upvoters": [current_user["id"]], "answered": False, "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.live_questions.insert_one(dict(q))
+    pub = _q_public(q)
+    await _broadcast(live_id, {"type": "question", "question": pub})
+    return pub
+
+
+@router.post("/api/lives/{live_id}/questions/{qid}/upvote")
+async def upvote_live_question(live_id: str, qid: str, current_user: dict = Depends(get_current_user_from_token)):
+    q = await db.live_questions.find_one({"id": qid, "live_id": live_id}, {"_id": 0})
+    if not q:
+        raise HTTPException(status_code=404, detail="Pregunta no encontrada")
+    op = "$pull" if current_user["id"] in q.get("upvoters", []) else "$addToSet"
+    await db.live_questions.update_one({"id": qid}, {op: {"upvoters": current_user["id"]}})
+    q = await db.live_questions.find_one({"id": qid}, {"_id": 0})
+    pub = _q_public(q)
+    await _broadcast(live_id, {"type": "question", "question": pub})
+    return pub
+
+
+@router.post("/api/lives/{live_id}/questions/{qid}/answer")
+async def answer_live_question(live_id: str, qid: str, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _live_or_404(live_id)
+    if not _can_moderate(live, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Sin permisos")
+    q = await db.live_questions.find_one({"id": qid, "live_id": live_id}, {"_id": 0})
+    if not q:
+        raise HTTPException(status_code=404, detail="Pregunta no encontrada")
+    await db.live_questions.update_one({"id": qid}, {"$set": {"answered": not q.get("answered", False)}})
+    q["answered"] = not q.get("answered", False)
+    pub = _q_public(q)
+    await _broadcast(live_id, {"type": "question", "question": pub, "highlight": q["answered"]})
+    return pub
+
+
+# ─── Programación + recordatorios ────────────────────────────────────────
+@router.post("/api/lives/schedule")
+async def schedule_live(request: ScheduleLiveRequest, current_user: dict = Depends(get_current_user_from_token)):
+    try:
+        when = datetime.fromisoformat(request.scheduled_at.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Fecha inválida")
+    if when <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=422, detail="La fecha debe ser futura")
+    live_id = str(uuid.uuid4())
+    doc = {"id": live_id, "host_id": current_user["id"], "host_name": current_user.get("name", "Usuario"), "host_avatar": current_user.get("avatar_url"),
+           "title": request.title[:120], "description": (request.description or "")[:500], "category": request.category or "general", "status": "scheduled",
+           "scheduled_at": when.isoformat(), "is_private": request.is_private, "access_code": _gen_code() if request.is_private else None,
+           "allow_comments": request.allow_comments, "allow_gifts": request.allow_gifts, "created_at": datetime.now(timezone.utc).isoformat(), "reminder_count": 0,
+           "viewer_count": 0, "total_viewers": 0, "peak_viewers": 0, "comment_count": 0, "like_count": 0, "gift_total": 0, "moderators": [], "muted_user_ids": [], "banned_user_ids": [], "blocked_words": []}
+    await db.lives.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@router.post("/api/lives/{live_id}/remind")
+async def toggle_reminder(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _live_or_404(live_id, status="scheduled")
+    existing = await db.live_reminders.find_one({"live_id": live_id, "user_id": current_user["id"]})
+    if existing:
+        await db.live_reminders.delete_one({"_id": existing["_id"]})
+        await db.lives.update_one({"id": live_id}, {"$inc": {"reminder_count": -1}})
+        return {"reminded": False}
+    await db.live_reminders.insert_one({"live_id": live_id, "user_id": current_user["id"], "notified_pre": False, "created_at": datetime.now(timezone.utc).isoformat()})
+    await db.lives.update_one({"id": live_id}, {"$inc": {"reminder_count": 1}})
+    return {"reminded": True, "scheduled_at": live["scheduled_at"]}
+
+
+@router.delete("/api/lives/{live_id}/scheduled")
+async def cancel_scheduled(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _live_or_404(live_id, status="scheduled")
+    if live["host_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Solo el anfitrión")
+    await db.lives.update_one({"id": live_id}, {"$set": {"status": "cancelled"}})
+    async for r in db.live_reminders.find({"live_id": live_id}, {"_id": 0, "user_id": 1}):
+        await notify_user(r["user_id"], "live_cancelled", "Live cancelado", f"{live['host_name']} canceló «{live['title']}»", {"live_id": live_id}, "/lives")
+    await db.live_reminders.delete_many({"live_id": live_id})
+    return {"cancelled": True}
+
+
+@router.post("/api/lives/{live_id}/go-live")
+async def go_live_from_schedule(live_id: str, background: BackgroundTasks, current_user: dict = Depends(get_current_user_from_token)):
+    """Convierte un live programado en live real (misma sala Daily que create_live) y avisa a quienes pidieron recordatorio."""
+    live = await _live_or_404(live_id, status="scheduled")
+    if live["host_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Solo el anfitrión")
+    if await db.lives.find_one({"host_id": current_user["id"], "status": "live"}):
+        raise HTTPException(status_code=400, detail="Ya tienes un live activo")
+    room_name = f"bruno-live-{live_id[:13]}"
+    exp = int(time.time()) + 6 * 3600
+    room = await _daily("POST", "/rooms", {"name": room_name, "privacy": "private", "properties": {"exp": exp, "max_participants": LIVE_MAX_PARTICIPANTS, "eject_at_room_exp": True, "enable_chat": False, "enable_knocking": False, "enable_screenshare": False}})
+    host_token = await _daily_token(room_name, current_user, True, exp)
+    now = datetime.now(timezone.utc)
+    await db.lives.update_one({"id": live_id}, {"$set": {"status": "live", "started_at": now.isoformat(), "room_name": room_name, "room_url": room.get("url"), "room_exp": exp}})
+    active_lives[live_id] = {"host_id": current_user["id"], "viewers": [], "started_at": now}
+
+    async def _notify():
+        async for r in db.live_reminders.find({"live_id": live_id}, {"_id": 0, "user_id": 1}):
+            await notify_user(r["user_id"], "live_started", "¡Empezó el live!", f"{live['host_name']} está en vivo: «{live['title']}»", {"live_id": live_id}, f"/lives/{live_id}")
+    background.add_task(_notify)
+    fresh = await db.lives.find_one({"id": live_id}, {"_id": 0})
+    return {**fresh, "is_host": True, "rtc": {"url": room.get("url"), "token": host_token}}
+
+
+@router.post("/api/cron/live-reminders")
+async def cron_live_reminders(request: Request, background: BackgroundTasks):
+    """Cron (cada 5 min): avisa 10 min antes a quienes tocaron «Avisarme»."""
+    async def _run():
+        now = time.time()
+        window_end = datetime.fromtimestamp(now + 11 * 60, tz=timezone.utc).isoformat()
+        async for live in db.lives.find({"status": "scheduled", "scheduled_at": {"$lte": window_end, "$gt": datetime.fromtimestamp(now - 5 * 60, tz=timezone.utc).isoformat()}}, {"_id": 0}):
+            async for r in db.live_reminders.find({"live_id": live["id"], "notified_pre": {"$ne": True}}, {"_id": 1, "user_id": 1}):
+                await notify_user(r["user_id"], "live_reminder", "Tu live empieza pronto", f"«{live['title']}» de {live['host_name']} empieza en unos minutos", {"live_id": live["id"]}, "/lives")
+                await db.live_reminders.update_one({"_id": r["_id"]}, {"$set": {"notified_pre": True}})
+    background.add_task(_run)
+    return {"ok": True}

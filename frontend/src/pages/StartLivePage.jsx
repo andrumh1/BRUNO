@@ -14,7 +14,8 @@ import { brunoToast } from "@/components/bruno/BrunoToast";
 import { useLiveRTC } from "@/components/live/useLiveRTC";
 import { useDailyLive } from "@/components/live/useDailyLive";
 import LiveModerationSheet from "@/components/live/LiveModerationSheet";
-import { Shield, Wifi, WifiOff, Pin } from "lucide-react";
+import LiveInteractSheet, { LivePollCard, GuestTiles } from "@/components/live/LiveInteractSheet";
+import { Shield, Wifi, WifiOff, Pin, Sparkles, CalendarClock } from "lucide-react";
 import { LiveEvents, LiveInputRow, LiveTopBar } from "@/components/live/LiveOverlay";
 import PrivacyShield from "@/components/live/PrivacyShield";
 
@@ -33,6 +34,20 @@ export default function StartLivePage() {
   const [camError, setCamError] = useState(null);
   const [codePanel, setCodePanel] = useState(false);
   const [modOpen, setModOpen] = useState(false);
+  const [interactOpen, setInteractOpen] = useState(false);
+  const [scheduleAt, setScheduleAt] = useState("");
+  const [upcoming, setUpcoming] = useState([]);
+  useEffect(() => { if (!token) return; axios.get(`${API}/lives/upcoming`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setUpcoming((r.data || []).filter((l) => l.is_host))).catch(() => {}); }, [token]);
+  const schedule = async () => {
+    if (!form.title.trim()) return brunoToast.error("Escribe un título");
+    if (!scheduleAt) return brunoToast.error("Elige fecha y hora");
+    try { const r = await axios.post(`${API}/lives/schedule`, { ...form, scheduled_at: new Date(scheduleAt).toISOString() }, { headers: { Authorization: `Bearer ${token}` } }); setUpcoming((p) => [...p, { ...r.data, is_host: true }]); setScheduleAt(""); brunoToast.success("Live programado", { description: "Quienes toquen «Avisarme» recibirán recordatorio." }); }
+    catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo programar"); }
+  };
+  const goLive = async (id) => {
+    try { stream?.getTracks().forEach((t) => t.stop()); const r = await axios.post(`${API}/lives/${id}/go-live`, {}, { headers: { Authorization: `Bearer ${token}` } }); setLive(r.data); setUpcoming((p) => p.filter((l) => l.id !== id)); }
+    catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo iniciar"); openCamera(); }
+  };
   const [elapsed, setElapsed] = useState(0);
   const videoRef = useRef(null);
   const headers = { Authorization: `Bearer ${token}` };
@@ -130,6 +145,7 @@ export default function StartLivePage() {
           <button onClick={flip} className="w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-flip-btn"><FlipHorizontal className="w-5 h-5" /></button>
           <button onClick={() => setMuted((m) => !m)} className={`w-10 h-10 rounded-full grid place-items-center ${muted ? "bg-red-500 text-white" : "bg-black/45 text-white"}`} data-testid="live-mute-btn">{muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}</button>
           <button onClick={() => setModOpen(true)} className="w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-moderation-btn" aria-label="Moderación"><Shield className="w-5 h-5" /></button>
+          <button onClick={() => setInteractOpen(true)} className="relative w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-interact-btn" aria-label="Interacción"><Sparkles className="w-5 h-5" />{rtc.guestRequests.length > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-primary text-[10px] grid place-items-center" data-testid="live-guest-badge">{rtc.guestRequests.length}</span>}</button>
           {daily.devices.cameras.length > 1 && (
             <select onChange={(e) => daily.setVideoDevice(e.target.value)} className="w-10 h-10 rounded-full bg-black/45 text-white text-[0px] appearance-none text-center" title="Elegir cámara" data-testid="live-camera-select">
               {daily.devices.cameras.map((c) => <option key={c.deviceId} value={c.deviceId} className="text-sm text-black">{c.label || "Cámara"}</option>)}
@@ -137,6 +153,9 @@ export default function StartLivePage() {
           )}
         </div>
         {rtc.pinned && <div className="absolute left-3 right-16 z-30 rounded-2xl bg-primary/90 text-white px-3 py-2 text-xs flex items-start gap-2" style={{ top: "calc(var(--safe-top) + 100px)" }} data-testid="live-pinned-bar"><Pin className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span className="truncate"><b>{rtc.pinned.user_name}</b>: {rtc.pinned.text}</span></div>}
+        <GuestTiles participants={daily.remoteParticipants} />
+        {rtc.poll?.id && <LivePollCard poll={rtc.poll} liveId={live.id} token={token} canModerate onClose={() => rtc.setPoll(null)} />}
+        {interactOpen && <LiveInteractSheet live={live} token={token} rtc={rtc} canModerate isHost userId={user?.id} onClose={() => setInteractOpen(false)} initialTab={rtc.guestRequests.length ? "guests" : "poll"} />}
         {modOpen && <LiveModerationSheet live={live} events={rtc.events} pinned={rtc.pinned} mutedIds={rtc.mutedIds} isHost token={token} onClose={() => setModOpen(false)} onLiveChange={(patch) => setLive((l) => ({ ...l, ...patch }))} />}
 
         {live.is_private && codePanel && (
@@ -188,6 +207,15 @@ export default function StartLivePage() {
             <input type="checkbox" checked={form.anti_capture} onChange={(e) => setForm({ ...form, anti_capture: e.target.checked })} className="accent-orange-500 w-5 h-5" data-testid="live-anticapture-toggle" />
           </label>
         )}
+        {upcoming.length > 0 && (
+          <div className="space-y-2" data-testid="live-upcoming-mine">
+            {upcoming.map((l) => <div key={l.id} className="flex items-center gap-2 rounded-2xl bg-primary/10 px-3 py-2"><CalendarClock className="w-4 h-4 text-primary shrink-0" /><div className="flex-1 min-w-0 leading-tight"><p className="text-sm font-semibold truncate">{l.title}</p><p className="text-[11px] text-muted-foreground">{new Date(l.scheduled_at).toLocaleString()} · {l.reminder_count || 0} avisos</p></div><button onClick={() => goLive(l.id)} className="h-8 px-3 rounded-full bg-red-500 text-white text-xs font-bold" data-testid={`live-golive-${l.id}`}>Iniciar ahora</button></div>)}
+          </div>
+        )}
+        <div className="rounded-2xl border border-border p-3 space-y-2" data-testid="live-schedule-box">
+          <p className="text-xs font-semibold inline-flex items-center gap-1.5"><CalendarClock className="w-3.5 h-3.5" /> Programar para después</p>
+          <div className="flex gap-2"><input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} className="flex-1 h-10 rounded-xl bg-foreground/[0.06] px-3 text-sm outline-none" data-testid="live-schedule-input" /><button onClick={schedule} className="h-10 px-3 rounded-xl bg-primary text-white text-xs font-semibold" data-testid="live-schedule-btn">Programar</button></div>
+        </div>
         <button onClick={start} disabled={starting || !!camError} className="w-full h-12 rounded-full bg-red-500 text-white font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50" data-testid="live-go-btn">
           {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radio className="w-4 h-4" />} {form.is_private ? "Iniciar live privado" : "Iniciar live"}
         </button>

@@ -9,6 +9,8 @@ import axios from "axios";
 import { Loader2, Lock, KeyRound, Radio, VolumeX, Volume2, ArrowLeft, Share2, Flag, UserPlus, Check, Pin, WifiOff, Shield } from "lucide-react";
 import { useDailyLive } from "@/components/live/useDailyLive";
 import LiveModerationSheet from "@/components/live/LiveModerationSheet";
+import LiveInteractSheet, { LivePollCard, GuestTiles } from "@/components/live/LiveInteractSheet";
+import { Sparkles, Hand } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { useLiveRTC } from "@/components/live/useLiveRTC";
@@ -34,6 +36,7 @@ export default function LiveViewerPage() {
   const [following, setFollowing] = useState(false);
   const [isMod, setIsMod] = useState(false);
   const [modOpen, setModOpen] = useState(false);
+  const [interactOpen, setInteractOpen] = useState(false);
   const [needsGesture, setNeedsGesture] = useState(false);
   const videoRef = useRef(null);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -76,7 +79,9 @@ export default function LiveViewerPage() {
   };
 
   const rtc = useLiveRTC({ liveId, token, role: "viewer", accessCode: live?.requires_code ? code : null, enabled: joined && !!live });
-  const daily = useDailyLive({ url: rtcInfo?.url, token: rtcInfo?.token, role: "viewer", hostId: live?.host_id, enabled: joined && !!rtcInfo });
+  const asGuest = rtc.guestStatus === "accepted" && !!rtc.guestRtc?.token;
+  const daily = useDailyLive({ url: asGuest ? rtc.guestRtc.url : rtcInfo?.url, token: asGuest ? rtc.guestRtc.token : rtcInfo?.token, role: asGuest ? "guest" : "viewer", hostId: live?.host_id, enabled: joined && !!(asGuest || rtcInfo) });
+  useEffect(() => { if (rtc.guestStatus === "accepted") brunoToast.success("¡Estás en el live!", { description: "Tu cámara y micrófono ahora se transmiten." }); if (rtc.guestStatus === "rejected") brunoToast.info?.("El anfitrión no aceptó tu solicitud"); }, [rtc.guestStatus]);
   const remoteStream = daily.remoteStream;
 
   useEffect(() => {
@@ -174,6 +179,11 @@ export default function LiveViewerPage() {
       {(daily.state === "interrupted" || rtc.reconnecting) && <div className="absolute inset-x-0 z-30 flex justify-center" style={{ top: "calc(var(--safe-top) + 60px)" }}><span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-amber-500/90 text-black text-xs font-semibold" data-testid="live-reconnecting"><WifiOff className="w-3.5 h-3.5" /> Conexión inestable · reconectando…</span></div>}
       {rtc.pinned && <div className="absolute left-3 right-3 z-20 rounded-2xl bg-primary/90 text-white px-3 py-2 text-xs flex items-start gap-2" style={{ top: "calc(var(--safe-top) + 96px)" }} data-testid="live-pinned-bar"><Pin className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span className="truncate"><b>{rtc.pinned.user_name}</b>: {rtc.pinned.text}</span></div>}
       {remoteStream && (muted || needsGesture) && <button onClick={(e) => { e.stopPropagation(); setMuted(false); videoRef.current?.play().catch(() => {}); }} className="absolute inset-x-0 top-1/2 z-20 text-center" data-testid="live-enable-audio"><span className="px-4 py-2 rounded-full bg-black/60 text-white text-xs font-semibold inline-flex items-center gap-1.5"><Volume2 className="w-3.5 h-3.5" /> Toca para activar el sonido</span></button>}
+      <GuestTiles participants={daily.remoteParticipants} />
+      {asGuest && daily.localStream && <div className="absolute left-3 z-20 w-24 h-32 rounded-2xl overflow-hidden ring-2 ring-emerald-400" style={{ top: "calc(var(--safe-top) + 150px)" }} data-testid="live-my-guest-tile"><video autoPlay playsInline muted ref={(el) => { if (el && el.srcObject !== daily.localStream) { el.srcObject = daily.localStream; el.play?.().catch(() => {}); } }} className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} /><span className="absolute bottom-1 left-1 text-[10px] text-white">Tú</span></div>}
+      {rtc.poll?.id && <LivePollCard poll={rtc.poll} liveId={liveId} token={token} canModerate={isMod} onClose={() => rtc.setPoll(null)} />}
+      <button onClick={() => setInteractOpen(true)} className="absolute right-3 z-30 h-10 px-3 rounded-full bg-black/55 text-white text-xs font-semibold inline-flex items-center gap-1.5" style={{ bottom: "calc(var(--safe-bottom) + 76px)" }} data-testid="live-interact-btn">{rtc.guestStatus === "pending" ? <Hand className="w-4 h-4 animate-pulse" /> : <Sparkles className="w-4 h-4" />}{rtc.guestStatus === "pending" ? "Esperando…" : "Participar"}</button>
+      {interactOpen && <LiveInteractSheet live={live} token={token} rtc={rtc} canModerate={isMod} isHost={false} userId={user?.id} onClose={() => setInteractOpen(false)} />}
       <LiveEvents events={rtc.events} hearts={rtc.hearts} />
       <LiveInputRow liveId={liveId} token={token} allowGifts={live?.allow_gifts} allowComments={rtc.settings.allow_comments ?? live?.allow_comments} onHeart={rtc.sendHeart} />
       {modOpen && <LiveModerationSheet live={live} events={rtc.events} pinned={rtc.pinned} mutedIds={rtc.mutedIds} isHost={false} token={token} onClose={() => setModOpen(false)} onLiveChange={(patch) => setLive((l) => ({ ...l, ...patch }))} />}
