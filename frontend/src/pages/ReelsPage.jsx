@@ -16,6 +16,7 @@ import { useNavScroll } from "@/contexts/NavScrollContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import ReelItem from "@/components/reels/ReelItem";
 import { useReelsFeed, rememberFeedPosition } from "@/components/reels/useReelsFeed";
+import UpcomingLives from "@/components/live/UpcomingLives";
 import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet, ReelLikersSheet, ReelOptionsSheet, ReelEditSheet } from "@/components/reels/ReelSheets";
 import RemixStudio from "@/components/reels/RemixStudio";
@@ -263,6 +264,7 @@ function LivesGrid({ token, navigate }) {
 
   return (
     <div className="h-full overflow-y-auto px-4 pb-32" style={{ paddingTop: "calc(var(--safe-top) + 64px)" }} data-testid="lives-grid">
+      <UpcomingLives token={token} />
       {/* Private access */}
       <div className="bruno-glass rounded-[22px] border p-3 mb-4 flex items-center gap-2" data-testid="lives-private-join">
         <Lock className="w-4 h-4 text-primary shrink-0" />

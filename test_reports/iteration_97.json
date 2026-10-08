@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 97: Validated Stage-2 videos/lives features. Backend (17/17 pass): post-drafts CRUD + ownership isolation; /upload/image video with trim_start=1&trim_end=4&cover_at=2 returns mp4_url containing 'so_1.00,eo_4.00' and poster_url containing 'so_2.00'; image upload with aspect=1:1 still returns 1080x1080; /lives/schedule validates future dates (past → 422); /lives/upcoming returns reminded=false,is_host=false for other users; /lives/{id}/remind toggles true↔false and increments reminder_count; non-host DELETE /scheduled → 403, host go-live succeeds and returns rtc.token; POST /cron/live-reminders → {ok:true}; guest/request+accept+remove+reject+cancel full cycle; poll perms (viewer POST → 403), create, vote with option change (total stays 1, pcts flip), GET current returns my_vote, close poll + 400 on post-close vote; Q&A: viewer asks (self-upvote=1), host upvote (=2), host answer toggles, muted user → 403, GET questions sorted unanswered-first. Frontend (390x844, mobile): /camera camera-drafts-btn visible → opens drafts sheet with draft-resume-{id} → tapping resume shows camera-publish-btn + camera-save-draft-btn (caption-input only visible when camera-caption-toggle is opened; caption state IS prefilled and shown inside toggle chip). /lives/start shows live-schedule-box with live-schedule-input + live-schedule-btn + live-upcoming-mine → live-golive-{id}. HOWEVER, the /lives route is wired to ReelsPage (App.js:182), NOT to LivesListPage; UpcomingLives (which emits data-testid='upcoming-lives') is imported but never rendered on any routed page, so a viewer visiting /lives does not see upcoming-lives / upcoming-remind-{id}. This blocks the viewer-side scheduled-lives UX required by the review request.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "App.js route /lives + LivesListPage / UpcomingLives", "issue": "Route '/lives' is mounted on ReelsPage, not LivesListPage. UpcomingLives component (data-testid='upcoming-lives') is imported in LivesListPage but LivesListPage is never routed → viewers cannot see scheduled upcoming lives or tap upcoming-remind-{id} from /lives. Review request explicitly expects '/lives list shows upcoming-lives section' for viewer2.", "selector": "[data-testid=\"upcoming-lives\"]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration97_drafts_lives.py",
+    "/app/test_reports/pytest/iteration97.xml"
+  ],
+  "action_items": [
+    "Route /lives → LivesListPage in /app/frontend/src/App.js (or embed <UpcomingLives /> inside the current /lives view/ReelsPage 'En vivo' tab) so viewers see scheduled upcoming lives and can toggle upcoming-remind-{id}. All backend endpoints behind the UI are green (see test_iteration97_drafts_lives.py)."
+  ],
+  "critical_code_review_comments": [
+    "lives.py:739 guest_accept re-issues a Daily token with explicit canSend/canAdmin perms AFTER already building one in line 736 via _daily_token — the first token is overwritten; harmless but wasted call. Consider dropping line 736.",
+    "lives.py:313 upcoming filter uses scheduled_at > now-3600s — scheduled lives within the last hour still appear 'upcoming'; intentional grace window but worth documenting.",
+    "post_drafts.py: no cap on #drafts per user — malicious client could flood post_drafts collection. Add a max (e.g. 100) and return 429.",
+    "uploads.py:112 cover variable only consumed in URL-synth fallback branch; if Cloudinary eager derivatives are ready and no trim/cover is requested, the explicit cover_at value is silently ignored. Minor.",
+    "App.js:74 imports LivesListPage but no <Route> uses it — dead import; also hides the viewer-side upcoming-lives entry (reported above).",
+    "BrunoCameraPage: camera-caption-input is only mounted when showCaption is true. The caption chip (camera-caption-toggle) does surface the prefilled value, so draft resume is functional, but automated tests looking for the input directly after resume will miss it — consider rendering the Input hidden (sr-only) or exposing data-value on the toggle."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration97_drafts_lives.py (new)"
+  ],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "~75% (camera drafts + schedule box OK; viewer /lives upcoming blocked by routing)"},
+  "test_credentials": "newtest@bruno.com / Test1234! (host); viewer2@bruno.com / Test1234! (viewer id 3636b29b-ae7d-49c4-8a1e-2312500d0eeb)",
+  "seed_data_creation": "During tests one post-draft + one scheduled live were created and then deleted/cancelled; a transient active live for host was also created and ended. No lingering TEST_ data expected.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression lives at /app/backend/tests/test_iteration97_drafts_lives.py (uses imageio-ffmpeg for a 5s mp4). After the /lives routing fix, retest only the viewer flow: viewer2 → /lives → wait for data-testid='upcoming-lives' → tap data-testid='upcoming-remind-{sched_id}' → text should become 'Avisar activado'. Full host live-interact-sheet (polls/qa/guests UI with two parallel Playwright contexts) was NOT re-exercised in UI — backend coverage already validates every endpoint behind it.",
+  "rca of the issue": "App.js registers `<Route path=\"/lives\" element={<ReelsPage/>}/>` (line 182) while importing LivesListPage (line 74) without any route pointing to it. UpcomingLives.jsx is only consumed in LivesListPage.jsx (line 170). Net result: upcoming-lives DOM node never mounts on any user-facing URL. Fix: either (a) replace line 182 element with <LivesListPage/>, (b) add a dedicated route e.g. `/lives/list` and link to it from ReelsPage 'En vivo' tab, or (c) inline <UpcomingLives/> above the En-vivo grid inside ReelsPage."
+}
