@@ -8,7 +8,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { ArrowLeft, Radio, Lock, Globe, ShieldCheck, Copy, Share2, RefreshCw, FlipHorizontal, Mic, MicOff, Loader2, KeyRound } from "lucide-react";
+import { ArrowLeft, Radio, Lock, Globe, ShieldCheck, Copy, Share2, RefreshCw, FlipHorizontal, Mic, MicOff, Loader2, KeyRound, Disc3, Square } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { useLiveRTC } from "@/components/live/useLiveRTC";
@@ -97,10 +97,21 @@ export default function StartLivePage() {
     setStarting(false);
   };
   const end = async () => {
-    try { await axios.post(`${API}/lives/${live.id}/end`, {}, { headers }); } catch (_) { /* ignore */ }
+    const id = live.id;
+    try { await axios.post(`${API}/lives/${id}/end`, {}, { headers }); } catch (_) { /* ignore */ }
     stream?.getTracks().forEach((t) => t.stop());
     brunoToast.success("Live finalizado");
-    navigate("/lives");
+    navigate(`/lives/${id}/summary`, { replace: true });
+  };
+  const [recBusy, setRecBusy] = useState(false);
+  const toggleRecording = async () => {
+    if (recBusy) return; setRecBusy(true);
+    try {
+      const r = await axios.post(`${API}/lives/${live.id}/recording/${rtc.recording ? "stop" : "start"}`, {}, { headers });
+      rtc.setRecording(r.data?.status === "recording");
+      brunoToast.success(r.data?.status === "recording" ? "Grabación iniciada" : "Grabación detenida", { description: r.data?.status === "recording" ? "Los participantes ven el aviso REC. Al terminar podrás publicarla como video." : "Puedes volver a grabar cuando quieras." });
+    } catch (e) { brunoToast.error("No se pudo grabar", { description: e?.response?.data?.detail || "Inténtalo de nuevo" }); }
+    finally { setRecBusy(false); }
   };
   const rotate = async () => {
     try { const r = await axios.post(`${API}/lives/${live.id}/rotate-code`, {}, { headers }); setLive((l) => ({ ...l, access_code: r.data.access_code })); brunoToast.success("Código renovado"); }
@@ -132,6 +143,7 @@ export default function StartLivePage() {
         {/* Estado: duración + conexión */}
         <div className="absolute left-3 z-30 flex items-center gap-2" style={{ top: "calc(var(--safe-top) + 64px)" }} data-testid="live-host-status">
           <span className="h-7 px-2.5 rounded-full bg-black/50 text-white text-[11px] font-mono inline-flex items-center" data-testid="live-host-duration">{fmtDur(elapsed)}</span>
+          {rtc.recording && <span className="h-7 px-2.5 rounded-full bg-red-600 text-white text-[11px] font-bold inline-flex items-center gap-1" data-testid="live-rec-badge"><span className="w-2 h-2 rounded-full bg-white animate-pulse" /> REC</span>}
           <span className={`h-7 px-2.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 ${daily.state === "connected" ? "bg-emerald-500/85 text-white" : daily.state === "error" ? "bg-red-500/85 text-white" : "bg-amber-500/90 text-black"}`} data-testid="live-host-connection" data-state={daily.state}>
             {daily.state === "connected" ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
             {daily.state === "connected" ? (daily.quality === "good" ? "En vivo" : "Señal débil") : daily.state === "interrupted" ? "Reconectando…" : daily.state === "error" ? "Sin conexión" : "Conectando…"}
@@ -144,6 +156,7 @@ export default function StartLivePage() {
         <div className="absolute right-3 z-30 flex flex-col gap-2" style={{ top: "calc(var(--safe-top) + 64px)" }}>
           <button onClick={flip} className="w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-flip-btn"><FlipHorizontal className="w-5 h-5" /></button>
           <button onClick={() => setMuted((m) => !m)} className={`w-10 h-10 rounded-full grid place-items-center ${muted ? "bg-red-500 text-white" : "bg-black/45 text-white"}`} data-testid="live-mute-btn">{muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}</button>
+          <button onClick={toggleRecording} disabled={recBusy} className={`w-10 h-10 rounded-full grid place-items-center ${rtc.recording ? "bg-red-600 text-white" : "bg-black/45 text-white"}`} data-testid="live-record-btn" aria-label={rtc.recording ? "Detener grabación" : "Grabar live"} title={rtc.recording ? "Detener grabación" : "Grabar para publicar después"}>{recBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : rtc.recording ? <Square className="w-4 h-4 fill-current" /> : <Disc3 className="w-5 h-5" />}</button>
           <button onClick={() => setModOpen(true)} className="w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-moderation-btn" aria-label="Moderación"><Shield className="w-5 h-5" /></button>
           <button onClick={() => setInteractOpen(true)} className="relative w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-interact-btn" aria-label="Interacción"><Sparkles className="w-5 h-5" />{rtc.guestRequests.length > 0 && <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-primary text-[10px] grid place-items-center" data-testid="live-guest-badge">{rtc.guestRequests.length}</span>}</button>
           {daily.devices.cameras.length > 1 && (

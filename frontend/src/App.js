@@ -64,6 +64,7 @@ import NewProductPage from "@/pages/NewProductPage";
 import NotificationSettingsPage from "@/pages/NotificationSettingsPage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
 import BrunoCameraPage from "@/pages/BrunoCameraPage";
+import LiveSummaryPage from "@/pages/LiveSummaryPage";
 import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
 import TermsOfServicePage from "@/pages/TermsOfServicePage";
 import DeleteAccountPage from "@/pages/DeleteAccountPage";
@@ -181,6 +182,7 @@ function AppRouter() {
       <Route path="/profile/:userId/reels" element={<ReelsPage />} />
       <Route path="/lives" element={<ReelsPage />} />
       <Route path="/lives/start" element={<ProtectedRoute><StartLivePage /></ProtectedRoute>} />
+      <Route path="/lives/:liveId/summary" element={<ProtectedRoute><LiveSummaryPage /></ProtectedRoute>} />
       <Route path="/lives/:liveId" element={<LiveViewerPage />} />
       
       {/* Fallback */}

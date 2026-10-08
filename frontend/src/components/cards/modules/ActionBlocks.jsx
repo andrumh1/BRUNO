@@ -38,7 +38,7 @@ export const CtaBlock = ({ design }) => {
   return <ActionButton design={design} href={design.cta.url || "#"} label={design.cta.label} Icon={ExternalLink} primary full testId="card-cta" />;
 };
 
-// Social links in 5 visual styles: icons | iconsNames | buttons | bubbles | bar
+// Social links in 7 visual styles: icons | iconsNames | buttons | bubbles | bar | outline | brand
 export const SocialBlock = ({ data, design }) => {
   const links = data.social_links || [];
   if (!links.length) return null;
@@ -46,8 +46,15 @@ export const SocialBlock = ({ data, design }) => {
   const t = design.colors.text;
   const center = design.layout.align === "center";
   const item = (l) => socialMediaConfig[l.type] || socialMediaConfig.custom;
-  const circle = (l, i, size) => { const { icon: Icon, color } = item(l); return (
-    <a key={`${l.type}-${i}`} href={l.url} target="_blank" rel="noreferrer" title={l.label || item(l).label} className={`${size} rounded-full flex items-center justify-center hover:scale-110 transition-transform`} style={style === "bubbles" ? { ...buttonStyle(design), borderRadius: 999, color: design.glass.enabled ? t : color } : { backgroundColor: rgba(t, 0.12), color: t }} data-testid={`card-social-${l.type}-${i}`}><Icon className="w-[45%] h-[45%]" /></a>
+  const circleStyle = (l) => {
+    const { color } = item(l);
+    if (style === "bubbles") return { ...buttonStyle(design), borderRadius: 999, color: design.glass.enabled ? t : color };
+    if (style === "outline") return { backgroundColor: "transparent", border: `1px solid ${rgba(t, 0.55)}`, color: t };
+    if (style === "brand") return { backgroundColor: color, color: "#FFFFFF", boxShadow: `0 8px 20px -10px ${color}` };
+    return { backgroundColor: rgba(t, 0.12), color: t };
+  };
+  const circle = (l, i, size) => { const { icon: Icon } = item(l); return (
+    <a key={`${l.type}-${i}`} href={l.url} target="_blank" rel="noreferrer" title={l.label || item(l).label} className={`${size} rounded-full flex items-center justify-center hover:scale-110 transition-transform`} style={circleStyle(l)} data-testid={`card-social-${l.type}-${i}`}><Icon className="w-[45%] h-[45%]" /></a>
   ); };
   if (style === "buttons") return <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5" data-testid="card-social-block">{links.map((l, i) => { const { icon: Icon } = item(l); return <ActionButton key={i} design={design} href={l.url} label={l.label || item(l).label} Icon={Icon} full testId={`card-social-${l.type}-${i}`} />; })}</div>;
   if (style === "iconsNames") return <div className={`flex flex-wrap gap-2 ${center ? "justify-center" : ""}`} data-testid="card-social-block">{links.map((l, i) => { const { icon: Icon } = item(l); return <a key={i} href={l.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-3 h-9 text-xs font-semibold hover:scale-[1.03] transition-transform" style={{ ...buttonStyle(design), borderRadius: design.buttons.radius }} data-testid={`card-social-${l.type}-${i}`}><Icon className="w-4 h-4" />{l.label || item(l).label}</a>; })}</div>;

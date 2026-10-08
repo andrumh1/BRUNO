@@ -77,6 +77,8 @@ class Card(BaseModel):
     is_draft: bool = False
     card_design: Optional[dict] = None
     card_design_version: int = 1
+    links: List[dict] = []
+    showcase: Optional[dict] = None
     legacy_template: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -105,6 +107,8 @@ class CardCreate(BaseModel):
     is_draft: bool = False
     card_design: Optional[dict] = None
     card_design_version: int = 1
+    links: List[dict] = []
+    showcase: Optional[dict] = None
 
 
 class CardUpdate(BaseModel):
@@ -129,6 +133,8 @@ class CardUpdate(BaseModel):
     card_design: Optional[dict] = None
     card_design_version: Optional[int] = None
     card_type: Optional[str] = None
+    links: Optional[List[dict]] = None
+    showcase: Optional[dict] = None
 
 
 class ReorderRequest(BaseModel):

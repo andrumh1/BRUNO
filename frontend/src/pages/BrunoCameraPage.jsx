@@ -183,6 +183,7 @@ const BrunoCameraPage = () => {
   const [draftCount, setDraftCount] = useState(0);
   const lastAction = useRef(null);
   useEffect(() => { if (token) axios.get(`${API}/post-drafts`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setDraftCount(r.data.length)).catch(() => {}); }, [token]);
+  useEffect(() => { if (searchParams.get("drafts") === "1") setDraftsOpen(true); }, [searchParams]);
 
   /* Sube el video/foto con progreso real; aplica recorte y portada elegidos en la vista previa. Reutiliza el media de un borrador. */
   const uploadMedia = async () => {
@@ -218,7 +219,7 @@ const BrunoCameraPage = () => {
   };
 
   const resumeDraft = (d) => {
-    setCapturedMedia({ type: d.media_type === "image" ? "photo" : "video", data: d.media_url, remote: true, up: d.media_meta || { url: d.media_url, poster_url: d.poster_url }, draftId: d.id });
+    setCapturedMedia({ type: d.media_type === "image" ? "photo" : "video", data: d.media_url, remote: true, up: d.media_meta || { url: d.media_url, poster_url: d.poster_url }, draftId: d.id, liveId: d.live_id || null });
     setCaption(d.caption || ""); setDraftsOpen(false);
   };
   const [showCaption, setShowCaption] = useState(false);
@@ -707,6 +708,7 @@ const BrunoCameraPage = () => {
         }, { headers: { Authorization: `Bearer ${token}` } });
         const { brunoToast } = await import("@/components/bruno/BrunoToast");
         if (capturedMedia.draftId) axios.delete(`${API}/post-drafts/${capturedMedia.draftId}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+        if (capturedMedia.liveId && created.data?.id) axios.post(`${API}/lives/${capturedMedia.liveId}/replay-published`, { post_id: created.data.id }, { headers: { Authorization: `Bearer ${token}` } }).then((r) => { if (r.data?.notified) brunoToast.success(`Avisamos a ${r.data.notified} participante${r.data.notified === 1 ? "" : "s"} del live`); }).catch(() => {});
         brunoToast.publish(capturedMedia.type === "photo" ? "Publicación creada" : "Reel publicado", { description: "Ya aparece en tu perfil, el feed y Reels." });
         navigate(capturedMedia.type === "photo" ? `/post/${created.data?.id || ""}` : `/reels?id=${created.data?.id || ""}`);
       }

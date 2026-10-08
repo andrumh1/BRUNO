@@ -1,27 +1,36 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { CardBackground } from "./modules/CardBackground";
 import { CardHeader } from "./modules/CardHeader";
 import { ContactBlock, SocialBlock, CtaBlock } from "./modules/ActionBlocks";
 import { GalleryBlock, LocationBlock, QRBlock, TypeFieldsBlock } from "./modules/InfoBlocks";
+import { LinksBlock, FeaturedBlock, ProBlock, PurposeContactsBlock } from "./modules/ShowcaseBlocks";
 import { SectionTitle } from "./modules/Surface";
-import { FONT_FAMILIES, spacingPx, depthShadow, rgba } from "@/lib/cardDesign";
+import { bodyFont, spacingPx, depthShadow, rgba } from "@/lib/cardDesign";
 
 // ONE CARD ENGINE: every card (public, preview, builder, thumbnails) renders through this component.
 const CardRenderer = ({ data = {}, design, cardId, onChat, seal = true, className = "", style }) => {
+  const ref = useRef(null);
+  const [narrow, setNarrow] = useState(true);
+  useEffect(() => { const el = ref.current; if (!el || typeof ResizeObserver === "undefined") return; const ro = new ResizeObserver(([e]) => setNarrow(e.contentRect.width < 600)); ro.observe(el); return () => ro.disconnect(); }, []);
   const pad = spacingPx(design);
   const t = design.colors.text;
   const center = design.layout.align === "center";
   const on = (k) => design.components[k] !== false;
+  const socialInHero = design.layout.header === "hero" && design.hero?.social;
 
   const modules = {
     bio: () => data.description && on("bio") && (
       <p key="bio" className={`text-sm sm:text-base leading-relaxed opacity-85 whitespace-pre-line ${center ? "text-center" : ""}`} data-testid="card-bio">{data.description}</p>
     ),
     contact: () => on("contact") && <ContactBlock key="contact" data={data} design={design} />,
-    social: () => on("social") && (data.social_links || []).length > 0 && (
-      <div key="social"><SectionTitle design={design}>Conecta conmigo</SectionTitle><SocialBlock data={data} design={design} /></div>
+    social: () => on("social") && !socialInHero && (data.social_links || []).length > 0 && (
+      <div key="social">{(design.layout.header || "classic") === "classic" && <SectionTitle design={design}>Conecta conmigo</SectionTitle>}<SocialBlock data={data} design={design} /></div>
     ),
+    links: () => on("links") && <LinksBlock key="links" data={data} design={design} />,
+    featured: () => on("featured") && <FeaturedBlock key="featured" data={data} design={design} />,
+    pro: () => on("pro") && <ProBlock key="pro" data={data} design={design} />,
+    purposeContacts: () => on("purposeContacts") && <PurposeContactsBlock key="purposeContacts" data={data} design={design} />,
     gallery: () => on("gallery") && <GalleryBlock key="gallery" data={data} design={design} />,
     location: () => on("location") && <LocationBlock key="location" data={data} design={design} />,
     typeFields: () => on("typeFields") && <TypeFieldsBlock key="typeFields" data={data} design={design} />,
@@ -33,15 +42,17 @@ const CardRenderer = ({ data = {}, design, cardId, onChat, seal = true, classNam
 
   return (
     <div
+      ref={ref}
       data-card-renderer
+      data-narrow={narrow ? "1" : "0"}
       className={`relative overflow-hidden ${className}`}
-      style={{ borderRadius: design.layout.radius, color: t, fontFamily: FONT_FAMILIES[design.typography.family], boxShadow: depthShadow(design), border: `1px solid ${rgba(t, 0.08)}`, ...style }}
+      style={{ borderRadius: design.layout.radius, color: t, fontFamily: bodyFont(design), boxShadow: depthShadow(design), border: `1px solid ${rgba(t, 0.08)}`, ...style }}
       data-testid="card-container"
       data-preset={design.preset}
     >
       <CardBackground design={design} data={data} />
       <div className="relative">
-        <CardHeader data={data} design={design} onChat={onChat} pad={pad} />
+        <CardHeader data={data} design={design} onChat={onChat} pad={pad} narrow={narrow} />
         <div style={{ padding: pad, display: "flex", flexDirection: "column", gap: pad * 0.9 }}>
           {body}
         </div>

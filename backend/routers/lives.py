@@ -203,7 +203,7 @@ async def create_live(request: CreateLiveRequest, current_user: dict = Depends(g
     exp = int(time.time()) + 6 * 3600
     room = await _daily("POST", "/rooms", {"name": room_name, "privacy": "private", "properties": {
         "exp": exp, "max_participants": LIVE_MAX_PARTICIPANTS, "eject_at_room_exp": True, "enable_chat": False,
-        "enable_knocking": False, "enable_screenshare": False, "start_video_off": False, "start_audio_off": False}})
+        "enable_knocking": False, "enable_screenshare": False, "start_video_off": False, "start_audio_off": False, "enable_recording": "cloud"}})
     host_token = await _daily_token(room_name, current_user, True, exp)
     live_doc = {
         "id": live_id,
@@ -374,6 +374,15 @@ async def end_live(live_id: str, current_user: dict = Depends(get_current_user_f
     )
 
     active_lives.pop(live_id, None)
+    rec = live.get("recording") or {}
+    if rec.get("status") == "recording" and live.get("room_name"):
+        try:
+            await _daily("POST", f"/rooms/{live['room_name']}/recordings/stop")
+        except HTTPException:
+            pass
+        await db.lives.update_one({"id": live_id}, {"$set": {"recording.status": "processing", "recording.stopped_at": ended_at.isoformat()}})
+    elif rec.get("status") == "stopped":
+        await db.lives.update_one({"id": live_id}, {"$set": {"recording.status": "processing"}})
     await _broadcast(live_id, {"type": "live_ended", "live_id": live_id})
     live_connections.pop(live_id, None)
     if live.get("room_name") and _daily_ready():
@@ -409,7 +418,7 @@ async def join_live(live_id: str, body: JoinLiveRequest = None, current_user: di
         state = active_lives.setdefault(live_id, {"host_id": live["host_id"], "viewers": [], "started_at": datetime.now(timezone.utc)})
         if current_user["id"] not in state["viewers"]:
             state["viewers"].append(current_user["id"])  # unique viewers for the whole session (no inflation on reconnect)
-            await db.lives.update_one({"id": live_id}, {"$set": {"total_viewers": len(state["viewers"])}})
+            await db.lives.update_one({"id": live_id}, {"$set": {"total_viewers": len(state["viewers"])}, "$addToSet": {"participant_ids": current_user["id"]}})
 
     rtc = None
     if live.get("room_name") and _daily_ready():
@@ -616,6 +625,7 @@ async def live_ws(websocket: WebSocket, live_id: str, token: str = Query(None), 
         "viewer_count": max(0, len(conns) - (1 if live["host_id"] in conns else 0)),
         "host_online": live["host_id"] in conns,
         "pinned_comment": live.get("pinned_comment"),
+        "recording": (live.get("recording") or {}).get("status") == "recording",
     })
     if not is_host:
         vc = _viewer_count(live_id, live["host_id"])
@@ -732,7 +742,7 @@ async def guest_accept(live_id: str, body: UserRef, current_user: dict = Depends
     guest = next((g for g in live.get("guest_requests") or [] if g["id"] == body.user_id), None)
     if not guest:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
-    await db.lives.update_one({"id": live_id}, {"$pull": {"guest_requests": {"id": body.user_id}}, "$addToSet": {"guests": guest}})
+    await db.lives.update_one({"id": live_id}, {"$pull": {"guest_requests": {"id": body.user_id}}, "$addToSet": {"guests": guest, "guest_history": body.user_id}})
     token = await _daily_token(live["room_name"], {"id": guest["id"], "name": guest["name"]}, False, live.get("room_exp") or int(time.time()) + 3600) if _daily_ready() else None
     if token:
         # token de invitado: puede publicar audio/video pero no administrar
@@ -940,7 +950,7 @@ async def go_live_from_schedule(live_id: str, background: BackgroundTasks, curre
         raise HTTPException(status_code=400, detail="Ya tienes un live activo")
     room_name = f"bruno-live-{live_id[:13]}"
     exp = int(time.time()) + 6 * 3600
-    room = await _daily("POST", "/rooms", {"name": room_name, "privacy": "private", "properties": {"exp": exp, "max_participants": LIVE_MAX_PARTICIPANTS, "eject_at_room_exp": True, "enable_chat": False, "enable_knocking": False, "enable_screenshare": False}})
+    room = await _daily("POST", "/rooms", {"name": room_name, "privacy": "private", "properties": {"exp": exp, "max_participants": LIVE_MAX_PARTICIPANTS, "eject_at_room_exp": True, "enable_chat": False, "enable_knocking": False, "enable_screenshare": False, "enable_recording": "cloud"}})
     host_token = await _daily_token(room_name, current_user, True, exp)
     now = datetime.now(timezone.utc)
     await db.lives.update_one({"id": live_id}, {"$set": {"status": "live", "started_at": now.isoformat(), "room_name": room_name, "room_url": room.get("url"), "room_exp": exp}})
@@ -966,3 +976,154 @@ async def cron_live_reminders(request: Request, background: BackgroundTasks):
                 await db.live_reminders.update_one({"_id": r["_id"]}, {"$set": {"notified_pre": True}})
     background.add_task(_run)
     return {"ok": True}
+
+
+# ─── Grabación (Daily cloud recording) · repetición · resumen ───────────────
+class ReplayPublished(BaseModel):
+    post_id: str
+
+
+async def _host_live(live_id: str, user_id: str, require_live: bool = False) -> dict:
+    live = await db.lives.find_one({"id": live_id}, {"_id": 0})
+    if not live:
+        raise HTTPException(status_code=404, detail="Live not found")
+    if live["host_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Solo el anfitrión puede hacer esto")
+    if require_live and live.get("status") != "live":
+        raise HTTPException(status_code=400, detail="El live ya terminó")
+    return live
+
+
+@router.post("/api/lives/{live_id}/recording/start")
+async def recording_start(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _host_live(live_id, current_user["id"], require_live=True)
+    rec = live.get("recording") or {}
+    if rec.get("status") == "recording":
+        return rec
+    try:
+        r = await _daily("POST", f"/rooms/{live['room_name']}/recordings/start", {"layout": {"preset": "default"}})
+    except HTTPException as e:
+        detail = str(e.detail)
+        low = detail.lower()
+        if "hosting a call" in low:
+            raise HTTPException(status_code=409, detail="La grabación empieza cuando tu cámara ya está en vivo. Espera a ver «En vivo» en verde e inténtalo de nuevo.")
+        if "recording" in low or "plan" in low or "payment" in low or "billing" in low:
+            raise HTTPException(status_code=402, detail="La grabación en la nube requiere activar facturación en la cuenta de Daily.co (plan de pago). El live sigue en vivo sin grabar.")
+        raise
+    rec = {"status": "recording", "id": r.get("recordingId") or r.get("id"), "started_at": datetime.now(timezone.utc).isoformat(), "segments": int(rec.get("segments") or 0) + 1}
+    await db.lives.update_one({"id": live_id}, {"$set": {"recording": rec}})
+    await _broadcast(live_id, {"type": "recording", "status": "recording"})
+    return rec
+
+
+@router.post("/api/lives/{live_id}/recording/stop")
+async def recording_stop(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _host_live(live_id, current_user["id"], require_live=True)
+    rec = live.get("recording") or {}
+    if rec.get("status") != "recording":
+        return rec or {"status": "none"}
+    try:
+        await _daily("POST", f"/rooms/{live['room_name']}/recordings/stop")
+    except HTTPException:
+        pass
+    rec["status"] = "stopped"
+    rec["stopped_at"] = datetime.now(timezone.utc).isoformat()
+    await db.lives.update_one({"id": live_id}, {"$set": {"recording": rec}})
+    await _broadcast(live_id, {"type": "recording", "status": "stopped"})
+    return rec
+
+
+def _import_replay_to_cloudinary(live_id: str, draft_id: str, download_link: str):
+    """Background: copy the Daily recording into our Cloudinary so the draft never expires."""
+    import cloudinary.uploader
+    from pymongo import MongoClient
+    client = MongoClient(os.environ["MONGO_URL"])
+    sdb = client[os.environ["DB_NAME"]]
+    try:
+        up = cloudinary.uploader.upload(download_link, resource_type="video", folder="bruno/live-replays",
+                                        eager=[{"format": "mp4", "video_codec": "h264", "width": 1080, "height": 1920, "crop": "limit"}], eager_async=True)
+        url = up.get("secure_url")
+        poster = url.rsplit(".", 1)[0] + ".jpg" if url else None
+        sdb.post_drafts.update_one({"id": draft_id}, {"$set": {"media_url": url, "poster_url": poster, "media_meta": {"url": url, "poster_url": poster, "public_id": up.get("public_id"), "duration": up.get("duration")}, "expires_at": None}})
+        sdb.lives.update_one({"id": live_id}, {"$set": {"recording.status": "ready", "recording.media_url": url}})
+    except Exception as e:  # keep the external (expiring) link, be honest about it
+        sdb.lives.update_one({"id": live_id}, {"$set": {"recording.status": "ready_external", "recording.import_error": str(e)[:200]}})
+    finally:
+        client.close()
+
+
+@router.get("/api/lives/{live_id}/recording")
+async def recording_status(live_id: str, background: BackgroundTasks, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _host_live(live_id, current_user["id"])
+    rec = live.get("recording") or {"status": "none"}
+    if rec.get("draft_id"):
+        draft = await db.post_drafts.find_one({"id": rec["draft_id"]}, {"_id": 0})
+        return {**rec, "draft": draft}
+    if rec.get("status") in ("processing", "stopped") and rec.get("id") and live.get("status") == "ended":
+        try:
+            info = await _daily("GET", f"/recordings/{rec['id']}")
+        except HTTPException:
+            info = {}
+        if info.get("status") == "finished":
+            link = await _daily("GET", f"/recordings/{rec['id']}/access-link?valid_for_secs=43200")
+            download = link.get("download_link")
+            now = datetime.now(timezone.utc)
+            draft = {"id": str(uuid.uuid4()), "user_id": current_user["id"], "media_url": download, "media_type": "video",
+                     "media_meta": {"url": download, "duration": info.get("duration")}, "caption": f"Repetición del live · {live.get('title', '')}".strip(),
+                     "trim_start": None, "trim_end": None, "cover_at": None, "poster_url": None, "live_id": live_id, "source": "live_replay",
+                     "expires_at": (datetime.fromtimestamp(now.timestamp() + 43200, tz=timezone.utc)).isoformat(), "updated_at": now.isoformat()}
+            await db.post_drafts.insert_one(dict(draft))
+            rec = {**rec, "status": "importing", "draft_id": draft["id"], "duration": info.get("duration"), "finished_at": now.isoformat()}
+            await db.lives.update_one({"id": live_id}, {"$set": {"recording": rec}})
+            background.add_task(_import_replay_to_cloudinary, live_id, draft["id"], download)
+            return {**rec, "draft": draft}
+        if info.get("status"):
+            rec = {**rec, "daily_status": info["status"]}
+    return rec
+
+
+@router.post("/api/lives/{live_id}/replay-published")
+async def replay_published(live_id: str, body: ReplayPublished, background: BackgroundTasks, current_user: dict = Depends(get_current_user_from_token)):
+    """Host published the replay as a video → notify everyone who was in the live."""
+    live = await _host_live(live_id, current_user["id"])
+    if (live.get("recording") or {}).get("replay_post_id"):
+        return {"notified": 0, "already": True}
+    ids = [u for u in set((live.get("participant_ids") or []) + (live.get("guest_history") or [])) if u != current_user["id"]]
+    await db.lives.update_one({"id": live_id}, {"$set": {"recording.replay_post_id": body.post_id, "replay_post_id": body.post_id}})
+    title = live.get("title", "live")
+    msg = f"{current_user.get('name', 'El anfitrión')} publicó la repetición del live «{title}»"
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        from utils.notification_realtime import emit_notification_ws
+    except Exception:
+        emit_notification_ws = None
+    for uid in ids:
+        doc = {"id": str(uuid.uuid4()), "user_id": uid, "actor_id": current_user["id"], "type": "live_replay", "target_id": body.post_id, "target_type": "post",
+               "message": msg, "content": msg, "is_read": False, "created_at": now}
+        await db.notifications.insert_one(dict(doc))
+        if emit_notification_ws:
+            try:
+                await emit_notification_ws(doc)
+            except Exception:
+                pass
+        background.add_task(notify_user, uid, "live_replay", "Repetición disponible", msg, {"post_id": body.post_id}, f"/reels?id={body.post_id}")
+    return {"notified": len(ids)}
+
+
+@router.get("/api/lives/{live_id}/summary")
+async def live_summary(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    live = await _host_live(live_id, current_user["id"])
+    questions = await db.live_questions.count_documents({"live_id": live_id})
+    answered = await db.live_questions.count_documents({"live_id": live_id, "answered": True})
+    polls = await db.live_polls.find({"live_id": live_id}, {"_id": 0, "options": 1}).to_list(50)
+    poll_votes = sum(int(o.get("votes") or 0) for p in polls for o in (p.get("options") or []))
+    duration = live.get("duration_seconds") or 0
+    if live.get("status") == "live" and live.get("started_at"):
+        duration = int((datetime.now(timezone.utc) - datetime.fromisoformat(live["started_at"].replace("Z", "+00:00"))).total_seconds())
+    return {
+        "id": live_id, "title": live.get("title"), "status": live.get("status"), "started_at": live.get("started_at"), "ended_at": live.get("ended_at"),
+        "duration_seconds": duration, "peak_viewers": live.get("peak_viewers") or 0, "total_viewers": live.get("total_viewers") or len(live.get("participant_ids") or []),
+        "comments": live.get("comments_count") or 0, "hearts": live.get("hearts_count") or 0, "gifts": live.get("total_gifts") or 0, "gift_value": live.get("total_gift_value") or 0,
+        "questions": questions, "questions_answered": answered, "polls": len(polls), "poll_votes": poll_votes,
+        "guests": len(set(live.get("guest_history") or [])), "recording": live.get("recording") or {"status": "none"}, "replay_post_id": live.get("replay_post_id"),
+    }

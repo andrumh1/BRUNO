@@ -12,13 +12,13 @@ export const CardBackground = ({ design, data }) => {
     <>
       <div aria-hidden className="absolute inset-0" style={{
         backgroundColor: bg.color,
-        backgroundImage: bg.type === "gradient" || bg.type === "animated" ? (animated ? `linear-gradient(${bg.angle}deg, ${bg.color}, ${bg.color2}, ${rgba(bg.color, 0.85)}, ${bg.color2})` : gradient) : undefined,
+        backgroundImage: bg.type === "gradient" || bg.type === "animated" ? (animated ? `linear-gradient(${bg.angle}deg, ${bg.color}, ${bg.color2}, ${rgba(bg.color, 0.85)}, ${bg.color2})` : gradient) : (bg.type === "fullimage" && !image ? `radial-gradient(ellipse at 50% 20%, ${bg.color2} 0%, ${bg.color} 70%)` : undefined),
         backgroundSize: animated && !isImage ? "300% 300%" : undefined,
         animation: animated && !isImage ? "brunoGradientShift 10s ease infinite" : undefined,
       }} />
       {isImage && (
         <>
-          <div aria-hidden className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${image})`, filter: `blur(${bg.blur}px) brightness(${bg.brightness}%)`, transform: bg.blur ? "scale(1.06)" : undefined }} />
+          <div aria-hidden className="absolute inset-0 bg-cover" style={{ backgroundImage: `url(${image})`, backgroundPosition: `${design.hero?.focusX ?? 50}% ${design.hero?.focusY ?? 50}%`, filter: `blur(${bg.blur}px) brightness(${bg.brightness}%)`, transform: bg.blur || (design.hero?.zoom || 100) > 100 ? `scale(${Math.max(1.06 * (bg.blur ? 1 : 0.95), (design.hero?.zoom || 100) / 100)})` : undefined, transformOrigin: `${design.hero?.focusX ?? 50}% ${design.hero?.focusY ?? 50}%` }} />
           <div aria-hidden className="absolute inset-0" style={{ background: `linear-gradient(180deg, ${rgba("#000000", bg.overlay / 100 * 0.55)}, ${rgba("#000000", bg.overlay / 100)})` }} />
         </>
       )}

@@ -1,20 +1,41 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
-import { MapPin, QrCode, Briefcase, GraduationCap, Award, Languages, Sparkles } from "lucide-react";
+import { MapPin, QrCode, Briefcase, GraduationCap, Award, Languages, Sparkles, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Surface, SectionTitle } from "./Surface";
 import { rgba } from "@/lib/cardDesign";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Full-screen viewer: images keep their aspect ratio (object-contain), swipe-free prev/next.
+const Lightbox = ({ photos, index, onClose, onStep }) => {
+  useEffect(() => { const k = (e) => { if (e.key === "Escape") onClose(); if (e.key === "ArrowRight") onStep(1); if (e.key === "ArrowLeft") onStep(-1); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose, onStep]);
+  return createPortal(
+    <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center" onClick={onClose} role="dialog" aria-modal="true" data-testid="gallery-lightbox">
+      <img src={photos[index]} alt={`Foto ${index + 1}`} className="max-w-[94vw] max-h-[86vh] object-contain select-none" onClick={(e) => e.stopPropagation()} data-testid="gallery-lightbox-img" />
+      <button type="button" onClick={onClose} className="absolute right-3 w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20" style={{ top: "calc(var(--safe-top) + 12px)" }} aria-label="Cerrar" data-testid="gallery-lightbox-close"><X className="w-5 h-5" /></button>
+      {photos.length > 1 && (
+        <>
+          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(-1); }} className="absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20" aria-label="Anterior" data-testid="gallery-lightbox-prev"><ChevronLeft className="w-5 h-5" /></button>
+          <button type="button" onClick={(e) => { e.stopPropagation(); onStep(1); }} className="absolute right-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20" aria-label="Siguiente" data-testid="gallery-lightbox-next"><ChevronRight className="w-5 h-5" /></button>
+          <span className="absolute left-1/2 -translate-x-1/2 text-white/70 text-xs" style={{ bottom: "calc(var(--safe-bottom) + 16px)" }}>{index + 1} / {photos.length}</span>
+        </>
+      )}
+    </div>, document.body);
+};
+
 export const GalleryBlock = ({ data, design }) => {
   const photos = data.gallery_photos || [];
+  const [open, setOpen] = useState(null);
   if (!photos.length) return null;
+  const step = (d) => setOpen((i) => (i + d + photos.length) % photos.length);
   return (
     <div data-testid="card-gallery-block">
       <SectionTitle design={design}>Galería</SectionTitle>
       <div className="grid grid-cols-3 gap-2">
-        {photos.map((p, i) => <div key={`${p}-${i}`} className="aspect-square overflow-hidden" style={{ borderRadius: Math.max(8, design.layout.radius - 10) }}><img src={p} alt={`Foto ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" /></div>)}
+        {photos.map((p, i) => <button type="button" key={`${p}-${i}`} onClick={() => setOpen(i)} className="aspect-square overflow-hidden block w-full" style={{ borderRadius: Math.max(8, design.layout.radius - 10) }} aria-label={`Ampliar foto ${i + 1}`} data-testid={`card-gallery-photo-${i}`}><img src={p} alt={`Foto ${i + 1}`} loading="lazy" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" /></button>)}
       </div>
+      {open !== null && <Lightbox photos={photos} index={open} onClose={() => setOpen(null)} onStep={step} />}
     </div>
   );
 };

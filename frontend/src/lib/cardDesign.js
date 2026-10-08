@@ -4,20 +4,29 @@ export const DESIGN_VERSION = 2;
 export const DEFAULT_DESIGN = {
   version: DESIGN_VERSION,
   preset: "custom",
-  layout: { align: "left", spacing: "medium", radius: 24 },
+  layout: { align: "left", spacing: "medium", radius: 24, header: "classic" },
   background: { type: "color", color: "#F9F1EA", color2: "#FF6A00", angle: 135, imageUrl: null, overlay: 45, blur: 0, brightness: 100 },
   colors: { text: "#474747", accent: "#FF6A00" },
-  typography: { family: "modern", titleSize: 2, weight: 700, letterSpacing: 0 },
+  typography: { family: "modern", bodyFamily: null, titleSize: 2, weight: 700, letterSpacing: 0 },
   banner: { enabled: true, height: "md", style: "image" },
   avatar: { enabled: true, shape: "rounded", position: "overlap", size: 96 },
-  buttons: { style: "solid", radius: 16, size: "md" },
+  hero: { height: "lg", fade: 70, focusX: 50, focusY: 30, zoom: 100, social: true },
+  buttons: { style: "solid", radius: 16, size: "md", stack: false },
   socialStyle: "icons",
   glass: { enabled: false, opacity: 50, blur: 40 },
   effects: { depth: "soft", glow: false, reflection: true },
   animations: { enabled: false },
-  components: { banner: true, avatar: true, bio: true, contact: true, social: true, gallery: true, location: true, typeFields: true, qr: false, cta: false },
-  componentOrder: ["bio", "contact", "social", "gallery", "location", "typeFields", "qr", "cta"],
+  components: { banner: true, avatar: true, bio: true, contact: true, social: true, gallery: true, location: true, typeFields: true, qr: false, cta: false, links: true, featured: true, pro: true, purposeContacts: true },
+  componentOrder: ["bio", "contact", "social", "links", "featured", "pro", "purposeContacts", "gallery", "location", "typeFields", "qr", "cta"],
   cta: { label: "", url: "" },
+};
+
+// Showcase presets (glamour / noir / editorial / spotlight) use their own header composition and component order.
+const SHOWCASE_ORDER = {
+  glamour: ["links", "bio", "contact", "featured", "gallery", "purposeContacts", "pro", "location", "social", "typeFields", "qr", "cta"],
+  noir: ["bio", "social", "links", "purposeContacts", "contact", "featured", "gallery", "pro", "location", "typeFields", "qr", "cta"],
+  editorial: ["bio", "links", "pro", "gallery", "featured", "contact", "purposeContacts", "social", "location", "typeFields", "qr", "cta"],
+  spotlight: ["bio", "social", "featured", "links", "contact", "gallery", "purposeContacts", "pro", "location", "typeFields", "qr", "cta"],
 };
 
 export const PRESETS = [
@@ -29,7 +38,14 @@ export const PRESETS = [
   { id: "formal", name: "Formal", desc: "Sobrio y empresarial", patch: { layout: { align: "left", spacing: "medium", radius: 12 }, background: { type: "color", color: "#FFFFFF" }, colors: { text: "#2B2B2B", accent: "#B8860B" }, typography: { family: "elegant", titleSize: 2, weight: 600, letterSpacing: 0.5 }, banner: { enabled: true, height: "sm", style: "color" }, avatar: { shape: "rounded", position: "left", size: 88 }, buttons: { style: "outline", radius: 8 }, socialStyle: "iconsNames", effects: { depth: "flat", reflection: false } } },
   { id: "photo", name: "Foto", desc: "Imagen a pantalla completa", patch: { background: { type: "fullimage", overlay: 55 }, colors: { text: "#FFFFFF" }, banner: { enabled: false }, avatar: { shape: "circle", position: "center", size: 104 }, layout: { align: "center" }, buttons: { style: "glass", radius: 999 }, glass: { enabled: true, opacity: 70, blur: 50 }, effects: { depth: "deep" } } },
   { id: "animated", name: "Animado", desc: "Gradiente vivo y suave", patch: { background: { type: "animated", color: "#FF6A00", color2: "#7C3AED", angle: 135 }, colors: { text: "#FFFFFF" }, banner: { enabled: false }, avatar: { shape: "bubble", position: "center", size: 104 }, layout: { align: "center" }, buttons: { style: "glass", radius: 999 }, glass: { enabled: true, opacity: 65, blur: 40 }, animations: { enabled: true }, effects: { depth: "floating", glow: true } } },
+  // ─── Showcase: modelos, fotógrafos, creadores, fitness, marcas personales ───
+  { id: "glamour", name: "Glamour", desc: "Fotografía protagonista", showcase: true, patch: { layout: { align: "left", spacing: "medium", radius: 28, header: "hero" }, background: { type: "color", color: "#0B0B0D", color2: "#1C1A1F" }, colors: { text: "#FFFFFF", accent: "#E9C2A6" }, typography: { family: "modern", titleSize: 3, weight: 800, letterSpacing: -0.5 }, banner: { enabled: false }, hero: { height: "xl", fade: 72, social: true }, buttons: { style: "glass", radius: 999, size: "lg", stack: true }, socialStyle: "icons", glass: { enabled: true, opacity: 72, blur: 60 }, effects: { depth: "deep", reflection: true, glow: false }, componentOrder: SHOWCASE_ORDER.glamour } },
+  { id: "noir", name: "Noir", desc: "Retrato y atmósfera", showcase: true, patch: { layout: { align: "center", spacing: "airy", radius: 24, header: "portrait" }, background: { type: "fullimage", color: "#0A0A0A", color2: "#2C2C2E", angle: 160, overlay: 72, blur: 10, brightness: 80 }, colors: { text: "#F4F4F4", accent: "#F4F4F4" }, typography: { family: "minimal", titleSize: 2, weight: 500, letterSpacing: 1.5 }, banner: { enabled: false }, avatar: { shape: "circle", position: "center", size: 132 }, buttons: { style: "outline", radius: 999, size: "md", stack: false }, socialStyle: "outline", glass: { enabled: false }, effects: { depth: "flat", reflection: false, glow: false }, animations: { enabled: false }, componentOrder: SHOWCASE_ORDER.noir } },
+  { id: "editorial", name: "Editorial", desc: "Portafolio de revista", showcase: true, patch: { layout: { align: "left", spacing: "medium", radius: 8, header: "editorial" }, background: { type: "color", color: "#F4EFE6", color2: "#E8D3A8" }, colors: { text: "#141414", accent: "#141414" }, typography: { family: "display", bodyFamily: "minimal", titleSize: 4, weight: 500, letterSpacing: 1 }, banner: { enabled: false }, hero: { fade: 0 }, buttons: { style: "solid", radius: 4, size: "lg", stack: true }, socialStyle: "iconsNames", glass: { enabled: false }, effects: { depth: "flat", reflection: false, glow: false }, componentOrder: SHOWCASE_ORDER.editorial } },
+  { id: "spotlight", name: "Spotlight", desc: "Creador y fitness", showcase: true, patch: { layout: { align: "left", spacing: "medium", radius: 28, header: "hero" }, background: { type: "color", color: "#121114", color2: "#2A1B10" }, colors: { text: "#FFFFFF", accent: "#FF6A00" }, typography: { family: "creative", titleSize: 3, weight: 800, letterSpacing: -0.5 }, banner: { enabled: false }, hero: { height: "lg", fade: 68, social: false }, buttons: { style: "bubble", radius: 999, size: "md", stack: false }, socialStyle: "brand", glass: { enabled: true, opacity: 68, blur: 50 }, effects: { depth: "floating", reflection: true, glow: true }, componentOrder: SHOWCASE_ORDER.spotlight } },
 ];
+
+export const isShowcaseHeader = (design) => (design?.layout?.header || "classic") !== "classic";
 
 export const FONT_FAMILIES = {
   modern: "'Manrope', 'Inter', sans-serif",
@@ -37,8 +53,9 @@ export const FONT_FAMILIES = {
   elegant: "'Playfair Display', Georgia, serif",
   corporate: "'IBM Plex Sans', 'Inter', sans-serif",
   creative: "'Outfit', 'Inter', sans-serif",
+  display: "'Bebas Neue', 'Oswald', 'Impact', sans-serif",
 };
-export const FONT_LABELS = { modern: "Moderna", minimal: "Minimal", elegant: "Elegante", corporate: "Corporativa", creative: "Creativa" };
+export const FONT_LABELS = { modern: "Moderna", minimal: "Minimal", elegant: "Elegante", corporate: "Corporativa", creative: "Creativa", display: "Display" };
 
 export const SAMPLE_DATA = {
   title: "Andrea Ruiz", subtitle: "Diseñadora de marca", description: "Creo identidades que se recuerdan. Hablemos de tu próximo proyecto.",
@@ -47,7 +64,12 @@ export const SAMPLE_DATA = {
   contact_info: { phone: "+34 600 000 000", email: "hola@andrea.co", whatsapp: "+34600000000", website: "andrea.co" },
   social_links: [{ type: "instagram", url: "#", label: "Instagram" }, { type: "linkedin", url: "#", label: "LinkedIn" }, { type: "tiktok", url: "#", label: "TikTok" }],
   gallery_photos: [], card_type: "personal",
+  links: [{ title: "Ver portafolio", url: "#" }, { title: "Reservar sesión", url: "#" }, { title: "Contactar", url: "#" }],
+  showcase: { specialty: "Model / Creator / Lifestyle", city: "Madrid", availability: "Disponible", featured_title: "Nuevo contenido", featured_url: "#", booking: "booking@andrea.co" },
 };
+
+// Sample used for showcase thumbnails: the cover photo is the person, not a landscape.
+export const SHOWCASE_SAMPLE = { ...SAMPLE_DATA, subtitle: "@andrea.ruiz", banner_url: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=900&q=60", description: "Modelo y creadora. Sesiones, campañas y colaboraciones." };
 
 export const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 export const deepMerge = (base, patch) => {
@@ -58,7 +80,10 @@ export const deepMerge = (base, patch) => {
 
 export const applyPreset = (design, presetId) => {
   const p = PRESETS.find((x) => x.id === presetId) || PRESETS[0];
-  return deepMerge(deepMerge(DEFAULT_DESIGN, p.patch), { preset: p.id, components: design.components, componentOrder: design.componentOrder, cta: design.cta });
+  const { componentOrder: presetOrder, components: presetComponents, ...patch } = p.patch;
+  const prevOrder = design.componentOrder || DEFAULT_DESIGN.componentOrder;
+  const order = presetOrder ? [...presetOrder, ...prevOrder.filter((k) => !presetOrder.includes(k))] : prevOrder;
+  return deepMerge(deepMerge(DEFAULT_DESIGN, patch), { preset: p.id, components: { ...design.components, ...(presetComponents || {}) }, componentOrder: order, cta: design.cta });
 };
 
 const LEGACY = [["premium_glass", "glass"], ["modern_glass", "glass"], ["glass", "glass"], ["fullimg", "photo"], ["animated", "animated"], ["premium_formal", "formal"], ["elegant", "formal"], ["formal", "formal"], ["full_banner_bubble", "modern"], ["edge_actions", "modern"], ["minimal", "minimal"], ["friend", "minimal"], ["clean", "minimal"], ["modern", "modern"], ["pro", "modern"], ["showcase", "modern"], ["tour", "modern"], ["bold", "modern"], ["promo", "modern"], ["gallery", "modern"], ["portfolio", "modern"], ["blocks", "modern"], ["classic", "classic"], ["default", "classic"]];
@@ -122,7 +147,14 @@ export const buttonStyle = (design, { primary = false } = {}) => {
   }
 };
 
-export const buttonSizeClass = (design) => ({ sm: "h-9 px-3 text-xs gap-1.5", md: "h-11 px-4 text-sm gap-2", lg: "h-13 px-5 text-base gap-2.5" }[design.buttons.size] || "h-11 px-4 text-sm gap-2");
+// Display faces (Bebas) are for titles only; body text falls back to a readable family.
+export const bodyFont = (design) => { const t = design.typography; return FONT_FAMILIES[t.bodyFamily || (t.family === "display" ? "minimal" : t.family)] || FONT_FAMILIES.modern; };
+
+export const buttonSizeClass = (design) => ({ sm: "h-9 px-3 text-xs gap-1.5", md: "h-11 px-4 text-sm gap-2", lg: "h-[52px] px-5 text-base gap-2.5" }[design.buttons.size] || "h-11 px-4 text-sm gap-2");
+
+// Framing of the main photo (cover/hero/editorial/fullimage) — keeps the face visible.
+export const coverFocus = (design) => { const h = design.hero || DEFAULT_DESIGN.hero; const z = Math.max(100, h.zoom || 100) / 100; return { objectPosition: `${h.focusX}% ${h.focusY}%`, transform: z > 1 ? `scale(${z})` : undefined, transformOrigin: `${h.focusX}% ${h.focusY}%` }; };
+export const coverImage = (data, design) => design.background?.imageUrl || data.banner_url || data.avatar_url || null;
 
 export const cardTypeLabel = (type) => ({ personal: "Personal", empresarial: "Empresarial", negocio: "Negocio", servicios: "Servicios", lugares: "Lugar", guardian: "Guardian", curriculum: "CV", mascotas: "Mascota", oferta_trabajo: "Oferta de trabajo", busqueda_personal: "Búsqueda de personal", solicitud_servicio: "Solicitud de servicio" }[type] || type || "");
 

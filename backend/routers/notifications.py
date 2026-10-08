@@ -36,6 +36,7 @@ NOTIFICATION_TYPES = {
     "new_message": {"title": "Nuevo mensaje", "icon": "message"},
     "new_follower": {"title": "Nuevo seguidor", "icon": "user-plus"},
     "share_scan": {"title": "Escaneo de QR", "icon": "qr-code"},
+    "live_replay": {"title": "Repetición disponible", "icon": "video"},
     "post_like": {"title": "Nuevo like", "icon": "heart"},
     "post_comment": {"title": "Nuevo comentario", "icon": "message-circle"},
     "product_favorited": {"title": "Favorito en tu producto", "icon": "star"},

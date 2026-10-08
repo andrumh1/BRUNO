@@ -29,6 +29,7 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
   const [guestRtc, setGuestRtc] = useState(null);
   const [poll, setPoll] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [recording, setRecording] = useState(false);
 
   const send = useCallback((msg) => { const ws = wsRef.current; if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }, []);
   const pushEvent = (e) => setEvents((p) => [...p.slice(-80), e]);
@@ -53,7 +54,8 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
       let msg; try { msg = JSON.parse(ev.data); } catch (_) { return; }
       switch (msg.type) {
         case "error": if (msg.code === 4003) setDenied(true); break;
-        case "welcome": setViewerCount(msg.viewer_count || 0); setPinned(msg.pinned_comment || null); if (role !== "host") setHostOnline(!!msg.host_online); break;
+        case "welcome": setViewerCount(msg.viewer_count || 0); setPinned(msg.pinned_comment || null); setRecording(!!msg.recording); if (role !== "host") setHostOnline(!!msg.host_online); break;
+        case "recording": setRecording(msg.status === "recording"); break;
         case "viewer_joined": setViewerCount(msg.viewer_count ?? 0); pushEvent({ id: `j-${Date.now()}`, kind: "join", user_name: msg.viewer?.name, user_id: msg.viewer?.id }); break;
         case "viewer_left": setViewerCount(msg.viewer_count ?? 0); break;
         case "host_online": setHostOnline(true); break;
@@ -87,5 +89,5 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
   const sendHeart = useCallback(() => send({ type: "heart" }), [send]);
 
   return { connected, hostOnline, viewerCount, events, hearts, pinned, settings, mutedIds, ended, denied, kicked, sendHeart, reconnecting: !connected && attempt > 0,
-    guestRequests, guests, guestStatus, setGuestStatus, guestRtc, setGuestRtc, poll, setPoll, questions, setQuestions };
+    guestRequests, guests, guestStatus, setGuestStatus, guestRtc, setGuestRtc, poll, setPoll, questions, setQuestions, recording, setRecording };
 }

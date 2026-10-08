@@ -60,7 +60,7 @@ export default function CardBuilderPage() {
   };
 
   const panel = {
-    content: <ContentPanel card={card} update={b.update} />, media: <MediaPanel card={card} update={b.update} token={token} />, social: <SocialPanel card={card} update={b.update} />,
+    content: <ContentPanel card={card} update={b.update} design={card.card_design} />, media: <MediaPanel card={card} update={b.update} token={token} design={card.card_design} updateDesign={b.updateDesign} />, social: <SocialPanel card={card} update={b.update} />,
     design: <DesignPanel card={card} design={card.card_design} setPreset={b.setPreset} updateDesign={b.updateDesign} resetDesign={b.resetDesign} />,
     components: <ComponentsPanel design={card.card_design} updateDesign={b.updateDesign} />, effects: <EffectsPanel design={card.card_design} updateDesign={b.updateDesign} />,
     type: <TypeFieldsPanel card={card} update={b.update} />,

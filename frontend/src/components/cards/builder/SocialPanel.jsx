@@ -4,10 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import SocialLinkSelector from "@/components/SocialLinkSelector";
 import LocationSelector from "@/components/LocationSelector";
+import LinksEditor from "./LinksEditor";
 import { Section } from "./controls";
 
 const SocialPanel = ({ card, update }) => (
   <div className="space-y-3" data-testid="panel-social">
+    <Section title="Enlaces destacados" testId="section-links">
+      <p className="text-xs text-muted-foreground -mt-1">Botones grandes con título y destino. Arrástralos con las flechas para ordenarlos.</p>
+      <LinksEditor links={card.links || []} onChange={(links) => update({ links })} />
+    </Section>
     <Section title="Redes sociales y enlaces" testId="section-social">
       <SocialLinkSelector links={card.social_links || []} onChange={(links) => update({ social_links: links })} />
     </Section>

@@ -3,10 +3,10 @@ import axios from "axios";
 import { DEFAULT_DESIGN, EMPTY_CUSTOM_FIELDS, applyPreset, deepMerge, resolveDesign } from "@/lib/cardDesign";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const SAVE_FIELDS = ["card_type", "title", "subtitle", "description", "avatar_url", "banner_url", "gallery_photos", "social_links", "contact_info", "location", "locations", "custom_fields", "is_public", "show_in_feed", "is_animated", "is_draft", "card_design", "background_color", "text_color"];
+const SAVE_FIELDS = ["card_type", "title", "subtitle", "description", "avatar_url", "banner_url", "gallery_photos", "social_links", "contact_info", "location", "locations", "custom_fields", "is_public", "show_in_feed", "is_animated", "is_draft", "card_design", "background_color", "text_color", "links", "showcase"];
 
 export const newCard = (type = "personal") => ({
-  card_type: type, title: "", subtitle: "", description: "", avatar_url: "", banner_url: "", gallery_photos: [], social_links: [],
+  card_type: type, title: "", subtitle: "", description: "", avatar_url: "", banner_url: "", gallery_photos: [], social_links: [], links: [], showcase: {},
   contact_info: {}, location: null, locations: [], custom_fields: EMPTY_CUSTOM_FIELDS, is_public: true, show_in_feed: true, is_animated: true, is_draft: true,
   card_design: applyPreset(DEFAULT_DESIGN, "modern"),
 });

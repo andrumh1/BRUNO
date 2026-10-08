@@ -2,6 +2,7 @@ import React from "react";
 import { MessageCircle } from "lucide-react";
 import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { Surface } from "./Surface";
+import { HeroHeader, PortraitHeader, EditorialHeader } from "./ShowcaseHeaders";
 import { FONT_FAMILIES, cardTypeLabel, rgba, contrastText } from "@/lib/cardDesign";
 
 const BANNER_H = { sm: "h-20 sm:h-24", md: "h-32 sm:h-40 lg:h-48", lg: "h-48 sm:h-60 lg:h-72" };
@@ -38,7 +39,11 @@ const ChatBtn = ({ onChat, design }) => onChat ? (
 ) : null;
 
 // Banner + avatar + name in every supported arrangement (position drives the layout).
-export const CardHeader = ({ data, design, onChat, pad }) => {
+export const CardHeader = ({ data, design, onChat, pad, narrow = true }) => {
+  const header = design.layout.header || "classic";
+  if (header === "hero") return <HeroHeader data={data} design={design} onChat={onChat} pad={pad} narrow={narrow} />;
+  if (header === "portrait") return <PortraitHeader data={data} design={design} onChat={onChat} pad={pad} narrow={narrow} />;
+  if (header === "editorial") return <EditorialHeader data={data} design={design} onChat={onChat} pad={pad} narrow={narrow} />;
   const bannerOn = design.components.banner && design.banner.enabled && design.background.type !== "fullimage";
   const avatarOn = design.components.avatar && design.avatar.enabled;
   const pos = design.avatar.position;

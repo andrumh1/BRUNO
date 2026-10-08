@@ -167,6 +167,7 @@ export default function LiveViewerPage() {
           {!remoteStream && !rtcInfo && joined && <div className="absolute inset-x-6 bottom-40 z-20 rounded-2xl bg-black/60 text-white text-xs p-3 text-center" data-testid="live-no-rtc">El servidor de video no está configurado (DAILY_API_KEY). Solo chat disponible.</div>}
         </div>
       </PrivacyShield>
+      {rtc.recording && <div className="absolute left-3 z-30 h-7 px-2.5 rounded-full bg-red-600 text-white text-[11px] font-bold inline-flex items-center gap-1.5" style={{ top: "calc(var(--safe-top) + 64px)" }} data-testid="live-viewer-rec-banner"><span className="w-2 h-2 rounded-full bg-white animate-pulse" /> REC · Este live se está grabando</div>}
 
       <LiveTopBar live={live} viewerCount={rtc.viewerCount} hostOnline={rtc.hostOnline} onClose={() => navigate(-1)}
         right={<div className="flex items-center gap-1.5">

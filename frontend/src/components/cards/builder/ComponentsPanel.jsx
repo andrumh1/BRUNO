@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Section, Choice, SliderField, ToggleRow } from "./controls";
 import { CtaFields } from "./ContentPanel";
 
-const LABELS = { bio: "Biografía", contact: "Botones de contacto", social: "Redes sociales", gallery: "Galería", location: "Ubicación", typeFields: "Campos del tipo (CV, oferta…)", qr: "Código QR", cta: "Botón de acción (CTA)" };
+const LABELS = { bio: "Biografía", contact: "Botones de contacto", social: "Redes sociales", links: "Enlaces destacados", featured: "Bloque destacado", pro: "Datos profesionales", purposeContacts: "Contacto por finalidad", gallery: "Galería", location: "Ubicación", typeFields: "Campos del tipo (CV, oferta…)", qr: "Código QR", cta: "Botón de acción (CTA)" };
 
 const Row = ({ id, design, updateDesign, onMove, index, total }) => {
   const controls = useDragControls();
