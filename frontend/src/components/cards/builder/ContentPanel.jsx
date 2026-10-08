@@ -42,7 +42,7 @@ const ContentPanel = ({ card, update, design }) => {
         </div>
         <TextField label="Dirección" value={ci.address} onChange={(v) => setCI("address", v)} placeholder="Calle, ciudad" testId="input-address" />
       </Section>
-      <Section title="Contacto por finalidad" defaultOpen={!!(sc.booking || sc.collab || sc.press)} testId="section-purpose">
+      <Section title="Contacto por finalidad" defaultOpen={showcase || !!(sc.booking || sc.collab || sc.press)} testId="section-purpose">
         <p className="text-xs text-muted-foreground -mt-1">Correo, teléfono o enlace. Solo se muestran los que rellenes.</p>
         <TextField label="Contrataciones" value={sc.booking} onChange={(v) => setSC("booking", v)} placeholder="booking@correo.com" testId="input-purpose-booking" />
         <TextField label="Colaboraciones" value={sc.collab} onChange={(v) => setSC("collab", v)} placeholder="colabs@correo.com" testId="input-purpose-collab" />

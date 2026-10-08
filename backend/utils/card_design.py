@@ -96,7 +96,10 @@ def design_from_legacy(card: dict) -> dict:
 
 def ensure_design(card: dict) -> tuple[dict, bool]:
     """Return (card, migrated). Adds card_design if missing; never removes legacy fields."""
-    if isinstance(card.get("card_design"), dict) and card["card_design"].get("version"):
+    cd = card.get("card_design")
+    if isinstance(cd, dict) and (cd.get("version") or cd.get("preset")):
+        if not cd.get("version"):
+            cd["version"] = DESIGN_VERSION
         return card, False
     card["card_design"] = design_from_legacy(card)
     card["card_design_version"] = DESIGN_VERSION

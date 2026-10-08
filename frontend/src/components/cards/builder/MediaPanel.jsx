@@ -73,7 +73,7 @@ const MediaPanel = ({ card, update, token, design, updateDesign }) => {
           <SliderField label="Zoom" value={design.hero.zoom} min={100} max={180} step={2} onChange={(v) => updateDesign({ hero: { zoom: v } })} testId="focus-zoom" />
         </Section>
       )}
-      <Section title="Bloque destacado" defaultOpen={!!(sc.featured_title || sc.featured_image)} testId="section-featured">
+      <Section title="Bloque destacado" defaultOpen={showcase || !!(sc.featured_title || sc.featured_image)} testId="section-featured">
         <p className="text-[11px] text-muted-foreground -mt-1">Un video, campaña o contenido con imagen, título y enlace. Si no tiene título ni imagen no se muestra.</p>
         <Drop label="Imagen o portada" hint="16:9 recomendado" url={sc.featured_image} onPick={pick("featured")} onClear={() => setSC("featured_image", "")} uploading={busy === "featured"} testId="drop-featured" />
         <div className="grid grid-cols-2 gap-3">
