@@ -6,6 +6,7 @@ creators/sellers receive amount − BRUNO fee into their connected account; payo
 "Mis ingresos"); refunds reverse the transfer and the fee; disputes are BRUNO's responsibility (platform).
 Money is always stored in minor units per currency. No wallet, no virtual coins, no P2P transfers.
 """
+import asyncio
 import csv
 import io
 import logging
@@ -21,6 +22,7 @@ from pydantic import BaseModel, Field
 
 from utils.security import get_current_user
 from utils.database import db
+from utils.email import send_email, receipt_html
 from models.user import User
 
 logger = logging.getLogger(__name__)
@@ -214,14 +216,99 @@ async def _price_for(body: CheckoutBody, buyer: User) -> dict:
     raise HTTPException(status_code=400, detail="Tipo de compra no válido")
 
 
-async def _discount(code: Optional[str], seller_id: Optional[str], subtotal: int) -> dict:
+async def _discount(code: Optional[str], seller_id: Optional[str], subtotal: int, kind: str = "", currency: str = "usd") -> dict:
     if not code:
         return {"minor": 0, "code": None}
-    d = await db.discount_codes.find_one({"code": code.strip().upper(), "seller_id": seller_id, "active": True}, {"_id": 0})
+    if not seller_id:
+        raise HTTPException(status_code=400, detail="Este producto no admite cupones")
+    d = await db.discount_codes.find_one({"code": code.strip().upper(), "seller_id": seller_id}, {"_id": 0})
+    if not d or not d.get("active"):
+        raise HTTPException(status_code=400, detail="Cupón no válido")
+    if d.get("expires_at") and d["expires_at"] < now_iso():
+        raise HTTPException(status_code=400, detail="Este cupón ha caducado")
+    if d.get("max_uses") and int(d.get("uses_count") or 0) >= int(d["max_uses"]):
+        raise HTTPException(status_code=400, detail="Este cupón ya alcanzó su límite de usos")
+    if d.get("applies_to", "all") != "all" and kind and d["applies_to"] != kind:
+        raise HTTPException(status_code=400, detail=f"Este cupón solo vale para {KIND_LABEL.get(d['applies_to'], d['applies_to']).lower()}")
+    if d.get("pct"):
+        minor = int(subtotal * float(d["pct"]) / 100)
+    else:
+        if (d.get("currency") or "usd") != currency:
+            raise HTTPException(status_code=400, detail=f"Este cupón es en {(d.get('currency') or 'usd').upper()}, no en {currency.upper()}")
+        minor = int(d.get("amount_minor") or 0)
+    return {"minor": min(minor, subtotal), "code": d["code"], "coupon_id": d["id"], "funded_by": "seller"}
+
+
+# ───────────────────────── creator coupons (seller funds the discount) ─────────────────────────
+KIND_LABEL = {"live_ticket": "Entradas a lives", "gift": "Regalos", "marketplace": "Marketplace", "all": "Todo"}
+
+
+class CouponBody(BaseModel):
+    code: str = Field(..., min_length=3, max_length=24)
+    pct: Optional[float] = Field(None, gt=0, le=100)
+    amount: Optional[float] = Field(None, gt=0)
+    currency: str = "usd"
+    applies_to: str = "all"  # all | live_ticket | gift | marketplace
+    max_uses: Optional[int] = Field(None, ge=1, le=100000)
+    expires_at: Optional[str] = None  # ISO date/datetime
+
+
+def _coupon_out(d: dict) -> dict:
+    cur = d.get("currency") or "usd"
+    return {**d, "amount": fmt_minor(int(d["amount_minor"]), cur) if d.get("amount_minor") else None, "uses_count": int(d.get("uses_count") or 0),
+            "expired": bool(d.get("expires_at") and d["expires_at"] < now_iso()), "exhausted": bool(d.get("max_uses") and int(d.get("uses_count") or 0) >= int(d["max_uses"]))}
+
+
+@router.get("/coupons")
+async def my_coupons(current_user: User = Depends(get_current_user)):
+    docs = await db.discount_codes.find({"seller_id": current_user.id}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return [_coupon_out(d) for d in docs]
+
+
+@router.post("/coupons", status_code=201)
+async def create_coupon(body: CouponBody, current_user: User = Depends(get_current_user)):
+    code = body.code.strip().upper()
+    if not code.replace("-", "").replace("_", "").isalnum():
+        raise HTTPException(status_code=400, detail="El código solo puede tener letras, números, guiones y guiones bajos")
+    if bool(body.pct) == bool(body.amount):
+        raise HTTPException(status_code=400, detail="Indica un porcentaje o un importe fijo (solo uno)")
+    if body.applies_to not in KIND_LABEL:
+        raise HTTPException(status_code=400, detail="Ámbito no válido")
+    expires = None
+    if body.expires_at:
+        try:
+            dt = datetime.fromisoformat(body.expires_at.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+            expires = dt.astimezone(timezone.utc).isoformat()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Fecha de caducidad no válida")
+        if expires < now_iso():
+            raise HTTPException(status_code=400, detail="La fecha de caducidad ya pasó")
+    if await db.discount_codes.find_one({"seller_id": current_user.id, "code": code}, {"_id": 0, "id": 1}):
+        raise HTTPException(status_code=409, detail="Ya tienes un cupón con ese código")
+    cur = body.currency.lower()
+    doc = {"id": str(uuid.uuid4()), "seller_id": current_user.id, "code": code, "pct": body.pct, "amount_minor": to_minor(body.amount, cur) if body.amount else None, "currency": cur if body.amount else None,
+           "applies_to": body.applies_to, "max_uses": body.max_uses, "uses_count": 0, "expires_at": expires, "active": True, "created_at": now_iso()}
+    await db.discount_codes.insert_one(dict(doc))
+    return _coupon_out(doc)
+
+
+@router.patch("/coupons/{coupon_id}")
+async def toggle_coupon(coupon_id: str, current_user: User = Depends(get_current_user)):
+    d = await db.discount_codes.find_one({"id": coupon_id, "seller_id": current_user.id}, {"_id": 0})
     if not d:
-        raise HTTPException(status_code=400, detail="Código de descuento no válido")
-    minor = int(subtotal * float(d.get("pct", 0)) / 100) if d.get("pct") else int(d.get("amount_minor") or 0)
-    return {"minor": min(minor, subtotal), "code": d["code"], "funded_by": "seller"}
+        raise HTTPException(status_code=404, detail="Cupón no encontrado")
+    await db.discount_codes.update_one({"id": coupon_id}, {"$set": {"active": not d.get("active"), "updated_at": now_iso()}})
+    return _coupon_out({**d, "active": not d.get("active")})
+
+
+@router.delete("/coupons/{coupon_id}")
+async def delete_coupon(coupon_id: str, current_user: User = Depends(get_current_user)):
+    res = await db.discount_codes.delete_one({"id": coupon_id, "seller_id": current_user.id})
+    if not res.deleted_count:
+        raise HTTPException(status_code=404, detail="Cupón no encontrado")
+    return {"deleted": True}
 
 
 @router.post("/quote")
@@ -230,7 +317,7 @@ async def quote(body: CheckoutBody, current_user: User = Depends(get_current_use
     item = await _price_for(body, current_user)
     fees = await get_fees()
     subtotal = item["unit_minor"] * body.quantity
-    disc = await _discount(body.discount_code, item.get("seller_id"), subtotal)
+    disc = await _discount(body.discount_code, item.get("seller_id"), subtotal, body.kind, item["currency"])
     base = subtotal - disc["minor"]
     shipping = int(item.get("shipping_minor") or 0)
     pct = fees[CREATOR_KINDS[body.kind]] if body.kind in CREATOR_KINDS else 0.0
@@ -238,7 +325,7 @@ async def quote(body: CheckoutBody, current_user: User = Depends(get_current_use
     cur = item["currency"]
     return {"name": item["name"], "currency": cur, "subtotal": fmt_minor(subtotal, cur), "discount": fmt_minor(disc["minor"], cur), "discount_code": disc["code"], "shipping": fmt_minor(shipping, cur),
             "total": fmt_minor(base + shipping, cur), "bruno_fee_pct": pct, "bruno_fee": fmt_minor(fee, cur), "seller_net": fmt_minor(base - fee + shipping, cur) if item.get("seller_id") else None,
-            "processor_fees_paid_by": "bruno", "discount_funded_by": "seller", "is_platform_sale": body.kind in PLATFORM_KINDS}
+            "processor_fees_paid_by": "bruno", "discount_funded_by": "seller", "is_platform_sale": body.kind in PLATFORM_KINDS, "accepts_coupons": bool(item.get("seller_id"))}
 
 
 @router.post("/checkout")
@@ -247,7 +334,7 @@ async def create_checkout(body: CheckoutBody, current_user: User = Depends(get_c
     fees = await get_fees()
     cur = item["currency"]
     subtotal = item["unit_minor"] * body.quantity
-    disc = await _discount(body.discount_code, item.get("seller_id"), subtotal)
+    disc = await _discount(body.discount_code, item.get("seller_id"), subtotal, body.kind, cur)
     base = subtotal - disc["minor"]
     shipping = int(item.get("shipping_minor") or 0)
     total = base + shipping
@@ -288,7 +375,7 @@ async def create_checkout(body: CheckoutBody, current_user: User = Depends(get_c
              "currency": cur, "subtotal_minor": subtotal, "discount_minor": disc["minor"], "discount_code": disc["code"], "shipping_minor": shipping, "total_minor": total,
              "fee_pct": pct, "fee_minor": fee, "seller_net_minor": (base - fee + shipping) if seller_acct else 0, "platform_revenue_minor": total if body.kind in PLATFORM_KINDS else fee,
              "refunded_minor": 0, "disputed": False, "status": "initiated", "session_id": session.id, "payment_intent": None, "meta": item.get("meta") or {}, "name": item["name"],
-             "quantity": body.quantity, "created_at": now_iso(), "updated_at": now_iso(), "fee_snapshot": fees}
+             "quantity": body.quantity, "created_at": now_iso(), "updated_at": now_iso(), "fee_snapshot": fees, "coupon_id": disc.get("coupon_id"), "origin_url": body.origin_url.rstrip("/")}
     await db.ledger_entries.insert_one(dict(entry))
     return {"checkout_url": session.url, "session_id": session.id, "ledger_id": entry_id}
 
@@ -325,7 +412,61 @@ async def _mark_paid(session: dict) -> Optional[dict]:
                                                         {"$set": {"status": "paid", "paid_at": now_iso(), "payment_intent": session.get("payment_intent"), "updated_at": now_iso()}}, projection={"_id": 0})
     if entry:
         await _fulfil({**entry, "payment_intent": session.get("payment_intent")})
+        if entry.get("coupon_id"):
+            await db.discount_codes.update_one({"id": entry["coupon_id"]}, {"$inc": {"uses_count": 1}, "$set": {"last_used_at": now_iso()}})
+        asyncio.create_task(_send_receipt(entry, quiet=True))
     return entry
+
+
+KIND_RECEIPT = {"live_ticket": "Entrada a live privado", "gift": "Regalo en vivo", "marketplace": "Compra en Marketplace", "piup": "Pedido PIUP", "promotion": "Promoción de publicación"}
+
+
+async def _send_receipt(entry: dict, quiet: bool = False) -> Optional[str]:
+    """Email receipt to the buyer (server-side template, recipient from DB). Never blocks fulfilment."""
+    buyer = await db.users.find_one({"id": entry["buyer_id"]}, {"_id": 0, "email": 1, "name": 1})
+    if not buyer or not buyer.get("email"):
+        return None
+    seller = await db.users.find_one({"id": entry["seller_id"]}, {"_id": 0, "name": 1}) if entry.get("seller_id") else None
+    cur = entry["currency"]
+    money = lambda m: f"{fmt_minor(int(m), cur):,.2f} {cur.upper()}" if cur not in ZERO_DECIMAL else f"{int(m):,} {cur.upper()}"
+    paid_at = entry.get("paid_at") or entry["created_at"]
+    try:
+        date_label = datetime.fromisoformat(paid_at).strftime("%d/%m/%Y %H:%M UTC")
+    except ValueError:
+        date_label = paid_at[:16]
+    app_url = (entry.get("origin_url") or os.environ.get("FRONTEND_URL") or "").rstrip("/")
+    html = receipt_html(buyer_name=buyer.get("name") or "hola", item_name=entry["name"], kind_label=KIND_RECEIPT.get(entry["kind"], entry["kind"]), date_label=date_label,
+                        receipt_no=entry["id"][:8].upper(), subtotal=money(entry["subtotal_minor"]), discount=money(entry["discount_minor"]) if entry.get("discount_minor") else None,
+                        discount_code=entry.get("discount_code"), shipping=money(entry["shipping_minor"]) if entry.get("shipping_minor") else None, total=money(entry["total_minor"]),
+                        seller_name=(seller or {}).get("name"), app_url=app_url if app_url.startswith("https://") else None)
+    try:
+        email_id = await send_email(to=buyer["email"], subject=f"Recibo BRUNO · {entry['name'][:60]}", html=html)
+        await db.ledger_entries.update_one({"id": entry["id"]}, {"$set": {"receipt_sent_at": now_iso(), "receipt_email_id": email_id, "receipt_to": buyer["email"]}})
+        return email_id
+    except HTTPException as e:
+        await db.ledger_entries.update_one({"id": entry["id"]}, {"$set": {"receipt_error": str(e.detail)[:200], "receipt_error_at": now_iso()}})
+        if quiet:
+            logger.warning(f"Receipt not sent for {entry['id']}: {e.detail}")
+            return None
+        raise
+    except Exception as e:
+        logger.error(f"Receipt failed for {entry['id']}: {e}")
+        await db.ledger_entries.update_one({"id": entry["id"]}, {"$set": {"receipt_error": str(e)[:200], "receipt_error_at": now_iso()}})
+        return None
+
+
+@router.post("/purchases/{ledger_id}/receipt")
+async def resend_receipt(ledger_id: str, current_user: User = Depends(get_current_user)):
+    entry = await db.ledger_entries.find_one({"id": ledger_id, "buyer_id": current_user.id}, {"_id": 0})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Compra no encontrada")
+    if entry["status"] not in ("paid", "partially_refunded", "refunded"):
+        raise HTTPException(status_code=400, detail="Esta compra aún no está pagada")
+    recent = entry.get("receipt_sent_at")
+    if recent and (datetime.now(timezone.utc) - datetime.fromisoformat(recent)).total_seconds() < 60:
+        raise HTTPException(status_code=429, detail="Acabamos de enviarte el recibo. Espera un minuto.")
+    email_id = await _send_receipt(entry)
+    return {"sent": bool(email_id), "to": (await db.users.find_one({"id": current_user.id}, {"_id": 0, "email": 1}) or {}).get("email")}
 
 
 @router.get("/status/{session_id}")
@@ -556,7 +697,7 @@ async def admin_overview(current_user: User = Depends(get_current_user)):
 @router.get("/purchases")
 async def my_purchases(current_user: User = Depends(get_current_user)):
     entries = await db.ledger_entries.find({"buyer_id": current_user.id}, {"_id": 0}).sort("created_at", -1).to_list(200)
-    return [{"id": e["id"], "date": e.get("paid_at") or e["created_at"], "kind": e["kind"], "name": e["name"], "currency": e["currency"], "total": fmt_minor(e["total_minor"], e["currency"]), "status": e["status"], "refunded": fmt_minor(int(e.get("refunded_minor") or 0), e["currency"]), "ref_id": e["ref_id"]} for e in entries]
+    return [{"id": e["id"], "date": e.get("paid_at") or e["created_at"], "kind": e["kind"], "name": e["name"], "currency": e["currency"], "total": fmt_minor(e["total_minor"], e["currency"]), "status": e["status"], "refunded": fmt_minor(int(e.get("refunded_minor") or 0), e["currency"]), "ref_id": e["ref_id"], "receipt_sent_at": e.get("receipt_sent_at"), "receipt_to": e.get("receipt_to")} for e in entries]
 
 
 @router.get("/lives/{live_id}/ticket")

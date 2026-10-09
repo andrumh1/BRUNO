@@ -130,9 +130,14 @@ export default function ReelsPage() {
     const uid = reel.author?.id || reel.user_id;
     if (uid === user?.id) return brunoToast.info?.("Es tu propio reel") || null;
     const next = !reel.is_following;
-    reels.forEach((r) => { if ((r.author?.id || r.user_id) === uid) patchReel(r.id, { is_following: next }); });
-    try { await axios.post(`${API}/users/${uid}/follow`, {}, { headers }); brunoToast.success(next ? "Ahora sigues a este creador" : "Dejaste de seguir"); }
-    catch (_) { reels.forEach((r) => { if ((r.author?.id || r.user_id) === uid) patchReel(r.id, { is_following: !next }); }); }
+    const setAll = (val) => reels.forEach((r) => { if ((r.author?.id || r.user_id) === uid) patchReel(r.id, { is_following: val }); });
+    setAll(next);
+    try {
+      const res = await axios.post(`${API}/users/${uid}/follow`, {}, { headers });
+      const following = !!res.data?.following;
+      setAll(following);
+      brunoToast.success(following ? `Ahora sigues a @${reel.author?.username || reel.author?.name || "este creador"}` : "Dejaste de seguir");
+    } catch (e) { setAll(!next); brunoToast.error(e?.response?.data?.detail || "No se pudo seguir al creador"); }
   }, [token, reels, user?.id]);
   const handleSave = useCallback(async (reel) => {
     if (!requireAuth()) return;
@@ -192,8 +197,8 @@ export default function ReelsPage() {
                   <ReelItem
                     reel={reel} isActive={index === activeIndex} isNear={Math.abs(index - activeIndex) === 1}
                     globalMuted={globalMuted} onToggleMute={() => setGlobalMuted((m) => !m)}
-                    onLike={handleLike} onFollow={handleFollow} onSave={handleSave}
-                    onOpenComments={setCommentsFor} onOpenShare={setShareFor} onMinimize={handleMinimize}
+                    onLike={handleLike} onFollow={handleFollow}
+                    onOpenComments={setCommentsFor} onMinimize={handleMinimize}
                     onOpenRemix={(r) => { if (requireAuth()) setRemixFor(r); }} onOpenRemixes={(r) => setRemixesOf(r.id)} onOpenSound={setSoundFor} onOpenLikers={setLikersFor} onOpenOptions={setOptionsFor}
                     onSwipeLeft={swipeLeft} onSwipeRight={swipeRight} currentUserId={user?.id}
                   />
@@ -210,7 +215,7 @@ export default function ReelsPage() {
       )}
 
       <ReelCommentsSheet reel={commentsFor} token={token} currentUserId={user?.id} highlightId={commentsFor?.id === initialReelId ? highlightCommentId : null} onClose={() => setCommentsFor(null)} onPosted={(id) => patchReel(id, (r) => ({ comments_count: (r.comments_count || 0) + 1 }))} onDeleted={(id, count) => patchReel(id, (r) => ({ comments_count: count ?? Math.max(0, (r.comments_count || 0) - 1) }))} />
-      {optionsFor && <ReelOptionsSheet reel={optionsFor} token={token} currentUserId={user?.id} onClose={() => setOptionsFor(null)} onDeleted={(id) => removeReel(id)} onEdit={setEditFor} onHidden={(id) => removeReel(id)} onBlocked={(uid) => removeByAuthor(uid)} />}
+      {optionsFor && <ReelOptionsSheet reel={optionsFor} token={token} currentUserId={user?.id} onClose={() => setOptionsFor(null)} onDeleted={(id) => removeReel(id)} onEdit={setEditFor} onHidden={(id) => removeReel(id)} onBlocked={(uid) => removeByAuthor(uid)} onSave={handleSave} onShare={setShareFor} />}
       {editFor && <ReelEditSheet reel={editFor} token={token} onClose={() => setEditFor(null)} onSaved={(id, patch) => patchReel(id, patch)} />}
       {soundFor && <ReelSoundSheet reel={soundFor} token={token} onClose={() => setSoundFor(null)} onPick={(r) => { setSoundFor(null); navigate(`/reels?id=${r.id}`); }} />}
       <ReelLikersSheet reel={likersFor} token={token} onClose={() => setLikersFor(null)} onFollow={(uid, next) => reels.forEach((r) => { if ((r.author?.id || r.user_id) === uid) patchReel(r.id, { is_following: next }); })} />

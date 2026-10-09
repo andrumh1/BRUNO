@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { fmtMoney, detailMsg } from "@/hooks/useBrunoCheckout";
+import { CouponsPanel } from "@/components/money/CouponsPanel";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const KIND = { live_ticket: "Entrada a live", gift: "Regalo", marketplace: "Venta Marketplace", piup: "PIUP", promotion: "Promoción" };
@@ -103,6 +104,7 @@ export default function MyEarningsPage() {
         </section>
 
         {data.payouts?.length > 0 && <section data-testid="earnings-payouts"><h2 className="text-sm font-bold mb-2">Retiros</h2>{data.payouts.map((p) => <div key={p.id} className="flex items-center justify-between text-sm py-2 border-b border-border/40"><span className="flex items-center gap-2">{p.status === "paid" ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Loader2 className="w-4 h-4 text-muted-foreground" />}{new Date(p.created_at).toLocaleDateString("es")} · {p.status}{p.failure ? ` · ${p.failure}` : ""}</span><span className="font-semibold">{fmtMoney(p.amount_minor / 100, p.currency)}</span></div>)}</section>}
+        <CouponsPanel token={token} />
         <div style={{ height: "var(--content-bottom)" }} />
       </div>
     </div>

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, Pause, User, Columns2, Scissors, Layers, Music2, Video, Check, Trash2, Flag, EyeOff, Ban, Pencil, Image as ImageIcon, Download } from "lucide-react";
+import { X, Send, Loader2, Link2, MessageSquare, Share2, Clock, Play, Pause, User, Columns2, Scissors, Layers, Music2, Video, Check, Trash2, Flag, EyeOff, Ban, Pencil, Image as ImageIcon, Download, Bookmark } from "lucide-react";
 import TextStylePicker from "@/components/TextStylePicker";
 import { useNavigate } from "react-router-dom";
 import { brunoToast } from "@/components/bruno/BrunoToast";
@@ -162,7 +162,7 @@ export function ReelLikersSheet({ reel, token, onClose, onFollow }) {
 
 const REPORT_REASONS = [["spam", "Spam o engaño"], ["harassment", "Acoso o bullying"], ["hate", "Odio o discriminación"], ["violence", "Violencia"], ["nudity", "Desnudez o contenido sexual"], ["misinformation", "Información falsa"], ["ip", "Infringe derechos de autor"], ["other", "Otro"]];
 
-export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDeleted, onEdit, onHidden, onBlocked }) {
+export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDeleted, onEdit, onHidden, onBlocked, onSave, onShare }) {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -172,6 +172,16 @@ export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDelete
   const isOwner = authorId === currentUserId;
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const needAuth = () => { if (!token) { brunoToast.error("Inicia sesión para continuar"); return false; } return true; };
+  const quickActions = (
+    <div className="grid grid-cols-2 gap-2 mb-1" data-testid="reel-quick-actions">
+      <button onClick={() => { onSave?.(reel); onClose(); }} className={`h-14 rounded-2xl flex flex-col items-center justify-center gap-1 text-xs font-semibold ${reel.is_bookmarked ? "bg-primary/15 text-primary" : "bg-foreground/[0.05]"}`} data-testid="reel-save-btn" aria-pressed={!!reel.is_bookmarked}>
+        <Bookmark className={`w-5 h-5 ${reel.is_bookmarked ? "fill-primary" : ""}`} /> {reel.is_bookmarked ? "Guardado" : "Guardar"}
+      </button>
+      <button onClick={() => { onClose(); onShare?.(reel); }} className="h-14 rounded-2xl bg-foreground/[0.05] flex flex-col items-center justify-center gap-1 text-xs font-semibold" data-testid="reel-share-btn">
+        <Share2 className="w-5 h-5" /> Enviar
+      </button>
+    </div>
+  );
   const del = async () => {
     setBusy(true);
     try { await axios.delete(`${API}/posts/${reel.id}`, { headers }); brunoToast.success("Publicación eliminada"); onDeleted?.(reel.id); onClose(); }
@@ -199,6 +209,7 @@ export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDelete
   return (
     <BottomSheet open onClose={onClose} title="Opciones" testid="reel-options-sheet" height="auto">
       <div className="px-4 pt-1 space-y-1.5" style={{ paddingBottom: "calc(var(--nav-reserve, 72px) + 12px)" }}>
+        {!confirm && !reporting && !blocking && quickActions}
         {isOwner ? (
           confirm ? (
             <div className="rounded-2xl bg-destructive/10 p-3" data-testid="reel-delete-confirm">

@@ -34,3 +34,8 @@
 - Bloqueo: 5 fallos → 429 durante 15 min (por correo y por IP).
 - Admin QA (finanzas /admin/money): testc@brunoqa.com / Prueba1234! (role=admin)
 - Stripe: sandbox reclamable (Flow A) — claves en backend/.env (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET). Connect NO activado hasta reclamar la cuenta. Test de monetización: `python3 tests/test_money.py` (24/24).
+
+## Comprador QA con correo real entregable (recibos por email, Resend) — creado 2026-06
+- delivered+brunoqa@resend.dev / Prueba1234! (id f113dac3-0932-45b6-812b-5ac241c5408d)
+- Cupones de prueba del vendedor newtest: VERANO20 (20 %, 2 usos, caduca 31/12/2026), FIJO5 (5 USD, solo Marketplace)
+- Producto de newtest para cotizar: 4334a391-d035-463c-b8cc-3e18e88aa833 (149.99 USD)
