@@ -458,12 +458,19 @@ const FloatingChatBubble = () => {
     return () => clearInterval(iv);
   }, [token, fetchChats]);
 
+  // New account (or logout) → drop every chat window, list and counter of the previous account
+  useEffect(() => { setChats([]); setOpenChats([]); setUnreadTotal(0); setIsOpen(false); setWs(null); }, [token]);
+
   useEffect(() => {
     if (!token) return;
+    let alive = true;
+    let socket = null;
+    let timer = null;
     const connect = () => {
+      if (!alive) return null;
       try {
-        const socket = new WebSocket(`${WS_URL}/api/ws/chat/${token}`);
-        socket.onopen = () => setWs(socket);
+        socket = new WebSocket(`${WS_URL}/api/ws/chat/${token}`);
+        socket.onopen = () => { if (alive) setWs(socket); };
         socket.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
@@ -477,12 +484,12 @@ const FloatingChatBubble = () => {
             }
           } catch (_e) { /* ignore */ }
         };
-        socket.onclose = () => { setWs(null); setTimeout(connect, 3000); };
+        socket.onclose = () => { setWs(null); if (alive) timer = setTimeout(connect, 3000); };
         return socket;
       } catch { return null; }
     };
-    const socket = connect();
-    return () => { if (socket?.readyState === WebSocket.OPEN) socket.close(); };
+    connect();
+    return () => { alive = false; clearTimeout(timer); try { socket?.close(); } catch { /* ignore */ } };
   }, [token]);
 
   useEffect(() => { setUnreadTotal(chats.reduce((s, c) => s + (c.unread_count || 0), 0)); }, [chats]);

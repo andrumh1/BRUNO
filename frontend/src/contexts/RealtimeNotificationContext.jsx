@@ -209,7 +209,7 @@ export const RealtimeNotificationProvider = ({ children }) => {
           // Reconnect with backoff
           reconnectRef.current = setTimeout(connect, 3000);
         };
-        ws.onerror = () => ws.close();
+        ws.onerror = () => { try { ws.close(); } catch (_) { /* ignore */ } };
       } catch (_) {
         if (!cancelled) reconnectRef.current = setTimeout(connect, 5000);
       }

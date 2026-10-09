@@ -254,7 +254,7 @@ export default function NotificationsPage() {
   const unreadCount = notifs.filter((n) => !(n.is_read || n.read)).length;
 
   return (
-    <div className="min-h-screen bg-background pb-24" data-testid="notifications-page">
+    <div className="min-h-screen bg-background" data-testid="notifications-page">
       {/* Minimal header */}
       <header className="sticky top-0 z-30 border-b bg-card/80 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">

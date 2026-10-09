@@ -28,37 +28,12 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production-
 ALGORITHM = "HS256"
 
 async def _get_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Get current user from JWT token"""
-    credentials_exception = HTTPException(status_code=401, detail="Could not validate credentials")
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email = payload.get("sub")
-        if not email:
-            raise credentials_exception
-        user = await db.users.find_one({"email": email}, {"_id": 0})
-        if not user:
-            # Try session token
-            session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
-            if session:
-                user = await db.users.find_one({"id": session["user_id"]}, {"_id": 0})
-        if not user:
-            raise credentials_exception
-        return user
-    except Exception:
-        # Try session token fallback
-        session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
-        if session:
-            expires_at = session.get("expires_at", "")
-            if isinstance(expires_at, str):
-                expires_at = datetime.fromisoformat(expires_at)
-            if expires_at.tzinfo is None:
-                expires_at = expires_at.replace(tzinfo=timezone.utc)
-            if datetime.now(timezone.utc) <= expires_at:
-                user = await db.users.find_one({"id": session["user_id"]}, {"_id": 0})
-                if user:
-                    return user
-        raise credentials_exception
+    from utils.security import resolve_user_dict_from_token
+    user = await resolve_user_dict_from_token(credentials.credentials if credentials else None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid authentication")
+    return user
+
 
 async def _get_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
     """Optional auth - returns None if not authenticated"""

@@ -15,6 +15,12 @@
   --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
   --safe-left: max(env(safe-area-inset-left, 0px), var(--safe-area-inset-left, 0px));
   --safe-right: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px));
+  /* Bottom navigation geometry — single source of truth for the pill and everything that must clear it.
+     --nav-reserve = space taken from the bottom edge (system inset + gap + pill). Apply insets ONCE here. */
+  --nav-h: 54px;
+  --nav-gap: 8px;
+  --nav-reserve: calc(var(--safe-bottom) + var(--nav-gap) + var(--nav-h));
+  --content-bottom: calc(var(--nav-reserve) + 12px);
 }
 
 body {
@@ -25,8 +31,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  /* Safe area for mobile devices */
-  padding-bottom: var(--safe-bottom);
+  /* Bottom inset is applied by the nav/--nav-reserve, never here (no double safe-area) */
   /* Reduced base font size for better mobile ergonomics */
   font-size: 14px;
   line-height: 1.5;
@@ -208,7 +213,7 @@ code {
     --chart-4: 0 0% 60%;
     --chart-5: 28 56% 85%;
     --radius: 0.75rem;
-    --reels-bg: 28 56% 95%;
+    --reels-bg: 0 0% 4%;
   }
 
   .dark {
@@ -237,7 +242,7 @@ code {
     --chart-3: 25 100% 70%;
     --chart-4: 0 0% 60%;
     --chart-5: 0 0% 40%;
-    --reels-bg: 0 0% 16%;
+    --reels-bg: 0 0% 4%;
   }
 }
 

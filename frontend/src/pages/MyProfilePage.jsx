@@ -348,7 +348,7 @@ const MyProfilePage = () => {
   const reels = posts.filter(p => p.video_url || p.media_type === 'video' || p.post_type === 'video');
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b">
         <div className="flex items-center justify-between px-4 py-3">

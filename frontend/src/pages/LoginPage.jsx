@@ -12,7 +12,8 @@ const API = `${BACKEND_URL}/api`;
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, logout, user: sessionUser, isAuthenticated, isLoading: authLoading } = useAuth();
+  const [switching, setSwitching] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,6 +50,8 @@ const LoginPage = () => {
         keep_session_active: keepActive,
       };
       const response = await axios.post(`${API}/auth/login`, payload);
+      if (!response.data?.access_token || !response.data?.user) throw new Error("Respuesta de acceso inválida");
+      if (isAuthenticated && sessionUser && sessionUser.id !== response.data.user.id) await logout();
       // Persist preferences
       try {
         if (rememberMe) {
@@ -58,11 +61,12 @@ const LoginPage = () => {
         }
         localStorage.setItem("bruno_keep_session_active", keepActive ? "1" : "0");
       } catch (_) { /* no-op */ }
-      login(response.data.user, response.data.access_token);
+      await login(response.data.user, response.data.access_token);
       const next = new URLSearchParams(window.location.search).get("next");
       navigate(next && next.startsWith("/") ? next : "/my-profile");
     } catch (err) {
-      setError(err.response?.data?.detail || "Error al iniciar sesion");
+      const status = err.response?.status;
+      setError(status === 429 ? (err.response?.data?.detail || "Demasiados intentos. Espera unos minutos.") : status === 401 ? "Correo o contraseña incorrectos" : (err.response?.data?.detail || "No se pudo iniciar sesión. Inténtalo de nuevo."));
     } finally {
       setLoading(false);
     }
@@ -93,6 +97,15 @@ const LoginPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {!authLoading && isAuthenticated && sessionUser && !switching && (
+            <div className="mb-4 p-3 rounded-xl border border-primary/30 bg-primary/5 text-sm space-y-2" data-testid="existing-session-banner">
+              <p>Ya tienes sesión iniciada como <strong data-testid="existing-session-name">{sessionUser.name || sessionUser.email}</strong>.</p>
+              <div className="flex gap-2">
+                <Button type="button" size="sm" className="rounded-full flex-1" onClick={() => navigate("/my-profile")} data-testid="existing-session-continue">Continuar</Button>
+                <Button type="button" size="sm" variant="outline" className="rounded-full flex-1" onClick={async () => { await logout(); setSwitching(true); setFormData({ email: "", password: "" }); }} data-testid="existing-session-switch">Cambiar de cuenta</Button>
+              </div>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">

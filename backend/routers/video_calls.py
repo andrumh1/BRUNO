@@ -10,6 +10,7 @@ import uuid
 import logging
 import os
 import time
+import asyncio
 import httpx
 
 import sys
@@ -91,12 +92,30 @@ class VideoCallResponse(BaseModel):
     room_name: str
     call_id: str
     dnd: bool = False
+    busy: bool = False
+
+
+RING_TIMEOUT_SEC = 45
+
+
+async def _ring_timeout(call_id: str):
+    """Nobody answered within RING_TIMEOUT_SEC → missed call for everyone."""
+    await asyncio.sleep(RING_TIMEOUT_SEC)
+    call = await db.video_calls.find_one({"id": call_id, "status": "ringing"}, {"_id": 0})
+    if not call:
+        return
+    await db.video_calls.update_one({"id": call_id}, {"$set": {"status": "missed", "ended_at": datetime.now(timezone.utc).isoformat()}})
+    await _log_call_message(call, "missed", call["started_by"])
+    try:
+        await ws_manager.broadcast_to_users({"type": "call_ended", "call_id": call_id, "reason": "missed"}, call.get("participants", []))
+    except Exception as e:
+        logger.warning(f"WS ring-timeout broadcast failed: {e}")
 
 
 @router.get("/history")
 async def call_history(filter: str = "all", q: str = "", limit: int = 100, current_user: User = Depends(get_current_user)):
     """Every call of the user (incoming/outgoing/missed) with duration, peer/group and redial info."""
-    query = {"participants": current_user.id, "status": {"$in": ["ended", "missed", "declined"]}}
+    query = {"participants": current_user.id, "status": {"$in": ["ended", "missed", "declined", "busy"]}}
     if filter == "missed":
         query["started_by"] = {"$ne": current_user.id}
         query["status"] = {"$in": ["missed", "declined"]}
@@ -139,7 +158,7 @@ async def call_history(filter: str = "all", q: str = "", limit: int = 100, curre
 @router.delete("/history")
 async def clear_call_history(call_id: str | None = None, current_user: User = Depends(get_current_user)):
     """Hide calls from my history (removes me from the participants list of the log)."""
-    query = {"participants": current_user.id, "status": {"$in": ["ended", "missed", "declined"]}}
+    query = {"participants": current_user.id, "status": {"$in": ["ended", "missed", "declined", "busy"]}}
     if call_id:
         query["id"] = call_id
     res = await db.video_calls.update_many(query, {"$pull": {"participants": current_user.id}})
@@ -214,6 +233,13 @@ async def start_video_call(
 
     other_participants = [p for p in chat["participants"] if p != current_user.id]
 
+    # Busy: a direct peer already in another ringing/active call
+    if not chat.get("is_group") and other_participants:
+        busy = await db.video_calls.find_one({"participants": other_participants[0], "status": {"$in": ["ringing", "active"]}, "id": {"$ne": call_id}}, {"_id": 0, "id": 1})
+        if busy:
+            await db.video_calls.update_one({"id": call_id}, {"$set": {"status": "busy", "ended_at": datetime.now(timezone.utc).isoformat()}})
+            return VideoCallResponse(room_url="", room_name=room_name, call_id=call_id, busy=True)
+
     # Do-Not-Disturb or chat muted: receiver is silenced → register as missed, no ring/push
     from utils.dnd import is_dnd_active
     from utils.chat_mute import muted_user_ids
@@ -224,14 +250,15 @@ async def start_video_call(
         await _log_call_message({**call_doc, "id": call_id}, "dnd", current_user.id)
         return VideoCallResponse(room_url="", room_name=room_name, call_id=call_id, dnd=True)
 
+    caller_profile = await db.user_profiles.find_one({"user_id": current_user.id}, {"_id": 0, "avatar_url": 1})
     call_notification = {
         "type": "incoming_call",
         "call_id": call_id,
         "chat_id": request.chat_id,
-        "room_url": room_url,
         "call_type": request.call_type,
         "caller_id": current_user.id,
         "caller_name": current_user.name,
+        "caller_avatar": (caller_profile or {}).get("avatar_url") or getattr(current_user, "avatar_url", None),
         "is_group": bool(chat.get("is_group")),
         "chat_name": chat.get("name"),
     }
@@ -264,6 +291,7 @@ async def start_video_call(
     except Exception as e:
         logger.warning(f"Push notification module unavailable: {e}")
 
+    asyncio.create_task(_ring_timeout(call_id))
     return VideoCallResponse(room_url=caller_url or room_url, room_name=room_name, call_id=call_id)
 
 
@@ -352,7 +380,7 @@ async def end_call(
     await _log_call_message(call, final, current_user.id)
     try:
         await ws_manager.broadcast_to_users(
-            {"type": "call_ended", "call_id": call_id},
+            {"type": "call_ended", "call_id": call_id, "reason": "cancelled" if final == "missed" and current_user.id == call.get("started_by") else final},
             call["participants"],
         )
     except Exception as e:

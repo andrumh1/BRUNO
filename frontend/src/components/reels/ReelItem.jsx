@@ -268,7 +268,7 @@ export default function ReelItem({
         <video
           key={retryKey}
           ref={videoRef}
-          className={`absolute inset-0 h-full w-full ${landscape || fullscreen ? "object-contain" : "object-contain sm:object-cover"}`}
+          className={`absolute inset-0 h-full w-full ${landscape || fullscreen ? "object-contain" : "object-cover"}`}
           data-landscape={landscape ? "true" : "false"}
           loop playsInline muted={globalMuted}
           preload={isActive || isNear ? "auto" : "metadata"}
@@ -338,7 +338,7 @@ export default function ReelItem({
       {!hideChrome && (
         <>
           {/* Right rail */}
-          <div className="absolute right-2 flex flex-col items-center gap-4 z-10" style={{ bottom: "calc(var(--nav-reserve, 64px) + 56px)" }}>
+          <div className="absolute right-2 flex flex-col items-center gap-4 z-10" style={{ bottom: "calc(var(--nav-reserve, 96px) + 118px)" }}>
             <div className="relative mb-1">
               <Link to={`/profile/${authorId}`} onClick={(e) => e.stopPropagation()} className="block w-12 h-12 rounded-full border-2 border-white overflow-hidden bg-zinc-800" data-testid="reel-author-avatar">
                 {reel.author?.avatar_url ? <img src={reel.author.avatar_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full grid place-items-center text-white"><User className="w-5 h-5" /></div>}
@@ -369,7 +369,7 @@ export default function ReelItem({
           </div>
 
           {/* Caption: creador + Seguir → audio → descripción */}
-          <div className="absolute left-3 right-20 z-10 pointer-events-none" style={{ bottom: "calc(var(--nav-reserve, 64px) + 22px)" }} data-testid="reel-caption">
+          <div className="absolute left-3 right-20 z-10 pointer-events-none" style={{ bottom: "calc(var(--nav-reserve, 96px) + 84px)" }} data-testid="reel-caption">
             <div className="flex items-center gap-2 min-w-0">
               <Link to={`/profile/${authorId}`} onClick={(e) => e.stopPropagation()} className="pointer-events-auto text-white font-bold text-[15px] drop-shadow truncate" data-testid="reel-author-name">
                 @{reel.author?.username || reel.author?.name || "usuario"}

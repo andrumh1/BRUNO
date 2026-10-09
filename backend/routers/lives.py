@@ -126,20 +126,8 @@ def _public(live: dict, viewer_id: Optional[str]) -> dict:
 
 
 async def _user_from_token(token: Optional[str]):
-    if not token:
-        return None
-    import jwt
-    try:
-        payload = jwt.decode(token, os.environ.get("SECRET_KEY", "super-secret-key"), algorithms=["HS256"])
-        email = payload.get("sub")
-        user_id = payload.get("user_id")
-        if user_id:
-            return await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0, "hashed_password": 0})
-        if email:
-            return await db.users.find_one({"email": email}, {"_id": 0, "password": 0, "hashed_password": 0})
-    except Exception:
-        return None
-    return None
+    from utils.security import resolve_user_dict_from_token
+    return await resolve_user_dict_from_token(token) if token else None
 
 
 async def get_current_user_from_token(authorization: str = Header(None)):

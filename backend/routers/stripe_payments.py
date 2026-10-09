@@ -52,22 +52,12 @@ def set_db(database):
     db = database
 
 async def _get_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    secret = os.environ.get("SECRET_KEY", "bruno-secret-key-2025-change-in-production")
-    try:
-        payload = jwt.decode(credentials.credentials, secret, algorithms=["HS256"])
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        user = await db.users.find_one({"email": user_id}, {"_id": 0, "hashed_password": 0})
-        if not user:
-            user = await db.users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-        return user
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    from utils.security import resolve_user_dict_from_token
+    user = await resolve_user_dict_from_token(credentials.credentials if credentials else None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid authentication")
+    return user
+
 
 # ---------- Get available packages ----------
 @router.get("/packages")

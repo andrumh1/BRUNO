@@ -64,6 +64,18 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
+  // Per-account private caches (chat drafts, offline outbox, translation prefs) must never survive an account switch.
+  const clearPrivateCaches = () => {
+    try {
+      const doomed = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith("bruno_draft_") || k.startsWith("bruno_outbox_") || k.startsWith("bruno_autotranslate_"))) doomed.push(k);
+      }
+      doomed.forEach((k) => localStorage.removeItem(k));
+    } catch { /* ignore */ }
+  };
+
   const clearAuth = () => {
     secureStorage.removeItem(TOKEN_KEY);
     secureStorage.removeItem(USER_KEY);
@@ -71,6 +83,7 @@ export function AuthProvider({ children }) {
     // Also clean up old unencrypted storage
     localStorage.removeItem("bruno_token");
     localStorage.removeItem("bruno_user");
+    clearPrivateCaches();
     setToken(null);
     setUser(null);
   };
@@ -111,6 +124,7 @@ export function AuthProvider({ children }) {
   }, [token]);
 
   const login = async (userData, userToken, keepSession = true) => {
+    if (user && user.id !== userData?.id) clearPrivateCaches();
     if (keepSession) {
       await secureStorage.setItem(TOKEN_KEY, userToken);
       localStorage.setItem(SESSION_PERSISTENT_KEY, "true");

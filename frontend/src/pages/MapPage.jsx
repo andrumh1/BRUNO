@@ -88,8 +88,8 @@ export default function MapPage() {
   return (
     <APIProvider apiKey={GOOGLE_KEY} libraries={["places"]}>
       <div className="fixed inset-0 z-0 bg-background" data-testid="map-page-google">
-        <div className="absolute top-0 inset-x-0 z-20 pointer-events-none">
-          <div className="pointer-events-auto flex items-center gap-2 px-3 pt-3">
+        <div className="absolute top-0 inset-x-0 z-20 pointer-events-none" style={{ paddingTop: "calc(var(--safe-top) + 8px)" }}>
+          <div className="pointer-events-auto flex items-center gap-2 px-3">
             <button
               onClick={() => navigate(-1)}
               className="w-10 h-10 rounded-full bg-background/90 backdrop-blur-md shadow flex items-center justify-center"

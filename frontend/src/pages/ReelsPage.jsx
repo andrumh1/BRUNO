@@ -153,7 +153,7 @@ export default function ReelsPage() {
   return (
     <div className="fixed inset-0 reels-surface overflow-hidden" data-testid="reels-page">
       {/* Header */}
-      <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-3 pb-3 bg-gradient-to-b from-[#474747]/85 via-[#474747]/40 to-transparent reel-chrome" style={{ paddingTop: topPad }} data-no-safe-top>
+      <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-3 pb-3 bg-gradient-to-b from-black/70 via-black/30 to-transparent reel-chrome pointer-events-none [&>*]:pointer-events-auto" style={{ paddingTop: topPad }} data-no-safe-top>
         {profileMode ? (
           <button onClick={() => navigate(-1)} className="w-9 h-9 grid place-items-center rounded-full bg-black/35 text-white" data-testid="reels-back-btn"><ArrowLeft className="w-5 h-5" /></button>
         ) : (

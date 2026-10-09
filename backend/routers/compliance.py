@@ -31,33 +31,14 @@ class DeleteAccountRequest(BaseModel):
 
 # Helper to get current user from token
 async def get_current_user_from_token(authorization: str = Header(None)):
+    from utils.security import resolve_user_dict_from_token
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    token = authorization.replace("Bearer ", "")
-    
-    import jwt
-    try:
-        payload = jwt.decode(token, os.environ.get("SECRET_KEY", "super-secret-key"), algorithms=["HS256"])
-        # Try both formats - user_id and sub (email)
-        user_id = payload.get("user_id")
-        email = payload.get("sub")
-        
-        if user_id:
-            user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0})
-        elif email:
-            user = await db.users.find_one({"email": email}, {"_id": 0, "password": 0})
-        else:
-            raise HTTPException(status_code=401, detail="Invalid token format")
-        
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-        
-        return user
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
+    user = await resolve_user_dict_from_token(authorization.replace("Bearer ", "", 1))
+    if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
+    return user
+
 
 # ============================================
 # REPORTS

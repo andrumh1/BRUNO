@@ -62,6 +62,9 @@ const MobileBottomNav = () => {
     { id: 'profile', icon: User, label: 'Perfil', path: '/my-profile', matchPaths: ['/my-profile', '/dashboard'], showAvatar: true }
   ];
 
+  // Pages that fill the viewport themselves (video/map/chat) must not get a trailing scroll reserve.
+  const fixedViewport = ['/reels', '/camera', '/chat', '/map', '/lives/', '/stories', '/call'].some((p) => location.pathname.startsWith(p));
+
   const isActive = (item) => {
     if (item.matchPaths) {
       return item.matchPaths.some(p => location.pathname === p || location.pathname.startsWith(p + '/'));
@@ -76,11 +79,11 @@ const MobileBottomNav = () => {
   if (minimized) {
     return (
       <>
-        <div className="h-3" />
+        {!fixedViewport && <div className="h-3" />}
         <div
           className={`kb-hide fixed left-0 right-0 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
           style={{
-            bottom: 'calc(var(--safe-bottom) + 6px)',
+            bottom: 'calc(var(--safe-bottom) + 4px)',
             pointerEvents: 'none',
             isolation: 'isolate', // prevents Google Maps stacking-context bleed
           }}
@@ -121,16 +124,17 @@ const MobileBottomNav = () => {
   // the OS home indicator on iOS + Android).
   return (
     <>
-      <div className="h-20" />
+      {/* Scroll reserve so the last rows/products are never hidden under the pill (not on fixed-viewport pages) */}
+      {!fixedViewport && <div aria-hidden style={{ height: 'var(--content-bottom)' }} data-testid="nav-scroll-reserve" />}
       <nav 
         className={`kb-hide fixed left-3 right-3 animate-in slide-in-from-bottom-4 duration-300 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
-        style={{ bottom: 'calc(var(--safe-bottom) + 16px)', isolation: 'isolate' }}
+        style={{ bottom: 'calc(var(--safe-bottom) + var(--nav-gap, 8px))', isolation: 'isolate' }}
         data-testid="mobile-bottom-nav"
         {...touchHandlers}
       >
         <div className="relative max-w-md mx-auto">
           {/* Floating bubble background */}
-          <div className="absolute inset-0 bg-background/85 backdrop-blur-2xl rounded-2xl border border-border/40 shadow-xl shadow-black/10" />
+          <div className="absolute inset-0 bg-background/85 backdrop-blur-2xl rounded-2xl border border-border/40 shadow-xl shadow-black/10 pointer-events-none" />
           
           {/* Subtle top glow */}
           <div 
@@ -141,7 +145,7 @@ const MobileBottomNav = () => {
           />
 
           {/* Navigation Items */}
-          <div className="relative flex items-center justify-around px-1 py-1.5 h-14">
+          <div className="relative flex items-center justify-around px-1" style={{ height: 'var(--nav-h, 54px)' }}>
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item);
@@ -151,7 +155,7 @@ const MobileBottomNav = () => {
                   <button
                     key={item.id}
                     onClick={() => setPublishMenuOpen(true)}
-                    className="relative flex flex-col items-center justify-center w-10 h-11 rounded-xl transition-all duration-200 hover:scale-105 active:scale-90"
+                    className="relative flex flex-col items-center justify-center min-w-[44px] h-11 rounded-xl transition-all duration-200 hover:scale-105 active:scale-90"
                     data-testid={`nav-${item.id}`}
                     aria-label="Publicar"
                   >
@@ -162,7 +166,7 @@ const MobileBottomNav = () => {
                         strokeWidth={2}
                       />
                     </div>
-                    <span className="text-[8px] mt-0.5 font-medium text-muted-foreground/70">
+                    <span className="text-[9px] leading-none mt-1 font-medium text-muted-foreground/70">
                       Crear
                     </span>
                   </button>
@@ -173,7 +177,7 @@ const MobileBottomNav = () => {
                 <button
                   key={item.id}
                   onClick={() => navigate(item.path)}
-                  className={`relative flex flex-col items-center justify-center w-10 h-11 rounded-xl transition-all duration-200 ${
+                  className={`relative flex flex-col items-center justify-center min-w-[44px] h-11 rounded-xl transition-all duration-200 ${
                     active ? 'scale-105' : 'hover:scale-105 active:scale-95'
                   }`}
                   data-testid={`nav-${item.id}`}
@@ -202,7 +206,7 @@ const MobileBottomNav = () => {
                       </div>
                     )}
                     
-                    <span className={`text-[8px] mt-0.5 font-medium transition-colors ${active ? 'text-primary' : 'text-muted-foreground/70'}`}>
+                    <span className={`text-[9px] leading-none mt-1 font-medium transition-colors ${active ? 'text-primary' : 'text-muted-foreground/70'}`}>
                       {item.label}
                     </span>
                   </div>

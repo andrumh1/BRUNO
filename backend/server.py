@@ -666,131 +666,17 @@ class Notification(BaseModel):
 # SECURITY FUNCTIONS
 # ============================================================================
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))) -> Optional[User]:
-    """Get current user from JWT token or session_token cookie (optional - returns None if not authenticated)"""
-    if not credentials:
-        return None
-    
-    try:
-        return await get_current_user(credentials)
-    except HTTPException:
-        return None
+from utils import security as _sec
+from utils.security import (  # noqa: E402 — single source of truth for auth
+    verify_password, get_password_hash, create_access_token, resolve_user_from_token,
+    get_current_user, get_current_user_optional, revoke_token, revoke_all_user_tokens,
+    client_ip, check_login_allowed, record_login_failure, clear_login_failures,
+)
 
 
 async def get_current_user_from_token(token: str) -> Optional[User]:
     """Get current user from a token string directly (for WebSocket endpoints)"""
-    if not token:
-        return None
-    
-    try:
-        # Try JWT token first
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email:
-            user_dict = await db.users.find_one({"email": email}, {"_id": 0})
-            if user_dict:
-                if isinstance(user_dict.get('created_at'), str):
-                    user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
-                return User(**user_dict)
-    except JWTError:
-        pass
-    
-    # Try as session_token
-    session_doc = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
-    if session_doc:
-        expires_at = session_doc["expires_at"]
-        if isinstance(expires_at, str):
-            expires_at = datetime.fromisoformat(expires_at)
-        if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
-        
-        now = datetime.now(timezone.utc)
-        if now > expires_at:
-            return None
-        
-        user_dict = await db.users.find_one({"id": session_doc["user_id"]}, {"_id": 0})
-        if user_dict:
-            if isinstance(user_dict.get('created_at'), str):
-                user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
-            return User(**user_dict)
-    
-    return None
-
-async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> User:
-    """Get current user from JWT token or session_token cookie"""
-    from fastapi import Request
-    
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
-    token = None
-    
-    # Try to get token from Authorization header first
-    if credentials:
-        token = credentials.credentials
-        # Try JWT token (email/password auth)
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            email: str = payload.get("sub")
-            if email is None:
-                raise credentials_exception
-            
-            user_dict = await db.users.find_one({"email": email}, {"_id": 0})
-            if user_dict is None:
-                raise credentials_exception
-            
-            if isinstance(user_dict.get('created_at'), str):
-                user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
-            
-            return User(**user_dict)
-        except JWTError:
-            # If JWT fails, try as session_token
-            pass
-    
-    # If we have a token, try it as session_token
-    if token:
-        session_doc = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
-        if session_doc:
-            # Check expiry
-            expires_at = session_doc["expires_at"]
-            if isinstance(expires_at, str):
-                expires_at = datetime.fromisoformat(expires_at)
-            if expires_at.tzinfo is None:
-                expires_at = expires_at.replace(tzinfo=timezone.utc)
-            
-            if expires_at < datetime.now(timezone.utc):
-                raise HTTPException(status_code=401, detail="Session expired")
-            
-            # Get user
-            user_dict = await db.users.find_one({"id": session_doc["user_id"]}, {"_id": 0})
-            if user_dict is None:
-                raise credentials_exception
-            
-            if isinstance(user_dict.get('created_at'), str):
-                user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
-            
-            return User(**user_dict)
-    
-    raise credentials_exception
+    return await resolve_user_from_token(token)
 
 # ============================================================================
 # AUTH ROUTES
@@ -824,32 +710,30 @@ async def register(user_input: UserCreate):
     return Token(access_token=access_token, token_type="bearer", user=user_obj)
 
 @api_router.post("/auth/login", response_model=Token)
-async def login(user_input: UserLogin):
-    # Find user
-    user_dict = await db.users.find_one({"email": user_input.email}, {"_id": 0})
+async def login(user_input: UserLogin, request: Request):
+    ip = client_ip(request)
+    email = user_input.email.strip().lower()
+    await check_login_allowed(email, ip)
+    user_dict = await db.users.find_one({"email": email}, {"_id": 0})
     if not user_dict:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
-        )
-    
-    # Verify password
-    if not verify_password(user_input.password, user_dict['hashed_password']):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
-        )
-    
-    # Convert datetime
+        user_dict = await db.users.find_one({"email": user_input.email.strip()}, {"_id": 0})
+    # Same message whether the account exists or not; never issue a token on failure.
+    if not user_dict or not verify_password(user_input.password, user_dict.get('hashed_password') or ""):
+        await record_login_failure(email, ip)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Correo o contraseña incorrectos")
+    if user_dict.get("is_active") is False:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cuenta desactivada")
+    await clear_login_failures(email, ip)
+
     if isinstance(user_dict.get('created_at'), str):
         user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
-    
     user_obj = User(**user_dict)
-    
+
     # Create token — mobile gets 1-year expiry for persistent notifications
     expire_delta = timedelta(days=365) if user_input.platform in ("mobile", "native") else None
     access_token = create_access_token(data={"sub": user_obj.email, "plt": user_input.platform or "web"}, expires_delta=expire_delta)
-    
+    await db.users.update_one({"id": user_obj.id}, {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}})
+    await db.audit_logs.insert_one({"id": str(uuid.uuid4()), "user_id": user_obj.id, "action": "login", "ip": ip, "platform": user_input.platform or "web", "created_at": datetime.now(timezone.utc).isoformat()})
     return Token(access_token=access_token, token_type="bearer", user=user_obj)
 
 @api_router.get("/auth/me/dnd")
@@ -882,8 +766,9 @@ async def get_me(current_user: User = Depends(get_current_user), credentials: Op
             if exp:
                 remaining = datetime.fromtimestamp(exp, tz=timezone.utc) - datetime.now(timezone.utc)
                 if remaining.days < 7:
-                    new_token = create_access_token(data={"sub": payload.get("sub")})
+                    new_token = create_access_token(data={"sub": payload.get("sub"), "plt": payload.get("plt", "web")})
                     user_dict["refreshed_token"] = new_token
+                    await revoke_token(credentials.credentials, current_user.id)
         except Exception:
             pass
     return user_dict
@@ -919,16 +804,31 @@ async def update_me(
     return User(**user_dict)
 
 @api_router.post("/auth/logout")
-async def logout(current_user: User = Depends(get_current_user)):
-    """Logout user - for audit logging purposes"""
-    # Log the logout event
+async def logout(current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)), all_devices: bool = False):
+    """Invalidate this session (or every session of the user with ?all_devices=true)."""
+    if all_devices:
+        await revoke_all_user_tokens(current_user.id)
+    elif credentials and credentials.credentials:
+        await revoke_token(credentials.credentials, current_user.id)
     await db.audit_logs.insert_one({
         "id": str(uuid.uuid4()),
         "user_id": current_user.id,
-        "action": "logout",
+        "action": "logout_all" if all_devices else "logout",
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     return {"message": "Logged out successfully"}
+
+
+@api_router.get("/auth/session")
+async def auth_session(current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
+    """Lightweight session check: who am I and when does this token expire."""
+    exp = None
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        exp = payload.get("exp")
+    except Exception:
+        pass
+    return {"user_id": current_user.id, "email": current_user.email, "name": current_user.name, "expires_at": datetime.fromtimestamp(exp, tz=timezone.utc).isoformat() if exp else None}
 
 class GoogleAuthRequest(BaseModel):
     session_id: str
@@ -1230,7 +1130,10 @@ async def change_password(payload: ChangePasswordInput, current_user: User = Dep
         {"id": current_user.id},
         {"$set": {"hashed_password": new_hash, "password_changed_at": datetime.now(timezone.utc).isoformat()}}
     )
-    return {"status": "ok", "message": "Contraseña actualizada"}
+    await revoke_all_user_tokens(current_user.id)
+    await asyncio.sleep(1.1)  # tokens_valid_after has second precision: the new token must be issued after it
+    new_token = create_access_token(data={"sub": current_user.email})
+    return {"status": "ok", "message": "Contraseña actualizada", "access_token": new_token}
 
 # ============================================================================
 # ALBUM ROUTES
@@ -2134,23 +2037,9 @@ async def seed_store_products():
 # ============================================================================
 
 async def get_user_from_token(token: str) -> Optional[User]:
-    """Validate token and return user for WebSocket connections"""
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")  # JWT token stores email in "sub", not user_id
-        if email is None:
-            return None
-        
-        user_data = await db.users.find_one({"email": email}, {"_id": 0, "hashed_password": 0})
-        if user_data is None:
-            return None
-        
-        if isinstance(user_data.get('created_at'), str):
-            user_data['created_at'] = datetime.fromisoformat(user_data['created_at'])
-        
-        return User(**user_data)
-    except JWTError:
-        return None
+    """Validate token and return user for WebSocket connections (same rules as HTTP)."""
+    return await resolve_user_from_token(token)
+
 
 @app.websocket("/api/ws/chat/{token}")
 @app.websocket("/ws/chat/{token}")
@@ -2277,6 +2166,8 @@ async def websocket_chat(websocket: WebSocket, token: str):
             
             elif action == "mark_read":
                 chat_id = data.get("chat_id")
+                if not await db.chats.find_one({"id": chat_id, "participants": user.id}, {"_id": 0, "id": 1}):
+                    continue
                 
                 # Mark messages as read
                 await db.messages.update_many(
@@ -2605,6 +2496,27 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def auth_hardening_startup():
+    """One-time platform-wide session reset (first boot with revocable tokens) + indexes for auth tables."""
+    try:
+        existing = await db.auth_settings.find_one({"key": "auth"}, {"_id": 0})
+        if not existing or not existing.get("min_token_iat"):
+            now = int(datetime.now(timezone.utc).timestamp())
+            await db.auth_settings.update_one({"key": "auth"}, {"$set": {"key": "auth", "min_token_iat": now, "reset_at": datetime.now(timezone.utc).isoformat(), "reason": "auth hardening: all pre-existing sessions invalidated"}}, upsert=True)
+            await db.audit_logs.insert_one({"id": str(uuid.uuid4()), "user_id": None, "action": "global_session_reset", "created_at": datetime.now(timezone.utc).isoformat()})
+            logger.warning("AUTH: all sessions issued before now were invalidated (global reset)")
+        await db.revoked_tokens.create_index("jti", unique=True)
+        await db.revoked_tokens.create_index("expires_at", expireAfterSeconds=0)
+        await db.login_attempts.create_index("key", unique=True)
+        await db.login_attempts.create_index("last_failure_at", expireAfterSeconds=60 * 60 * 24)
+        await db.chats.create_index("participants")
+        await db.messages.create_index([("chat_id", 1), ("created_at", -1)])
+    except Exception as e:
+        logger.error(f"auth startup hardening failed: {e}")
+
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

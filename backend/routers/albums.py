@@ -65,29 +65,12 @@ class AlbumMediaResponse(BaseModel):
     created_at: datetime
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify token and get current user"""
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        user_identifier = payload.get("sub")
-        if not user_identifier:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        
-        # Try to find by email first (main auth system uses email as sub), then by id
-        user = await _db.users.find_one({"email": user_identifier}, {"_id": 0, "password": 0})
-        if not user:
-            user = await _db.users.find_one({"id": user_identifier}, {"_id": 0, "password": 0})
-        
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-        
-        class UserObj:
-            def __init__(self, data):
-                for key, value in data.items():
-                    setattr(self, key, value)
-        
-        return UserObj(user)
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    from utils.security import resolve_user_dict_from_token
+    user = await resolve_user_dict_from_token(credentials.credentials if credentials else None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid authentication")
+    return user
+
 
 @router.post("", response_model=AlbumResponse)
 async def create_album(

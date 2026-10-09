@@ -1738,6 +1738,8 @@ async def create_or_get_chat(
     """Create a new direct chat or get existing one"""
     if participant_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot chat with yourself")
+    if not await db.users.find_one({"id": participant_id}, {"_id": 0, "id": 1}):
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
     # Check if direct chat already exists
     existing_chat = await db.chats.find_one({

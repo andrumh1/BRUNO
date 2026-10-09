@@ -1286,13 +1286,17 @@ const ChatPage = () => {
 
   useEffect(() => {
     if (!token) return;
+    let alive = true;
+    let current = null;
 
     const connectWebSocket = () => {
+      if (!alive) return null;
       try {
         const socket = new WebSocket(`${WS_URL}/api/ws/chat/${token}`);
+        current = socket;
         
         socket.onopen = () => {
-          setWs(socket);
+          if (alive) setWs(socket);
         };
         
         socket.onmessage = (event) => {
@@ -1328,7 +1332,7 @@ const ChatPage = () => {
         
         socket.onclose = () => {
           setWs(null);
-          wsReconnectRef.current = setTimeout(connectWebSocket, 3000);
+          if (alive) wsReconnectRef.current = setTimeout(connectWebSocket, 3000);
         };
         
         socket.onerror = (error) => {
@@ -1342,15 +1346,14 @@ const ChatPage = () => {
       }
     };
 
-    const socket = connectWebSocket();
+    connectWebSocket();
 
     return () => {
+      alive = false;
       if (wsReconnectRef.current) {
         clearTimeout(wsReconnectRef.current);
       }
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.close();
-      }
+      try { current?.close(); } catch (_e) { /* ignore */ }
     };
   }, [token, selectedChat?.id]);
 

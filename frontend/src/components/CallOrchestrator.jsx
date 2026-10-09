@@ -10,6 +10,9 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import VideoCallModal from "@/components/VideoCallModal";
+import { brunoToast } from "@/components/bruno/BrunoToast";
+
+const OUTGOING_TIMEOUT_MS = 45000;
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -40,15 +43,19 @@ export default function CallOrchestrator() {
           { chat_id: chatId, call_type: type },
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        if (startRes.data?.busy) { setCall(null); brunoToast.info(`${peer_name} está en otra llamada`, { description: "Inténtalo en unos minutos" }); return; }
+        if (startRes.data?.dnd) { setCall(null); brunoToast.info(`${peer_name} tiene activado No molestar`, { description: "Le dejamos aviso de llamada perdida" }); return; }
         setCall((prev) => ({
           ...(prev || {}),
           id: startRes.data.call_id,
           room_url: startRes.data.room_url,
           type,
           isIncoming: false,
+          outgoingSince: Date.now(),
         }));
-      } catch (_err) {
+      } catch (err) {
         setCall(null);
+        brunoToast.error("No se pudo iniciar la llamada", { description: err?.response?.data?.detail || "Revisa tu conexión e inténtalo de nuevo" });
       }
     };
     window.addEventListener("bruno:start-call", onStart);
@@ -79,9 +86,16 @@ export default function CallOrchestrator() {
               });
             } else if (data.type === "call_answered" && data.call_id) {
               // Peer answered our outgoing call → join the room
-              setCall((prev) => (prev && prev.id === data.call_id ? { ...prev, room_url: data.room_url || prev.room_url, isIncoming: false } : prev));
+              setCall((prev) => (prev && prev.id === data.call_id ? { ...prev, room_url: data.room_url || prev.room_url, isIncoming: false, answered: true } : prev));
+            } else if (data.type === "call_declined" && data.call_id) {
+              setCall((prev) => { if (prev && prev.id === data.call_id) { brunoToast.info(`${prev.peerName} rechazó la llamada`); return null; } return prev; });
             } else if (data.type === "call_ended" && data.call_id) {
-              setCall((prev) => (prev && prev.id === data.call_id ? null : prev));
+              setCall((prev) => {
+                if (!prev || prev.id !== data.call_id) return prev;
+                if (data.reason === "missed" && !prev.answered) brunoToast.info(prev.isIncoming ? `Llamada perdida de ${prev.peerName}` : `${prev.peerName} no respondió`);
+                if (data.reason === "cancelled" && prev.isIncoming) brunoToast.info(`${prev.peerName} canceló la llamada`);
+                return null;
+              });
             }
           } catch (_e) { /* ignore */ }
         };
@@ -100,6 +114,16 @@ export default function CallOrchestrator() {
       try { s?.close?.(); } catch (_e) { /* ignore */ }
     };
   }, [token]);
+
+  // Outgoing call nobody answers → hang up as missed (server also enforces the same timeout)
+  useEffect(() => {
+    if (!call?.id || call.isIncoming || call.answered) return undefined;
+    const t = setTimeout(async () => {
+      try { await axios.post(`${API}/calls/${call.id}/end`, {}, { headers: { Authorization: `Bearer ${token}` } }); } catch (_e) { /* ignore */ }
+      setCall((prev) => (prev && prev.id === call.id && !prev.answered ? null : prev));
+    }, OUTGOING_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, [call?.id, call?.isIncoming, call?.answered, token]);
 
   // Permission ringtone — best-effort, doesn't break the call if blocked
   useEffect(() => {

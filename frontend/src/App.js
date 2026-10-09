@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { TourProvider, TourOverlay } from "@/components/WelcomeTour";
@@ -19,6 +19,17 @@ import CardReminderBanner from "@/components/CardReminderBanner";
 import FloatingBubbles from "@/components/FloatingBubbles";
 import FloatingChatBubble from "@/components/FloatingChatBubble";
 import CallOrchestrator from "@/components/CallOrchestrator";
+
+// Remount chat + call orchestration whenever the signed-in account changes so no state leaks between accounts.
+const AccountScoped = () => {
+  const { user } = useAuth();
+  return (
+    <React.Fragment key={user?.id || "anon"}>
+      <FloatingChatBubble />
+      <CallOrchestrator />
+    </React.Fragment>
+  );
+};
 import PWAInstallPrompt from "@/components/bruno/PWAInstallPrompt";
 import PictureInPicture from "@/components/PictureInPicture";
 import CameraFloatingButton from "@/components/CameraFloatingButton";
@@ -207,8 +218,7 @@ function App() {
                 <AppRouter />
                 <NativeBootstrap />
                 <FloatingBubbles />
-                <FloatingChatBubble />
-                <CallOrchestrator />
+                <AccountScoped />
                 <PictureInPicture />
                 <CameraFloatingButton />
                 <MobileBottomNav />
