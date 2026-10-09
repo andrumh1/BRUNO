@@ -121,7 +121,7 @@ export default function VideoCallModal({ isOpen, onClose, roomUrl, remoteUserNam
 
   if (isIncoming) {
     return (
-      <div className="fixed inset-0 z-[150] bg-gradient-to-br from-stone-950 via-orange-950 to-stone-950 flex flex-col items-center justify-center text-white" style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }} data-testid="incoming-call-screen">
+      <div className="fixed inset-0 z-[20000] bg-gradient-to-br from-stone-950 via-orange-950 to-stone-950 flex flex-col items-center justify-center text-white" style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }} data-testid="incoming-call-screen">
         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 280, damping: 22 }} className="flex flex-col items-center">
           <div className="relative">
             {[0, 1, 2].map((i) => <span key={i} className="absolute inset-0 rounded-full bg-orange-500/20" style={{ animation: "pulse 1.6s ease-out infinite", animationDelay: `${i * 0.5}s`, transform: `scale(${1.4 + i * 0.3})` }} />)}
@@ -147,7 +147,7 @@ export default function VideoCallModal({ isOpen, onClose, roomUrl, remoteUserNam
   // Outgoing while ringing without a room yet (room is created server-side right after)
   if (!roomUrl) {
     return (
-      <div className="fixed inset-0 z-[150] bg-stone-950 flex flex-col items-center justify-center text-white" data-testid="outgoing-call-screen">
+      <div className="fixed inset-0 z-[20000] bg-stone-950 flex flex-col items-center justify-center text-white" data-testid="outgoing-call-screen">
         <Avatar url={remoteAvatarUrl} />
         <h2 className="mt-6 text-2xl font-bold">{remoteUserName}</h2>
         <div className="mt-3 flex items-center gap-2 text-white/60"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Iniciando llamada…</span></div>
@@ -157,7 +157,7 @@ export default function VideoCallModal({ isOpen, onClose, roomUrl, remoteUserNam
   }
 
   return (
-    <div className="fixed inset-0 z-[150] bg-stone-950 text-white" data-testid="in-call-screen" data-ringing={isRinging ? "1" : "0"}>
+    <div className="fixed inset-0 z-[20000] bg-stone-950 text-white" data-testid="in-call-screen" data-ringing={isRinging ? "1" : "0"}>
       <DailyStage roomUrl={roomUrl} callType={callType} onLeft={onClose} onPeerJoined={() => setPeerIn(true)} onPeerLeft={handlePeerLeft}>
         <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-center gap-2 px-4 py-2.5 pointer-events-none" style={{ paddingTop: "calc(var(--safe-top) + 10px)" }}>
           <div className={`w-2 h-2 rounded-full ${peerIn ? "bg-green-500" : "bg-amber-400 animate-pulse"}`} />

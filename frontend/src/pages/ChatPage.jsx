@@ -1249,7 +1249,7 @@ const ChatPage = () => {
       }
       try { current?.close(); } catch (_e) { /* ignore */ }
     };
-  }, [token, selectedChat?.id]);
+  }, [token]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);

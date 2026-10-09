@@ -70,12 +70,21 @@ export default function CallOrchestrator() {
       try {
         const socket = new WebSocket(`${WS_URL}/api/ws/chat/${token}`);
         wsRef.current = socket;
+        // Recover a ring we may have missed while this socket was (re)connecting
+        socket.onopen = async () => {
+          try {
+            const r = await axios.get(`${API}/calls/pending`, { headers: { Authorization: `Bearer ${token}` } });
+            const d = r.data?.call;
+            if (alive && d) setCall((prev) => (prev && (prev.answered || prev.id === d.call_id)) ? prev : { id: d.call_id, room_url: null, type: d.call_type || "video", peerName: d.is_group && d.chat_name ? `${d.chat_name} · ${d.caller_name}` : d.caller_name, peerAvatar: d.caller_avatar || null, isIncoming: true });
+          } catch (_e) { /* ignore */ }
+        };
         socket.onmessage = (event) => {
           if (!alive) return;
           try {
             const data = JSON.parse(event.data);
             if (data.type === "incoming_call") {
-              setCall((prev) => prev ? prev : {
+              // A live (answered) call keeps priority; a stale/ringing one is superseded by the new ring.
+              setCall((prev) => (prev && prev.answered) ? prev : {
                 id: data.call_id,
                 room_url: null,
                 type: data.call_type || "video",
@@ -114,6 +123,13 @@ export default function CallOrchestrator() {
       try { s?.close?.(); } catch (_e) { /* ignore */ }
     };
   }, [token]);
+
+  // Incoming ring nobody answers → clear after the server timeout (server already logs it as missed)
+  useEffect(() => {
+    if (!call?.id || !call.isIncoming) return undefined;
+    const t = setTimeout(() => setCall((prev) => (prev && prev.id === call.id && prev.isIncoming ? null : prev)), OUTGOING_TIMEOUT_MS + 5000);
+    return () => clearTimeout(t);
+  }, [call?.id, call?.isIncoming]);
 
   // Outgoing call nobody answers → hang up as missed (server also enforces the same timeout)
   useEffect(() => {

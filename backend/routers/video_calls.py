@@ -112,6 +112,27 @@ async def _ring_timeout(call_id: str):
         logger.warning(f"WS ring-timeout broadcast failed: {e}")
 
 
+@router.get("/pending")
+async def pending_call(current_user: User = Depends(get_current_user)):
+    """A call currently ringing for me (so a client that reconnected its socket can still show it)."""
+    call = await db.video_calls.find_one({"participants": current_user.id, "status": "ringing", "started_by": {"$ne": current_user.id}}, {"_id": 0}, sort=[("started_at", -1)])
+    if not call:
+        return {"call": None}
+    started = call.get("started_at")
+    try:
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(str(started).replace("Z", "+00:00"))).total_seconds()
+    except Exception:
+        age = 0
+    if age > RING_TIMEOUT_SEC + 5:
+        return {"call": None}
+    caller = await db.users.find_one({"id": call["started_by"]}, {"_id": 0, "id": 1, "name": 1})
+    prof = await db.user_profiles.find_one({"user_id": call["started_by"]}, {"_id": 0, "display_name": 1, "avatar_url": 1})
+    chat = await db.chats.find_one({"id": call["chat_id"]}, {"_id": 0, "is_group": 1, "name": 1})
+    return {"call": {"call_id": call["id"], "chat_id": call["chat_id"], "call_type": call.get("call_type", "video"), "caller_id": call["started_by"],
+                     "caller_name": (prof or {}).get("display_name") or (caller or {}).get("name") or "Usuario", "caller_avatar": (prof or {}).get("avatar_url"),
+                     "is_group": bool((chat or {}).get("is_group")), "chat_name": (chat or {}).get("name")}}
+
+
 @router.get("/history")
 async def call_history(filter: str = "all", q: str = "", limit: int = 100, current_user: User = Depends(get_current_user)):
     """Every call of the user (incoming/outgoing/missed) with duration, peer/group and redial info."""
