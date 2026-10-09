@@ -43,6 +43,8 @@ class CreateLiveRequest(BaseModel):
     description: Optional[str] = ""
     category: Optional[str] = "general"
     is_private: bool = False
+    ticket_price: Optional[float] = None  # entrada de pago (privados); None/0 = gratis
+    ticket_currency: Optional[str] = "usd"
     allow_comments: bool = True
     allow_gifts: bool = True
     anti_capture: bool = True
@@ -211,6 +213,8 @@ async def create_live(request: CreateLiveRequest, current_user: dict = Depends(g
         "description": request.description,
         "category": request.category,
         "is_private": request.is_private,
+        "ticket_price_minor": (int(round(request.ticket_price * 100)) if (request.is_private and request.ticket_price and request.ticket_price > 0) else None),
+        "ticket_currency": (request.ticket_currency or "usd").lower(),
         "access_code": _gen_code() if request.is_private else None,
         "anti_capture": request.anti_capture if request.is_private else False,
         "allow_comments": request.allow_comments,
@@ -394,7 +398,12 @@ async def join_live(live_id: str, body: JoinLiveRequest = None, current_user: di
         raise HTTPException(status_code=404, detail="Live not found or ended")
 
     is_host = live["host_id"] == current_user["id"]
-    if live.get("is_private") and not is_host:
+    if live.get("ticket_price_minor") and not is_host:
+        # Paid private live: access only with a confirmed ticket (server-side; sharing the link/code is not enough)
+        ticket = await db.live_tickets.find_one({"live_id": live_id, "user_id": current_user["id"]}, {"_id": 0, "id": 1})
+        if not ticket:
+            raise HTTPException(status_code=402, detail={"code": "ticket_required", "message": "Este live requiere entrada de pago", "price_minor": live["ticket_price_minor"], "currency": live.get("ticket_currency", "usd")})
+    elif live.get("is_private") and not is_host:
         code = ((body.access_code if body else None) or "").strip().upper()
         if not code or code != live.get("access_code"):
             raise HTTPException(status_code=403, detail="Código de acceso incorrecto")
@@ -896,6 +905,7 @@ async def schedule_live(request: ScheduleLiveRequest, current_user: dict = Depen
     doc = {"id": live_id, "host_id": current_user["id"], "host_name": current_user.get("name", "Usuario"), "host_avatar": current_user.get("avatar_url"),
            "title": request.title[:120], "description": (request.description or "")[:500], "category": request.category or "general", "status": "scheduled",
            "scheduled_at": when.isoformat(), "is_private": request.is_private, "access_code": _gen_code() if request.is_private else None,
+           "ticket_price_minor": (int(round(request.ticket_price * 100)) if (request.is_private and request.ticket_price and request.ticket_price > 0) else None), "ticket_currency": (request.ticket_currency or "usd").lower(),
            "allow_comments": request.allow_comments, "allow_gifts": request.allow_gifts, "created_at": datetime.now(timezone.utc).isoformat(), "reminder_count": 0,
            "viewer_count": 0, "total_viewers": 0, "peak_viewers": 0, "comment_count": 0, "like_count": 0, "gift_total": 0, "moderators": [], "muted_user_ids": [], "banned_user_ids": [], "blocked_words": []}
     await db.lives.insert_one(doc)

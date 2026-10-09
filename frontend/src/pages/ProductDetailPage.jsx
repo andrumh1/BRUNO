@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBrunoCheckout } from "@/hooks/useBrunoCheckout";
+import { QuoteCard } from "@/components/money/QuoteCard";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import {
@@ -46,6 +48,7 @@ const ProductDetailPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { user, token } = useAuth();
+  const checkout = useBrunoCheckout();
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -383,8 +386,8 @@ const ProductDetailPage = () => {
       )}
 
       {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 z-40">
-        <div className="max-w-4xl mx-auto flex gap-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 z-40 max-h-[70vh] overflow-y-auto" style={{ paddingBottom: "var(--content-bottom)" }}>
+        <div className="max-w-4xl mx-auto flex flex-wrap gap-3">
           {/* Quantity selector */}
           <div className="flex items-center border rounded-lg">
             <button
@@ -425,8 +428,11 @@ const ProductDetailPage = () => {
                 )}
                 {product.category === "services" ? "Solicitar Servicio" : "Comprar"}
               </Button>
-            ) : (
-              /* Standard Add to Cart */
+            ) : (<>
+              {product.category !== "services" && product.seller_id !== user?.id && product.user_id !== user?.id && (
+                <Button variant="secondary" className="flex-1" onClick={() => checkout.getQuote({ kind: "marketplace", ref_id: product.id })} disabled={checkout.busy} data-testid="product-pay-in-bruno-btn">Pagar en BRUNO</Button>
+              )}
+              {/* Standard Add to Cart */}
               <Button className="flex-1" onClick={handleAddToCart} disabled={addingToCart}>
                 {addingToCart ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -435,8 +441,9 @@ const ProductDetailPage = () => {
                 )}
                 Agregar
               </Button>
-            )
+            </>)
           )}
+          {checkout.quote && <div className="basis-full"><QuoteCard quote={checkout.quote} busy={checkout.busy} onPay={() => checkout.pay({ kind: "marketplace", ref_id: product.id })} onCancel={() => window.location.reload()} /></div>}
         </div>
       </div>
     </div>

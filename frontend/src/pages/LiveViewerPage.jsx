@@ -12,6 +12,8 @@ import LiveModerationSheet from "@/components/live/LiveModerationSheet";
 import LiveInteractSheet, { LivePollCard, GuestTiles } from "@/components/live/LiveInteractSheet";
 import { Sparkles, Hand } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBrunoCheckout } from "@/hooks/useBrunoCheckout";
+import { QuoteCard } from "@/components/money/QuoteCard";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { useLiveRTC } from "@/components/live/useLiveRTC";
 import { LiveEvents, LiveInputRow, LiveTopBar } from "@/components/live/LiveOverlay";
@@ -30,6 +32,8 @@ export default function LiveViewerPage() {
   const [code, setCode] = useState((params.get("code") || "").toUpperCase());
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [ticket, setTicket] = useState(null);
+  const checkout = useBrunoCheckout();
   const [muted, setMuted] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [rtcInfo, setRtcInfo] = useState(null);
@@ -74,9 +78,15 @@ export default function LiveViewerPage() {
       setIsMod(!!r.data.is_moderator);
       setRtcInfo(r.data.rtc || null);
       setJoined(true);
-    } catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo entrar al live"); }
+    } catch (e) {
+      const d = e?.response?.data?.detail;
+      if (e?.response?.status === 402 && d?.code === "ticket_required") { setTicket({ price_minor: d.price_minor, currency: d.currency }); const q = await checkout.getQuote({ kind: "live_ticket", ref_id: liveId }); if (!q) setTicket(null); }
+      else brunoToast.error((typeof d === "string" ? d : d?.message) || "No se pudo entrar al live");
+    }
     setJoining(false);
   };
+  // Auto-join after returning from a paid ticket checkout
+  useEffect(() => { if (params.get("paid") === "1" && live && !joined) { join(); } /* eslint-disable-next-line */ }, [live?.id]);
 
   const rtc = useLiveRTC({ liveId, token, role: "viewer", accessCode: live?.requires_code ? code : null, enabled: joined && !!live });
   const asGuest = rtc.guestStatus === "accepted" && !!rtc.guestRtc?.token;
@@ -134,6 +144,21 @@ export default function LiveViewerPage() {
       <div className="fixed inset-0 bg-black grid place-items-center text-white p-8" data-testid="live-ended-page">
         <div className="text-center"><Radio className="w-10 h-10 mx-auto mb-3 text-white/60" /><p className="font-bold">Este live ha terminado</p>
           <button onClick={() => navigate("/lives")} className="mt-4 px-5 h-10 rounded-full bg-white text-black text-sm font-semibold">Ver otros lives</button></div>
+      </div>
+    );
+  }
+
+  /* Paid ticket gate — access is only granted server-side after the payment is confirmed */
+  if (ticket && !joined) {
+    return (
+      <div className="fixed inset-0 bg-black overflow-hidden" data-testid="live-ticket-gate">
+        <button onClick={() => navigate(-1)} className="absolute left-3 z-10 w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" style={{ top: "calc(var(--safe-top) + 10px)" }} aria-label="Volver"><ArrowLeft className="w-5 h-5" /></button>
+        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 bruno-glass rounded-[28px] border p-5 text-center space-y-3" style={{ maxWidth: 420, marginInline: "auto" }}>
+          <div className="w-14 h-14 mx-auto rounded-full bg-primary/15 grid place-items-center"><Lock className="w-6 h-6 text-primary" /></div>
+          <p className="font-bold">Live privado de pago</p>
+          <p className="text-sm text-muted-foreground">{live?.host_name} cobra entrada para este live. El acceso se activa solo cuando el pago está confirmado.</p>
+          <QuoteCard quote={checkout.quote} busy={checkout.busy} cta="Comprar entrada" onPay={() => checkout.pay({ kind: "live_ticket", ref_id: liveId })} />
+        </div>
       </div>
     );
   }

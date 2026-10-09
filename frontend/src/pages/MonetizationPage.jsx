@@ -163,7 +163,8 @@ const MonetizationPage = () => {
             </div>
             <h1 className="text-xl font-bold">Monetización</h1>
           </div>
-          <div className="ml-auto flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full">
+          <button onClick={() => navigate("/earnings")} className="ml-auto h-9 px-3 rounded-full bg-emerald-500/10 text-emerald-700 text-xs font-bold" data-testid="monetization-earnings-link">Mis ingresos</button>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full">
             <Coins className="w-4 h-4 text-primary" />
             <span className="font-bold text-primary">{user?.points || 0}</span>
           </div>

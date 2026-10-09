@@ -37,6 +37,10 @@ function useRingtone(active) {
   }, [active]);
 }
 
+// Daily allows a single call instance per page: serialise destroy → create between consecutive calls.
+let pendingDestroy = Promise.resolve();
+const destroyInstance = (inst) => { if (!inst) return pendingDestroy; pendingDestroy = pendingDestroy.then(() => inst.destroy()).catch(() => {}); return pendingDestroy; };
+
 const Avatar = ({ url, size = "w-32 h-32" }) => (
   <div className={`relative ${size} rounded-full overflow-hidden border-4 border-white/20 shadow-2xl`}>
     {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full grid place-items-center bg-gradient-to-br from-orange-500 to-pink-500"><UserIcon className="w-14 h-14 text-white" /></div>}
@@ -61,12 +65,14 @@ function DailyStage({ roomUrl, callType, onLeft, onPeerJoined, onPeerLeft, child
   useEffect(() => {
     if (!roomUrl || !boxRef.current) return undefined;
     let frame;
+    let cancelled = false;
+    (async () => {
     try {
-      const existing = DailyIframe.getCallInstance?.();
-      if (existing) { try { existing.destroy(); } catch (_) { /* ignore */ } }
+      await destroyInstance(DailyIframe.getCallInstance?.());
+      if (cancelled || !boxRef.current) return;
       frame = DailyIframe.createFrame(boxRef.current, {
         showLeaveButton: false, showFullscreenButton: false, showLocalVideo: true, showParticipantsBar: false,
-        iframeStyle: { position: "absolute", inset: 0, width: "100%", height: "100%", border: "0", background: "#0c0a09" },
+        iframeStyle: { position: "absolute", top: 0, left: 0, width: "100%", height: "calc(100% + 84px)", border: "0", background: "#0c0a09" },
         theme: { colors: { accent: "#FF6A00", accentText: "#FFFFFF", background: "#0c0a09", backgroundAccent: "#1c1917", baseText: "#FFFFFF", mainAreaBg: "#0c0a09", mainAreaBgAccent: "#1c1917", mainAreaText: "#FFFFFF", supportiveText: "#d6d3d1" } },
       });
       frameRef.current = frame;
@@ -87,7 +93,8 @@ function DailyStage({ roomUrl, callType, onLeft, onPeerJoined, onPeerLeft, child
       brunoToast.error("No se pudo iniciar el video", { description: e?.message || "" });
       onLeft?.();
     }
-    return () => { try { frame?.leave?.(); } catch (_) { /* ignore */ } try { frame?.destroy?.(); } catch (_) { /* ignore */ } frameRef.current = null; };
+    })();
+    return () => { cancelled = true; const f = frame; frameRef.current = null; if (f) { pendingDestroy = pendingDestroy.then(() => f.leave().catch(() => {})).then(() => f.destroy()).catch(() => {}); } };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomUrl]);
 

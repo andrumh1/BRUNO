@@ -91,6 +91,9 @@ import MonetizationPage from "@/pages/MonetizationPage";
 import AlbumsPage from "@/pages/AlbumsPage";
 import CardAnalyticsPage from "@/pages/CardAnalyticsPage";
 import PremiumPage from "@/pages/PremiumPage";
+import PaymentResultPage from "@/pages/PaymentResultPage";
+import MyEarningsPage from "@/pages/MyEarningsPage";
+import AdminMoneyPage from "@/pages/AdminMoneyPage";
 import HashtagPage from "@/pages/HashtagPage";
 import UsernameRedirect from "@/pages/UsernameRedirect";
 import SavedPostsPage from "@/pages/SavedPostsPage";
@@ -187,8 +190,10 @@ function AppRouter() {
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/premium" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
       <Route path="/partner-dashboard" element={<ProtectedRoute><PartnerDashboardPage /></ProtectedRoute>} />
-      <Route path="/payment/success" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
-      <Route path="/payment/cancel" element={<ProtectedRoute><PremiumPage /></ProtectedRoute>} />
+      <Route path="/payment/success" element={<ProtectedRoute><PaymentResultPage /></ProtectedRoute>} />
+      <Route path="/payment/cancel" element={<ProtectedRoute><PaymentResultPage cancelled /></ProtectedRoute>} />
+      <Route path="/earnings" element={<ProtectedRoute><MyEarningsPage /></ProtectedRoute>} />
+      <Route path="/admin/money" element={<ProtectedRoute><AdminMoneyPage /></ProtectedRoute>} />
       <Route path="/reels" element={<ReelsPage />} />
       <Route path="/profile/:userId/reels" element={<ReelsPage />} />
       <Route path="/lives" element={<ReelsPage />} />

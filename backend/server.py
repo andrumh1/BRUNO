@@ -2479,6 +2479,9 @@ social_set_db(db)
 app.include_router(social_router)
 
 # Then include api_router in app
+from routers.money import router as money_router, webhook_router as stripe_webhook_router  # noqa: E402
+app.include_router(money_router)
+app.include_router(stripe_webhook_router)
 app.include_router(api_router)
 
 # CORS

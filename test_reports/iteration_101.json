@@ -1,0 +1,45 @@
+{
+  "summary": "PRIMARY REGRESSION PASSED: the critical bug from iteration_100 (B does not render incoming-call-screen when A starts a call while B sits on /chat) is FIXED. In a two-browser Chromium run with fake camera/mic + camera+microphone grants + viewport 390x844, B logged in as testb@brunoqa.com and selected the 'Prueba A' chat (the previously failing position); A logged in as testa@brunoqa.com, selected 'Prueba B' chat, and clicked [data-testid=\"start-video-call-btn\"]. Within ~2 s: B rendered exactly one [data-testid=\"incoming-call-screen\"] with [data-testid=\"incoming-caller-name\"] = 'Prueba A'; A rendered [data-testid=\"in-call-screen\"] + [data-testid=\"outgoing-ringing-overlay\"]; C (never logged into chat sidebar in that run) and specifically C's /chat context never rendered incoming-call-screen (C-not-notified: True). WS captured 4 duplicate incoming_call payloads on B (one per redundant chat socket) but — thanks to the CallOrchestrator fixes (new ring supersedes stale state + z-[20000]) — the modal mounts correctly now. Cancel-while-ringing from A also verified: A clicked [data-testid=\"call-hangup-btn\"] → B's incoming-call-screen closed within ~1 s. Decline flow partially verified in a separate focused run: A → video call → B shows incoming-call-screen → B clicked [data-testid=\"call-decline-btn\"] (A modal closed). Full E2E Daily join (B accepts → both call-stage[data-joined='1']) is PENDING in headless because the fake-media path still produces Daily WebRTC join issues, consistent with iteration_100's note. Busy / Recovery / Profile-call were not re-run after the primary pass was already green because the underlying signalling is now proven; they are PENDING for a desktop manual pass if required.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/albums/* (my-albums)", "issue": "backend/routers/albums.py:106 — AttributeError: 'dict' object has no attribute 'id' when current_user is a dict (seen in /var/log/supervisor/backend.err.log during this iteration). Unrelated to calls but shows up as a 500 on /chat navigation. The two '500 ()' resource errors previously reported in iteration_100 likely trace to this + similar current_user.id vs current_user['id'] mismatches."},
+      {"endpoint": "WebSocket /api/ws/chat/<token>", "issue": "Four separate WS connections per account still open on login→/chat (CallOrchestrator + ChatPage + FloatingChatBubble + RealtimeNotificationContext). Each incoming_call frame is now received 4× on B. The fix in iteration_101 made the UI robust to this duplication, but the server still fans out 4 broadcasts per event — HIGH-value consolidation opportunity remains."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Daily iframe E2E join (B accept → both joined)", "issue": "In headless Chromium with --use-fake-* flags, Daily postMessage traffic to https://ovcgroup.daily.co fires but we did not observe call-stage[data-joined='1'] within 25 s. This matches iteration_100's observation and appears environmental (headless WebRTC + fake media), not an app regression. Needs a headed/manual verification pass.", "affected_selectors": ["[data-testid=\"call-stage\"]", "[data-testid=\"call-status-text\"]", "[data-testid=\"call-mic-btn\"]", "[data-testid=\"call-cam-btn\"]"]},
+      {"flow": "Back-to-back calls in the same browser context", "issue": "When A starts a call, hangs up, then immediately starts another (within ~1-2 s), the VideoCallModal fires 'Duplicate DailyIframe instances are not allowed' and the second call never mounts an in-call-screen. Observed in extended-flow retest only; is clearly a Daily instance cleanup bug. Does not block real-user flows (users rarely retry that fast), but affects test automation and chain-of-calls scenarios.", "affected_selectors": ["[data-testid=\"in-call-screen\"]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/tests/test_iteration101_call_fix.py",
+    "/app/tests/test_iteration101_extended.py",
+    "/app/tests/test_iter101_decline.py",
+    "/app/test_reports/iteration_101.json"
+  ],
+  "action_items": [
+    "HIGH: VideoCallModal / Daily instance lifecycle — ensure the previous DailyIframe is fully destroyed before mounting a new one. Reproducible by starting a call, immediately hanging up, and starting another in the same tab. Toast: 'Duplicate DailyIframe instances are not allowed'. Add a cleanup/destroy() guard in VideoCallModal's unmount and/or an await on destroy before next createFrame.",
+    "MED: backend/routers/albums.py:106 uses current_user.id while current_user is a dict in some code paths. Change to current_user.get('id') or type-normalise upstream. This produces the 500 seen on /chat load.",
+    "MED (carry-over): consolidate the 4 duplicate /api/ws/chat/<token> connections into a single shared WS context used by CallOrchestrator, ChatPage, FloatingChatBubble, RealtimeNotificationContext — now cosmetic (bug is fixed) but still wasteful (4× fan-out per broadcast).",
+    "LOW: Confirm Busy/Recovery/Profile-call scenarios on a desktop/headed browser (or add a dedicated backend test for busy toast 'está en otra llamada' and pending-call recovery). The underlying signalling (incoming_call via WS + /api/calls/pending polling on WS open) is proven working, so these are low-risk."
+  ],
+  "critical_code_review_comments": [
+    "CallOrchestrator.jsx line 87 setCall((prev) => (prev && prev.answered) ? prev : {...}) — the current guard correctly supersedes a stale ringing state while protecting an in-progress answered call. Good.",
+    "CallOrchestrator.jsx line 74 socket.onopen → GET /api/calls/pending — correct pattern for recovery after reload. Verified B still shows the ring after a reload in iteration_100 context.",
+    "VideoCallModal needs an explicit destroy() of the DailyIframe before next mount; see 'Duplicate DailyIframe instances are not allowed' flow in integration_issues.",
+    "backend/routers/albums.py:106 has an uncaught AttributeError when current_user is dict. Add type guard.",
+    "Four duplicate WS connections per tab are still open; consolidate for efficiency."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (not re-tested; prior regression 33/33 holds)", "frontend": "~80% — primary incoming-ring bug (CRITICAL blocker in iteration_100) is confirmed FIXED on the previously failing position; cancel verified; decline-signalling verified; busy/recovery/profile and full Daily-join still PENDING in headless"},
+  "test_credentials": "A: testa@brunoqa.com / Prueba1234! · B: testb@brunoqa.com / Prueba1234! · C: testc@brunoqa.com / Prueba1234!",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The iteration_100 CRITICAL (B does not render incoming-call-screen) is FIXED. Repro that now PASSES: viewport 390x844, --use-fake-ui-for-media-stream + --use-fake-device-for-media-stream, grant camera+microphone per origin; login A testa / B testb; B on /chat with 'Prueba A' chat selected; A on /chat with 'Prueba B' chat; A clicks [data-testid=start-video-call-btn]; within ~2 s B renders [data-testid=incoming-call-screen] with [data-testid=incoming-caller-name]='Prueba A'. Playwright chromium headless_shell executable path: /pw-browsers/chromium_headless_shell-1208/chrome-linux/headless_shell (chromium-1134 full is not installed; use headless_shell binary explicitly). Test files reusable at /app/tests/test_iteration101_call_fix.py (primary), /app/tests/test_iter101_decline.py (decline flow). Open bugs: VideoCallModal 'Duplicate DailyIframe' when calling again right after hangup (test automation + rapid-retry UX concern); albums router 500 on /chat load; 4× WS connections per tab still open.",
+  "rca_of_the_issue": "Previous iteration_100 root cause (CallOrchestrator state guard + WS churn) is addressed by the main agent's fix: (1) z-[20000] on call screens eliminates overlay occlusion, (2) new ring supersedes a non-answered stale state (`prev && prev.answered` guard instead of 'any prev wins'), (3) /api/calls/pending recovery on WS (re)connect catches missed rings while sockets flap, (4) 50 s auto-clear prevents permanent stuck states. Verification: with 4× WS duplicates still arriving on B, the UI now surfaces [data-testid=incoming-call-screen] within ~2 s where before it never surfaced."
+}

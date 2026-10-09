@@ -32,3 +32,5 @@
 - C: testc@brunoqa.com / Prueba1234!
 - Script de regresión: `cd /app/backend && python3 tests/test_auth_chat_isolation.py` (33 comprobaciones; necesita Origin en WS).
 - Bloqueo: 5 fallos → 429 durante 15 min (por correo y por IP).
+- Admin QA (finanzas /admin/money): testc@brunoqa.com / Prueba1234! (role=admin)
+- Stripe: sandbox reclamable (Flow A) — claves en backend/.env (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET). Connect NO activado hasta reclamar la cuenta. Test de monetización: `python3 tests/test_money.py` (24/24).
