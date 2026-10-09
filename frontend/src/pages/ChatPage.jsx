@@ -7,7 +7,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import VideoCallModal from "@/components/VideoCallModal";
 import { StickerPicker, StickerMessage } from "@/components/StickerPicker";
 import { CardPicker, CardMessagePreview } from "@/components/CardPicker";
 import { ChatAttachmentMenu } from "@/components/ChatAttachmentMenu";
@@ -143,14 +142,6 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
   const [showCamera, setShowCamera] = useState(false);
   const [showVideoNoteRecorder, setShowVideoNoteRecorder] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
-  // Video call state
-  const [videoCallState, setVideoCallState] = useState({
-    isOpen: false,
-    roomUrl: null,
-    isIncoming: false,
-    callId: null,
-    callType: "video" // "video" or "audio"
-  });
   const [callLoading, setCallLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -306,28 +297,6 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
           ));
         }
 
-        // Handle incoming video calls
-        if (data.type === "incoming_call" && data.chat_id === chat.id) {
-          setVideoCallState({
-            isOpen: true,
-            roomUrl: data.room_url,
-            isIncoming: true,
-            callId: data.call_id,
-            callerName: data.caller_name,
-            callType: data.call_type || "video"
-          });
-        }
-
-        // Handle call answered
-        if (data.type === "call_answered" && videoCallState.callId === data.call_id) {
-          setVideoCallState(prev => ({ ...prev, isIncoming: false }));
-        }
-
-        // Handle call declined or ended
-        if ((data.type === "call_declined" || data.type === "call_ended") && 
-            videoCallState.callId === data.call_id) {
-          setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null, callType: "video" });
-        }
       } catch (e) {
         // error handled
       }
@@ -343,7 +312,7 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
       ws.removeEventListener("message", handleWsMessage);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
-  }, [ws, chat?.id, currentUserId, videoCallState.callId]);
+  }, [ws, chat?.id, currentUserId]);
 
   const messagesBoxRef = useRef(null);
   const scrollToBottom = useCallback((smooth = true) => {
@@ -360,73 +329,10 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
     return () => window.removeEventListener("bruno:viewport", onViewport);
   }, [scrollToBottom]);
 
-  // Video call functions
-  const startVideoCall = async (callType = "video") => {
+  // Calls are owned by the global CallOrchestrator (single ringing/accept flow for the whole app)
+  const startVideoCall = (callType = "video") => {
     if (!chat?.id) return;
-    setCallLoading(true);
-    try {
-      const response = await axios.post(`${API}/calls/start`, {
-        chat_id: chat.id,
-        call_type: callType
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.data.dnd) {
-        const { brunoToast } = await import("@/components/bruno/BrunoToast");
-        brunoToast.info("No disponible ahora", { description: "Tiene activado No molestar. La llamada quedó registrada como perdida." });
-        return;
-      }
-      
-      setVideoCallState({
-        isOpen: true,
-        roomUrl: response.data.room_url,
-        isIncoming: false,
-        callId: response.data.call_id,
-        callType: callType
-      });
-    } catch (error) {
-      // error handled
-    } finally {
-      setCallLoading(false);
-    }
-  };
-
-  const handleAcceptCall = async () => {
-    if (!videoCallState.callId) return;
-    try {
-      const ans = await axios.post(`${API}/calls/${videoCallState.callId}/answer`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setVideoCallState(prev => ({ ...prev, isIncoming: false, roomUrl: ans.data?.room_url || prev.roomUrl }));
-    } catch (error) {
-      // error handled
-    }
-  };
-
-  const handleDeclineCall = async () => {
-    if (!videoCallState.callId) return;
-    try {
-      await axios.post(`${API}/calls/${videoCallState.callId}/decline`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null, callType: "video" });
-    } catch (error) {
-      // error handled
-    }
-  };
-
-  const handleEndCall = async () => {
-    if (videoCallState.callId) {
-      try {
-        await axios.post(`${API}/calls/${videoCallState.callId}/end`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      } catch (error) {
-        // error handled
-      }
-    }
-    setVideoCallState({ isOpen: false, roomUrl: null, isIncoming: false, callId: null, callType: "video" });
+    window.dispatchEvent(new CustomEvent("bruno:start-call", { detail: { chat_id: chat.id, type: callType, peer_name: isGroup ? `${groupName} (grupo)` : (participant.display_name || participant.username), peer_avatar: isGroup ? null : participant.avatar_url } }));
   };
 
   // Handle audio recording finish
@@ -813,18 +719,6 @@ const ChatView = ({ chat, onBack, currentUserId, ws, onNewMessage, autoCall = nu
         <GroupInfoSheet chat={chat} isOpen={showGroupInfo} onClose={() => setShowGroupInfo(false)} token={token} currentUserId={currentUserId}
           onUpdated={(patch) => onChatUpdated?.(chat.id, patch)} onLeft={(id) => onLeftGroup?.(id)} onCall={(kind) => startVideoCall(kind)} />
       )}
-
-      {/* Video Call Modal */}
-      <VideoCallModal
-        isOpen={videoCallState.isOpen}
-        onClose={handleEndCall}
-        roomUrl={videoCallState.roomUrl}
-        remoteUserName={isGroup ? `${groupName} (grupo)` : (participant.display_name || participant.username)}
-        isIncoming={videoCallState.isIncoming}
-        onAccept={handleAcceptCall}
-        onDecline={handleDeclineCall}
-        callType={videoCallState.callType}
-      />
 
       {/* Messages */}
       <ChatSearchBar chatId={chat.id} token={token} isOpen={showSearch} onClose={() => setShowSearch(false)} onJump={jumpToSearchResult} />

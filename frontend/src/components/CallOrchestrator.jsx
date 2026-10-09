@@ -75,7 +75,7 @@ export default function CallOrchestrator() {
           try {
             const data = JSON.parse(event.data);
             if (data.type === "incoming_call") {
-              setCall({
+              setCall((prev) => prev ? prev : {
                 id: data.call_id,
                 room_url: null,
                 type: data.call_type || "video",
@@ -125,23 +125,11 @@ export default function CallOrchestrator() {
     return () => clearTimeout(t);
   }, [call?.id, call?.isIncoming, call?.answered, token]);
 
-  // Permission ringtone — best-effort, doesn't break the call if blocked
-  useEffect(() => {
-    if (!call?.isIncoming) return undefined;
-    let audio;
-    try {
-      audio = new Audio("/ringtone.mp3");
-      audio.loop = true;
-      audio.play().catch(() => { /* autoplay blocked */ });
-    } catch (_e) { /* ignore */ }
-    return () => { try { audio?.pause(); } catch (_e) { /* ignore */ } };
-  }, [call?.isIncoming]);
-
   const handleAccept = async () => {
     if (!call?.id) return;
     try {
       const ans = await axios.post(`${API}/calls/${call.id}/answer`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      setCall((prev) => prev ? { ...prev, room_url: ans.data?.room_url || prev._pending_room || prev.room_url, isIncoming: false } : prev);
+      setCall((prev) => prev ? { ...prev, room_url: ans.data?.room_url || prev._pending_room || prev.room_url, isIncoming: false, answered: true } : prev);
     } catch (_e) { setCall(null); }
   };
   const handleDecline = async () => {
@@ -156,6 +144,8 @@ export default function CallOrchestrator() {
     }
     setCall(null);
   };
+  // The other side left the Daily room (hung up or lost connection) → close our side too
+  const handlePeerLeft = () => { setCall((prev) => { if (prev && prev.answered) { brunoToast.info("Llamada finalizada"); if (prev.id) axios.post(`${API}/calls/${prev.id}/end`, {}, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {}); return null; } return prev; }); };
 
   if (!call) return null;
 
@@ -167,9 +157,10 @@ export default function CallOrchestrator() {
       remoteUserName={call.peerName}
       remoteAvatarUrl={call.peerAvatar}
       isIncoming={call.isIncoming}
-      isConnecting={false}
+      isRinging={!call.isIncoming && !call.answered}
       onAccept={handleAccept}
       onDecline={handleDecline}
+      onPeerLeft={handlePeerLeft}
       callType={call.type}
     />
   );
