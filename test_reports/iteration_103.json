@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 103: full coverage of coupons CRUD, quote-with-coupon, email receipts resend, chat Llamadas tab, and reels (save/share moved to Más + follow). Backend: 25/25 pytest-style checks PASS in /app/backend/tests/test_coupons_receipts.py (coupon create pct & fixed, duplicate 409, pct+amount 400, past date 400, bad chars 400, isolation vs other seller, PATCH toggle, DELETE 404 cross-user; quote 149,99→120,00 with VERANO20 (discount 29.99, bruno_fee 6.0, seller_net 114.0), FIJO5 discount 5.0, invalid 400, deactivated 400, scope mismatch 400 'solo vale para entradas a lives', promotion+coupon 400 'no admite cupones'; receipts: delivered+brunoqa purchase has receipt_sent_at + receipt_to, resend 200 {sent:true}, immediate 2nd call 429, cross-user 404). Frontend verified at 390x844: /earnings coupons-panel lists VERANO20+FIJO5, QA coupon create → appears, toggle → 'Desactivado', delete removes it, no horizontal overflow. QuoteCard verified on NON-SERVICE product d540fa94- (clothing, same seller newtest): coupon-toggle-btn → coupon-input + coupon-apply-btn, VERANO20 → quote-discount visible + coupon-applied + total 40,00 US$ (20% off 49.99); coupon-remove-btn → back to 49,99; NOEXISTE999 → inline coupon-error 'Cupón no válido' and total unchanged; receipt copy 'Recibirás el recibo por correo al confirmarse el pago.' present inside checkout-quote. Chat Llamadas tab (testa): calls-history renders with 2 filters and 23 call items; redial button data-testid=call-redial-* present. Reels (viewer2): rail no longer has reel-save-btn/reel-share-btn (count=0), reel-more-btn opens reel-options-sheet with reel-quick-actions grid containing both; Guardar → toast 'Guardado en favoritos' + label flips to 'Guardado'; Enviar button renders. Follow pill → POST /api/users/{sellerId}/follow → toast 'Ahora sigues a @Test User' → label becomes 'Siguiendo'; second click → 'Dejaste de seguir' → state restored.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/albums/my-albums", "issue": "backend/routers/albums.py:106 raises AttributeError: 'dict' object has no attribute 'id' when current_user is a dict. Produces 500 errors visible in console on /chat and other pages. Unrelated to this iteration's scope but still present (carried over from iteration_101)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ProductDetailPage", "issue": "product-pay-in-bruno-btn is HIDDEN for services category (line 443: `product.category !== 'services'`). The spec test product 4334a391 is category 'services', so the QuoteCard checkout cannot be opened from its PDP (user only sees 'Solicitar Servicio' / 'Contactar'). Spec explicitly requires testing coupon flow on this product; blocker for that specific scenario. Backend quote still computes the correct 149,99 → 120,00 totals; only the entry point is missing in UI. Verified full QuoteCard+coupon mechanics on a non-service product (d540fa94- clothing by same seller) with the same seller/currency, discount applied correctly.", "selector": "[data-testid=\"product-pay-in-bruno-btn\"]", "priority": "HIGH"},
+      {"component": "ChatList chat-tab-calls", "issue": "The motion.span (`chat-tab-pill`) rendered with class 'absolute inset-0' on top of tab buttons intercepts pointer clicks on the inactive tab (chat-tab-calls fails to switch even with Playwright force=True). Workaround used: JS .click() dispatch. Suggest adding pointer-events-none to the layoutId span so clicks always reach the button beneath.", "selector": "[data-testid=\"chat-tab-calls\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/earnings coupons-panel @390px", "issues": ["No horizontal overflow (scrollWidth==clientWidth==356). Layout OK."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_coupons_receipts.py", "/app/backend/tests/test_money.py"],
+  "action_items": [
+    "HIGH: Enable product-pay-in-bruno-btn also for services category in /app/frontend/src/pages/ProductDetailPage.jsx:443 — the backend accepts marketplace quotes for services (verified in /app/backend/tests/test_coupons_receipts.py quote=149,99→120,00). Suggested change: drop the `product.category !== 'services'` condition OR render both 'Solicitar Servicio' and 'Pagar en BRUNO' side by side.",
+    "MED: Add `pointer-events-none` to the layoutId=chat-tab-pill motion.span in /app/frontend/src/components/chat/ChatList.jsx (line ~107) so the active-tab animation doesn't block clicks on the inactive tab.",
+    "LOW (carry-over): Fix /app/backend/routers/albums.py:106 `current_user.id` → use dict access or type guard; still throws 500 on /chat navigation."
+  ],
+  "critical_code_review_comments": [
+    "ProductDetailPage.jsx hides the new monetization CTA for all services products — unintended given the backend fully supports marketplace quotes for them.",
+    "ChatList.jsx motion.span pill lacks pointer-events-none, causing flaky tab-switch clicks (confirmed in Playwright).",
+    "albums.py:106 still has current_user.id vs dict mismatch producing 500 on /chat (noted since iteration_101)."
+  ],
+  "updated_files": ["/app/backend/tests/test_coupons_receipts.py (new)"],
+  "success_rate": {"backend": "100% (25/25)", "frontend": "~90% (10/11 — services PDP coupon flow blocked by hidden button; verified on equivalent non-service product)"},
+  "test_credentials": "newtest@bruno.com / Test1234! (seller, VERANO20+FIJO5), viewer2@bruno.com / Test1234! (buyer), delivered+brunoqa@resend.dev / Prueba1234! (buyer with real email), testa@brunoqa.com / Prueba1234! (calls history)",
+  "seed_data_creation": "Backend test creates ephemeral QA coupons (QATEST*, QAFIX*, QASCOPE*) and deletes them in finally; no residue expected. Frontend test created QAUI#### coupon via UI and deleted it in-flow.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All iteration-103 backend endpoints green (25/25). The only blocking UI gap is product-pay-in-bruno-btn hidden for services PDP; the backend coupon pipeline for product 4334a391 (services) returns the exact totals in the spec (120,00 US$ with VERANO20, discount 29.99, bruno_fee 6.0, seller_net 114.0). Second cosmetic issue: chat-tab-calls needs pointer-events-none on the layoutId span. Albums 500 still present. For regression use: cd /app/backend && python3 tests/test_coupons_receipts.py (25) + python3 tests/test_money.py (24).",
+  "rca_of_the_issue": "ProductDetailPage.jsx:443 conditions the Pagar-en-BRUNO button on `product.category !== 'services'`. This excludes the exact test product (services). All other backend+frontend plumbing (useBrunoCheckout, CouponBox, QuoteCard, _discount) works correctly as verified on a non-services product by the same seller."
+}

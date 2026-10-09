@@ -65,8 +65,8 @@ class AlbumMediaResponse(BaseModel):
     created_at: datetime
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    from utils.security import resolve_user_dict_from_token
-    user = await resolve_user_dict_from_token(credentials.credentials if credentials else None)
+    from utils.security import resolve_user_from_token
+    user = await resolve_user_from_token(credentials.credentials if credentials else None)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid authentication")
     return user

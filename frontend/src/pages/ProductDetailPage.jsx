@@ -440,7 +440,7 @@ const ProductDetailPage = () => {
               </Button>
             </>)
           )}
-          {product.category !== "services" && product.seller_id !== user?.id && product.user_id !== user?.id && (
+          {Number(product.price) > 0 && product.seller_id !== user?.id && product.user_id !== user?.id && (
             <Button variant="secondary" className="flex-1" onClick={() => checkout.getQuote({ kind: "marketplace", ref_id: product.id })} disabled={checkout.busy} data-testid="product-pay-in-bruno-btn">Pagar en BRUNO</Button>
           )}
           {checkout.quote && <div className="basis-full"><QuoteCard quote={checkout.quote} busy={checkout.busy} error={checkout.error} couponError={checkout.couponError} onApplyCoupon={checkout.applyCoupon} onPay={() => checkout.pay({ kind: "marketplace", ref_id: product.id })} onCancel={() => window.location.reload()} /></div>}

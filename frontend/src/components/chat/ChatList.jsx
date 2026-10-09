@@ -104,7 +104,7 @@ const ChatList = ({ chats, onSelectChat, selectedChatId, onNewChat, onNewGroup, 
         <div className="flex gap-1 p-1 rounded-2xl bg-muted/60 mb-3" data-testid="chat-tabs">
           {[{ id: "chats", label: "Chats", Icon: MessageCircle }, { id: "calls", label: "Llamadas", Icon: Phone }].map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} className={`relative flex-1 h-9 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${tab === t.id ? "text-foreground" : "text-muted-foreground"}`} data-testid={`chat-tab-${t.id}`}>
-              {tab === t.id && <motion.span layoutId="chat-tab-pill" className="absolute inset-0 rounded-xl bg-card shadow-sm" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
+              {tab === t.id && <motion.span layoutId="chat-tab-pill" className="absolute inset-0 rounded-xl bg-card shadow-sm pointer-events-none" transition={{ type: "spring", stiffness: 400, damping: 30 }} />}
               <span className="relative flex items-center gap-1.5"><t.Icon className="w-4 h-4" /> {t.label}</span>
             </button>
           ))}
