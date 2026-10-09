@@ -1,0 +1,33 @@
+{
+  "summary": "Full regression of BRUNO monetization layer (Stripe TEST mode). Backend tests: /app/backend/tests/test_money.py → 24/24 PASS. Frontend: /earnings renders with data-connected='0', balances, country select (Colombia blocked toast, MX connect_not_enabled toast), CSV downloads starting with 'fecha,tipo', empty rows copy OK. /admin/money for testc shows fees 10/15/5, edit gift→16 saves, toast 'Comisiones actualizadas', reload persists 16, reverted to 15 OK; USD summary with 'Comisiones netas BRUNO' and 'terceros' copy; ledger shows 3 promotion entries. /admin/money for testa shows admin-money-forbidden. Marketplace: non-DEAL product shows product-pay-in-bruno-btn → checkout-quote with 5% split text; DEAL products DO NOT render the pay-in-bruno button (only deal-purchase-btn 'Comprar'). Live gift flow (public live by B): rose quote 0,99 US$ with 15% split and 'Enviar regalo' CTA. /payment/success invalid session → data-status=checking → timeout after ~30s. /payment/cancel shows 'Pago cancelado'. /payment/success without kind renders Premium page. API isolation OK (A earnings empty, B purchases empty). Backend regression + 24/24.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "LiveViewerPage", "issue": "For a private + paid live (is_private:true + ticket_price:5), opening /lives/{id} as a non-ticketed viewer shows the ACCESS CODE gate ('Live privado · Ingresa el código') instead of live-ticket-gate with checkout-quote. The join() is only auto-triggered when !requires_code || code.length===6, so the 402 ticket_required path never fires. Spec requires ticket gate to appear instead (or alongside) the code gate.", "selector": "[data-testid=\"live-ticket-gate\"]", "priority": "HIGH"},
+      {"component": "ProductDetailPage", "issue": "On DEAL-enabled products (deal_enabled:true) the product-pay-in-bruno-btn is NOT rendered — only the deal-purchase-btn 'Comprar'. Spec says Pagar en BRUNO should be available on any product not owned by the viewer. Non-DEAL products render it correctly.", "selector": "[data-testid=\"product-pay-in-bruno-btn\"]", "priority": "MEDIUM"},
+      {"component": "ProductDetailPage/QuoteCard (non-DEAL)", "issue": "After clicking quote-pay-btn on a non-DEAL marketplace product, there was no visible navigation to Stripe and no seller_not_ready toast captured in the DOM. URL stayed on /marketplace/{id}. Possibly a silent error — needs verification.", "selector": "[data-testid=\"quote-pay-btn\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/marketplace/{id} mobile 390x844", "issues": ["QuoteCard renders inline above the fixed action bar (y=526, h=218). No overlap observed because the fixed bar sits below card. --content-bottom reserve appears respected."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_money.py"],
+  "action_items": [
+    "LiveViewerPage: when live.ticket_price > 0, call join() or probe getQuote({kind:'live_ticket'}) at mount even if requires_code is true, so the ticket gate is shown instead of (or in addition to) the code gate; or branch UI on live.ticket_price before the code gate.",
+    "ProductDetailPage: render product-pay-in-bruno-btn also for DEAL-enabled products (independent of DEAL vs non-DEAL flows), or document why DEAL excludes it.",
+    "Investigate why non-DEAL quote-pay-btn click didn't yield a toast or redirect — probably backend returned seller_not_ready (409) and toast was not surfaced; verify brunoToast.error path in useBrunoCheckout."
+  ],
+  "critical_code_review_comments": [
+    "LiveViewerPage ticket detection only runs through join() error path; needs proactive handling for private+paid lives.",
+    "DEAL/non-DEAL branching in ProductDetailPage hides new monetization CTA for DEAL products."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (24/24)", "frontend": "~80% (6/8 scenarios fully pass)"},
+  "test_credentials": "A: testa@brunoqa.com / Prueba1234!, B: testb@brunoqa.com / Prueba1234!, C(admin): testc@brunoqa.com / Prueba1234!",
+  "seed_data_creation": "Created ephemeral public live by B for gift test (ended after). Created private paid live attempt (auto-ended). Gift fee reset to 15% after edit test.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression stable. Remaining items: (1) private+paid live gate flow needs the live-ticket-gate to render pre-code; (2) DEAL products missing product-pay-in-bruno-btn; (3) non-DEAL marketplace pay button error pathway (seller_not_ready) didn't surface — verify toast after fix.",
+  "rca of the issue": "LiveViewerPage.jsx: effect auto-calls join() only when !live.requires_code or 6-digit code entered. On a private paid live (requires_code=true + ticket_price>0), join() is never triggered without a code, so the 402 ticket_required branch that would set ticket state and fetch the quote never fires → user sees code gate instead of ticket gate."
+}

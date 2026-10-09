@@ -12,6 +12,7 @@ export function useBrunoCheckout() {
   const { token } = useAuth();
   const [quote, setQuote] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
   const headers = { Authorization: `Bearer ${token}` };
 
   const getQuote = async (body) => {
@@ -26,9 +27,9 @@ export function useBrunoCheckout() {
       const r = await axios.post(`${API}/money/checkout`, { ...body, origin_url: window.location.origin }, { headers });
       sessionStorage.setItem("bruno_last_checkout", JSON.stringify({ session_id: r.data.session_id, kind: body.kind, ref_id: body.ref_id }));
       window.location.href = r.data.checkout_url;
-    } catch (e) { brunoToast.error(detailMsg(e) || "No se pudo iniciar el pago"); setBusy(false); }
+    } catch (e) { const m = detailMsg(e) || "No se pudo iniciar el pago"; setError(m); brunoToast.error(m); setBusy(false); }
   };
-  return { quote, busy, getQuote, pay };
+  return { quote, busy, error, getQuote, pay };
 }
 
 export const detailMsg = (e) => { const d = e?.response?.data?.detail; return typeof d === "string" ? d : d?.message; };

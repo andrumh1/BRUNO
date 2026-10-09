@@ -85,6 +85,8 @@ export default function LiveViewerPage() {
     }
     setJoining(false);
   };
+  // Paid live: show the ticket gate straight away (code alone never grants access)
+  useEffect(() => { if (live?.requires_ticket && !joined && !ticket && params.get("paid") !== "1") { setTicket({ price: live.ticket_price }); checkout.getQuote({ kind: "live_ticket", ref_id: liveId }); } /* eslint-disable-next-line */ }, [live?.id, live?.requires_ticket]);
   // Auto-join after returning from a paid ticket checkout
   useEffect(() => { if (params.get("paid") === "1" && live && !joined) { join(); } /* eslint-disable-next-line */ }, [live?.id]);
 
@@ -157,7 +159,7 @@ export default function LiveViewerPage() {
           <div className="w-14 h-14 mx-auto rounded-full bg-primary/15 grid place-items-center"><Lock className="w-6 h-6 text-primary" /></div>
           <p className="font-bold">Live privado de pago</p>
           <p className="text-sm text-muted-foreground">{live?.host_name} cobra entrada para este live. El acceso se activa solo cuando el pago está confirmado.</p>
-          <QuoteCard quote={checkout.quote} busy={checkout.busy} cta="Comprar entrada" onPay={() => checkout.pay({ kind: "live_ticket", ref_id: liveId })} />
+          <QuoteCard quote={checkout.quote} busy={checkout.busy} error={checkout.error} cta="Comprar entrada" onPay={() => checkout.pay({ kind: "live_ticket", ref_id: liveId })} />
         </div>
       </div>
     );

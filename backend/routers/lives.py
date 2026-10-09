@@ -321,7 +321,10 @@ async def get_live_details(live_id: str, current_user: Optional[dict] = Depends(
     if not live:
         raise HTTPException(status_code=404, detail="Live not found")
     out = _public(live, current_user["id"] if current_user else None)
-    out["requires_code"] = bool(live.get("is_private")) and (not current_user or current_user["id"] != live["host_id"])
+    not_host = (not current_user or current_user["id"] != live["host_id"])
+    out["requires_ticket"] = bool(live.get("ticket_price_minor")) and not_host
+    out["ticket_price"] = (live["ticket_price_minor"] / 100) if live.get("ticket_price_minor") else None
+    out["requires_code"] = bool(live.get("is_private")) and not_host and not out["requires_ticket"]
     out["is_host"] = bool(current_user) and current_user["id"] == live["host_id"]
     out["is_moderator"] = bool(current_user) and _can_moderate(live, current_user["id"])
     out["viewer_count"] = _viewer_count(live_id, live["host_id"]) if live.get("status") == "live" else live.get("viewer_count", 0)

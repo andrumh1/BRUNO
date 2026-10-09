@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { fmtMoney } from "@/hooks/useBrunoCheckout";
 
 // Transparent split shown before confirming any purchase (who pays what, who funds discounts and processor fees).
-export const QuoteCard = ({ quote, busy, onPay, onCancel, cta = "Pagar con tarjeta" }) => {
+export const QuoteCard = ({ quote, busy, error, onPay, onCancel, cta = "Pagar con tarjeta" }) => {
   if (!quote) return null;
   const c = quote.currency;
   return (
@@ -18,6 +18,7 @@ export const QuoteCard = ({ quote, busy, onPay, onCancel, cta = "Pagar con tarje
         <p className="text-[11px] text-muted-foreground leading-snug" data-testid="quote-split">Reparto: {fmtMoney(quote.seller_net, c)} para el creador/vendedor · {fmtMoney(quote.bruno_fee, c)} comisión BRUNO ({quote.bruno_fee_pct} %). BRUNO asume las comisiones del procesador de pago. Impuestos y envío no llevan comisión.</p>
       )}
       {quote.is_platform_sale && <p className="text-[11px] text-muted-foreground">Venta directa de BRUNO. Pago seguro procesado por Stripe.</p>}
+      {error && <p className="text-xs text-destructive bg-destructive/10 rounded-lg p-2" role="alert" data-testid="quote-error">{error}</p>}
       <div className="flex gap-2 pt-1">
         {onCancel && <Button variant="outline" className="flex-1 rounded-full" onClick={onCancel} data-testid="quote-cancel-btn">Cancelar</Button>}
         <Button className="flex-1 rounded-full" onClick={onPay} disabled={busy} data-testid="quote-pay-btn">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ShieldCheck className="w-4 h-4 mr-1.5" />{cta}</>}</Button>

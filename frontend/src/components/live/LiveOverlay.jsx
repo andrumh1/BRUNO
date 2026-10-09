@@ -71,7 +71,7 @@ export function LiveInputRow({ liveId, token, allowGifts, allowComments = true, 
           <button onClick={() => setPayMode("points")} className={`flex-1 h-7 rounded-full text-[10px] font-semibold ${payMode === "points" ? "bg-primary text-white" : "text-muted-foreground"}`} data-testid="live-gift-mode-points">Puntos BRUNO</button>
           <button onClick={() => setPayMode("card")} className={`flex-1 h-7 rounded-full text-[10px] font-semibold ${payMode === "card" ? "bg-primary text-white" : "text-muted-foreground"}`} data-testid="live-gift-mode-card">Con tarjeta (USD) · 15 % BRUNO</button>
         </div>
-        {payMode === "card" && checkout.quote && <div className="mb-2"><QuoteCard quote={checkout.quote} busy={checkout.busy} cta="Enviar regalo" onPay={() => checkout.pay({ kind: "gift", ref_id: liveId, option: pendingGift })} onCancel={() => setPendingGift(null)} /></div>}
+        {payMode === "card" && checkout.quote && <div className="mb-2"><QuoteCard quote={checkout.quote} busy={checkout.busy} error={checkout.error} cta="Enviar regalo" onPay={() => checkout.pay({ kind: "gift", ref_id: liveId, option: pendingGift })} onCancel={() => setPendingGift(null)} /></div>}
         <div className="bruno-glass rounded-[22px] border p-3 mb-2 grid grid-cols-6 gap-1" data-testid="live-gifts-panel">
           {GIFTS.map((g) => (
             <button key={g.id} onClick={() => (payMode === "card" ? pickPaid(g) : sendGift(g))} className="flex flex-col items-center gap-0.5 rounded-xl py-1.5 hover:bg-foreground/[0.06] active:scale-95" data-testid={`live-gift-${g.id}`}>
