@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 104 regression on web session cookie, Cloudinary chunked upload endpoints, public coupon landing, purchases/receipts, sale notifications, feed long-video exclusion, and all mobile UI (card top bar, bottom nav, reels sheet, coupon landing + checkout preseed, purchases page). Backend pytest: 16/17 PASS (/app/backend/tests/test_iteration104.py). Only backend failure: Set-Cookie attribute SameSite is 'None; Partitioned' instead of 'Lax' (code in utils/security.py sets samesite='lax', but the edge/CDN appears to rewrite it on egress). Frontend @390x844 with injected --safe-area-inset-top:47px/--safe-area-inset-bottom:34px: card-top-bar sticky w/ padding-top:47px, back/edit/share/qr buttons all 44x44 at y=55, each receives its own click via elementFromPoint; share section ('Copiar enlace / Compartir / Imagen para redes / Transferir') visible at y≈488 with nav at y=788 (not covered); no horizontal overflow. Bottom nav: height=48, buttons ≥44x44, minimizes on scroll (height goes 48→24). Reels (viewer2): rail no longer contains reel-save-btn/share/remix (count=0); reel-more-btn → reel-options-sheet with reel-quick-actions grid containing Guardar/Enviar/Remix; Save shows 'Guardado en favoritos' toast and label flips 'Guardar' → 'Quitar de guardados'. Coupon landing /cupon/d97a66b9-… renders coupon-landing + coupon-landing-code=VERANO20 + coupon-landing-saved; localStorage.bruno_coupon = {id, code:'VERANO20', seller_id, at}. Purchases page: purchases-page present with purchase-receipt-* and purchase-resend-* buttons; clicking resend produces a toast; profile-purchases-btn visible on /my-profile. Backend /api/money/purchases shows receipt_sent_at and /api/money/purchases/{id}/receipt returns 200/429. Backend /api/notifications includes a 'sale' type notification for testa. Backend /api/posts/recommended-videos?kind=all&limit=20 → 200 (list empty on this account, no long videos). Backend /api/upload/limits returns plan='Free', video_max_bytes=104857600 (100 MB), chunk_bytes=20971520, note present; /video/sign at 50 MB returns upload_url+signature/api_key/timestamp/folder/eager/context+upload_id; 350 MB → 413 mentioning 100 MB; /video/complete without public_id → 400; unknown public_id → 404.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/auth/login (platform='web')", "issue": "Set-Cookie attribute is 'SameSite=None; Partitioned' instead of 'SameSite=Lax' required by spec. backend/utils/security.py:192 sets samesite='lax' — the deviation appears to be edge/CDN rewriting on egress (CHIPS Partitioned). Cookie still functions (same-origin requests include it), but spec compliance fails."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Web logout → reload redirect", "issue": "After POST /api/auth/logout (credentials:include) and reloading '/', viewer2 landed on /reels instead of /login. The backend logout test passes (cookie invalidated, token revoked), but the SPA still rendered a logged-in-like landing. Not fully diagnosed; may be that /reels is a public route or that AuthContext holds in-memory token until the next 401. Minor UX, not blocking.", "affected_selectors": []}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration104.py",
+    "/app/test_reports/pytest/iter104.xml"
+  ],
+  "action_items": [
+    "LOW: Investigate SameSite=Lax override at proxy — if intentional, update spec; otherwise ensure Starlette set_cookie sees samesite='lax' survives the preview edge (test again on production domain).",
+    "LOW: Verify client-side logout clears in-memory token so the next SPA navigation goes to /login immediately (not after a 401 round-trip). Not blocking; cookie IS cleared server-side."
+  ],
+  "critical_code_review_comments": [
+    "utils/security.py samesite='lax' is correct intent; verify no middleware or CDN strips/rewrites it. If the preview env always rewrites to SameSite=None;Partitioned, document this (the user won't observe a functional break on same-origin preview).",
+    "Could not reach a live /c/ product via /api/marketplace/products?limit=50 (returned empty list for viewer2). Checkout coupon pre-apply integration not re-verified end-to-end; backend _discount logic was proven in iteration_103 (test_coupons_receipts.py 25/25)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration104.py (new)",
+    "/app/test_reports/pytest/iter104.xml (new)"
+  ],
+  "success_rate": {"backend": "94% (16/17)", "frontend": "~95% (card top bar, bottom nav, reels sheet, coupon landing + localStorage, purchases + resend, profile-purchases-btn, no-h-overflow, session restore on reload all verified; could not confirm checkout coupon-applied/quote-discount or live-close-btn+live-end-confirm flow because no active live and product list returned empty)"},
+  "test_credentials": "newtest@bruno.com / Test1234! · viewer2@bruno.com / Test1234! · delivered+brunoqa@resend.dev / Prueba1234! · testa@brunoqa.com / Prueba1234!",
+  "seed_data_creation": "None (test is read-only against the API).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest /app/backend/tests/test_iteration104.py -v` for 17 backend checks (expect 16 pass + 1 known SameSite deviation). For FE, inject :root{--safe-area-inset-top:47px;--safe-area-inset-bottom:34px} after load for safe-area-dependent checks. Card id 731e16a0-df46-4b8c-a028-4ab05fa922f7 (newtest). Public coupon id d97a66b9-da42-460e-882d-f2d4ba42a63c = VERANO20. Prev iteration_103 covered coupon/receipt business logic (25/25). Live close flow (live-end-confirm, live-close-btn, live-end-cancel, live-end-confirm-btn) could not be exercised because no active live was running at test time — try scheduling one via /lives/start as newtest if needed.",
+  "rca_of_the_issue": "SameSite deviation: utils/security.py explicitly sets samesite='lax', so the discrepancy observed in the raw Set-Cookie header ('SameSite=None; Partitioned') originates downstream of FastAPI (preview edge / proxy adding CHIPS). Confirmed by reading /app/backend/utils/security.py:192. Logout-redirect anomaly: likely the SPA retains the access_token obtained at login in memory (AuthContext) until a 401 is encountered; cookie is cleared server-side (session_restore→401 verified in pytest)."
+}
