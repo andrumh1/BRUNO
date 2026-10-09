@@ -108,7 +108,7 @@ const LoginPage = () => {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm" role="alert" data-testid="login-error">
                 <AlertCircle className="w-4 h-4" />
                 <span>{error}</span>
               </div>

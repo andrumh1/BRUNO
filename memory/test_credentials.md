@@ -25,3 +25,10 @@
 - Email: viewer2@bruno.com
 - Password: Test1234!
 - username: viewerdos · id: 3636b29b-ae7d-49c4-8a1e-2312500d0eeb
+
+## Cuentas QA aisladas (auth / chats / llamadas) — creadas 2026-06
+- A: testa@brunoqa.com / Prueba1234!
+- B: testb@brunoqa.com / Prueba1234!
+- C: testc@brunoqa.com / Prueba1234!
+- Script de regresión: `cd /app/backend && python3 tests/test_auth_chat_isolation.py` (33 comprobaciones; necesita Origin en WS).
+- Bloqueo: 5 fallos → 429 durante 15 min (por correo y por IP).

@@ -1,0 +1,32 @@
+{
+  "summary": "Full regression on BRUNO.APP security/bug-fix session (iteration 99). Backend regression script (33/33) PASSES. Frontend auth, existing-session banner, account switching, cross-account chat isolation, cross-context messaging, account-switch leak, call signalling (decline flow + C-not-notified), and mobile layout at 390/360/430 with simulated 47/34 safe-area insets all PASS. Call accept-flow (Daily iframe) and cancel-before-answer flow were only partially exercised in UI (decline + no-leak-to-C were verified; backend tests already cover answer/cancel/busy/timeout).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "LoginPage error alert", "issue": "The error container shown after a 401 wrong-password lacks data-testid=\"login-error\" (as hinted in the request). The red error text (text 'Correo o contraseña incorrectos') does render inside a div with bg-destructive styling, but automated tests cannot select it reliably by data-testid. Not functional, but testability gap.", "selector": "div.bg-destructive\\/10 inside LoginPage.jsx line 111", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auth_chat_isolation.py",
+    "/app/test_reports/iteration_99.json"
+  ],
+  "action_items": [
+    "(Optional, low priority) Add data-testid=\"login-error\" to the error alert <div> in /app/frontend/src/pages/LoginPage.jsx (around line 111) for more robust automated error assertions.",
+    "(Nice-to-have) Expose a stable data-testid for the floating chat bubble trigger (currently only the opened/minimized panel has data-testid=\"floating-chat-minimized\"); this would let tests validate the per-user remount more precisely."
+  ],
+  "critical_code_review_comments": [
+    "LoginPage.jsx: error container could use a stable data-testid for testability.",
+    "FloatingChatBubble.jsx: trigger button has no explicit data-testid; only inner elements are tagged.",
+    "Backend login lock recovery: not re-tested in this iteration to avoid locking A/B/C per the agent note; backend script covers it."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (33/33 regression)", "frontend": "~95% (all auth, isolation, messaging, mobile layout verified; call accept iframe & cancel flow only partially re-verified in UI)"},
+  "test_credentials": "A: testa@brunoqa.com / Prueba1234! · B: testb@brunoqa.com / Prueba1234! · C: testc@brunoqa.com / Prueba1234! · Mobile: newtest@bruno.com / Test1234!",
+  "seed_data_creation": "None. Used existing A/B/C fixtures + mobile layout user (newtest@bruno.com) already present.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression lives at /app/backend/tests/test_auth_chat_isolation.py (standalone, prints PASS/FAIL). Do NOT execute more than 4 wrong-password attempts per A/B/C account within 15 min window — lock is 429. The LoginPage error alert does not expose data-testid=login-error; use role=alert or text match on 'Correo o contraseña incorrectos'. The FloatingChatBubble trigger has no data-testid; use data-testid=floating-chat-minimized for the opened state. Call UI: decline tested via button[aria-label*='echazar']; accept via text 'Aceptar'/'Contestar'. Mobile safe-area simulation: add_init_script sets --safe-area-inset-top=47px and --safe-area-inset-bottom=34px on DOMContentLoaded; nav height=54 and nav bottom edge = innerHeight - 42 verified on 390/360/430.",
+  "rca_of_the_issue": "N/A — no regressions found. Previously-fixed items (chat isolation across accounts in same browser, WS reconnect leak, incoming_call only to callee, mobile pill nav sitting 8px above safe-area, reels caption above AI btn/nav, map controls below top notch, no horizontal overflow) all verified."
+}
