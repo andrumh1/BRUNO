@@ -1,0 +1,67 @@
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Loader2, Mail, Receipt, CheckCircle2, ExternalLink } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { brunoToast } from "@/components/bruno/BrunoToast";
+import { fmtMoney, detailMsg } from "@/hooks/useBrunoCheckout";
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const KIND = { live_ticket: "Entrada a live", gift: "Regalo en vivo", marketplace: "Marketplace", piup: "PIUP", promotion: "Promoción" };
+const STATUS = { paid: "Pagado", partially_refunded: "Reembolso parcial", refunded: "Reembolsado", initiated: "Pendiente", failed: "Fallido", expired: "Caducado" };
+const LINK = { live_ticket: (r) => `/lives/${r}`, gift: (r) => `/lives/${r}`, marketplace: (r) => `/marketplace/product/${r}`, piup: () => "/piup", promotion: () => "/monetization" };
+
+const PurchaseRow = ({ p, onResend, busy }) => (
+  <div className="rounded-2xl border border-border/60 p-3 text-sm space-y-2" data-testid={`purchase-${p.id}`}>
+    <div className="flex items-start gap-3">
+      <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary grid place-items-center shrink-0"><Receipt className="w-4 h-4" /></div>
+      <div className="min-w-0 flex-1">
+        <p className="font-medium truncate">{p.name}</p>
+        <p className="text-[11px] text-muted-foreground">{KIND[p.kind] || p.kind} · {new Date(p.date).toLocaleString("es")} · <span data-testid={`purchase-status-${p.id}`}>{STATUS[p.status] || p.status}</span></p>
+        {p.receipt_sent_at && <p className="text-[11px] text-emerald-600 flex items-center gap-1" data-testid={`purchase-receipt-${p.id}`}><CheckCircle2 className="w-3 h-3" /> Recibo enviado a {p.receipt_to}</p>}
+      </div>
+      <p className="font-bold tabular-nums shrink-0">{fmtMoney(p.total, p.currency)}</p>
+    </div>
+    <div className="flex gap-2">
+      {["paid", "partially_refunded", "refunded"].includes(p.status) && (
+        <Button size="sm" variant="outline" className="rounded-full h-9" onClick={() => onResend(p)} disabled={busy === p.id} data-testid={`purchase-resend-${p.id}`}>
+          {busy === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Mail className="w-4 h-4 mr-1.5" /> Reenviar recibo</>}
+        </Button>
+      )}
+      {LINK[p.kind] && <Button size="sm" variant="ghost" className="rounded-full h-9" asChild><a href={LINK[p.kind](p.ref_id)} data-testid={`purchase-open-${p.id}`}><ExternalLink className="w-4 h-4 mr-1.5" /> Abrir</a></Button>}
+    </div>
+  </div>
+);
+
+export default function MyPurchasesPage() {
+  const { token } = useAuth();
+  const navigate = useNavigate();
+  const [list, setList] = useState(null);
+  const [busy, setBusy] = useState("");
+  const headers = { Authorization: `Bearer ${token}` };
+
+  useEffect(() => { if (token) axios.get(`${API}/money/purchases`, { headers }).then((r) => setList(r.data)).catch(() => setList([])); /* eslint-disable-next-line */ }, [token]);
+
+  const resend = async (p) => {
+    setBusy(p.id);
+    try { const r = await axios.post(`${API}/money/purchases/${p.id}/receipt`, {}, { headers }); brunoToast.success("Recibo enviado", { description: `Revisa ${r.data.to}` }); setList((l) => l.map((x) => (x.id === p.id ? { ...x, receipt_sent_at: new Date().toISOString(), receipt_to: r.data.to } : x))); }
+    catch (e) { brunoToast.error(detailMsg(e) || "No se pudo reenviar el recibo"); }
+    finally { setBusy(""); }
+  };
+
+  return (
+    <div className="min-h-screen bg-background" data-testid="purchases-page">
+      <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border/40" style={{ paddingTop: "var(--safe-top, 0px)" }}>
+        <div className="h-14 px-3 flex items-center gap-2"><Button variant="ghost" size="icon" onClick={() => navigate(-1)} data-testid="purchases-back"><ArrowLeft className="w-5 h-5" /></Button><h1 className="text-base font-bold">Mis compras</h1></div>
+      </div>
+      <div className="max-w-2xl mx-auto p-4 space-y-3">
+        <p className="text-xs text-muted-foreground">Cada pago confirmado te llega también por correo. Si no lo encuentras, reenvíalo desde aquí.</p>
+        {list === null ? <div className="grid place-items-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+          : list.length === 0 ? <p className="text-sm text-muted-foreground text-center py-16" data-testid="purchases-empty">Aún no has comprado nada en BRUNO.</p>
+          : list.map((p) => <PurchaseRow key={p.id} p={p} onResend={resend} busy={busy} />)}
+        <div style={{ height: "var(--content-bottom)" }} />
+      </div>
+    </div>
+  );
+}

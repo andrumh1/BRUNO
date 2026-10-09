@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field
 
 from utils.security import get_current_user
 from utils.database import db
-from utils.email import send_email, receipt_html
+from utils.email import send_email, receipt_html, sale_html
 from models.user import User
 
 logger = logging.getLogger(__name__)
@@ -294,6 +294,20 @@ async def create_coupon(body: CouponBody, current_user: User = Depends(get_curre
     return _coupon_out(doc)
 
 
+@router.get("/coupons/{coupon_id}/public")
+async def public_coupon(coupon_id: str):
+    """Shareable coupon landing data (no auth): who offers it and what it gives."""
+    d = await db.discount_codes.find_one({"id": coupon_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(status_code=404, detail="Cupón no encontrado")
+    seller = await db.users.find_one({"id": d["seller_id"]}, {"_id": 0, "id": 1, "name": 1, "username": 1})
+    prof = await db.user_profiles.find_one({"user_id": d["seller_id"]}, {"_id": 0, "display_name": 1, "avatar_url": 1})
+    out = _coupon_out(d)
+    valid = out["active"] and not out["expired"] and not out["exhausted"]
+    return {"id": d["id"], "code": d["code"], "pct": d.get("pct"), "amount": out["amount"], "currency": d.get("currency"), "applies_to": d.get("applies_to", "all"), "applies_label": KIND_LABEL.get(d.get("applies_to", "all"), "Todo"),
+            "expires_at": d.get("expires_at"), "valid": valid, "seller": {"id": d["seller_id"], "name": (prof or {}).get("display_name") or (seller or {}).get("name") or "Creador", "username": (seller or {}).get("username"), "avatar_url": (prof or {}).get("avatar_url")}}
+
+
 @router.patch("/coupons/{coupon_id}")
 async def toggle_coupon(coupon_id: str, current_user: User = Depends(get_current_user)):
     d = await db.discount_codes.find_one({"id": coupon_id, "seller_id": current_user.id}, {"_id": 0})
@@ -415,7 +429,48 @@ async def _mark_paid(session: dict) -> Optional[dict]:
         if entry.get("coupon_id"):
             await db.discount_codes.update_one({"id": entry["coupon_id"]}, {"$inc": {"uses_count": 1}, "$set": {"last_used_at": now_iso()}})
         asyncio.create_task(_send_receipt(entry, quiet=True))
+        if entry.get("seller_id"):
+            asyncio.create_task(_notify_sale(entry))
     return entry
+
+
+SALE_LABEL = {"live_ticket": "una entrada a tu live", "gift": "un regalo en tu live", "marketplace": "un producto de tu tienda"}
+
+
+async def _notify_sale(entry: dict):
+    """Creator alert for every sale: in-app notification (+WS), push and a real email."""
+    seller_id = entry["seller_id"]
+    cur = entry["currency"]
+    net = fmt_minor(entry["seller_net_minor"], cur)
+    net_label = f"{net:,.2f} {cur.upper()}" if cur not in ZERO_DECIMAL else f"{int(net):,} {cur.upper()}"
+    buyer = await db.users.find_one({"id": entry["buyer_id"]}, {"_id": 0, "name": 1}) or {}
+    what = SALE_LABEL.get(entry["kind"], "algo")
+    msg = f"{buyer.get('name') or 'Alguien'} compró {what} · {entry['name']} · recibes {net_label}"
+    try:
+        notif = {"id": str(uuid.uuid4()), "user_id": seller_id, "actor_id": entry["buyer_id"], "type": "sale", "message": msg, "from_user_id": entry["buyer_id"],
+                 "target_id": entry["id"], "target_type": "sale", "url": "/earnings", "is_read": False, "created_at": now_iso()}
+        await db.notifications.insert_one(dict(notif))
+        from utils.notification_realtime import emit_notification_ws
+        await emit_notification_ws(notif)
+    except Exception as e:
+        logger.warning(f"sale notification failed: {e}")
+    try:
+        from routers.push_notifications import send_push_notification, NotificationPayload
+        await send_push_notification(seller_id, NotificationPayload(title="Nueva venta en BRUNO", body=msg, url="/earnings", tag=f"sale-{entry['id']}"))
+    except Exception as e:
+        logger.warning(f"sale push failed: {e}")
+    seller = await db.users.find_one({"id": seller_id}, {"_id": 0, "email": 1, "name": 1}) or {}
+    if not seller.get("email"):
+        return
+    app_url = (entry.get("origin_url") or os.environ.get("FRONTEND_URL") or "").rstrip("/")
+    try:
+        html = sale_html(seller_name=seller.get("name") or "hola", item_name=entry["name"], buyer_name=buyer.get("name") or "Un comprador", kind_label=KIND_RECEIPT.get(entry["kind"], entry["kind"]),
+                         total=f"{fmt_minor(entry['total_minor'], cur):,.2f} {cur.upper()}", fee=f"{fmt_minor(entry['fee_minor'], cur):,.2f} {cur.upper()} ({entry['fee_pct']} %)", net=net_label,
+                         app_url=app_url if app_url.startswith("https://") else None)
+        await send_email(to=seller["email"], subject=f"Nueva venta · {entry['name'][:60]}", html=html)
+        await db.ledger_entries.update_one({"id": entry["id"]}, {"$set": {"sale_email_sent_at": now_iso()}})
+    except Exception as e:
+        logger.warning(f"sale email failed for {entry['id']}: {getattr(e, 'detail', e)}")
 
 
 KIND_RECEIPT = {"live_ticket": "Entrada a live privado", "gift": "Regalo en vivo", "marketplace": "Compra en Marketplace", "piup": "Pedido PIUP", "promotion": "Promoción de publicación"}

@@ -35,7 +35,7 @@ const RegisterPage = () => {
     }
 
     try {
-      const response = await axios.post(`${API}/auth/register`, formData);
+      const response = await axios.post(`${API}/auth/register`, formData, { withCredentials: true });
       login(response.data.user, response.data.access_token);
       navigate("/my-profile");
     } catch (err) {

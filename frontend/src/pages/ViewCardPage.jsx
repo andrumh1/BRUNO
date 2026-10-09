@@ -132,49 +132,52 @@ const ViewCardPage = () => {
   const bg = design.background.color;
 
   return (
-    <div className="min-h-screen bg-background pb-20" data-testid="view-card-page" data-card-theme={isDark ? "dark" : "light"}>
-      {/* Subtle background glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+    <div className="min-h-screen bg-background" style={{ paddingBottom: "calc(var(--content-bottom, 96px) + 72px)" }} data-testid="view-card-page" data-card-theme={isDark ? "dark" : "light"}>
+      {/* Subtle background glow — decorative only, never above controls nor interactive */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden>
         <div className="absolute top-1/3 left-1/3 w-[500px] h-[500px] rounded-full blur-[140px] opacity-10" style={{ backgroundColor: bg }} />
         <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full blur-[120px] opacity-8" style={{ backgroundColor: bg }} />
       </div>
 
-      {/* Top bar - full width */}
-      <div className="relative z-20 w-full px-4 sm:px-6 lg:px-10 pt-3 sm:pt-4 pb-2 flex items-center justify-between">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)} data-testid="card-back-btn">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex items-center gap-1 sm:gap-2">
-          <Button variant="ghost" size="icon" onClick={() => {
-            addMinimizedCard({
-              id: cardId,
-              title: card?.title || card?.name || '',
-              card_type: card?.card_type || '',
-              thumbnail: card?.avatar_url || card?.banner_url || null,
-            });
-            navigate(-1);
-          }} data-testid="card-minimize-btn" title="Minimizar">
-            <Minimize2 className="w-4 h-4" />
+      {/* Top bar - sticky under the status bar/notch, solid glass so controls stay readable over any card */}
+      <div className="sticky top-0 z-40 w-full isolate" data-testid="card-top-bar" style={{ paddingTop: "var(--safe-top, 0px)" }}>
+        <div className="absolute inset-0 bg-background/90 backdrop-blur-xl border-b border-border/40 pointer-events-none" aria-hidden />
+        <div className="relative px-3 sm:px-6 lg:px-10 py-2 flex items-center justify-between gap-2">
+          <Button variant="outline" size="icon" onClick={() => navigate(-1)} data-testid="card-back-btn" aria-label="Volver" className="h-11 w-11 rounded-full bg-card shadow-sm shrink-0">
+            <ArrowLeft className="w-5 h-5" />
           </Button>
-          {isOwner && (
-            <Button variant="ghost" size="sm" onClick={() => navigate(`/cards/${cardId}/edit`)} data-testid="card-edit-btn">
-              <Pencil className="w-4 h-4 mr-1.5" /> Editar
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar">
+            <Button variant="outline" size="icon" className="h-11 w-11 rounded-full bg-card shadow-sm shrink-0" onClick={() => {
+              addMinimizedCard({
+                id: cardId,
+                title: card?.title || card?.name || '',
+                card_type: card?.card_type || '',
+                thumbnail: card?.avatar_url || card?.banner_url || null,
+              });
+              navigate(-1);
+            }} data-testid="card-minimize-btn" title="Minimizar" aria-label="Minimizar">
+              <Minimize2 className="w-4 h-4" />
             </Button>
-          )}
-          {isOwner && (
-            <Button variant="ghost" size="icon" onClick={() => navigate(`/cards/${cardId}/transfer`)} data-testid="card-nfc-transfer-btn" title="Transferir por NFC" className="text-primary">
-              <Nfc className="w-4 h-4" />
+            {isOwner && (
+              <Button size="sm" onClick={() => navigate(`/cards/${cardId}/edit`)} data-testid="card-edit-btn" className="h-11 rounded-full px-4 shadow-sm shrink-0">
+                <Pencil className="w-4 h-4 mr-1.5" /> Editar
+              </Button>
+            )}
+            {isOwner && (
+              <Button variant="outline" size="icon" onClick={() => navigate(`/cards/${cardId}/transfer`)} data-testid="card-nfc-transfer-btn" title="Transferir por NFC" aria-label="Transferir por NFC" className="h-11 w-11 rounded-full bg-card shadow-sm text-primary shrink-0">
+                <Nfc className="w-4 h-4" />
+              </Button>
+            )}
+            <Button variant="outline" size="icon" onClick={() => setTheme(isDark ? "light" : "dark")} data-testid="card-theme-toggle" title={isDark ? "Modo claro" : "Modo oscuro"} aria-pressed={isDark} className="h-11 w-11 rounded-full bg-card shadow-sm shrink-0">
+              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
-          )}
-          <Button variant="ghost" size="icon" onClick={() => setTheme(isDark ? "light" : "dark")} data-testid="card-theme-toggle" title={isDark ? "Modo claro" : "Modo oscuro"} aria-pressed={isDark}>
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </Button>
-          <Button variant="ghost" size="icon" onClick={handleShare} data-testid="card-share-btn">
-            <Share2 className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={fetchQRCode} data-testid="card-qr-btn">
-            <QrCode className="w-4 h-4" />
-          </Button>
+            <Button variant="outline" size="icon" onClick={handleShare} data-testid="card-share-btn" aria-label="Compartir" className="h-11 w-11 rounded-full bg-card shadow-sm shrink-0">
+              <Share2 className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={fetchQRCode} data-testid="card-qr-btn" aria-label="Código QR" className="h-11 w-11 rounded-full bg-card shadow-sm shrink-0">
+              <QrCode className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 

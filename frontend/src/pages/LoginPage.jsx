@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
+import { isNative } from "@/native/capacitor";
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -46,10 +47,11 @@ const LoginPage = () => {
       const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|Opera Mini|IEMobile/i.test(navigator.userAgent);
       const payload = {
         ...formData,
-        platform: isMobile ? "mobile" : "web",
+        platform: isNative() ? "native" : isMobile ? "mobile" : "web",
         keep_session_active: keepActive,
+        remember: keepActive,
       };
-      const response = await axios.post(`${API}/auth/login`, payload);
+      const response = await axios.post(`${API}/auth/login`, payload, { withCredentials: true });
       if (!response.data?.access_token || !response.data?.user) throw new Error("Respuesta de acceso inválida");
       if (isAuthenticated && sessionUser && sessionUser.id !== response.data.user.id) await logout();
       // Persist preferences

@@ -39,3 +39,7 @@
 - delivered+brunoqa@resend.dev / Prueba1234! (id f113dac3-0932-45b6-812b-5ac241c5408d)
 - Cupones de prueba del vendedor newtest: VERANO20 (20 %, 2 usos, caduca 31/12/2026), FIJO5 (5 USD, solo Marketplace)
 - Producto de newtest para cotizar: 4334a391-d035-463c-b8cc-3e18e88aa833 (149.99 USD)
+
+## Sesión web con cookie httpOnly (2026-06)
+- Login web → cookie `bruno_session` (httpOnly, Secure, SameSite=Lax, path=/api) + token en memoria (no en localStorage). `POST /api/auth/session/restore` devuelve el token a partir de la cookie. Nativo (platform=native) sigue con Bearer en almacenamiento cifrado.
+- Compra simulada QA del comprador delivered+brunoqa@resend.dev (vendedor testa@brunoqa.com) para /purchases y reenvío de recibo.

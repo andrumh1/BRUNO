@@ -28,7 +28,7 @@ LOGIN_MAX_ATTEMPTS = 5
 LOGIN_LOCK_MINUTES = 15
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 _global_min_iat_cache = {"value": 0, "checked_at": 0.0}
 
@@ -184,18 +184,42 @@ async def clear_login_failures(email: str, ip: str) -> None:
     await db.login_attempts.delete_many({"key": {"$in": [f"email:{email.lower()}", f"ip:{ip}"]}})
 
 
+SESSION_COOKIE = "bruno_session"
+
+
+def set_session_cookie(response, token: str, persistent: bool = True, max_age_days: int = 30) -> None:
+    """httpOnly session cookie for the web app (same-origin → SameSite=Lax blocks cross-site CSRF)."""
+    kwargs = {"key": SESSION_COOKIE, "value": token, "httponly": True, "secure": True, "samesite": "lax", "path": "/api"}
+    if persistent:
+        kwargs["max_age"] = max_age_days * 86400
+    response.set_cookie(**kwargs)
+
+
+def clear_session_cookie(response) -> None:
+    response.delete_cookie(SESSION_COOKIE, path="/api", httponly=True, secure=True, samesite="lax")
+
+
+def token_from_request(request: Optional[Request], credentials: Optional[HTTPAuthorizationCredentials]) -> Optional[str]:
+    if credentials and credentials.credentials:
+        return credentials.credentials
+    return request.cookies.get(SESSION_COOKIE) if request is not None else None
+
+
 async def get_current_user_optional(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
 ) -> Optional[User]:
-    if not credentials:
+    token = token_from_request(request, credentials)
+    if not token:
         return None
-    return await resolve_user_from_token(credentials.credentials)
+    return await resolve_user_from_token(token)
 
 
 async def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ) -> User:
-    user = await resolve_user_from_token(credentials.credentials if credentials else None)
+    user = await resolve_user_from_token(token_from_request(request, credentials))
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

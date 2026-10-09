@@ -33,6 +33,7 @@ export default function StartLivePage() {
   const [muted, setMuted] = useState(false);
   const [camError, setCamError] = useState(null);
   const [codePanel, setCodePanel] = useState(false);
+  const [endConfirm, setEndConfirm] = useState(false);
   const [modOpen, setModOpen] = useState(false);
   const [interactOpen, setInteractOpen] = useState(false);
   const [scheduleAt, setScheduleAt] = useState("");
@@ -100,6 +101,7 @@ export default function StartLivePage() {
     const id = live.id;
     try { await axios.post(`${API}/lives/${id}/end`, {}, { headers }); } catch (_) { /* ignore */ }
     stream?.getTracks().forEach((t) => t.stop());
+    daily.localStream?.getTracks?.().forEach((t) => t.stop());
     brunoToast.success("Live finalizado");
     navigate(`/lives/${id}/summary`, { replace: true });
   };
@@ -149,8 +151,21 @@ export default function StartLivePage() {
             {daily.state === "connected" ? (daily.quality === "good" ? "En vivo" : "Señal débil") : daily.state === "interrupted" ? "Reconectando…" : daily.state === "error" ? "Sin conexión" : "Conectando…"}
           </span>
         </div>
-        <LiveTopBar live={live} viewerCount={rtc.viewerCount} hostOnline={rtc.connected} onClose={() => { if (window.confirm("¿Finalizar el live para todos?")) end(); }}
+        <LiveTopBar live={live} viewerCount={rtc.viewerCount} hostOnline={rtc.connected} onClose={() => setEndConfirm(true)}
           right={live.is_private && <button onClick={() => setCodePanel((v) => !v)} className="h-9 px-3 rounded-full bg-primary text-white text-xs font-bold inline-flex items-center gap-1" data-testid="live-code-toggle"><KeyRound className="w-3.5 h-3.5" /> Código</button>} />
+
+        {endConfirm && (
+          <div className="absolute inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" data-testid="live-end-confirm" onClick={() => setEndConfirm(false)}>
+            <div className="w-full max-w-sm rounded-3xl bg-card text-foreground p-5 space-y-3" style={{ marginBottom: "var(--safe-bottom)" }} onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-bold text-lg">¿Finalizar la transmisión?</h3>
+              <p className="text-sm text-muted-foreground">Se cerrará para todos los espectadores{rtc.recording ? ", se detendrá la grabación" : ""} y se apagarán tu cámara y micrófono. Verás el resumen al terminar.</p>
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setEndConfirm(false)} className="flex-1 h-11 rounded-full bg-foreground/[0.06] text-sm font-semibold" data-testid="live-end-cancel">Cancelar</button>
+                <button onClick={() => { setEndConfirm(false); end(); }} className="flex-1 h-11 rounded-full bg-destructive text-white text-sm font-semibold" data-testid="live-end-confirm-btn">Finalizar</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Host controls */}
         <div className="absolute right-3 z-30 flex flex-col gap-2" style={{ top: "calc(var(--safe-top) + 64px)" }}>

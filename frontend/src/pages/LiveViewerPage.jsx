@@ -129,6 +129,12 @@ export default function LiveViewerPage() {
   };
   useEffect(() => { if (rtc.denied) { setJoined(false); brunoToast.error("Código de acceso rechazado"); } }, [rtc.denied]);
   useEffect(() => () => { if (joined && token) axios.post(`${API}/lives/${liveId}/leave`, {}, { headers }).catch(() => {}); }, [joined]);
+  // Salir: detiene la reproducción de inmediato (audio incluido) y vuelve a la pantalla anterior o a /lives.
+  const leaveLive = () => {
+    const v = videoRef.current;
+    if (v) { try { v.pause(); v.srcObject = null; v.removeAttribute("src"); } catch (_) { /* ignore */ } }
+    if (window.history.length > 1) navigate(-1); else navigate("/lives", { replace: true });
+  };
 
   if (isJoinRoute || loading || authLoading) return <div className="fixed inset-0 bg-black grid place-items-center"><Loader2 className="w-8 h-8 text-white animate-spin" /></div>;
 
@@ -196,7 +202,7 @@ export default function LiveViewerPage() {
       </PrivacyShield>
       {rtc.recording && <div className="absolute left-3 z-30 h-7 px-2.5 rounded-full bg-red-600 text-white text-[11px] font-bold inline-flex items-center gap-1.5" style={{ top: "calc(var(--safe-top) + 64px)" }} data-testid="live-viewer-rec-banner"><span className="w-2 h-2 rounded-full bg-white animate-pulse" /> REC · Este live se está grabando</div>}
 
-      <LiveTopBar live={live} viewerCount={rtc.viewerCount} hostOnline={rtc.hostOnline} onClose={() => navigate(-1)}
+      <LiveTopBar live={live} viewerCount={rtc.viewerCount} hostOnline={rtc.hostOnline} onClose={leaveLive}
         right={<div className="flex items-center gap-1.5">
           {live?.host_id !== user?.id && <button onClick={toggleFollow} className={`h-9 px-3 rounded-full text-xs font-bold inline-flex items-center gap-1 ${following ? "bg-white/20 text-white" : "bg-primary text-white"}`} data-testid="live-follow-btn" aria-pressed={following}>{following ? <Check className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}{following ? "Siguiendo" : "Seguir"}</button>}
           <button onClick={shareLive} className="w-9 h-9 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-share-btn" aria-label="Compartir"><Share2 className="w-4 h-4" /></button>

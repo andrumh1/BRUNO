@@ -9,6 +9,8 @@ import InternalGalleryPicker from "@/components/bruno/InternalGalleryPicker";
 import axios from "axios";
 import * as faceapi from "face-api.js";
 import { VideoTrimCover, UploadProgress, DraftsSheet } from "@/components/camera/VideoPublishTools";
+import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
+import { setVideoLimit, videoTooLarge, videoTooLargeMsg } from "@/lib/media";
 import {
   Camera,
   Video,
@@ -188,15 +190,23 @@ const BrunoCameraPage = () => {
   /* Sube el video/foto con progreso real; aplica recorte y portada elegidos en la vista previa. Reutiliza el media de un borrador. */
   const uploadMedia = async () => {
     if (capturedMedia.remote && capturedMedia.up) return capturedMedia.up;
-    const formData = new FormData();
     const resp = await fetch(capturedMedia.data);
     const blob = await resp.blob();
     const ext = capturedMedia.type === "photo" ? "jpg" : (capturedMedia.ext || (blob.type.includes("mp4") ? "mp4" : "webm"));
-    formData.append("file", blob, `bruno_${Date.now()}.${ext}`);
-    const params = capturedMedia.type === "photo" ? {} : { ...(trim.start > 0 ? { trim_start: trim.start.toFixed(2) } : {}), ...(trim.end > 0 ? { trim_end: trim.end.toFixed(2) } : {}), ...(coverAt != null ? { cover_at: coverAt.toFixed(2) } : {}) };
+    const fileName = `bruno_${capturedMedia.fileKey || Date.now()}.${ext}`;
     setUpload({ pct: 0, phase: "upload", error: null });
+    if (capturedMedia.type !== "photo") {
+      // Video: subida directa por partes y reanudable (no pasa por el servidor de BRUNO); límite real del plan.
+      const file = new File([blob], fileName, { type: blob.type || "video/mp4", lastModified: capturedMedia.lastModified || 0 });
+      const lim = await getUploadLimits(token).catch(() => null);
+      if (lim?.video_max_bytes) setVideoLimit(lim.video_max_bytes);
+      if (videoTooLarge(file)) throw Object.assign(new Error("too large"), { userMessage: videoTooLargeMsg() });
+      return uploadVideoDirect(file, { token, trim, coverAt, onProgress: (p) => setUpload({ pct: p.pct, phase: p.phase === "retry" ? "retry" : p.phase, error: null, loaded: p.loaded, total: p.total }) });
+    }
+    const formData = new FormData();
+    formData.append("file", blob, fileName);
     const res = await axios.post(`${API}/upload/image`, formData, {
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }, params,
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       onUploadProgress: (e) => { const pct = e.total ? Math.round((e.loaded * 100) / e.total) : 0; setUpload({ pct, phase: pct >= 100 ? "process" : "upload", error: null }); },
     });
     return res.data || {};
@@ -214,7 +224,7 @@ const BrunoCameraPage = () => {
       brunoToast.success("Borrador guardado", { description: "Retómalo desde «Borradores» en la cámara." });
       setUpload({ pct: 0, phase: null, error: null }); setCapturedMedia(null); setCaption(""); setDraftCount((n) => n + 1);
     } catch (err) {
-      setUpload((u) => ({ ...u, phase: null, error: err?.response?.data?.detail || "No se pudo guardar el borrador. Revisa tu conexión." }));
+      setUpload((u) => ({ ...u, phase: null, error: err?.userMessage || err?.response?.data?.detail || "No se pudo guardar el borrador. Revisa tu conexión." }));
     } finally { setPublishing(false); }
   };
 
@@ -617,7 +627,7 @@ const BrunoCameraPage = () => {
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
     mr.onstop = () => {
       const blob = new Blob(chunks, { type: supported.split(";")[0] });
-      setCapturedMedia({ type: "video", data: URL.createObjectURL(blob), ext });
+      setCapturedMedia({ type: "video", data: URL.createObjectURL(blob), ext, fileKey: Date.now() });
     };
     mr.start();
     setIsRecording(true);
@@ -715,7 +725,7 @@ const BrunoCameraPage = () => {
     } catch (err) {
       const { brunoToast } = await import("@/components/bruno/BrunoToast");
       brunoToast.error("No se pudo publicar", { description: err?.response?.data?.detail || "Revisa tu conexión e inténtalo de nuevo." });
-      setUpload((u) => ({ ...u, phase: null, error: err?.response?.data?.detail || "Falló la subida. Puedes reintentar sin perder tu video." }));
+      setUpload((u) => ({ ...u, phase: null, error: err?.userMessage || err?.response?.data?.detail || "Falló la subida. Puedes reintentar sin perder tu video." }));
     } finally {
       setPublishing(false);
     }
@@ -1197,7 +1207,7 @@ const BrunoCameraPage = () => {
             if (!file) return;
             const url = URL.createObjectURL(file);
             const isVideo = isVideoFile(file);
-            setCapturedMedia({ type: isVideo ? "video" : "photo", data: url, blob: file });
+            setCapturedMedia({ type: isVideo ? "video" : "photo", data: url, blob: file, fileKey: `${file.size}_${file.lastModified}`, lastModified: file.lastModified });
             if (isVideo && mode !== "video15" && mode !== "video60") setMode("video15");
           }}
         />

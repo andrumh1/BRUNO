@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Request, WebSocket, WebSocketDisconnect, Body
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Request, Response, WebSocket, WebSocketDisconnect, Body
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -101,6 +101,7 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
     platform: Optional[str] = "web"  # "web" | "mobile" | "native"
+    remember: Optional[bool] = True
 
 class Token(BaseModel):
     access_token: str
@@ -683,7 +684,7 @@ async def get_current_user_from_token(token: str) -> Optional[User]:
 # ============================================================================
 
 @api_router.post("/auth/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def register(user_input: UserCreate):
+async def register(user_input: UserCreate, response: Response):
     # Check if user exists
     existing_user = await db.users.find_one({"email": user_input.email})
     if existing_user:
@@ -706,11 +707,11 @@ async def register(user_input: UserCreate):
     
     # Create token
     access_token = create_access_token(data={"sub": user_obj.email})
-    
+    _sec.set_session_cookie(response, access_token)
     return Token(access_token=access_token, token_type="bearer", user=user_obj)
 
 @api_router.post("/auth/login", response_model=Token)
-async def login(user_input: UserLogin, request: Request):
+async def login(user_input: UserLogin, request: Request, response: Response):
     ip = client_ip(request)
     email = user_input.email.strip().lower()
     await check_login_allowed(email, ip)
@@ -734,6 +735,8 @@ async def login(user_input: UserLogin, request: Request):
     access_token = create_access_token(data={"sub": user_obj.email, "plt": user_input.platform or "web"}, expires_delta=expire_delta)
     await db.users.update_one({"id": user_obj.id}, {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}})
     await db.audit_logs.insert_one({"id": str(uuid.uuid4()), "user_id": user_obj.id, "action": "login", "ip": ip, "platform": user_input.platform or "web", "created_at": datetime.now(timezone.utc).isoformat()})
+    if user_input.platform != "native":
+        _sec.set_session_cookie(response, access_token, persistent=user_input.remember is not False)
     return Token(access_token=access_token, token_type="bearer", user=user_obj)
 
 @api_router.get("/auth/me/dnd")
@@ -756,19 +759,22 @@ async def update_dnd(payload: dict, current_user: User = Depends(get_current_use
     return {**dnd, "active": is_dnd_active({"dnd": dnd})}
 
 @api_router.get("/auth/me")
-async def get_me(current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
+async def get_me(request: Request, response: Response, current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
     user_dict = current_user.dict()
     # Auto-refresh token if it will expire within 7 days
-    if credentials and credentials.credentials:
+    raw = _sec.token_from_request(request, credentials)
+    if raw:
         try:
-            payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+            payload = jwt.decode(raw, SECRET_KEY, algorithms=[ALGORITHM])
             exp = payload.get("exp")
             if exp:
                 remaining = datetime.fromtimestamp(exp, tz=timezone.utc) - datetime.now(timezone.utc)
                 if remaining.days < 7:
                     new_token = create_access_token(data={"sub": payload.get("sub"), "plt": payload.get("plt", "web")})
                     user_dict["refreshed_token"] = new_token
-                    await revoke_token(credentials.credentials, current_user.id)
+                    if request.cookies.get(_sec.SESSION_COOKIE) == raw:
+                        _sec.set_session_cookie(response, new_token)
+                    await revoke_token(raw, current_user.id)
         except Exception:
             pass
     return user_dict
@@ -804,12 +810,14 @@ async def update_me(
     return User(**user_dict)
 
 @api_router.post("/auth/logout")
-async def logout(current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)), all_devices: bool = False):
+async def logout(request: Request, response: Response, current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)), all_devices: bool = False):
     """Invalidate this session (or every session of the user with ?all_devices=true)."""
+    raw = _sec.token_from_request(request, credentials)
     if all_devices:
         await revoke_all_user_tokens(current_user.id)
-    elif credentials and credentials.credentials:
-        await revoke_token(credentials.credentials, current_user.id)
+    elif raw:
+        await revoke_token(raw, current_user.id)
+    _sec.clear_session_cookie(response)
     await db.audit_logs.insert_one({
         "id": str(uuid.uuid4()),
         "user_id": current_user.id,
@@ -819,12 +827,23 @@ async def logout(current_user: User = Depends(get_current_user), credentials: Op
     return {"message": "Logged out successfully"}
 
 
+@api_router.post("/auth/session/restore")
+async def auth_session_restore(request: Request, response: Response):
+    """Web only: the httpOnly cookie proves the session; the token is returned for in-memory use (never persisted by the browser app)."""
+    raw = request.cookies.get(_sec.SESSION_COOKIE)
+    user = await resolve_user_from_token(raw) if raw else None
+    if not user:
+        _sec.clear_session_cookie(response)
+        raise HTTPException(status_code=401, detail="Sin sesión")
+    return {"access_token": raw, "token_type": "bearer", "user": user.model_dump()}
+
+
 @api_router.get("/auth/session")
-async def auth_session(current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
+async def auth_session(request: Request, current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
     """Lightweight session check: who am I and when does this token expire."""
     exp = None
     try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(_sec.token_from_request(request, credentials), SECRET_KEY, algorithms=[ALGORITHM])
         exp = payload.get("exp")
     except Exception:
         pass

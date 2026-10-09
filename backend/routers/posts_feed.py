@@ -402,6 +402,8 @@ async def get_recommended_videos(
                 if p.get("user_id"): affinity_authors.add(p["user_id"])
 
     base_q = {"visibility": "public"} if kind == "all" else {"visibility": "public", **VIDEO_QUERY}
+    # Reels are short-form: long videos (≥ 3 min, HLS) stay in the feed/profile/long-video player, not in the vertical swipe feed.
+    base_q["media.duration"] = {"$not": {"$gte": 180}}
     if mode == "following":
         if not follow_ids:
             return []

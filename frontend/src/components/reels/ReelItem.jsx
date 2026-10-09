@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Music2, Play, User, Plus, Minimize2, Maximize2, RotateCcw, Layers, Scissors, Columns2, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, Music2, Play, User, Plus, Minimize2, Maximize2, RotateCcw, Scissors, Columns2, MoreHorizontal } from "lucide-react";
 import ReelTextCard from "@/components/reels/ReelTextCard";
 import ReelCarousel from "@/components/reels/ReelCarousel";
 import ReelPlaybackControls from "@/components/reels/ReelPlaybackControls";
@@ -23,7 +23,7 @@ const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1
  */
 export default function ReelItem({
   reel, isActive, isNear, globalMuted, onToggleMute, onLike, onFollow,
-  onOpenComments, onOpenRemix, onOpenRemixes, onOpenSound, onOpenLikers, onOpenOptions, onSwipeLeft, onSwipeRight, onMinimize, hideChrome, currentUserId,
+  onOpenComments, onOpenRemixes, onOpenSound, onOpenLikers, onOpenOptions, onSwipeLeft, onSwipeRight, onMinimize, hideChrome, currentUserId,
 }) {
   const [expanded, setExpanded] = useState(false);
   const videoRef = useRef(null);
@@ -281,6 +281,7 @@ export default function ReelItem({
           onError={handleVideoError}
           data-testid={`reel-video-${reel.id}`}
         >
+          {reel.hls_url && <source src={reel.hls_url} type="application/vnd.apple.mpegurl" data-testid="reel-hls-source" />}
           {sources.map((s) => <source key={s} src={s} type={/\.(webm)(\?|$)/i.test(s) ? "video/webm" : "video/mp4"} />)}
         </video>
       ) : reel.image_url || reel.thumbnail_url ? (
@@ -356,7 +357,6 @@ export default function ReelItem({
 
             <Rail icon={<Heart className={`w-7 h-7 ${reel.is_liked ? "text-red-500 fill-red-500 scale-110" : "text-white"} transition-all`} />} label={fmt(reel.likes_count)} testid="reel-like-btn" onClick={() => onLike?.(reel, !reel.is_liked)} onLabelClick={() => onOpenLikers?.(reel)} labelTestid="reel-likes-count" />
             <Rail icon={<MessageCircle className="w-7 h-7 text-white" />} label={fmt(reel.comments_count)} testid="reel-comments-btn" onClick={() => onOpenComments?.(reel)} />
-            {src && <Rail icon={<Layers className="w-7 h-7 text-white" />} label={reel.remix_count ? fmt(reel.remix_count) : "Remix"} testid="reel-remix-btn" onClick={() => onOpenRemix?.(reel)} />}
             <Rail icon={<Minimize2 className="w-6 h-6 text-white" />} label="PiP" testid="reel-minimize-btn" onClick={() => setMinOpen(true)} />
             <Rail icon={<MoreHorizontal className="w-6 h-6 text-white" />} label="Más" testid="reel-more-btn" onClick={() => onOpenOptions?.(reel)} />
             {src && (

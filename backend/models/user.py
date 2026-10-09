@@ -33,6 +33,8 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    platform: Optional[str] = None
+    remember: Optional[bool] = True
 
 
 class Token(BaseModel):

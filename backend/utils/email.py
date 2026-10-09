@@ -156,3 +156,23 @@ def receipt_html(*, buyer_name: str, item_name: str, kind_label: str, date_label
         'Nunca te pediremos tu contraseña ni los datos de tu tarjeta por correo.</p>'
         '</td></tr></table></td></tr></table>'
     )
+
+
+def sale_html(*, seller_name: str, item_name: str, buyer_name: str, kind_label: str, total: str, fee: str, net: str, app_url: str | None) -> str:
+    rows = _row("Pagó el comprador", total) + _row("Comisión BRUNO", f"−{fee}") + _row("Tu parte", net, bold=True)
+    brand = escape(EMAIL_FROM_NAME)
+    link = (f'<p style="margin:18px 0 0"><a href="{escape(app_url)}/earnings" style="display:inline-block;background:#F26A1B;color:#fff;text-decoration:none;'
+            f'padding:10px 18px;border-radius:999px;font-weight:700;font-size:14px">Ver mis ingresos</a></p>') if app_url and app_url.startswith("https://") else ""
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ec;padding:24px 0;font-family:Arial,Helvetica,sans-serif;color:#1c1c1c">'
+        '<tr><td align="center"><table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:20px;padding:28px">'
+        f'<tr><td><p style="margin:0 0 4px;font-size:12px;letter-spacing:.18em;color:#F26A1B;font-weight:700">{brand}</p>'
+        f'<h1 style="margin:0 0 16px;font-size:22px">¡Nueva venta!</h1>'
+        f'<p style="margin:0 0 6px;font-size:15px">Hola {escape(seller_name)}, {escape(buyer_name)} acaba de comprar:</p>'
+        f'<p style="margin:0 0 4px;font-size:16px;font-weight:700">{escape(item_name)}</p>'
+        f'<p style="margin:0 0 14px;font-size:13px;color:#6b6b6b">{escape(kind_label)}</p>'
+        f'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;border-bottom:1px solid #eee;margin:10px 0">{rows}</table>'
+        f'{link}'
+        f'<p style="margin:22px 0 0;font-size:12px;color:#888">Tu parte queda en tu cuenta de cobros y la retiras cuando quieras desde Mis ingresos. Enviado por {brand}.</p>'
+        '</td></tr></table></td></tr></table>'
+    )

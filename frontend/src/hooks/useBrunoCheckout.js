@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
+import { getSharedCoupon } from "@/pages/CouponLandingPage";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -20,7 +21,18 @@ export function useBrunoCheckout() {
   const getQuote = async (body) => {
     setBusy(true);
     lastBody.current = { ...body, discount_code: body.discount_code || null };
-    try { const r = await axios.post(`${API}/money/quote`, { ...lastBody.current, origin_url: window.location.origin }, { headers }); setQuote(r.data); setCouponError(null); return r.data; }
+    try {
+      let r = await axios.post(`${API}/money/quote`, { ...lastBody.current, origin_url: window.location.origin }, { headers });
+      // A coupon saved from a shared link (/cupon/:id) is applied silently when it belongs to this seller.
+      const shared = !body.discount_code && r.data?.accepts_coupons ? getSharedCoupon() : null;
+      if (shared) {
+        try {
+          const r2 = await axios.post(`${API}/money/quote`, { ...lastBody.current, discount_code: shared.code, origin_url: window.location.origin }, { headers });
+          if (r2.data?.discount_code) { r = r2; lastBody.current.discount_code = shared.code; }
+        } catch { /* belongs to another seller or no longer valid → ignore */ }
+      }
+      setQuote(r.data); setCouponError(null); return r.data;
+    }
     catch (e) { brunoToast.error(detailMsg(e) || "No se pudo calcular el precio"); return null; }
     finally { setBusy(false); }
   };

@@ -5,7 +5,8 @@ import { useNavScroll } from "@/contexts/NavScrollContext";
 import { useBrunoCamera } from "@/contexts/BrunoCameraContext";
 import BrunoPublishMenu from "@/components/bruno/BrunoPublishMenu";
 import axios from "axios";
-import { isVideoFile, videoTooLarge, VIDEO_TOO_LARGE_MSG } from "@/lib/media";
+import { isVideoFile, videoTooLarge, videoTooLargeMsg, setVideoLimit } from "@/lib/media";
+import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
 import { 
   Film, Map, ShoppingBag, User, Plus, Bell,
   ChevronDown
@@ -47,8 +48,7 @@ const MobileBottomNav = () => {
       document.documentElement.style.setProperty("--nav-reserve", "0px");
       return;
     }
-    const reserve = minimized ? 14 : 88;
-    document.documentElement.style.setProperty("--nav-reserve", `${reserve}px`);
+    document.documentElement.style.setProperty("--nav-reserve", minimized ? "calc(var(--safe-bottom) + 14px)" : "calc(var(--safe-bottom) + var(--nav-gap) + var(--nav-h))");
   }, [shouldHide, minimized]);
 
   if (shouldHide) return null;
@@ -145,7 +145,7 @@ const MobileBottomNav = () => {
           />
 
           {/* Navigation Items */}
-          <div className="relative flex items-center justify-around px-1" style={{ height: 'var(--nav-h, 54px)' }}>
+          <div className="relative flex items-center justify-around px-0.5" style={{ height: 'var(--nav-h, 48px)' }}>
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item);
@@ -160,13 +160,13 @@ const MobileBottomNav = () => {
                     aria-label="Publicar"
                   >
                     {/* Subtle contour ring — hints at "action" without shouting orange */}
-                    <div className="relative w-7 h-7 rounded-full border border-foreground/25 flex items-center justify-center bg-foreground/[0.03] group-active:bg-primary/10 transition-colors">
+                    <div className="relative w-6 h-6 rounded-full border border-foreground/25 flex items-center justify-center bg-foreground/[0.03] group-active:bg-primary/10 transition-colors">
                       <Icon
                         className="w-4 h-4 text-foreground/70"
                         strokeWidth={2}
                       />
                     </div>
-                    <span className="text-[9px] leading-none mt-1 font-medium text-muted-foreground/70">
+                    <span className="text-[9px] leading-none mt-0.5 font-medium text-muted-foreground/70">
                       Crear
                     </span>
                   </button>
@@ -206,7 +206,7 @@ const MobileBottomNav = () => {
                       </div>
                     )}
                     
-                    <span className={`text-[9px] leading-none mt-1 font-medium transition-colors ${active ? 'text-primary' : 'text-muted-foreground/70'}`}>
+                    <span className={`text-[9px] leading-none mt-0.5 font-medium transition-colors ${active ? 'text-primary' : 'text-muted-foreground/70'}`}>
                       {item.label}
                     </span>
                   </div>
@@ -233,17 +233,19 @@ const MobileBottomNav = () => {
           // Helper: publish a story given a file
           const publishStory = async (mediaFile, meta = {}) => {
             const { brunoToast } = await import("@/components/bruno/BrunoToast");
-            if (videoTooLarge(mediaFile)) { brunoToast.error("Video demasiado grande", { description: VIDEO_TOO_LARGE_MSG }); return; }
+            const isVideo = isVideoFile(mediaFile);
+            if (isVideo) { const lim = await getUploadLimits(token).catch(() => null); if (lim?.video_max_bytes) setVideoLimit(lim.video_max_bytes); }
+            if (videoTooLarge(mediaFile)) { brunoToast.error("Video demasiado grande", { description: videoTooLargeMsg() }); return; }
             try {
-              const form = new FormData();
-              form.append("file", mediaFile);
-              const isVideo = isVideoFile(mediaFile);
-              const ep = isVideo ? "/upload/chat-file" : "/upload/image";
-              const up = await axios.post(`${API}${ep}`, form, {
-                headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-                timeout: 0,
-              });
-              const mediaUrl = up.data.url || up.data.secure_url;
+              let upData;
+              if (isVideo) upData = await uploadVideoDirect(mediaFile, { token, folder: "bruno/stories" });
+              else {
+                const form = new FormData();
+                form.append("file", mediaFile);
+                const up = await axios.post(`${API}/upload/image?aspect=9:16`, form, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }, timeout: 0 });
+                upData = up.data;
+              }
+              const mediaUrl = upData.url || upData.secure_url;
               if (!mediaUrl) throw new Error("no url");
               await axios.post(`${API}/stories/`, {
                 media_url: mediaUrl,
@@ -256,7 +258,7 @@ const MobileBottomNav = () => {
               const { brunoToast } = await import("@/components/bruno/BrunoToast");
               brunoToast.publish("Publicado en Story", { description: "Disponible durante 24h." });
             } catch (e) {
-              brunoToast.error("No se pudo publicar", { description: e?.response?.data?.detail || "Revisa tu conexión e inténtalo de nuevo." });
+              brunoToast.error("No se pudo publicar", { description: e?.userMessage || e?.response?.data?.detail || "Revisa tu conexión e inténtalo de nuevo." });
             }
           };
 
@@ -264,31 +266,25 @@ const MobileBottomNav = () => {
           const publishPost = async (mediaFile, meta = {}) => {
             const { brunoToast } = await import("@/components/bruno/BrunoToast");
             const isVideo = isVideoFile(mediaFile);
-            if (videoTooLarge(mediaFile)) { brunoToast.error("Video demasiado grande", { description: VIDEO_TOO_LARGE_MSG }); return; }
+            if (isVideo) { const lim = await getUploadLimits(token).catch(() => null); if (lim?.video_max_bytes) setVideoLimit(lim.video_max_bytes); }
+            if (videoTooLarge(mediaFile)) { brunoToast.error("Video demasiado grande", { description: videoTooLargeMsg() }); return; }
             const tid = `publish-${Date.now()}`;
-            brunoToast.loading(isVideo ? "Subiendo tu reel… 0%" : "Publicando…", { id: tid, description: "No cierres la app." });
+            brunoToast.loading(isVideo ? "Subiendo tu video… 0%" : "Publicando…", { id: tid, description: "No cierres la app." });
             try {
-              const form = new FormData();
-              form.append("file", mediaFile);
-              const ep = isVideo ? "/upload/chat-file" : "/upload/image";
-              const up = await axios.post(`${API}${ep}`, form, {
-                headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-                timeout: 0,
-                onUploadProgress: (ev) => {
-                  if (!ev.total) return;
-                  const pct = Math.round((ev.loaded / ev.total) * 100);
-                  brunoToast.loading(
-                    pct >= 100 ? "Procesando tu video…" : `${isVideo ? "Subiendo tu reel" : "Subiendo"}… ${pct}%`,
-                    { id: tid, description: "No cierres la app." }
-                  );
-                },
-              });
-              const u = up.data || {};
+              let u;
+              if (isVideo) {
+                u = await uploadVideoDirect(mediaFile, { token, onProgress: (p) => brunoToast.loading(p.phase === "process" ? "Procesando tu video…" : p.phase === "retry" ? `Reintentando… ${p.pct}%` : `Subiendo tu video… ${p.pct}%`, { id: tid, description: p.phase === "retry" ? "Se reanuda donde se quedó." : "No cierres la app." }) });
+              } else {
+                const form = new FormData();
+                form.append("file", mediaFile);
+                const up = await axios.post(`${API}/upload/image`, form, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }, timeout: 0 });
+                u = up.data || {};
+              }
               const mediaUrl = u.url || u.secure_url;
               if (!mediaUrl) throw new Error("no url");
               const r = await axios.post(`${API}/posts`, {
                 content: meta?.caption || "",
-                media: [{ type: isVideo ? "video" : "image", url: mediaUrl, mp4_url: u.mp4_url || null, poster_url: u.poster_url || null, f_auto_url: u.f_auto_url || null }],
+                media: [{ type: isVideo ? "video" : "image", url: mediaUrl, mp4_url: u.mp4_url || null, poster_url: u.poster_url || null, f_auto_url: u.f_auto_url || null, hls_url: u.hls_url || null, duration: u.duration || null }],
                 post_type: isVideo ? "video" : "image",
                 visibility: "public",
                 audio: meta?.music?.url ? { source_post_id: meta.music.trackId, name: meta.music.title, url: meta.music.url } : null,
@@ -298,7 +294,7 @@ const MobileBottomNav = () => {
               navigate(isVideo ? `/reels?id=${r.data.id}` : `/post/${r.data.id}`);
             } catch (e) {
               brunoToast.dismiss(tid);
-              brunoToast.error("No se pudo publicar", { id: tid, description: e?.response?.data?.detail || "Revisa tu conexión e inténtalo de nuevo." });
+              brunoToast.error("No se pudo publicar", { id: tid, description: e?.userMessage || e?.response?.data?.detail || "Revisa tu conexión e inténtalo de nuevo." });
             }
           };
 

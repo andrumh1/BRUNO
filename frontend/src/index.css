@@ -17,8 +17,9 @@
   --safe-right: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px));
   /* Bottom navigation geometry — single source of truth for the pill and everything that must clear it.
      --nav-reserve = space taken from the bottom edge (system inset + gap + pill). Apply insets ONCE here. */
-  --nav-h: 54px;
-  --nav-gap: 8px;
+  --nav-h: 48px;
+  /* 8px gap on devices without a bottom inset; sits ~5px lower (3px gap) when the safe area already lifts it */
+  --nav-gap: clamp(3px, calc(8px - var(--safe-bottom) * 0.5), 8px);
   --nav-reserve: calc(var(--safe-bottom) + var(--nav-gap) + var(--nav-h));
   --content-bottom: calc(var(--nav-reserve) + 12px);
 }

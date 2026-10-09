@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { secureStorage } from "@/utils/secureStorage";
+import { isNative } from "@/native/capacitor";
+
+// Web: the session lives in an httpOnly cookie set by the server; the token stays in memory only (never in localStorage).
+// Native (Capacitor): cookies are unreliable across the app shell, so the token is kept in encrypted device storage.
+const persistToken = () => { try { return isNative(); } catch { return false; } };
 
 const AuthContext = createContext({
   user: null,
@@ -45,6 +50,19 @@ export function AuthProvider({ children }) {
         let storedToken = await secureStorage.getItem(TOKEN_KEY);
         if (!storedToken && !isPersistent) {
           storedToken = sessionStorage.getItem(TOKEN_KEY);
+        }
+        if (storedToken && !persistToken()) {
+          // Legacy web session stored in the browser → move it to the cookie-only model.
+          secureStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem(TOKEN_KEY);
+        }
+        if (!storedToken || !persistToken()) {
+          try {
+            const r = await axios.post(`${API}/auth/session/restore`, {}, { withCredentials: true, timeout: 10000, headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : {} });
+            storedToken = r.data?.access_token || storedToken;
+            if (r.data?.user) setUser(r.data.user);
+          } catch (e) {
+            if (!persistToken()) storedToken = null;
+          }
         }
 
         if (storedToken) {
@@ -98,14 +116,14 @@ export function AuthProvider({ children }) {
     try {
       const response = await axios.get(`${API}/auth/me`, {
         headers: { Authorization: `Bearer ${currentToken}` },
-        timeout: 10000,
+        timeout: 10000, withCredentials: true,
       });
 
       const userData = response.data;
       let activeToken = currentToken;
       if (userData.refreshed_token) {
         activeToken = userData.refreshed_token;
-        await secureStorage.setItem(TOKEN_KEY, activeToken);
+        if (persistToken()) await secureStorage.setItem(TOKEN_KEY, activeToken);
         delete userData.refreshed_token;
       }
 
@@ -125,12 +143,9 @@ export function AuthProvider({ children }) {
 
   const login = async (userData, userToken, keepSession = true) => {
     if (user && user.id !== userData?.id) clearPrivateCaches();
-    if (keepSession) {
-      await secureStorage.setItem(TOKEN_KEY, userToken);
-      localStorage.setItem(SESSION_PERSISTENT_KEY, "true");
-    } else {
-      sessionStorage.setItem(TOKEN_KEY, userToken);
-      localStorage.setItem(SESSION_PERSISTENT_KEY, "false");
+    localStorage.setItem(SESSION_PERSISTENT_KEY, keepSession ? "true" : "false");
+    if (persistToken()) {
+      if (keepSession) await secureStorage.setItem(TOKEN_KEY, userToken); else sessionStorage.setItem(TOKEN_KEY, userToken);
     }
     await secureStorage.setItem(USER_KEY, JSON.stringify(userData));
 
@@ -159,7 +174,7 @@ export function AuthProvider({ children }) {
     try {
       if (token) {
         await axios.post(`${API}/auth/logout`, {}, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` }, withCredentials: true,
         }).catch(() => {});
       }
     } finally {
@@ -170,7 +185,7 @@ export function AuthProvider({ children }) {
   const setKeepSession = async (keep) => {
     setSessionPersistent(keep);
     localStorage.setItem(SESSION_PERSISTENT_KEY, keep ? "true" : "false");
-    if (token) {
+    if (token && persistToken()) {
       if (keep) {
         await secureStorage.setItem(TOKEN_KEY, token);
         sessionStorage.removeItem(TOKEN_KEY);

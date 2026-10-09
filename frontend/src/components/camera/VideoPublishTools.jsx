@@ -37,8 +37,8 @@ export function UploadProgress({ pct, phase, error, onRetry }) {
         <div className="flex items-center gap-2"><span className="flex-1">{error}</span><button onClick={onRetry} className="h-8 px-3 rounded-full bg-primary text-white font-semibold inline-flex items-center gap-1" data-testid="upload-retry-btn"><RotateCw className="w-3.5 h-3.5" /> Reintentar</button></div>
       ) : (
         <>
-          <div className="flex justify-between mb-1"><span>{phase === "upload" ? `Subiendo… ${pct}%` : phase === "process" ? "Procesando video…" : "Publicando…"}</span><span>{phase === "upload" ? `${pct}%` : ""}</span></div>
-          <div className="h-1.5 rounded-full bg-white/20 overflow-hidden"><div className={`h-full bg-primary transition-[width] ${phase !== "upload" ? "animate-pulse w-full" : ""}`} style={phase === "upload" ? { width: `${pct}%` } : undefined} /></div>
+          <div className="flex justify-between mb-1"><span>{phase === "upload" ? `Subiendo… ${pct}%` : phase === "retry" ? "Conexión perdida · reintentando sin perder lo subido…" : phase === "process" ? "Procesando video…" : "Publicando…"}</span><span>{["upload", "retry"].includes(phase) ? `${pct}%` : ""}</span></div>
+          <div className="h-1.5 rounded-full bg-white/20 overflow-hidden"><div className={`h-full bg-primary transition-[width] ${!["upload", "retry"].includes(phase) ? "animate-pulse w-full" : ""}`} style={["upload", "retry"].includes(phase) ? { width: `${pct}%` } : undefined} /></div>
         </>
       )}
     </div>

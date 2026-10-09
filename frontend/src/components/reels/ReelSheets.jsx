@@ -162,7 +162,7 @@ export function ReelLikersSheet({ reel, token, onClose, onFollow }) {
 
 const REPORT_REASONS = [["spam", "Spam o engaño"], ["harassment", "Acoso o bullying"], ["hate", "Odio o discriminación"], ["violence", "Violencia"], ["nudity", "Desnudez o contenido sexual"], ["misinformation", "Información falsa"], ["ip", "Infringe derechos de autor"], ["other", "Otro"]];
 
-export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDeleted, onEdit, onHidden, onBlocked, onSave, onShare }) {
+export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDeleted, onEdit, onHidden, onBlocked, onSave, onShare, onRemix }) {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -172,14 +172,20 @@ export function ReelOptionsSheet({ reel, token, currentUserId, onClose, onDelete
   const isOwner = authorId === currentUserId;
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const needAuth = () => { if (!token) { brunoToast.error("Inicia sesión para continuar"); return false; } return true; };
+  const hasVideo = !!reel.video_url;
   const quickActions = (
-    <div className="grid grid-cols-2 gap-2 mb-1" data-testid="reel-quick-actions">
-      <button onClick={() => { onSave?.(reel); onClose(); }} className={`h-14 rounded-2xl flex flex-col items-center justify-center gap-1 text-xs font-semibold ${reel.is_bookmarked ? "bg-primary/15 text-primary" : "bg-foreground/[0.05]"}`} data-testid="reel-save-btn" aria-pressed={!!reel.is_bookmarked}>
-        <Bookmark className={`w-5 h-5 ${reel.is_bookmarked ? "fill-primary" : ""}`} /> {reel.is_bookmarked ? "Guardado" : "Guardar"}
+    <div className={`grid ${hasVideo ? "grid-cols-3" : "grid-cols-2"} gap-2 mb-1`} data-testid="reel-quick-actions">
+      <button onClick={() => { onSave?.(reel); onClose(); }} className={`h-16 rounded-2xl flex flex-col items-center justify-center gap-1 text-[11px] font-semibold px-1 text-center leading-tight ${reel.is_bookmarked ? "bg-primary/15 text-primary" : "bg-foreground/[0.05]"}`} data-testid="reel-save-btn" aria-pressed={!!reel.is_bookmarked}>
+        <Bookmark className={`w-5 h-5 ${reel.is_bookmarked ? "fill-primary" : ""}`} /> {reel.is_bookmarked ? "Quitar de guardados" : "Guardar"}
       </button>
-      <button onClick={() => { onClose(); onShare?.(reel); }} className="h-14 rounded-2xl bg-foreground/[0.05] flex flex-col items-center justify-center gap-1 text-xs font-semibold" data-testid="reel-share-btn">
+      <button onClick={() => { onClose(); onShare?.(reel); }} className="h-16 rounded-2xl bg-foreground/[0.05] flex flex-col items-center justify-center gap-1 text-[11px] font-semibold" data-testid="reel-share-btn">
         <Share2 className="w-5 h-5" /> Enviar
       </button>
+      {hasVideo && (
+        <button onClick={() => { onClose(); onRemix?.(reel); }} className="h-16 rounded-2xl bg-foreground/[0.05] flex flex-col items-center justify-center gap-1 text-[11px] font-semibold" data-testid="reel-remix-btn">
+          <Layers className="w-5 h-5" /> {reel.remix_count ? `Remix · ${reel.remix_count}` : "Remix"}
+        </button>
+      )}
     </div>
   );
   const del = async () => {

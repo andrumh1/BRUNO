@@ -93,6 +93,8 @@ import CardAnalyticsPage from "@/pages/CardAnalyticsPage";
 import PremiumPage from "@/pages/PremiumPage";
 import PaymentResultPage from "@/pages/PaymentResultPage";
 import MyEarningsPage from "@/pages/MyEarningsPage";
+import MyPurchasesPage from "@/pages/MyPurchasesPage";
+import CouponLandingPage from "@/pages/CouponLandingPage";
 import AdminMoneyPage from "@/pages/AdminMoneyPage";
 import HashtagPage from "@/pages/HashtagPage";
 import UsernameRedirect from "@/pages/UsernameRedirect";
@@ -141,6 +143,8 @@ function AppRouter() {
       <Route path="/ui-kit" element={<BrunoUIKitPage />} />
       <Route path="/welcome" element={<WelcomePage />} />
       <Route path="/c/:cardId" element={<ViewCardPage />} />
+      <Route path="/cupon/:couponId" element={<CouponLandingPage />} />
+      <Route path="/purchases" element={<ProtectedRoute><MyPurchasesPage /></ProtectedRoute>} />
       <Route path="/t/:token" element={<TransferReceivePage />} />
       <Route path="/wallet" element={<ProtectedRoute><ReceivedCardsPage /></ProtectedRoute>} />
       <Route path="/cards/:cardId/transfer" element={<ProtectedRoute><CardTransferPage /></ProtectedRoute>} />

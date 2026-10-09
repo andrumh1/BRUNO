@@ -109,7 +109,7 @@ export function LiveTopBar({ live, viewerCount, hostOnline, onClose, right }) {
       </span>
       <span className="inline-flex items-center gap-1 h-7 px-2 rounded-full bg-black/45 text-white text-[10px]" data-testid="live-viewer-count"><Eye className="w-3 h-3" /> {viewerCount}</span>
       <div className="ml-auto flex items-center gap-2">{right}
-        <button onClick={onClose} className="w-9 h-9 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-close-btn" aria-label="Salir"><X className="w-5 h-5" /></button>
+        <button onClick={onClose} className="w-11 h-11 rounded-full bg-black/65 border border-white/40 text-white grid place-items-center shadow-lg active:scale-95 transition-transform" data-testid="live-close-btn" aria-label="Salir del live"><X className="w-5 h-5" strokeWidth={2.5} /></button>
       </div>
     </div>
   );

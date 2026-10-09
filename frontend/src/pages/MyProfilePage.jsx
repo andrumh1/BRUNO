@@ -67,7 +67,7 @@ import {
   TrendingUp,
   LayoutGrid,
   ArrowUpDown,
-  Heart, ImageDown } from "lucide-react";
+  Heart, ImageDown , Receipt } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -603,6 +603,9 @@ const MyProfilePage = () => {
             </Button>
             <Button variant="outline" size="icon" onClick={handleShareProfile} title="Compartir perfil" data-testid="profile-share-btn">
               <Share2 className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => navigate("/purchases")} title="Mis compras" data-testid="profile-purchases-btn">
+              <Receipt className="w-4 h-4" />
             </Button>
             <Button variant="outline" size="icon" onClick={() => setProfileShareSheet(true)} title="Imagen para redes" data-testid="profile-share-image-btn" className="border-primary/40 text-primary">
               <ImageDown className="w-4 h-4" />

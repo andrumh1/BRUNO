@@ -10,6 +10,7 @@ import os
 import io
 import cloudinary
 import cloudinary.uploader
+import cloudinary.utils
 from starlette.concurrency import run_in_threadpool
 
 import sys
@@ -48,13 +49,102 @@ IMAGE_PRESETS = {
 }
 
 
-MAX_VIDEO_BYTES = 100 * 1024 * 1024  # Cloudinary per-file video limit
+MAX_VIDEO_BYTES = 100 * 1024 * 1024  # Cloudinary per-file video limit (free plan); real value read from the account below
+_LIMITS_CACHE: dict = {"at": 0.0, "data": None}
+CHUNK_BYTES = 20 * 1024 * 1024
+HLS_MIN_SECONDS = 180  # long videos get an HLS adaptive rendition (eager, async)
+
+
+def _fetch_limits() -> dict:
+    """Real per-file limits of the connected Cloudinary account (plan dependent)."""
+    import cloudinary.api
+    u = cloudinary.api.usage()
+    ml = u.get("media_limits") or {}
+    return {"plan": u.get("plan"), "video_max_bytes": int(ml.get("video_max_size_bytes") or MAX_VIDEO_BYTES), "image_max_bytes": int(ml.get("image_max_size_bytes") or 10 * 1024 * 1024)}
+
+
+async def video_limits() -> dict:
+    import time
+    if not _LIMITS_CACHE["data"] or time.time() - _LIMITS_CACHE["at"] > 3600:
+        try:
+            _LIMITS_CACHE["data"] = await run_in_threadpool(_fetch_limits)
+        except Exception as e:
+            logger.warning(f"Cloudinary usage unavailable: {e}")
+            _LIMITS_CACHE["data"] = _LIMITS_CACHE["data"] or {"plan": None, "video_max_bytes": MAX_VIDEO_BYTES, "image_max_bytes": 10 * 1024 * 1024}
+        _LIMITS_CACHE["at"] = time.time()
+    d = dict(_LIMITS_CACHE["data"])
+    mb = d["video_max_bytes"] // (1024 * 1024)
+    d.update({"video_max_mb": mb, "chunk_bytes": CHUNK_BYTES, "resumable": True, "max_duration_seconds": None,
+              "note": f"El límite real lo fija el plan de almacenamiento ({d.get('plan') or 'Cloudinary'}): {mb} MB por video, sin límite de duración. Videos de 3 h necesitan un plan con archivos de varios GB."})
+    return d
+
+
+def _too_large_msg(limit_mb: int) -> str:
+    return f"El video supera los {limit_mb} MB que permite el plan actual de almacenamiento. La duración no es el límite: reduce la calidad/bitrate o súbelo en partes."
+
+
+@router.get("/limits")
+async def upload_limits(current_user: User = Depends(get_current_user)):
+    return await video_limits()
+
+
+@router.post("/video/sign")
+async def sign_video_upload(folder: str = "bruno", size: int = 0, current_user: User = Depends(get_current_user)):
+    """Signature for a direct, chunked, resumable browser → Cloudinary upload (the file never passes through BRUNO)."""
+    import time
+    lim = await video_limits()
+    if size and size > lim["video_max_bytes"]:
+        raise HTTPException(status_code=413, detail=_too_large_msg(lim["video_max_mb"]))
+    cfg = cloudinary.config()
+    if not (cfg.cloud_name and cfg.api_key and cfg.api_secret):
+        raise HTTPException(status_code=503, detail="Almacenamiento de video no configurado")
+    params = {"timestamp": int(time.time()), "folder": f"{folder}/{current_user.id}", "eager": "f_mp4,vc_h264,ac_aac,br_2500k,w_1080,h_1920,c_limit|w_1080,h_1920,c_limit,so_auto/jpg",
+              "eager_async": "true", "context": f"owner={current_user.id}"}
+    signature = cloudinary.utils.api_sign_request(params, cfg.api_secret)
+    return {"upload_url": f"https://api.cloudinary.com/v1_1/{cfg.cloud_name}/video/upload", "params": {**params, "api_key": cfg.api_key, "signature": signature},
+            "chunk_bytes": CHUNK_BYTES, "upload_id": uuid.uuid4().hex, "video_max_bytes": lim["video_max_bytes"]}
+
+
+@router.post("/video/complete")
+async def complete_video_upload(body: dict, trim_start: Optional[float] = None, trim_end: Optional[float] = None, cover_at: Optional[float] = None, current_user: User = Depends(get_current_user)):
+    """Verify the asset with Cloudinary (never trust the browser) and return BRUNO's media descriptor; long videos get HLS."""
+    import cloudinary.api
+    public_id = (body or {}).get("public_id")
+    if not public_id:
+        raise HTTPException(status_code=400, detail="public_id requerido")
+    try:
+        res = await run_in_threadpool(lambda: cloudinary.api.resource(public_id, resource_type="video", context=True, media_metadata=True))
+    except Exception:
+        raise HTTPException(status_code=404, detail="El video no existe en el almacenamiento")
+    owner = ((res.get("context") or {}).get("custom") or {}).get("owner")
+    if owner and owner != current_user.id:
+        raise HTTPException(status_code=403, detail="Ese video no es tuyo")
+    base_url = res.get("secure_url") or ""
+    duration = float(res.get("duration") or 0)
+    trim = ""
+    if trim_start is not None and trim_start > 0:
+        trim += f"so_{trim_start:.2f},"
+    if trim_end is not None and trim_end > 0 and (trim_start is None or trim_end > trim_start):
+        trim += f"eo_{trim_end:.2f},"
+    cover = f"so_{max(0.0, cover_at):.2f}" if cover_at is not None else "so_auto"
+    mp4_url = base_url.replace("/upload/", f"/upload/{trim}f_mp4,vc_h264,ac_aac,br_2500k,w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/").rsplit(".", 1)[0] + ".mp4"
+    poster_url = base_url.replace("/upload/", f"/upload/{cover},w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/").rsplit(".", 1)[0] + ".jpg"
+    hls_url = None
+    if duration >= HLS_MIN_SECONDS:
+        hls_url = base_url.replace("/upload/", f"/upload/{trim}sp_auto/").rsplit(".", 1)[0] + ".m3u8"
+        try:
+            await run_in_threadpool(lambda: cloudinary.uploader.explicit(public_id, type="upload", resource_type="video", eager=[{"streaming_profile": "auto", "format": "m3u8"}], eager_async=True))
+        except Exception as e:
+            logger.warning(f"HLS eager failed for {public_id}: {e}")
+    return {"url": mp4_url, "original_url": base_url, "mp4_url": mp4_url, "f_auto_url": base_url.replace("/upload/", "/upload/f_auto,q_auto/"), "poster_url": poster_url, "hls_url": hls_url,
+            "public_id": public_id, "width": res.get("width"), "height": res.get("height"), "format": res.get("format"), "resource_type": "video", "duration": duration, "bytes": res.get("bytes"), "is_long": duration >= HLS_MIN_SECONDS}
 
 
 def _upload_video(contents: bytes, folder: str, filename: str | None):
     """Blocking Cloudinary video upload. upload_large needs a file-like object, not raw bytes."""
-    if len(contents) > MAX_VIDEO_BYTES:
-        raise HTTPException(status_code=413, detail="El video supera los 100 MB. Recórtalo o bájale la calidad e inténtalo de nuevo.")
+    limit = (_LIMITS_CACHE["data"] or {}).get("video_max_bytes") or MAX_VIDEO_BYTES
+    if len(contents) > limit:
+        raise HTTPException(status_code=413, detail=_too_large_msg(limit // (1024 * 1024)))
     opts = {"folder": folder, "resource_type": "video", "eager": VIDEO_EAGER, "eager_async": True}
     if len(contents) > 10_000_000:
         return cloudinary.uploader.upload_large(

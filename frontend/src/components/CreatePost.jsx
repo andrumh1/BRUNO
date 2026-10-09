@@ -3,7 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import axios from "axios";
-import { isVideoFile, videoTooLarge, VIDEO_TOO_LARGE_MSG } from "@/lib/media";
+import { isVideoFile, videoTooLarge, videoTooLargeMsg, setVideoLimit } from "@/lib/media";
+import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
 import TextStylePicker from "@/components/TextStylePicker";
 import { TEXT_BGS, TEXT_FONTS } from "@/lib/textStyles";
 import { 
@@ -27,6 +28,7 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
   const [media, setMedia] = useState([]);
   const [aspect, setAspect] = useState("4:5"); // estándar BRUNO: 1:1 1080×1080 · 4:5 1080×1350 · 9:16 1080×1920
   const [uploading, setUploading] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(null);
   const [posting, setPosting] = useState(false);
   const [showCardPicker, setShowCardPicker] = useState(false);
   const [selectedCard, setSelectedCard] = useState(null);
@@ -49,34 +51,47 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
     if (files.length === 0) return;
     setUploading(true);
     for (const file of files) {
+      const isVideo = isVideoFile(file);
+      if (isVideo) {
+        const lim = await getUploadLimits(token).catch(() => null);
+        if (lim?.video_max_bytes) setVideoLimit(lim.video_max_bytes);
+      }
       if (videoTooLarge(file)) {
         const { brunoToast } = await import("@/components/bruno/BrunoToast");
-        brunoToast.error("Video demasiado grande", { description: VIDEO_TOO_LARGE_MSG });
+        brunoToast.error("Video demasiado grande", { description: videoTooLargeMsg() });
         continue;
       }
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-        const isVideo = isVideoFile(file);
-        const endpoint = isVideo ? "/upload/chat-file" : `/upload/image?aspect=${encodeURIComponent(aspect)}`;
-        const response = await axios.post(`${API}${endpoint}`, formData, {
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-          timeout: 0,
-        });
+        let data;
+        if (isVideo) {
+          data = await uploadVideoDirect(file, { token, onProgress: (p) => setVideoProgress(p) });
+          setVideoProgress(null);
+        } else {
+          const formData = new FormData();
+          formData.append("file", file);
+          const response = await axios.post(`${API}/upload/image?aspect=${encodeURIComponent(aspect)}`, formData, {
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+            timeout: 0,
+          });
+          data = response.data;
+        }
         const mediaType = isVideo ? "video" : "image";
         setMedia(prev => [...prev, {
           type: mediaType,
-          url: response.data.url,
-          width: response.data.width || null,
-          height: response.data.height || null,
-          mp4_url: response.data.mp4_url || null,
-          f_auto_url: response.data.f_auto_url || null,
-          poster_url: response.data.poster_url || null,
-          original_url: response.data.original_url || response.data.url,
+          url: data.url,
+          width: data.width || null,
+          height: data.height || null,
+          mp4_url: data.mp4_url || null,
+          f_auto_url: data.f_auto_url || null,
+          poster_url: data.poster_url || null,
+          hls_url: data.hls_url || null,
+          duration: data.duration || null,
+          original_url: data.original_url || data.url,
         }]);
       } catch (error) {
+        setVideoProgress(null);
         const { brunoToast } = await import("@/components/bruno/BrunoToast");
-        brunoToast.error("No se pudo subir el archivo", { description: error?.response?.data?.detail || file.name });
+        brunoToast.error("No se pudo subir el archivo", { description: error?.userMessage || error?.response?.data?.detail || file.name });
       }
     }
     setUploading(false);
@@ -292,6 +307,12 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
                 </div>
               )}
               
+              {videoProgress && (
+                <div className="rounded-xl bg-muted/60 p-2 text-xs" data-testid="create-post-video-progress" data-phase={videoProgress.phase}>
+                  <div className="flex justify-between mb-1"><span>{videoProgress.phase === "process" ? "Procesando video…" : videoProgress.phase === "retry" ? "Reintentando sin perder lo subido…" : "Subiendo video por partes…"}</span><span>{videoProgress.pct}%</span></div>
+                  <div className="h-1.5 rounded-full bg-foreground/10 overflow-hidden"><div className="h-full bg-primary transition-[width]" style={{ width: `${videoProgress.pct}%` }} /></div>
+                </div>
+              )}
               {/* Actions */}
               <div className="flex items-center justify-between pt-2 border-t">
                 <div className="flex items-center gap-1">
