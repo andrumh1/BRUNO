@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useShareHit } from "@/lib/shareStats";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { SeriesList } from "@/components/series/SeriesList";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,8 +31,7 @@ import {
   Eye,
   Minimize2,
   Phone,
-  Video
-} from "lucide-react";
+  Video, ListVideo } from "lucide-react";
 import { useNavScroll } from "@/contexts/NavScrollContext";
 import LocationShareSheet from "@/components/bruno/LocationShareSheet";
 
@@ -397,6 +397,7 @@ const UserProfilePage = () => {
               { id: "posts", icon: Grid3X3, label: "Posts" },
               { id: "media", icon: Grid3X3, label: "Media" },
               { id: "cards", icon: CreditCard, label: "Tarjetas" },
+              { id: "series", icon: ListVideo, label: "Series" },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -441,6 +442,7 @@ const UserProfilePage = () => {
             </div>
           )}
 
+          {activeTab === "series" && <SeriesList userId={userId} token={token} />}
           {activeTab === "cards" && (
             cards.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">

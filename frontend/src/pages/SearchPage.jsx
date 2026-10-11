@@ -10,8 +10,8 @@ import { SearchResultItem } from "@/components/search/SearchResultItem";
 import { SearchHome, AskBrunoCard } from "@/components/search/SearchHome";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
-const GROUP_LABEL = { user: "Personas", business: "Empresas", hashtag: "Hashtags", video: "Videos", post: "Publicaciones", card: "Tarjetas", product: "Tienda", comment: "Comentarios", ai_public: "Respuestas públicas de BRUNO IA", ai_private: "Mis conversaciones con BRUNO IA" };
-const GROUP_FILTER = { user: "people", business: "businesses", hashtag: "hashtags", video: "videos", post: "posts", card: "cards", product: "store", comment: "comments", ai_public: "ai", ai_private: "ai" };
+const GROUP_LABEL = { user: "Personas", business: "Empresas", hashtag: "Hashtags", video: "Videos", series: "Series", post: "Publicaciones", card: "Tarjetas", product: "Tienda", comment: "Comentarios", ai_public: "Respuestas públicas de BRUNO IA", ai_private: "Mis conversaciones con BRUNO IA" };
+const GROUP_FILTER = { user: "people", business: "businesses", hashtag: "hashtags", video: "videos", series: "videos", post: "posts", card: "cards", product: "store", comment: "comments", ai_public: "ai", ai_private: "ai" };
 const SORTS = [["relevance", "Relevancia"], ["newest", "Más recientes"], ["oldest", "Más antiguos"]];
 
 export default function SearchPage() {

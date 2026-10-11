@@ -32,7 +32,9 @@ export default function ReelsPage() {
   const [searchParams] = useSearchParams();
   useShareHit("reel");
   const longMode = !!videoId || window.location.pathname.startsWith("/video");
+  const seriesId = longMode ? searchParams.get("series") : null;
   const initialReelId = videoId || searchParams.get("id");
+  const [autoNext, setAutoNext] = useState(null); // { toIndex, secondsLeft }
   const profileMode = !!profileUserId;
   const [chaptersFor, setChaptersFor] = useState(null); // { reel, seek }
   const { token, user } = useAuth();
@@ -56,7 +58,23 @@ export default function ReelsPage() {
   const itemRefs = useRef([]);
 
   const feedMode = longMode ? "long" : tab === "following" ? "following" : "for_you";
-  const { reels, loading, loadingMore, loadMore, trackView, patchReel, removeReel, removeByAuthor, restoredIndex, cacheKey } = useReelsFeed({ token, mode: feedMode, profileUserId, initialReelId });
+  const { reels, loading, loadingMore, loadMore, trackView, patchReel, removeReel, removeByAuthor, restoredIndex, cacheKey } = useReelsFeed({ token, mode: feedMode, profileUserId, initialReelId, seriesId });
+  // Serie: empezar en el video pedido (orden de la serie) y autoplay del siguiente con cuenta atrás cancelable
+  const seriesStarted = useRef(false);
+  useEffect(() => {
+    if (!seriesId || loading || seriesStarted.current || !reels.length) return;
+    seriesStarted.current = true;
+    const idx = Math.max(0, reels.findIndex((r) => r.id === initialReelId));
+    if (idx > 0) setTimeout(() => { const el = itemRefs.current[idx]; const c = containerRef.current; if (el && c) c.scrollTop = el.offsetTop; }, 50);
+  }, [seriesId, loading, reels, initialReelId]);
+  useEffect(() => {
+    if (!autoNext) return;
+    if (autoNext.secondsLeft <= 0) { itemRefs.current[autoNext.toIndex]?.scrollIntoView({ behavior: "smooth" }); setAutoNext(null); return; }
+    const t = setTimeout(() => setAutoNext((a) => (a ? { ...a, secondsLeft: a.secondsLeft - 1 } : null)), 1000);
+    return () => clearTimeout(t);
+  }, [autoNext]);
+  useEffect(() => { setAutoNext(null); }, [activeIndex]);
+  const onEndedInSeries = (idx) => { if (seriesId && idx < reels.length - 1) setAutoNext({ toIndex: idx + 1, secondsLeft: 5 }); };
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
   /* Restaurar la posición del feed al volver de un perfil / comentarios */
@@ -168,7 +186,7 @@ export default function ReelsPage() {
           <button onClick={() => setHistoryOpen(true)} className="w-9 h-9 grid place-items-center rounded-full bg-black/35 text-white" data-testid="reels-history-btn" aria-label="Historial"><Clock className="w-5 h-5" /></button>
         )}
         {longMode ? (
-          <span className="text-white font-bold text-sm" data-testid="long-player-title">Videos largos</span>
+          <button onClick={() => seriesId && navigate(`/series/${seriesId}`)} className="text-white font-bold text-sm max-w-[60vw] truncate" data-testid="long-player-title">{seriesId && reels[activeIndex]?.series ? `${reels[activeIndex].series.title} · ${reels[activeIndex].series.index + 1}/${reels[activeIndex].series.count}` : "Videos largos"}</button>
         ) : profileMode ? (
           <span className="text-white font-bold text-sm">Reels del perfil</span>
         ) : (
@@ -207,6 +225,7 @@ export default function ReelsPage() {
                     onOpenRemixes={(r) => setRemixesOf(r.id)} onOpenSound={setSoundFor} onOpenLikers={setLikersFor} onOpenOptions={setOptionsFor}
                     onSwipeLeft={swipeLeft} onSwipeRight={swipeRight} currentUserId={user?.id}
                     longMode={longMode} token={token} onOpenChapters={(r, seek) => setChaptersFor({ reel: r, seek })}
+                    noLoop={!!seriesId} onEnded={() => onEndedInSeries(index)}
                   />
                 ) : (
                   <div className="h-full w-full reels-surface bg-center bg-cover opacity-70" style={{ backgroundImage: reel.poster_url || reel.thumbnail_url ? `url(${reel.poster_url || reel.thumbnail_url})` : undefined }} />
@@ -223,6 +242,14 @@ export default function ReelsPage() {
       <ReelCommentsSheet reel={commentsFor} token={token} currentUserId={user?.id} highlightId={commentsFor?.id === initialReelId ? highlightCommentId : null} onClose={() => setCommentsFor(null)} onPosted={(id) => patchReel(id, (r) => ({ comments_count: (r.comments_count || 0) + 1 }))} onDeleted={(id, count) => patchReel(id, (r) => ({ comments_count: count ?? Math.max(0, (r.comments_count || 0) - 1) }))} />
       {optionsFor && <ReelOptionsSheet reel={optionsFor} token={token} currentUserId={user?.id} onClose={() => setOptionsFor(null)} onDeleted={(id) => removeReel(id)} onEdit={setEditFor} onHidden={(id) => removeReel(id)} onBlocked={(uid) => removeByAuthor(uid)} onSave={handleSave} onShare={setShareFor} onRemix={(r) => { if (requireAuth()) setRemixFor(r); }} />}
       {editFor && <ReelEditSheet reel={editFor} token={token} onClose={() => setEditFor(null)} onSaved={(id, patch) => patchReel(id, patch)} />}
+      {autoNext && reels[autoNext.toIndex] && (
+        <div className="absolute inset-x-4 z-40 rounded-2xl bg-black/80 backdrop-blur-md text-white p-3 flex items-center gap-3 reel-chrome" style={{ bottom: "calc(var(--nav-reserve, 64px) + 70px)" }} data-testid="series-autonext">
+          <div className="w-16 h-10 rounded-lg overflow-hidden bg-white/10 shrink-0">{reels[autoNext.toIndex].thumbnail_url && <img src={reels[autoNext.toIndex].thumbnail_url} alt="" className="w-full h-full object-cover" />}</div>
+          <div className="min-w-0 flex-1"><p className="text-[11px] text-white/70">Siguiente en {autoNext.secondsLeft} s</p><p className="text-sm font-semibold truncate">{(reels[autoNext.toIndex].content || "Siguiente video").split("\n")[0]}</p></div>
+          <button onClick={() => setAutoNext((a) => ({ ...a, secondsLeft: 0 }))} className="h-8 px-3 rounded-full bg-white text-black text-xs font-bold" data-testid="series-autonext-now">Ver ya</button>
+          <button onClick={() => setAutoNext(null)} className="h-8 px-3 rounded-full bg-white/15 text-xs font-semibold" data-testid="series-autonext-cancel">Cancelar</button>
+        </div>
+      )}
       {chaptersFor && <ChaptersSheet reel={chaptersFor.reel} chapters={getChapters(chaptersFor.reel)} currentTime={0} onSeek={chaptersFor.seek} isOwner={user?.id && user.id === (chaptersFor.reel.user_id || chaptersFor.reel.author?.id)} token={token} onSaved={(p) => patchReel(chaptersFor.reel.id, { chapters: p.chapters })} onClose={() => setChaptersFor(null)} />}
       {soundFor && <ReelSoundSheet reel={soundFor} token={token} onClose={() => setSoundFor(null)} onPick={(r) => { setSoundFor(null); navigate(`/reels?id=${r.id}`); }} />}
       <ReelLikersSheet reel={likersFor} token={token} onClose={() => setLikersFor(null)} onFollow={(uid, next) => reels.forEach((r) => { if ((r.author?.id || r.user_id) === uid) patchReel(r.id, { is_following: next }); })} />

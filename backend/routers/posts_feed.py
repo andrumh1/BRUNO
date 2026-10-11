@@ -1,6 +1,7 @@
 """Posts, Feed, Chat, Users, Notifications, and Settings routes.
 Extracted from server.py to reduce monolith size.
 """
+import asyncio
 from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
 import os
 import hmac
@@ -301,6 +302,9 @@ async def create_post(
         await search_sync.index_hashtags()
     except Exception:
         pass
+    if any((m or {}).get("type") == "video" and (m.get("duration") or 0) >= 180 for m in post_doc.get("media") or []):
+        from routers.series import suggest_chapters_background
+        asyncio.create_task(suggest_chapters_background(post_doc["id"]))
     if audio:
         await db.posts.update_one({"id": audio["source_post_id"]}, {"$inc": {"sound_uses": 1}})
     if remix:

@@ -56,6 +56,13 @@ export function SearchResultItem({ item, onOpen, onFollow }) {
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground shrink-0">{item.card_type}</span>
         </Row>
       );
+    case "series":
+      return (
+        <Row onClick={open} testid={tid}>
+          <div className="relative w-16 h-10 rounded-lg overflow-hidden bg-black/70 shrink-0">{item.cover && <img src={item.cover} alt="" className="w-full h-full object-cover" loading="lazy" />}<span className="absolute bottom-0.5 right-0.5 text-[9px] bg-black/70 text-white rounded px-1">{item.count} videos</span></div>
+          <div className="min-w-0 flex-1"><p className="text-sm font-semibold truncate">{item.title}</p><p className="text-xs text-muted-foreground truncate">Serie · {item.author?.name}{item.snippet ? ` · ${item.snippet}` : ""}</p></div>
+        </Row>
+      );
     case "hashtag":
       return (
         <Row onClick={open} testid={tid}>

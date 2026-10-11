@@ -26,7 +26,7 @@ const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1
 export default function ReelItem({
   reel, isActive, isNear, globalMuted, onToggleMute, onLike, onFollow,
   onOpenComments, onOpenRemixes, onOpenSound, onOpenLikers, onOpenOptions, onSwipeLeft, onSwipeRight, onMinimize, hideChrome, currentUserId,
-  longMode = false, onOpenChapters, token,
+  longMode = false, onOpenChapters, token, noLoop = false, onEnded,
 }) {
   const [expanded, setExpanded] = useState(false);
   const videoRef = useRef(null);
@@ -277,7 +277,8 @@ export default function ReelItem({
           ref={videoRef}
           className={`absolute inset-0 h-full w-full ${landscape || fullscreen ? "object-contain" : "object-cover"}`}
           data-landscape={landscape ? "true" : "false"}
-          loop playsInline muted={globalMuted}
+          loop={!noLoop} playsInline muted={globalMuted}
+          onEnded={() => onEnded?.()}
           preload={isActive || isNear ? "auto" : "metadata"}
           poster={reel.poster_url || reel.thumbnail_url || undefined}
           onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) { setProgress((v.currentTime / v.duration) * 100); setTime({ cur: v.currentTime, dur: v.duration }); if (longMode && isActive) resume.onProgress(v.currentTime, v.duration); } }}

@@ -97,6 +97,7 @@ import MyPurchasesPage from "@/pages/MyPurchasesPage";
 import AdminReportsPage from "@/pages/AdminReportsPage";
 import AdminUserModerationPage from "@/pages/AdminUserModerationPage";
 import SearchPage from "@/pages/SearchPage";
+import SeriesPage from "@/pages/SeriesPage";
 import CouponLandingPage from "@/pages/CouponLandingPage";
 import AdminMoneyPage from "@/pages/AdminMoneyPage";
 import HashtagPage from "@/pages/HashtagPage";
@@ -207,6 +208,7 @@ function AppRouter() {
       <Route path="/search" element={<SearchPage />} />
       <Route path="/reels" element={<ReelsPage />} />
       <Route path="/video/:videoId" element={<ReelsPage />} />
+      <Route path="/series/:seriesId" element={<SeriesPage />} />
       <Route path="/profile/:userId/reels" element={<ReelsPage />} />
       <Route path="/lives" element={<ReelsPage />} />
       <Route path="/lives/start" element={<ProtectedRoute><StartLivePage /></ProtectedRoute>} />

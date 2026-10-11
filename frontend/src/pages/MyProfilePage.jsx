@@ -4,6 +4,7 @@ import ScheduledStories from "@/components/bruno/ScheduledStories";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { BrunoHeaderMark } from "@/components/bruno/BrunoLogo";
 import { Link, useNavigate } from "react-router-dom";
+import { SeriesList } from "@/components/series/SeriesList";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,7 +68,7 @@ import {
   TrendingUp,
   LayoutGrid,
   ArrowUpDown,
-  Heart, ImageDown , Receipt } from "lucide-react";
+  Heart, ImageDown , Receipt, ListVideo } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
@@ -679,6 +680,16 @@ const MyProfilePage = () => {
             <FolderOpen className="w-5 h-5" />
             <span className="text-sm font-medium hidden sm:inline">Albums</span>
           </button>
+          <button
+            onClick={() => setActiveTab("series")}
+            className={`flex-1 py-3 flex items-center justify-center gap-2 border-b-2 transition-colors ${
+              activeTab === "series" ? "border-primary text-primary" : "border-transparent text-muted-foreground"
+            }`}
+            data-testid="tab-series"
+          >
+            <ListVideo className="w-5 h-5" />
+            <span className="text-sm font-medium hidden sm:inline">Series</span>
+          </button>
         </div>
       </div>
 
@@ -994,6 +1005,7 @@ const MyProfilePage = () => {
         )}
 
         {/* Albums */}
+        {activeTab === "series" && <SeriesList userId={user?.id} token={token} own />}
         {activeTab === "albums" && (
           <div data-testid="albums-tab-content">
             <div className="flex items-center justify-between mb-4">

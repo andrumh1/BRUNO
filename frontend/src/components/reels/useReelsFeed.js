@@ -25,11 +25,12 @@ export const normalizeReel = (post) => {
     audio_name: post.audio?.name || post.audio_name || post.music?.title || null,
     sound_source_id: post.audio?.source_post_id || post.id,
     author: {
-      id: post.user?.id || post.user_id,
-      name: post.user?.display_name || post.user?.name,
-      username: post.user?.username || post.user?.name,
-      avatar_url: post.user?.avatar_url,
+      id: post.user?.id || post.user_id || post.author?.id,
+      name: post.user?.display_name || post.user?.name || post.author?.name,
+      username: post.user?.username || post.user?.name || post.author?.name,
+      avatar_url: post.user?.avatar_url || post.author?.avatar_url,
     },
+    series: post.series || null,
   };
 };
 
@@ -43,8 +44,8 @@ const CACHE_TTL = 15 * 60 * 1000;
 export const rememberFeedPosition = (key, index) => { const c = FEED_CACHE.get(key); if (c) { c.index = index; c.at = Date.now(); } };
 export const feedCacheKey = (mode, profileUserId) => `${mode}|${profileUserId || ""}`;
 
-export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
-  const cacheKey = feedCacheKey(mode, profileUserId);
+export function useReelsFeed({ token, mode, profileUserId, initialReelId, seriesId }) {
+  const cacheKey = feedCacheKey(mode, profileUserId || seriesId);
   const cached = !initialReelId && FEED_CACHE.get(cacheKey);
   const fresh = cached && Date.now() - cached.at < CACHE_TTL && cached.reels.length > 0;
   const [reels, setReels] = useState(fresh ? cached.reels : []);
@@ -65,6 +66,8 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
     const exclude = reset ? [] : [...seenRef.current];
     const url = profileUserId
       ? `${API}/posts?user_id=${profileUserId}&media_only=true&limit=60`
+      : seriesId
+        ? `${API}/series/${seriesId}/play`
       : mode === "long"
         ? `${API}/posts/recommended-videos?kind=video&long=1&limit=${PAGE}&mode=for_you&seed=${seedRef.current}&exclude=${exclude.join(",")}`
         : `${API}/posts/recommended-videos?kind=all&limit=${PAGE}&mode=${mode}&seed=${seedRef.current}&exclude=${exclude.join(",")}`;
@@ -76,7 +79,7 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
     list = list.filter((r) => reset || !seenRef.current.has(r.id));
     list.forEach((r) => seenRef.current.add(r.id));
     return list;
-  }, [token, mode, profileUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, mode, profileUserId, seriesId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clave de la última carga: si el feed vino de caché y la clave no cambió, no refetch (seguro ante StrictMode).
   const depsKey = `${cacheKey}|${initialReelId || ""}`;
@@ -95,12 +98,12 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
       if (initialReelId && !first.some((r) => r.id === initialReelId)) {
         const one = await axios.get(`${API}/posts/${initialReelId}`, { headers }).then((r) => normalizeReel(r.data)).catch(() => null);
         if (one) { first.unshift(one); seenRef.current.add(one.id); }
-      } else if (initialReelId) {
+      } else if (initialReelId && !seriesId) {
         const idx = first.findIndex((r) => r.id === initialReelId);
         if (idx > 0) first.unshift(...first.splice(idx, 1));
       }
       setReels(first);
-      setDone(profileUserId ? true : first.length < PAGE);
+      setDone(profileUserId || seriesId ? true : first.length < PAGE);
       setLoading(false);
       completed = true;
     })();
@@ -109,7 +112,7 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
 
   const loadingRef = useRef(false);
   const loadMore = useCallback(async () => {
-    if (loadingRef.current || loadingMore || done || profileUserId) return;
+    if (loadingRef.current || loadingMore || done || profileUserId || seriesId) return;
     loadingRef.current = true;
     setLoadingMore(true);
     const more = await fetchPage(false);

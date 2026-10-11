@@ -18,8 +18,8 @@ from utils.search_sync import get_engine, full_sync
 router = APIRouter(prefix="/search", tags=["search"])
 
 TYPE_KINDS = {
-    "all": ["video", "post", "user", "card", "hashtag", "product", "comment", "ai_public", "ai_private"],
-    "videos": ["video"], "posts": ["post", "video"], "people": ["user"], "businesses": ["user"], "cards": ["card"],
+    "all": ["video", "series", "post", "user", "card", "hashtag", "product", "comment", "ai_public", "ai_private"],
+    "videos": ["video", "series"], "posts": ["post", "video"], "people": ["user"], "businesses": ["user"], "cards": ["card"],
     "hashtags": ["hashtag"], "store": ["product"], "comments": ["comment"], "ai": ["ai_public", "ai_private"],
 }
 GROUP_SIZE = 4
@@ -177,6 +177,8 @@ async def hydrate(cands: list, parsed: dict, ctx: dict, business_only: bool = Fa
     comments = {c["id"]: c async for c in db.comments.find({"id": {"$in": comment_ids}}, {"_id": 0, "id": 1, "post_id": 1, "content": 1, "user_id": 1, "parent_id": 1, "removed_by_moderation": 1})} if comment_ids else {}
     card_ids = [c["ref_id"] for c in by_kind.get("card", [])]
     cards = {c["id"]: c async for c in db.cards.find({"id": {"$in": card_ids}}, {"_id": 0, "id": 1, "user_id": 1, "is_public": 1, "title": 1, "subtitle": 1, "card_type": 1, "avatar_url": 1, "background_color": 1, "text_color": 1})} if card_ids else {}
+    series_ids = [c["ref_id"] for c in by_kind.get("series", [])]
+    series = {x["id"]: x async for x in db.series.find({"id": {"$in": series_ids}}, {"_id": 0})} if series_ids else {}
     prod_ids = [c["ref_id"] for c in by_kind.get("product", [])]
     products = {}
     if prod_ids:
@@ -246,6 +248,12 @@ async def hydrate(cands: list, parsed: dict, ctx: dict, business_only: bool = Fa
                     continue
                 img = p.get("image_url") if str(p.get("image_url") or "").startswith("http") else None
                 item.update({"title": p.get("name"), "price": p.get("price"), "currency": p.get("currency") or "USD", "image": img, "seller": "BRUNO Store", "url": f"/store?product={rid}"})
+        elif k == "series":
+            sr = series.get(rid)
+            if not sr or (sr.get("visibility") == "private" and sr["user_id"] != ctx["id"]) or not _author_ok(sr["user_id"], users, ctx):
+                continue
+            own = users.get(sr["user_id"]) or {}
+            item.update({"title": sr.get("title"), "snippet": (sr.get("description") or "")[:140], "count": len(sr.get("video_ids") or []), "cover": sr.get("cover_url") or meta.get("cover"), "author": {"id": sr["user_id"], "name": own.get("name")}, "url": f"/series/{rid}"})
         elif k == "ai_private":
             if not ctx["id"] or c.get("owner_id") != ctx["id"]:
                 continue
@@ -276,7 +284,7 @@ async def run_search(q: str, type_: str, sort: str, page: int, limit: int, user:
     used_fuzzy = (cands[0].get("_fuzzy") if cands else []) or []
     if type_ == "all":
         groups: dict = {}
-        order = ["user", "business", "hashtag", "video", "post", "card", "product", "comment", "ai_public", "ai_private"]
+        order = ["user", "business", "hashtag", "video", "series", "post", "card", "product", "comment", "ai_public", "ai_private"]
         for it in items:
             groups.setdefault(it["kind"], []).append(it)
             if it["kind"] == "user" and it.get("is_business"):

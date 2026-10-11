@@ -2454,6 +2454,8 @@ api_router.include_router(cards_router)
 api_router.include_router(cards_public_router)
 from routers.search import router as search_router
 api_router.include_router(search_router)
+from routers.series import router as series_router
+api_router.include_router(series_router)
 from routers.user_data import router as user_data_router
 api_router.include_router(user_data_router)
 

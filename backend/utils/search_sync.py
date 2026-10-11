@@ -428,6 +428,10 @@ async def full_sync(batch: int = 300) -> dict:
             await eng.upsert(buf); buf = []; await asyncio.sleep(0)
     await eng.upsert(buf)
 
+    async for sr in db.series.find({}, {"_id": 0}):
+        from routers.series import _index_series
+        await _index_series(sr); live_keys.add(f"series:{sr['id']}")
+
     await index_hashtags()
     # Retira del índice lo que ya no existe en origen (excepto hashtags, que se recalculan arriba)
     stale = await db.search_index.find({"kind": {"$ne": "hashtag"}}, {"_id": 0, "key": 1}).to_list(None)
