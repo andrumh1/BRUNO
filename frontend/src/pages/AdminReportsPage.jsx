@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, ShieldAlert, Radio, Ban, EyeOff, AlertTriangle, CheckCircle2, UserX } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, Loader2, ShieldAlert, Radio, Ban, EyeOff, AlertTriangle, CheckCircle2, UserX, History } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
@@ -23,6 +23,9 @@ const ReportCard = ({ r, onAction, onStopLive, busy }) => (
         {r.target?.kind === "post" && <p className="text-xs mt-1 rounded-lg bg-foreground/[0.05] px-2 py-1 truncate">Post: {r.target.preview || "(sin texto)"}</p>}
         {r.target?.kind === "user" && <p className="text-xs mt-1 rounded-lg bg-foreground/[0.05] px-2 py-1">Usuario: {r.target.name} {r.target.is_active === false ? "· suspendido" : ""}</p>}
         {!r.target && <p className="text-[11px] text-muted-foreground mt-1">Contenido no encontrado (id {r.content_id})</p>}
+        {(r.target_user_id || r.target?.host_id || r.target?.user_id || (r.content_type === "user" && r.content_id)) && (
+          <Link to={`/admin/users/${r.target_user_id || r.target?.host_id || r.target?.user_id || r.content_id}/moderation`} className="inline-flex items-center gap-1 text-[11px] text-primary font-semibold mt-1" data-testid={`report-user-history-${r.id}`}><History className="w-3 h-3" />Historial de moderación del usuario</Link>
+        )}
       </div>
     </div>
     {["pending", "reviewing"].includes(r.status) && (
@@ -66,7 +69,7 @@ export default function AdminReportsPage() {
   return (
     <div className="min-h-screen bg-background" data-testid="admin-reports-page">
       <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border/40" style={{ paddingTop: "var(--safe-top, 0px)" }}>
-        <div className="h-14 px-3 flex items-center gap-2"><Button variant="ghost" size="icon" onClick={() => navigate(-1)} data-testid="admin-reports-back"><ArrowLeft className="w-5 h-5" /></Button><h1 className="text-base font-bold">Reportes y moderación</h1></div>
+        <div className="h-14 px-3 flex items-center gap-2"><Button variant="ghost" size="icon" onClick={() => navigate(-1)} data-testid="admin-reports-back"><ArrowLeft className="w-5 h-5" /></Button><h1 className="text-base font-bold flex-1">Reportes y moderación</h1><Link to="/admin/users" className="h-9 px-3 rounded-full bg-foreground/[0.06] text-xs font-semibold inline-flex items-center gap-1" data-testid="admin-reports-history-link"><History className="w-3.5 h-3.5" />Historial</Link></div>
         <div className="flex gap-1.5 px-3 pb-2 overflow-x-auto no-scrollbar">{TABS.map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold ${tab === id ? "bg-primary text-white" : "bg-foreground/[0.06]"}`} data-testid={`admin-reports-tab-${id}`}>{label}</button>)}</div>
       </div>
       <div className="max-w-2xl mx-auto p-4 space-y-3">

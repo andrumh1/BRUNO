@@ -18,6 +18,7 @@ sys.path.insert(0, '/app/backend')
 from utils.database import db
 from utils.security import get_current_user, get_current_user_optional
 from models.user import User
+from utils import search_sync
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,8 @@ class PostCreate(BaseModel):
     audio: Optional[dict] = None
     text_style: Optional[dict] = None  # {bg, font} for text-only posts
     scheduled_at: Optional[str] = None  # ISO datetime → post stays hidden until then
+    source: Optional[str] = None  # "bruno_ai" cuando se publica una respuesta de BRUNO IA
+    ai_question: Optional[str] = None
 
 class Like(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -275,6 +278,9 @@ async def create_post(
     post_doc = post.model_dump()
     post_doc['created_at'] = post_doc['created_at'].isoformat()
     post_doc['updated_at'] = post_doc['updated_at'].isoformat()
+    if post_data.source == "bruno_ai":
+        post_doc["source"] = "bruno_ai"
+        post_doc["ai_question"] = (post_data.ai_question or "")[:300]
 
     # Scheduled publishing: hide under visibility="scheduled" until the cron flips it
     if post_data.scheduled_at:
@@ -290,6 +296,11 @@ async def create_post(
             post_doc["visibility"] = "scheduled"
     
     await db.posts.insert_one(post_doc)
+    try:
+        await search_sync.index_post(post_doc)
+        await search_sync.index_hashtags()
+    except Exception:
+        pass
     if audio:
         await db.posts.update_one({"id": audio["source_post_id"]}, {"$inc": {"sound_uses": 1}})
     if remix:
@@ -616,7 +627,12 @@ async def update_post(post_id: str, data: PostUpdate, current_user: User = Depen
     if data.visibility in ("public", "followers", "private"):
         upd["visibility"] = data.visibility
     await db.posts.update_one({"id": post_id}, {"$set": upd})
-    return await db.posts.find_one({"id": post_id}, {"_id": 0})
+    fresh = await db.posts.find_one({"id": post_id}, {"_id": 0})
+    try:
+        await search_sync.index_post(fresh)
+    except Exception:
+        pass
+    return fresh
 
 
 @router.get("/posts/history/videos")
@@ -936,6 +952,10 @@ async def delete_post(post_id: str, current_user: User = Depends(get_current_use
     await db.posts.delete_one({"id": post_id})
     await db.likes.delete_many({"target_id": post_id, "target_type": "post"})
     await db.comments.delete_many({"post_id": post_id})
+    try:
+        await search_sync.remove_post(post_id)
+    except Exception:
+        pass
     
     # Update posts count
     await db.user_profiles.update_one(
@@ -984,6 +1004,10 @@ async def delete_comment(post_id: str, comment_id: str, current_user: User = Dep
         raise HTTPException(status_code=403, detail="No puedes borrar este comentario")
     replies = await db.comments.count_documents({"parent_id": comment_id})
     await db.comments.delete_many({"$or": [{"id": comment_id}, {"parent_id": comment_id}]})
+    try:
+        await search_sync.remove_comment(comment_id)
+    except Exception:
+        pass
     if comment.get("parent_id"):
         await db.comments.update_one({"id": comment["parent_id"]}, {"$inc": {"replies_count": -1}})
     total = await db.comments.count_documents({"post_id": post_id})
@@ -1056,6 +1080,10 @@ async def create_comment(
     comment_doc['updated_at'] = comment_doc['updated_at'].isoformat()
     
     await db.comments.insert_one(comment_doc)
+    try:
+        await search_sync.index_comment(comment_doc, post)
+    except Exception:
+        pass
     
     # Update post's comment count
     await db.posts.update_one({"id": post_id}, {"$inc": {"comments_count": 1}})

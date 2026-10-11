@@ -296,6 +296,7 @@ async def admin_stop_live(live_id: str, report_id: Optional[str] = None, reason:
         if live["status"] == "preparing":
             await _refund_live_tickets(live_id, "admin_stopped_before_start")
         await db.notifications.insert_one({"id": str(uuid.uuid4()), "user_id": live["host_id"], "actor_id": current_user["id"], "type": "moderation", "message": f"Tu live «{live['title']}» fue detenido por moderación: {reason}", "target_id": live_id, "target_type": "live", "is_read": False, "created_at": now.isoformat()})
+        await _log_mod_action(current_user["id"], live["host_id"], "stop_live", reason, "live", live_id, report_id=report_id, source="lives")
     if report_id:
         from bson import ObjectId
         try:
@@ -403,4 +404,64 @@ async def update_report_status(
         {"_id": ObjectId(report_id)},
         {"$set": {"status": "dismissed" if action == "dismiss" else "resolved", "reviewed_at": now, "reviewed_by": current_user["id"], "action_taken": action, "target_user_id": target_user}}
     )
+    await _log_mod_action(current_user["id"], target_user, action, report.get("reason") or "", ctype, cid, report_id=report_id)
     return {"success": True, "action": action}
+
+
+async def _log_mod_action(moderator_id: str, target_user_id: Optional[str], action: str, reason: str, content_type: Optional[str], content_id: Optional[str], report_id: Optional[str] = None, source: str = "reports"):
+    await db.moderation_actions.insert_one({
+        "id": str(uuid.uuid4()), "moderator_id": moderator_id, "target_user_id": target_user_id, "action": action, "reason": reason,
+        "content_type": content_type, "content_id": content_id, "report_ids": [report_id] if report_id else [], "source": source,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+
+@router.get("/api/admin/users/lookup")
+async def admin_user_lookup(q: str, current_user: dict = Depends(get_current_user_from_token)):
+    """Busca usuarios por nombre, correo o id para abrir su historial de moderación (solo admin)."""
+    _require_admin(current_user)
+    import re
+    q = (q or "").strip()
+    if len(q) < 2:
+        return []
+    rx = {"$regex": re.escape(q), "$options": "i"}
+    rows = await db.users.find({"$or": [{"name": rx}, {"email": rx}, {"id": q}]}, {"_id": 0, "id": 1, "name": 1, "email": 1, "avatar_url": 1, "is_active": 1, "is_banned": 1, "role": 1}).limit(12).to_list(None)
+    return rows
+
+
+@router.get("/api/admin/users/{user_id}/moderation-timeline")
+async def admin_user_moderation_timeline(user_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    """Línea de tiempo de TODO lo que moderación hizo sobre un usuario: quién, qué, por qué y sobre qué contenido."""
+    _require_admin(current_user)
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "id": 1, "name": 1, "email": 1, "avatar_url": 1, "is_active": 1, "is_banned": 1, "is_suspended": 1, "suspended_at": 1, "suspended_reason": 1, "created_at": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    events = []
+    # 1) Acciones registradas (nuevo esquema + esquema antiguo content_type=user)
+    async for a in db.moderation_actions.find({"$or": [{"target_user_id": user_id}, {"content_type": "user", "content_id": user_id}]}, {"_id": 0}):
+        events.append({"at": a.get("created_at"), "action": a.get("action"), "by": a.get("moderator_id"), "reason": a.get("reason"), "content_type": a.get("content_type"), "content_id": a.get("content_id"), "source": a.get("source") or "moderation", "report_ids": a.get("report_ids") or []})
+    seen_reports = {rid for e in events for rid in e["report_ids"]}
+    # 2) Reportes revisados contra este usuario que no quedaron registrados como acción
+    async for r in db.reports.find({"target_user_id": user_id, "status": {"$in": ["resolved", "dismissed"]}}, {"reviewed_at": 1, "reviewed_by": 1, "action_taken": 1, "reason": 1, "content_type": 1, "content_id": 1}):
+        rid = str(r["_id"])
+        if rid in seen_reports:
+            continue
+        events.append({"at": r.get("reviewed_at"), "action": r.get("action_taken") or "review", "by": r.get("reviewed_by"), "reason": r.get("reason"), "content_type": r.get("content_type"), "content_id": r.get("content_id"), "source": "reports", "report_ids": [rid]})
+    # 3) Lives detenidos por un admin
+    async for l in db.lives.find({"host_id": user_id, "admin_stop": {"$exists": True}}, {"_id": 0, "id": 1, "title": 1, "admin_stop": 1}):
+        s = l["admin_stop"]
+        events.append({"at": s.get("at"), "action": "stop_live", "by": s.get("by"), "reason": s.get("reason"), "content_type": "live", "content_id": l["id"], "content_label": l.get("title"), "source": "lives", "report_ids": []})
+    # 4) Estado de cuenta (suspensión/baneo) sin registro explícito
+    if user.get("suspended_at") and not any(e["action"] in ("suspend_user", "suspend", "ban") for e in events):
+        events.append({"at": user["suspended_at"], "action": "suspend_user", "by": None, "reason": user.get("suspended_reason"), "content_type": "user", "content_id": user_id, "source": "account", "report_ids": []})
+    # 5) Reportes PRESENTADOS por este usuario (contexto)
+    reports_made = await db.reports.count_documents({"reporter_id": user_id})
+    reports_received = await db.reports.count_documents({"target_user_id": user_id})
+    mod_ids = {e["by"] for e in events if e.get("by")}
+    mods = {m["id"]: m async for m in db.users.find({"id": {"$in": list(mod_ids)}}, {"_id": 0, "id": 1, "name": 1, "avatar_url": 1})} if mod_ids else {}
+    for e in events:
+        m = mods.get(e.get("by"))
+        e["by"] = {"id": e["by"], "name": m.get("name") if m else ("Sistema" if not e.get("by") else "Admin")} if (e.get("by") or True) else None
+    events.sort(key=lambda e: e.get("at") or "", reverse=True)
+    strikes = sum(1 for e in events if e["action"] in ("warn_user", "warn", "remove_content", "remove", "suspend_user", "suspend", "ban", "stop_live"))
+    return {"user": user, "events": events, "strikes": strikes, "reports_received": reports_received, "reports_made": reports_made}

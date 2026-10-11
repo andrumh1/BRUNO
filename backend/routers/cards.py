@@ -25,6 +25,7 @@ from utils.database import db
 from utils.security import get_current_user, get_current_user_optional
 from utils.card_design import ensure_design, DESIGN_VERSION
 from models.user import User
+from utils import search_sync
 
 router = APIRouter(prefix="/cards", tags=["cards"])
 logger = logging.getLogger(__name__)
@@ -171,6 +172,10 @@ async def create_card(card_input: CardCreate, current_user: User = Depends(get_c
     card_doc['updated_at'] = card_doc['updated_at'].isoformat()
 
     await db.cards.insert_one(card_doc)
+    try:
+        await search_sync.index_card(card_doc); await search_sync.index_user(current_user.id)
+    except Exception:
+        pass
     return card_obj
 
 
@@ -260,6 +265,10 @@ async def update_card(
 
     await db.cards.update_one({"id": card_id}, {"$set": update_data})
     updated = await db.cards.find_one({"id": card_id}, {"_id": 0})
+    try:
+        await search_sync.index_card(updated)
+    except Exception:
+        pass
     return Card(**_deserialize(updated))
 
 
@@ -268,6 +277,10 @@ async def delete_card(card_id: str, current_user: User = Depends(get_current_use
     result = await db.cards.delete_one({"id": card_id, "user_id": current_user.id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Card not found")
+    try:
+        await search_sync.remove_card(card_id)
+    except Exception:
+        pass
     return None
 
 

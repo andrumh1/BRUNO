@@ -45,6 +45,22 @@ export default function LiveModerationSheet({ live, events, pinned, mutedIds, is
             <div className="flex items-start gap-2 rounded-2xl bg-primary/10 p-3" data-testid="live-pinned-current"><Pin className="w-4 h-4 text-primary mt-0.5" /><p className="flex-1 text-sm"><b>{pinned.user_name}</b>: {pinned.text}</p><button onClick={() => act("unpin", {}, "Mensaje desfijado")} className="text-xs text-primary font-semibold" data-testid="live-unpin-btn"><PinOff className="w-4 h-4" /></button></div>
           ) : <p className="text-xs text-muted-foreground">Toca el pin junto a un mensaje para fijarlo.</p>}
         </section>
+        {isHost && (
+          <section data-testid="live-mods-section">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Moderadores delegados</p>
+            <p className="text-[11px] text-muted-foreground mb-2">Pueden fijar mensajes, silenciar y expulsar durante este live. Toca el escudo junto a un espectador para nombrarlo.</p>
+            {(live?.moderators_info || []).length === 0 ? <p className="text-xs text-muted-foreground" data-testid="live-mods-empty">Aún no has nombrado moderadores.</p> : (
+              <div className="flex flex-wrap gap-1.5">
+                {(live.moderators_info || []).map((m) => (
+                  <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary pl-1 pr-2 py-1 text-xs font-semibold" data-testid={`live-mod-chip-${m.id}`}>
+                    <span className="w-5 h-5 rounded-full bg-primary/20 overflow-hidden">{m.avatar && <img src={m.avatar} alt="" className="w-full h-full object-cover" />}</span>{m.name}
+                    <button onClick={() => act("remove_mod", { user_id: m.id }, "Moderador retirado")} className="ml-0.5 rounded-full hover:bg-primary/20 p-0.5" aria-label="Quitar moderador" data-testid={`live-mod-remove-${m.id}`}><ShieldOff className="w-3 h-3" /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
         <section>
           <p className="text-xs font-semibold text-muted-foreground mb-2">Participantes recientes</p>
           {people.length === 0 && <p className="text-xs text-muted-foreground">Aún nadie ha participado.</p>}

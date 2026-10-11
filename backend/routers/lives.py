@@ -514,7 +514,15 @@ async def get_live_details(live_id: str, current_user: Optional[dict] = Depends(
     if not out["is_moderator"]:
         for k in ("muted_user_ids", "banned_user_ids", "blocked_words", "room_name", "room_url"):
             out.pop(k, None)
+    else:
+        out["moderators_info"] = await _moderators_info(live.get("moderators") or [])
     return out
+
+
+async def _moderators_info(ids: list) -> list:
+    if not ids:
+        return []
+    return [{"id": u["id"], "name": u.get("name", "Usuario"), "avatar": u.get("avatar_url")} async for u in db.users.find({"id": {"$in": ids}}, {"_id": 0, "id": 1, "name": 1, "avatar_url": 1})]
 
 
 @router.post("/api/lives/{live_id}/rotate-code")
@@ -712,6 +720,9 @@ async def moderate_live(live_id: str, body: ModerationAction, current_user: dict
     if event:
         await _broadcast(live_id, event)
     fresh = await db.lives.find_one({"id": live_id}, {"_id": 0, "moderators": 1, "muted_user_ids": 1, "banned_user_ids": 1, "blocked_words": 1, "allow_comments": 1, "pinned_comment": 1})
+    fresh["moderators_info"] = await _moderators_info(fresh.get("moderators") or [])
+    if body.action in ("add_mod", "remove_mod"):
+        await _send_to(live_id, body.user_id, {"type": "mod_status", "is_moderator": body.action == "add_mod"})
     return fresh
 
 

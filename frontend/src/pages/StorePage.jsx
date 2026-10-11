@@ -38,6 +38,13 @@ const StorePage = () => {
   const { t } = useLanguage();
   
   const [products, setProducts] = useState([]);
+  // Deep-link desde Buscar: /store?product=<id> → desplazar y resaltar el producto
+  useEffect(() => {
+    const pid = new URLSearchParams(window.location.search).get("product");
+    if (!pid || !products.length) return;
+    const el = document.querySelector(`[data-testid="store-product-${pid}"]`);
+    if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("ring-2", "ring-primary"); setTimeout(() => el.classList.remove("ring-2", "ring-primary"), 2500); }
+  }, [products]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");

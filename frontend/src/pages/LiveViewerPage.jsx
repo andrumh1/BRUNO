@@ -39,6 +39,12 @@ export default function LiveViewerPage() {
   const [rtcInfo, setRtcInfo] = useState(null);
   const [following, setFollowing] = useState(false);
   const [isMod, setIsMod] = useState(false);
+  // El anfitrión puede nombrarte/quitarte como moderador en caliente
+  useEffect(() => {
+    const on = (e) => { setIsMod(!!e.detail?.is_moderator); brunoToast.success(e.detail?.is_moderator ? "Ahora eres moderador de este live" : "Ya no eres moderador"); };
+    window.addEventListener("bruno:live-mod-status", on);
+    return () => window.removeEventListener("bruno:live-mod-status", on);
+  }, []);
   const [modOpen, setModOpen] = useState(false);
   const [interactOpen, setInteractOpen] = useState(false);
   const [needsGesture, setNeedsGesture] = useState(false);

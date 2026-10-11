@@ -9,7 +9,7 @@ import { isVideoFile, videoTooLarge, videoTooLargeMsg, setVideoLimit } from "@/l
 import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
 import { setPendingMedia } from "@/lib/pendingMedia";
 import { 
-  Film, Map, ShoppingBag, User, Plus, Bell,
+  Film, Map, ShoppingBag, User, Plus, Bell, Search,
   ChevronDown
 } from "lucide-react";
 
@@ -22,6 +22,18 @@ const MobileBottomNav = () => {
   const { minimized, setMinimized, touchHandlers, idle, bumpIdle } = useNavScroll();
   const { open: openCamera, isOpen: cameraOpen } = useBrunoCamera();
   const [publishMenuOpen, setPublishMenuOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  // Contador real de notificaciones (se refresca al navegar, cada 30 s y con eventos realtime)
+  useEffect(() => {
+    if (!token) { setUnread(0); return; }
+    let alive = true;
+    const load = () => axios.get(`${API}/notifications/unread-count`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => { if (alive) setUnread(r.data?.count || 0); }).catch(() => {});
+    load();
+    const iv = setInterval(load, 30000);
+    window.addEventListener("bruno:notification", load);
+    return () => { alive = false; clearInterval(iv); window.removeEventListener("bruno:notification", load); };
+  }, [token, location.pathname]);
   
   const hiddenPaths = ['/login', '/register', '/landing', '/website', '/bruno'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || 
@@ -54,12 +66,14 @@ const MobileBottomNav = () => {
 
   if (shouldHide) return null;
 
+  // Orden: Reels · Tienda · Mapa · Crear (+) · Buscar · Notificaciones · Perfil
   const navItems = [
     { id: 'reels', icon: Film, label: 'Reels', path: '/reels', matchPaths: ['/', '/feed', '/reels', '/lives'], hasIndicator: true },
-    { id: 'marketplace', icon: ShoppingBag, label: 'Tienda', path: '/marketplace', matchPaths: ['/marketplace'] },
-    { id: 'create', icon: Plus, label: '', path: '/camera', isCreate: true },
+    { id: 'marketplace', icon: ShoppingBag, label: 'Tienda', path: '/marketplace', matchPaths: ['/marketplace', '/store'] },
     { id: 'map', icon: Map, label: 'Mapa', path: '/map', matchPaths: ['/map'] },
-    { id: 'notifications', icon: Bell, label: 'Alertas', path: '/notifications', matchPaths: ['/notifications', '/settings/notifications'], hasBadge: true },
+    { id: 'create', icon: Plus, label: '', path: '/camera', isCreate: true },
+    { id: 'search', icon: Search, label: 'Buscar', path: '/search', matchPaths: ['/search', '/hashtag'] },
+    { id: 'notifications', icon: Bell, label: 'Notificaciones', wide: true, path: '/notifications', matchPaths: ['/notifications', '/settings/notifications'], hasBadge: true },
     { id: 'profile', icon: User, label: 'Perfil', path: '/my-profile', matchPaths: ['/my-profile', '/dashboard'], showAvatar: true }
   ];
 
@@ -146,7 +160,7 @@ const MobileBottomNav = () => {
           />
 
           {/* Navigation Items */}
-          <div className="relative flex items-center justify-around px-0.5" style={{ height: 'var(--nav-h, 48px)' }}>
+          <div className="relative flex items-center justify-around px-0.5 nav-items-7" style={{ height: 'var(--nav-h, 48px)' }}>
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item);
@@ -156,7 +170,7 @@ const MobileBottomNav = () => {
                   <button
                     key={item.id}
                     onClick={() => setPublishMenuOpen(true)}
-                    className="relative flex flex-col items-center justify-center min-w-[44px] h-11 rounded-xl transition-all duration-200 hover:scale-105 active:scale-90"
+                    className="relative flex flex-col items-center justify-center flex-1 min-w-[40px] h-11 rounded-xl transition-all duration-200 hover:scale-105 active:scale-90"
                     data-testid={`nav-${item.id}`}
                     aria-label="Publicar"
                   >
@@ -178,10 +192,11 @@ const MobileBottomNav = () => {
                 <button
                   key={item.id}
                   onClick={() => navigate(item.path)}
-                  className={`relative flex flex-col items-center justify-center min-w-[44px] h-11 rounded-xl transition-all duration-200 ${
+                  className={`relative flex flex-col items-center justify-center ${item.wide ? 'flex-[1.45]' : 'flex-1'} min-w-[40px] h-11 rounded-xl transition-all duration-200 ${
                     active ? 'scale-105' : 'hover:scale-105 active:scale-95'
                   }`}
                   data-testid={`nav-${item.id}`}
+                  aria-label={item.label}
                 >
                   {active && (
                     <div className="absolute -top-0.5 w-4 h-1 rounded-full bg-primary" />
@@ -201,13 +216,13 @@ const MobileBottomNav = () => {
                         {item.hasIndicator && (
                           <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
                         )}
-                        {item.hasBadge && (
-                          <span className="absolute -top-1 -right-1.5 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center text-[6px] text-white font-bold">!</span>
+                        {item.hasBadge && unread > 0 && (
+                          <span className="absolute -top-1.5 -right-2 min-w-[14px] h-3.5 px-0.5 bg-red-500 rounded-full flex items-center justify-center text-[8px] leading-none text-white font-bold" data-testid="nav-notifications-badge">{unread > 99 ? "99+" : unread}</span>
                         )}
                       </div>
                     )}
                     
-                    <span className={`text-[9px] leading-none mt-0.5 font-medium transition-colors ${active ? 'text-primary' : 'text-muted-foreground/70'}`}>
+                    <span className={`${item.wide ? 'text-[8px] tracking-tight' : 'text-[9px]'} leading-none mt-0.5 font-medium transition-colors whitespace-nowrap ${active ? 'text-primary' : 'text-muted-foreground/70'}`}>
                       {item.label}
                     </span>
                   </div>

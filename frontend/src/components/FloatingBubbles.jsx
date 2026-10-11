@@ -210,7 +210,9 @@ const AIChatWindow = ({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5 bg-gradient-to-b from-transparent to-muted/10">
         {aiMessages.map((msg, i) => (
-          <MessageBubble key={`msg-${i}`} msg={msg} navigate={(path) => { navigate(path); onClose(); }} onPublish={publishPhoto} onSpeak={speak} />
+          <div key={`msg-${i}`} id={msg.id ? `ai-msg-${msg.id}` : undefined} className={msg.highlight ? "rounded-2xl ring-2 ring-primary/70 ring-offset-2 ring-offset-background" : undefined} data-testid={msg.id ? `ai-msg-${msg.id}` : undefined}>
+            <MessageBubble msg={msg} navigate={(path) => { navigate(path); onClose(); }} onPublish={publishPhoto} onSpeak={speak} />
+          </div>
         ))}
         {aiLoading && (
           <div className="flex justify-start">
@@ -310,6 +312,28 @@ const FloatingBubbles = () => {
   useEffect(() => {
     if (minimized) { setShowAIChat(false); setAiMinimized(false); }
   }, [minimized]);
+
+  // Abrir una conversación concreta desde Buscar → BRUNO IA → "Mis conversaciones"
+  useEffect(() => {
+    const onOpen = async (ev) => {
+      const { session_id, message_id } = ev.detail || {};
+      if (!token) return;
+      try {
+        const r = await axios.get(`${API}/ai/history`, { params: { session_id, limit: 60 }, headers: { Authorization: `Bearer ${token}` } });
+        const msgs = [];
+        for (const conv of [...r.data].reverse()) {
+          msgs.push({ role: "user", content: conv.user_message, id: conv.id ? `${conv.id}-q` : undefined, highlight: conv.id === message_id });
+          msgs.push({ role: "assistant", content: conv.ai_response, id: conv.id, highlight: conv.id === message_id });
+        }
+        if (msgs.length) setAiMessages(msgs);
+        if (session_id) setSessionId(session_id);
+      } catch { /* history unavailable */ }
+      setAiMinimized(false); setShowAIChat(true);
+      setTimeout(() => { document.getElementById(`ai-msg-${message_id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }, 350);
+    };
+    window.addEventListener("bruno:open-ai", onOpen);
+    return () => window.removeEventListener("bruno:open-ai", onOpen);
+  }, [token]);
 
   // Also react to the global minimize-all broadcast.
   useEffect(() => {
@@ -423,7 +447,8 @@ const FloatingBubbles = () => {
   const publishPhoto = async (imageUrl, caption) => {
     const { brunoToast } = await import("@/components/bruno/BrunoToast");
     try {
-      const r = await axios.post(`${API}/posts`, { content: caption, media: [{ type: "image", url: imageUrl }], post_type: "image", visibility: "public" }, { headers: { Authorization: `Bearer ${token}` } });
+      const lastQuestion = [...aiMessages].reverse().find((m) => m.role === "user")?.content || "";
+      const r = await axios.post(`${API}/posts`, { content: caption, media: [{ type: "image", url: imageUrl }], post_type: "image", visibility: "public", source: "bruno_ai", ai_question: lastQuestion }, { headers: { Authorization: `Bearer ${token}` } });
       brunoToast.publish("Publicación creada", { description: "Tu foto ya está en el feed y en tu perfil." });
       setShowAIChat(false);
       navigate(`/post/${r.data.id}`);

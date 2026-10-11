@@ -66,6 +66,7 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
         case "new_gift": pushEvent({ kind: "gift", id: msg.gift.id, user_name: msg.gift.sender_name, gift_type: msg.gift.gift_type, amount: msg.gift.amount }); break;
         case "heart": { const n = Math.min(6, Number(msg.count) || 1); const ids = Array.from({ length: n }, (_, i) => `${Date.now()}-${i}-${Math.random()}`); setHearts((p) => [...p.slice(-20), ...ids.map((id) => ({ id, dx: Math.round(Math.random() * 80 - 40) }))]); setTimeout(() => setHearts((p) => p.filter((h) => !ids.includes(h.id))), 2500); break; }
         case "pinned": setPinned(msg.comment || null); break;
+        case "mod_status": window.dispatchEvent(new CustomEvent("bruno:live-mod-status", { detail: { is_moderator: !!msg.is_moderator } })); break;
         case "user_muted": setMutedIds((p) => [...new Set([...p, msg.user_id])]); break;
         case "user_unmuted": setMutedIds((p) => p.filter((x) => x !== msg.user_id)); break;
         case "user_kicked": setEvents((p) => p.filter((e) => e.user_id !== msg.user_id)); break;

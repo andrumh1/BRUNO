@@ -48,3 +48,8 @@
 - Host QA: testb@brunoqa.com / Prueba1234! · Espectador adulto: viewer2@bruno.com / Test1234! (birth_date 1990-05-05, saldo de créditos ~6 USD) · Menor: ninguno (usar un usuario nuevo y POST /api/users/me/birth-date con fecha reciente).
 - Flujo live: POST /api/lives (status preparing) → POST /api/lives/{id}/start (live) → POST /heartbeat cada 20 s → POST /end. Privados: PIN en respuesta de creación (`access_code`, solo host); espectador POST /join {access_code}; 5 fallos → 429 15 min (colección pin_attempts).
 - Créditos: GET /api/credits/wallet, /gifts, POST /api/credits/gift {live_id,gift_id,quantity}. Recarga: POST /api/money/checkout kind "credits" option c5|c10|c20|c50.
+
+## Búsqueda global (2026-06)
+- Datos semilla: tarjeta privada "Tarjeta Secreta Zanahoria" (newtest, is_public=false → NO debe aparecer); tarjeta pública de negocio "Panadería Doña Ñoña" (viewer3 → aparece en Tarjetas y Empresas); viewer4@bruno.com es cuenta PRIVADA con post "Xilófono privado…" (solo visible para sus seguidores); post antiguo público "Canción antigua del río Magdalena" (viewer3, 2026-01-05).
+- Admin reindex: POST /api/search/admin/reindex (testc@brunoqa.com). Estado: GET /api/search/status.
+- Historial de moderación: /admin/users (buscar usuario) y /admin/users/{id}/moderation (admin testc). Usuario con acción registrada: Prueba B (testb@brunoqa.com, id b1838f61-9fcf-4f4f-b4cb-2da82280dada).

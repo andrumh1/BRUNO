@@ -299,6 +299,7 @@ async def chat_with_bruno_ai(
         response = await chat.send_message(_user_message(enriched_message, image))
 
         conversation_doc = {
+            "id": str(uuid.uuid4()),
             "session_id": session_id,
             "user_id": current_user.id,
             "model": model,
@@ -309,6 +310,11 @@ async def chat_with_bruno_ai(
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.ai_conversations.insert_one(conversation_doc)
+        try:
+            from utils import search_sync
+            await search_sync.index_ai_conversation(conversation_doc)
+        except Exception:
+            pass
 
         cards_for_response = [
             {"id": c.get("id", ""), "title": c.get("title", ""), "card_type": c.get("card_type", ""),
@@ -355,13 +361,20 @@ async def chat_with_bruno_ai_stream(
                 elif isinstance(ev, StreamDone):
                     break
             text = "".join(full)
-            await db.ai_conversations.insert_one({
+            conv_doc = {
+                "id": str(uuid.uuid4()),
                 "session_id": session_id, "user_id": current_user.id, "model": model,
                 "user_message": input_data.message, "ai_response": text,
                 "attachment_url": input_data.attachment_url,
                 "cards_context": [c.get("id") for c in cards_context if c],
                 "created_at": datetime.now(timezone.utc).isoformat(),
-            })
+            }
+            await db.ai_conversations.insert_one(conv_doc)
+            try:
+                from utils import search_sync
+                await search_sync.index_ai_conversation(conv_doc)
+            except Exception:
+                pass
             yield f"data: {_json.dumps({'type': 'done', 'response': text})}\n\n"
         except Exception as e:
             logging.error(f"AI stream error: {e}")

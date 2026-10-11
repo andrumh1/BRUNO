@@ -10,6 +10,7 @@ sys.path.insert(0, '/app/backend')
 
 from utils.database import db
 from utils.security import get_current_user, get_current_user_optional
+from utils import search_sync
 from models.user import User
 
 router = APIRouter(prefix="/marketplace", tags=["marketplace"])
@@ -98,6 +99,10 @@ async def create_product(
     }
     
     await db.marketplace_products.insert_one(product_doc)
+    try:
+        await search_sync.index_product(product_doc, "marketplace"); await search_sync.index_user(product_doc.get("seller_id"))
+    except Exception:
+        pass
     
     # Return without _id
     product_doc.pop("_id", None)
@@ -239,6 +244,10 @@ async def update_product(
     )
     
     updated = await db.marketplace_products.find_one({"id": product_id}, {"_id": 0})
+    try:
+        await search_sync.index_product(updated, "marketplace")
+    except Exception:
+        pass
     return updated
 
 
@@ -257,6 +266,10 @@ async def delete_product(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     await db.marketplace_products.delete_one({"id": product_id})
+    try:
+        await search_sync.remove_product(product_id)
+    except Exception:
+        pass
     return {"status": "deleted"}
 
 
