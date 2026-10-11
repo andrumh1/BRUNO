@@ -29,6 +29,11 @@ export default function CardExampleViewerPage() {
   const [copied, setCopied] = useState(false);
   const [qr, setQr] = useState(null);
   const [demo, setDemo] = useState(null);
+  const [barOpen, setBarOpen] = useState(true);
+  const dragRef = React.useRef({ y: 0, moved: false });
+  const onDragStart = (y) => { dragRef.current = { y, moved: false }; };
+  const onDragMove = (y) => { const dy = y - dragRef.current.y; if (Math.abs(dy) > 18 && !dragRef.current.moved) { dragRef.current.moved = true; setBarOpen(dy < 0); } };
+  const onDragEnd = () => { if (!dragRef.current.moved) setBarOpen((v) => !v); };
 
   const load = () => { setErr(false); axios.get(`${API}/card-examples/${type}`, { params: { template, lang: language } }).then((r) => { setCard(r.data); if (!template) setParams({ template: r.data.example_preset }, { replace: true }); }).catch(() => setErr(true)); };
   useEffect(load, [type, template, language]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -49,10 +54,10 @@ export default function CardExampleViewerPage() {
 
   if (err) return <div className="min-h-screen grid place-items-center text-center p-6" data-testid="example-error"><div><p className="text-sm text-muted-foreground">{t.loadErr}</p><button onClick={load} className="mt-3 rounded-full bg-primary text-white px-4 py-2 text-sm font-semibold">{t.retry}</button></div></div>;
   return (
-    <div className="min-h-screen bg-background" data-testid="card-example-viewer" style={{ paddingBottom: "calc(var(--content-bottom, 96px) + 140px)" }}>
+    <div className="min-h-screen bg-background" data-testid="card-example-viewer" style={{ paddingBottom: barOpen ? "calc(var(--content-bottom, 96px) + 170px)" : "calc(var(--content-bottom, 96px) + 50px)" }}>
       <header className="sticky top-0 z-30 bruno-glass border-b border-border/40">
         <div className="max-w-3xl mx-auto h-14 px-3 flex items-center gap-2">
-          <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full grid place-items-center hover:bg-foreground/[0.06]" aria-label={t.back} data-testid="example-back"><ArrowLeft className="w-5 h-5" /></button>
+          <button onClick={() => navigate("/cards/examples")} className="w-10 h-10 rounded-full grid place-items-center hover:bg-foreground/[0.06]" aria-label={t.back} data-testid="example-back"><ArrowLeft className="w-5 h-5" /></button>
           <div className="min-w-0 flex-1"><p className="text-sm font-bold truncate" data-testid="example-type-name">{card?.type_name || "…"}</p><p className="text-[11px] text-muted-foreground truncate" data-testid="example-preset-name">{card?.preset_name}</p></div>
           <button onClick={() => setLanguage(language === "es" ? "en" : "es")} className="h-9 px-2.5 rounded-full bg-foreground/[0.06] text-xs font-semibold inline-flex items-center gap-1" aria-label="Idioma / Language" data-testid="example-lang-toggle"><Languages className="w-3.5 h-3.5" />{language.toUpperCase()}</button>
           <button onClick={showQr} className="w-9 h-9 rounded-full bg-foreground/[0.06] grid place-items-center" aria-label={t.qr} data-testid="example-qr-btn"><QrCode className="w-4 h-4" /></button>
@@ -65,8 +70,21 @@ export default function CardExampleViewerPage() {
           : <div className="transition-opacity duration-200" key={`${card.example_preset}-${language}`} data-testid="example-card-wrap"><CardRenderer data={card} design={card.card_design} cardId={card.id} onChat={() => setDemo({ label: "Chat", href: "chat" })} /></div>}
       </main>
 
-      <div className="fixed inset-x-0 z-30 bruno-glass border-t border-border/40" style={{ bottom: "calc(var(--nav-reserve, 64px) + 8px)" }} data-testid="example-template-bar">
-        <div className="max-w-3xl mx-auto px-3 pt-2 pb-2 space-y-2">
+      <div className="fixed inset-x-0 z-30 bruno-glass border-t border-border/40 transition-transform duration-300 ease-out motion-reduce:transition-none" style={{ bottom: "calc(var(--nav-reserve, 64px) + 8px)", transform: barOpen ? "translateY(0)" : "translateY(calc(100% - 34px))" }} data-testid="example-template-bar" data-open={barOpen ? "1" : "0"}>
+        <button
+          className="w-full h-[34px] flex flex-col items-center justify-center gap-1 touch-none select-none cursor-grab active:cursor-grabbing"
+          aria-label={barOpen ? (language === "en" ? "Hide templates" : "Ocultar plantillas") : (language === "en" ? "Show templates" : "Mostrar plantillas")}
+          aria-expanded={barOpen}
+          onPointerDown={(e) => { e.currentTarget.setPointerCapture?.(e.pointerId); onDragStart(e.clientY); }}
+          onPointerMove={(e) => { if (e.buttons || e.pointerType === "touch") onDragMove(e.clientY); }}
+          onPointerUp={onDragEnd}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setBarOpen((v) => !v); } }}
+          data-testid="example-bar-handle"
+        >
+          <span className="w-10 h-1.5 rounded-full bg-foreground/30" />
+          <span className="text-[10px] text-muted-foreground leading-none">{barOpen ? (language === "en" ? "Swipe down to see the full card" : "Desliza abajo para ver la tarjeta completa") : `${t.templates} · ${t.use}`}</span>
+        </button>
+        <div className="max-w-3xl mx-auto px-3 pb-2 space-y-2">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide" role="tablist" aria-label={t.templates}>
             {(card?.example_presets || []).map((p) => (
               <button key={p} role="tab" aria-selected={p === card?.example_preset} onClick={() => setParams({ template: p })} className={`shrink-0 flex flex-col items-center gap-1 rounded-xl p-1 transition-colors ${p === card?.example_preset ? "bg-primary/15 ring-2 ring-primary" : "hover:bg-foreground/[0.05]"}`} data-testid={`example-template-${p}`}><Swatch id={p} /><span className="text-[10px] font-medium">{(T[language] && (PRESETS.find((x) => x.id === p)?.name)) || p}</span></button>
