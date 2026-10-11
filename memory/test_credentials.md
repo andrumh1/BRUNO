@@ -58,3 +58,4 @@
 - Videos largos semilla (newtest): 12b28791-edff-4be8-875d-f23742f6b758 (420 s, capítulos en descripción) y bdce489a-6f05-46b3-93c4-a0e70360bd64 (600 s). Ruta /video/:id. Feed: GET /api/posts/recommended-videos?kind=video&long=1.
 - Progreso: POST/GET /api/posts/{id}/progress. Capítulos: PUT /api/posts/{id} {chapters:[{time,title}]} (solo dueño).
 - Cupones: GET /api/money/coupons/stats (clics se cuentan al abrir GET /api/money/coupons/{id}/public).
+- Serie semilla (newtest): 6ff8761f-215b-423d-a934-d0bd9a017824 "Curso BRUNO completo" (2 videos). Rutas /series/:id, /series/new, /video/:id?series=:sid. Capítulos IA: POST /api/posts/{id}/chapters/ai (422 en videos sin voz).

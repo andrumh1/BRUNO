@@ -49,6 +49,7 @@ export default function SeriesPage() {
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [err, setErr] = useState("");
+  const [confirmDel, setConfirmDel] = useState(false);
 
   useEffect(() => { if (!isNew) axios.get(`${API}/series/${seriesId}`, { headers }).then((r) => setS(r.data)).catch((e) => setErr(e?.response?.data?.detail || "Serie no encontrada")); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesId, token]);
@@ -65,7 +66,11 @@ export default function SeriesPage() {
     } catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo guardar"); }
     finally { setSaving(false); }
   };
-  const remove = async () => { if (!window.confirm("¿Eliminar esta serie? Los videos no se borran.")) return; await axios.delete(`${API}/series/${seriesId}`, { headers }); brunoToast.success("Serie eliminada"); navigate(-1); };
+  const remove = async () => {
+    if (!confirmDel) { setConfirmDel(true); setTimeout(() => setConfirmDel(false), 4000); return; }
+    try { await axios.delete(`${API}/series/${seriesId}`, { headers }); brunoToast.success("Serie eliminada. Los videos no se borran."); navigate(-1); }
+    catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo eliminar"); }
+  };
 
   if (err) return <div className="min-h-screen grid place-items-center p-6 text-center" data-testid="series-error"><div><ListVideo className="w-10 h-10 mx-auto text-muted-foreground" /><p className="mt-2 text-sm">{err}</p><button onClick={() => navigate(-1)} className="mt-4 rounded-full bg-primary text-white px-4 py-2 text-sm font-semibold">Volver</button></div></div>;
   if (!s) return <div className="min-h-screen grid place-items-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -79,7 +84,7 @@ export default function SeriesPage() {
         {s.is_owner && !editing && (
           <div className="absolute right-3 flex gap-2" style={{ top: "calc(var(--safe-top, 0px) + 10px)" }}>
             <button onClick={() => setEditing(true)} className="h-10 px-3 rounded-full bg-black/40 text-white text-xs font-semibold inline-flex items-center gap-1" data-testid="series-edit"><Pencil className="w-3.5 h-3.5" />Editar</button>
-            <button onClick={remove} className="w-10 h-10 rounded-full bg-black/40 text-white grid place-items-center" aria-label="Eliminar serie" data-testid="series-delete"><Trash2 className="w-4 h-4" /></button>
+            <button onClick={remove} className={`h-10 rounded-full text-white grid place-items-center transition-colors ${confirmDel ? "px-3 bg-destructive text-xs font-bold" : "w-10 bg-black/40"}`} aria-label="Eliminar serie" data-testid="series-delete">{confirmDel ? "¿Eliminar? Confirmar" : <Trash2 className="w-4 h-4" />}</button>
           </div>
         )}
         <div className="absolute inset-x-0 bottom-0 px-4 pb-3">
