@@ -113,6 +113,13 @@ export default function StartLivePage() {
     const id = setInterval(() => axios.post(`${API}/lives/${live.id}/heartbeat`, {}, { headers }).catch(() => {}), 20000);
     return () => clearInterval(id);
   }, [live?.id, live?.status]);
+  // Moderación detuvo el live (o el servidor lo cerró): liberar cámara y llevar al resumen.
+  useEffect(() => {
+    if (!rtc.ended || !live?.id || live.status !== "live") return;
+    stream?.getTracks().forEach((t) => t.stop());
+    brunoToast.error(rtc.endedReason === "admin_stopped" ? "Tu live fue detenido por moderación" : "El live terminó", { description: rtc.endedMessage || undefined });
+    navigate(`/lives/${live.id}/summary`, { replace: true });
+  }, [rtc.ended]);
   const cancelPrep = async () => {
     try { await axios.post(`${API}/lives/${live.id}/cancel`, {}, { headers }); } catch (_) { /* ignore */ }
     confirmedRef.current = false; setLive(null); openCamera();

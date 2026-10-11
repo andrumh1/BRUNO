@@ -72,6 +72,19 @@ export default function AdminMoneyPage() {
           <div className="rounded-2xl border border-border/60 p-3" data-testid="admin-connected"><p className="text-[11px] uppercase tracking-wider text-muted-foreground">Cuentas conectadas</p><p className="font-bold">{data.connected_accounts.total} · {data.connected_accounts.payouts_enabled} con pagos activos</p></div>
         </section>
         <p className="text-[11px] text-muted-foreground">{data.reconciliation_note}</p>
+        {data.pending_refunds?.length > 0 && (
+          <section className="rounded-3xl border border-amber-400/50 p-4 space-y-2" data-testid="admin-pending-refunds">
+            <h2 className="text-sm font-bold">Reembolsos automáticos pendientes ({data.pending_refunds.length})</h2>
+            <p className="text-[11px] text-muted-foreground">Entradas de lives cancelados o que nunca empezaron cuyo reembolso Stripe falló. Reintenta cuando el pago exista en Stripe.</p>
+            {data.pending_refunds.map((r) => (
+              <div key={r.id} className="flex items-center gap-2 text-xs border-t border-border/40 pt-2" data-testid={`pending-refund-${r.id}`}>
+                <div className="flex-1 min-w-0"><p className="font-medium truncate">{r.name} · {fmtMoney(r.total, r.currency)}</p><p className="text-muted-foreground truncate">{r.reason} · {r.error}</p></div>
+                <Button size="sm" variant="outline" className="rounded-full h-8" onClick={async () => { try { await axios.post(`${API}/money/refund`, { ledger_id: r.id, reason: r.reason || "live_not_started" }, { headers }); brunoToast.success("Reembolso emitido"); load(); } catch (e) { brunoToast.error(detailMsg(e) || "No se pudo reembolsar"); } }} data-testid={`pending-refund-retry-${r.id}`}>Reintentar</Button>
+              </div>
+            ))}
+          </section>
+        )}
+        <Button variant="outline" className="rounded-full" onClick={() => navigate("/admin/reports")} data-testid="admin-reports-link">Ver reportes y moderación</Button>
 
         <section data-testid="admin-ledger">
           <h2 className="text-sm font-bold mb-2">Movimientos recientes</h2>

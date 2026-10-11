@@ -59,6 +59,29 @@ HOST_STALE_SECONDS = 120   # live sin latido del anfitrión → se cierra (sin s
 PREPARING_TTL_SECONDS = 900  # preparando sin "Iniciar" → se descarta
 
 
+async def _refund_live_tickets(live_id: str, reason: str) -> dict:
+    """Devuelve solas las entradas de un live que se canceló o nunca empezó. Idempotente; si Stripe falla queda `refund_pending` para reintento admin."""
+    import stripe
+    from starlette.concurrency import run_in_threadpool
+    _stripe_ready = lambda: bool(stripe.api_key)
+    done, pending = 0, 0
+    async for e in db.ledger_entries.find({"kind": "live_ticket", "ref_id": live_id, "status": "paid"}, {"_id": 0}):
+        try:
+            if not _stripe_ready() or not e.get("payment_intent"):
+                raise RuntimeError("stripe_unavailable")
+            r = await run_in_threadpool(lambda: stripe.Refund.create(payment_intent=e["payment_intent"], metadata={"ledger_id": e["id"], "reason": reason, "auto": "live_not_started"}, idempotency_key=f"refund-{e['id']}-full"))
+            await db.ledger_entries.update_one({"id": e["id"]}, {"$set": {"status": "refunded", "refunded_minor": e["total_minor"], "refund_id": r.id, "refund_reason": reason, "refunded_at": datetime.now(timezone.utc).isoformat()}})
+            done += 1
+        except Exception as ex:
+            await db.ledger_entries.update_one({"id": e["id"]}, {"$set": {"refund_pending": True, "refund_reason": reason, "refund_error": str(getattr(ex, 'user_message', ex))[:160], "updated_at": datetime.now(timezone.utc).isoformat()}})
+            pending += 1
+        await db.live_tickets.delete_many({"live_id": live_id, "user_id": e["buyer_id"]})
+        await db.notifications.insert_one({"id": str(uuid.uuid4()), "user_id": e["buyer_id"], "type": "refund", "message": f"El live «{e['name']}» no llegó a realizarse: te devolvemos {e['total_minor'] / 100:.2f} {e['currency'].upper()}" + ("" if done else " (en proceso)"), "target_id": live_id, "target_type": "live", "is_read": False, "created_at": datetime.now(timezone.utc).isoformat()})
+    if done or pending:
+        await db.lives.update_one({"id": live_id}, {"$set": {"tickets_refund": {"done": done, "pending": pending, "reason": reason, "at": datetime.now(timezone.utc).isoformat()}}})
+    return {"refunded": done, "pending": pending}
+
+
 async def _reap_stale_lives():
     """Cierra lives cuyo anfitrión desapareció y descarta preparaciones abandonadas (se ejecuta al listar)."""
     now = datetime.now(timezone.utc)
@@ -71,7 +94,9 @@ async def _reap_stale_lives():
         await db.lives.update_one({"id": l["id"], "status": "live"}, {"$set": {"status": "ended", "ended_at": now.isoformat(), "duration_seconds": dur, "end_reason": "host_lost"}})
         await _broadcast(l["id"], {"type": "live_ended", "reason": "host_lost"})
     old = (now - timedelta(seconds=PREPARING_TTL_SECONDS)).isoformat()
-    await db.lives.update_many({"status": "preparing", "created_at": {"$lt": old}}, {"$set": {"status": "cancelled", "ended_at": now.isoformat(), "end_reason": "abandoned"}})
+    async for l in db.lives.find({"status": "preparing", "created_at": {"$lt": old}}, {"_id": 0, "id": 1}):
+        await db.lives.update_one({"id": l["id"]}, {"$set": {"status": "cancelled", "ended_at": now.isoformat(), "end_reason": "abandoned"}})
+        await _refund_live_tickets(l["id"], "abandoned")
 
 
 class LiveComment(BaseModel):
@@ -395,13 +420,14 @@ async def cancel_live(live_id: str, current_user: dict = Depends(get_current_use
     if not live:
         raise HTTPException(status_code=404, detail="No hay ninguna preparación que cancelar")
     await db.lives.update_one({"id": live_id}, {"$set": {"status": "cancelled", "ended_at": datetime.now(timezone.utc).isoformat(), "end_reason": "host_cancelled"}})
+    refunds = await _refund_live_tickets(live_id, "host_cancelled")
     if live.get("room_name"):
         try:
             await _daily("DELETE", f"/rooms/{live['room_name']}")
         except Exception:
             pass
     active_lives.pop(live_id, None)
-    return {"cancelled": True}
+    return {"cancelled": True, **refunds}
 
 
 @router.get("/api/lives")
@@ -1116,7 +1142,8 @@ async def cancel_scheduled(live_id: str, current_user: dict = Depends(get_curren
     live = await _live_or_404(live_id, status="scheduled")
     if live["host_id"] != current_user["id"]:
         raise HTTPException(status_code=403, detail="Solo el anfitrión")
-    await db.lives.update_one({"id": live_id}, {"$set": {"status": "cancelled"}})
+    await db.lives.update_one({"id": live_id}, {"$set": {"status": "cancelled", "end_reason": "host_cancelled_scheduled"}})
+    await _refund_live_tickets(live_id, "scheduled_cancelled")
     async for r in db.live_reminders.find({"live_id": live_id}, {"_id": 0, "user_id": 1}):
         await notify_user(r["user_id"], "live_cancelled", "Live cancelado", f"{live['host_name']} canceló «{live['title']}»", {"live_id": live_id}, "/lives")
     await db.live_reminders.delete_many({"live_id": live_id})

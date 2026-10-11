@@ -1,0 +1,11 @@
+import os,stripe
+from dotenv import load_dotenv; load_dotenv('/app/backend/.env')
+stripe.api_key=os.environ['STRIPE_SECRET_KEY']; client = stripe.StripeClient(os.environ['STRIPE_SECRET_KEY'])
+acct = client.v2.core.accounts.create({"display_name":"QA","contact_email":"qa2@example.com","identity":{"country":"us"},"dashboard":"express","defaults":{"responsibilities":{"fees_collector":"application","losses_collector":"application"}},"configuration":{"recipient":{"capabilities":{"stripe_balance":{"stripe_transfers":{"requested":True}}}}}})
+print("created", acct.id)
+try: a=stripe.Account.modify(acct.id, settings={"payouts":{"schedule":{"interval":"manual"}}}, metadata={"bruno_user_id":"x"}); print("v1 modify ok, payouts:", a.settings.payouts.schedule.interval)
+except Exception as e: print("v1 modify ERR", str(e)[:200])
+try: a=stripe.Account.retrieve(acct.id); print("v1 retrieve ok charges/payouts:", a.get("charges_enabled"), a.get("payouts_enabled"), "due:", (a.get("requirements") or {}).get("currently_due")[:3])
+except Exception as e: print("v1 retrieve ERR", str(e)[:200])
+try: print("login link:", stripe.Account.create_login_link(acct.id).url[:40])
+except Exception as e: print("login link ERR", str(e)[:200])

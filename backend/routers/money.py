@@ -120,16 +120,24 @@ async def connect_onboard(body: OnboardRequest, current_user: User = Depends(get
     acct_doc = await db.connected_accounts.find_one({"user_id": current_user.id}, {"_id": 0})
     try:
         if not acct_doc:
-            acct = stripe.Account.create(type="express", country=country, email=current_user.email,
-                                         capabilities={"card_payments": {"requested": True}, "transfers": {"requested": True}},
-                                         settings={"payouts": {"schedule": {"interval": "manual"}}},
-                                         business_profile={"product_description": "Creador/vendedor en BRUNO"},
-                                         metadata={"bruno_user_id": current_user.id})
-            acct_doc = {"user_id": current_user.id, "account_id": acct.id, "country": country, "currency": SELLER_COUNTRIES[country], "created_at": now_iso(), "status": "onboarding"}
+            # Stripe exige Accounts v2 para nuevas integraciones Connect; el resto (status, payouts manuales, charges) sigue vía v1 compatible.
+            client = stripe.StripeClient(stripe.api_key)
+            acct = client.v2.core.accounts.create({
+                "display_name": (current_user.name or "Creador BRUNO")[:60], "contact_email": current_user.email,
+                "identity": {"country": country.lower()}, "dashboard": "express",
+                "defaults": {"responsibilities": {"fees_collector": "application", "losses_collector": "application"}},
+                "configuration": {"recipient": {"capabilities": {"stripe_balance": {"stripe_transfers": {"requested": True}}}}},
+                "metadata": {"bruno_user_id": current_user.id},
+            })
+            stripe.Account.modify(acct.id, settings={"payouts": {"schedule": {"interval": "manual"}}}, business_profile={"product_description": "Creador/vendedor en BRUNO"})
+            acct_doc = {"user_id": current_user.id, "account_id": acct.id, "country": country, "currency": SELLER_COUNTRIES[country], "created_at": now_iso(), "status": "onboarding", "api": "v2"}
             await db.connected_accounts.insert_one(dict(acct_doc))
-        link = stripe.AccountLink.create(account=acct_doc["account_id"], refresh_url=f"{body.origin_url}/earnings?connect=refresh", return_url=f"{body.origin_url}/earnings?connect=return", type="account_onboarding")
+        client = stripe.StripeClient(stripe.api_key)
+        link = client.v2.core.account_links.create({"account": acct_doc["account_id"], "use_case": {"type": "account_onboarding", "account_onboarding": {"configurations": ["recipient"], "refresh_url": f"{body.origin_url}/earnings?connect=refresh", "return_url": f"{body.origin_url}/earnings?connect=return"}}})
     except stripe.error.StripeError as e:
         raise _stripe_unavailable(e)
+    except Exception as e:  # errores v2 (stripe._error.TemporarySessionExpiredError etc.) → mismo trato
+        raise HTTPException(status_code=503, detail={"code": "connect_error", "message": str(e)[:200]})
     return {"url": link.url, "account_id": acct_doc["account_id"]}
 
 
@@ -139,11 +147,12 @@ async def _account_status(user_id: str) -> dict:
         return {"connected": False}
     try:
         acct = stripe.Account.retrieve(doc["account_id"])
+        caps = acct.get("capabilities") or {}
         status = {"connected": True, "account_id": doc["account_id"], "country": doc["country"], "currency": doc.get("currency"),
-                  "charges_enabled": bool(acct.get("charges_enabled")), "payouts_enabled": bool(acct.get("payouts_enabled")),
+                  "charges_enabled": bool(acct.get("charges_enabled")), "payouts_enabled": bool(acct.get("payouts_enabled")), "transfers_active": caps.get("transfers") == "active",
                   "requirements_due": list((acct.get("requirements") or {}).get("currently_due") or []), "disabled_reason": (acct.get("requirements") or {}).get("disabled_reason"),
                   "has_bank_account": bool((acct.get("external_accounts") or {}).get("data"))}
-        await db.connected_accounts.update_one({"user_id": user_id}, {"$set": {"charges_enabled": status["charges_enabled"], "payouts_enabled": status["payouts_enabled"], "status": "active" if status["payouts_enabled"] else "onboarding", "checked_at": now_iso()}})
+        await db.connected_accounts.update_one({"user_id": user_id}, {"$set": {"charges_enabled": status["charges_enabled"], "payouts_enabled": status["payouts_enabled"], "transfers_active": status["transfers_active"], "status": "active" if (status["payouts_enabled"] or status["transfers_active"]) else "onboarding", "checked_at": now_iso()}})
         return status
     except stripe.error.StripeError as e:
         return {"connected": True, "account_id": doc["account_id"], "country": doc["country"], "currency": doc.get("currency"), "error": str(e)[:200]}
@@ -370,9 +379,10 @@ async def create_checkout(body: CheckoutBody, current_user: User = Depends(get_c
             if paid:
                 raise HTTPException(status_code=400, detail="Ya tienes entrada para este live")
         acct = await db.connected_accounts.find_one({"user_id": item["seller_id"]}, {"_id": 0})
-        if not acct or not acct.get("charges_enabled"):
+        # Destination charges: cobra BRUNO; el creador solo necesita poder RECIBIR transferencias (transfers activo / payouts habilitados).
+        if not acct or not (acct.get("transfers_active") or acct.get("payouts_enabled")):
             st = await _account_status(item["seller_id"]) if acct else {"connected": False}
-            if not st.get("charges_enabled"):
+            if not (st.get("transfers_active") or st.get("payouts_enabled")):
                 raise HTTPException(status_code=409, detail={"code": "seller_not_ready", "message": "Este creador/vendedor aún no ha completado su cuenta de cobros en BRUNO. No se puede cobrar hasta que la active."})
         seller_acct = acct["account_id"]
 
@@ -716,6 +726,8 @@ async def refund(body: RefundBody, current_user: User = Depends(get_current_user
         r = stripe.Refund.create(**kwargs, idempotency_key=f"refund-{entry['id']}-{kwargs.get('amount', 'full')}")
     except stripe.error.StripeError as e:
         raise _stripe_unavailable(e)
+    full = r.amount >= entry["total_minor"] - int(entry.get("refunded_minor") or 0)
+    await db.ledger_entries.update_one({"id": entry["id"]}, {"$set": {"status": "refunded" if full else "partially_refunded", "refund_id": r.id, "refunded_at": now_iso(), "updated_at": now_iso()}, "$inc": {"refunded_minor": r.amount}, "$unset": {"refund_pending": "", "refund_error": ""}})
     return {"refund_id": r.id, "status": r.status, "amount": fmt_minor(r.amount, entry["currency"])}
 
 
@@ -753,7 +765,8 @@ async def admin_overview(current_user: User = Depends(get_current_user)):
     accounts = await db.connected_accounts.count_documents({})
     active = await db.connected_accounts.count_documents({"payouts_enabled": True})
     fees_doc = await db.money_settings.find_one({"key": "fees"}, {"_id": 0})
-    return {"by_currency": agg, "platform_balance": platform_balance, "connected_accounts": {"total": accounts, "payouts_enabled": active}, "fees": await get_fees(), "fees_history": (fees_doc or {}).get("history", [])[-20:],
+    pending_refunds = [{"id": e["id"], "name": e["name"], "buyer_id": e["buyer_id"], "total": fmt_minor(e["total_minor"], e["currency"]), "currency": e["currency"], "reason": e.get("refund_reason"), "error": e.get("refund_error")} for e in entries if e.get("refund_pending") and e["status"] == "paid"]
+    return {"by_currency": agg, "platform_balance": platform_balance, "connected_accounts": {"total": accounts, "payouts_enabled": active}, "fees": await get_fees(), "fees_history": (fees_doc or {}).get("history", [])[-20:], "pending_refunds": pending_refunds,
             "recent": [{k: e.get(k) for k in ("id", "kind", "name", "currency", "status", "created_at", "buyer_id", "seller_id", "fee_pct")} | {"total": fmt_minor(e["total_minor"], e["currency"]), "bruno_fee": fmt_minor(e["fee_minor"], e["currency"]), "seller_net": fmt_minor(e["seller_net_minor"], e["currency"]), "refunded": fmt_minor(int(e.get("refunded_minor") or 0), e["currency"]), "disputed": bool(e.get("disputed"))} for e in entries[:200]],
             "reconciliation_note": "El dinero de terceros (bruto de creadores/vendedores) no es ingreso de BRUNO; solo las comisiones netas y las ventas comerciales (PIUP, promociones) lo son."}
 

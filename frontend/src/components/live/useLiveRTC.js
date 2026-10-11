@@ -20,6 +20,8 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
   const [settings, setSettings] = useState({});
   const [mutedIds, setMutedIds] = useState([]);
   const [ended, setEnded] = useState(false);
+  const [endedReason, setEndedReason] = useState(null);
+  const [endedMessage, setEndedMessage] = useState(null);
   const [denied, setDenied] = useState(false);
   const [kicked, setKicked] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -69,7 +71,7 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
         case "user_kicked": setEvents((p) => p.filter((e) => e.user_id !== msg.user_id)); break;
         case "kicked": setKicked(true); break;
         case "settings": setSettings((s) => ({ ...s, ...msg })); break;
-        case "live_ended": setEnded(true); break;
+        case "live_ended": setEnded(msg.reason || true); setEndedReason(msg.reason || null); if (msg.message) setEndedMessage(msg.message); break;
         case "guest_request": setGuestRequests((p) => [...p.filter((g) => g.id !== msg.user.id), msg.user]); break;
         case "guest_request_cancel": setGuestRequests((p) => p.filter((g) => g.id !== msg.user_id)); break;
         case "guest_accepted": setGuestStatus("accepted"); setGuestRtc(msg.rtc); break;
@@ -95,5 +97,5 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
   }, [send]);
 
   return { connected, hostOnline, viewerCount, events, hearts, pinned, settings, mutedIds, ended, denied, kicked, sendHeart, reconnecting: !connected && attempt > 0,
-    guestRequests, guests, guestStatus, setGuestStatus, guestRtc, setGuestRtc, poll, setPoll, questions, setQuestions, recording, setRecording };
+    guestRequests, guests, guestStatus, setGuestStatus, guestRtc, setGuestRtc, poll, setPoll, questions, setQuestions, recording, setRecording, endedReason, endedMessage };
 }

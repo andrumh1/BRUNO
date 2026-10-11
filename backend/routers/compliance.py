@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
+import uuid
 import os
 
 router = APIRouter(tags=["compliance"])
@@ -263,6 +264,47 @@ async def export_user_data(current_user: dict = Depends(get_current_user_from_to
 # ADMIN MODERATION (for future use)
 # ============================================
 
+def _require_admin(user: dict) -> None:
+    if user.get("role") not in ("admin", "superadmin") and not user.get("is_admin") and user.get("subscription_tier") != "admin":
+        raise HTTPException(status_code=403, detail="Solo administración")
+
+
+@router.post("/api/admin/lives/{live_id}/stop")
+async def admin_stop_live(live_id: str, report_id: Optional[str] = None, reason: str = "Incumple las normas de BRUNO", current_user: dict = Depends(get_current_user_from_token)):
+    """Detiene un live con un toque: cierra la sala, avisa a todos, bloquea nuevas compras y resuelve el reporte."""
+    _require_admin(current_user)
+    from routers.lives import _broadcast, _daily, active_lives, _refund_live_tickets
+    live = await db.lives.find_one({"id": live_id}, {"_id": 0, "status": 1, "room_name": 1, "started_at": 1, "host_id": 1, "title": 1})
+    if not live:
+        raise HTTPException(status_code=404, detail="Live no encontrado")
+    now = datetime.now(timezone.utc)
+    if live["status"] in ("live", "preparing"):
+        dur = 0
+        if live.get("started_at"):
+            try:
+                dur = max(0, int((now - datetime.fromisoformat(live["started_at"])).total_seconds()))
+            except ValueError:
+                dur = 0
+        await db.lives.update_one({"id": live_id}, {"$set": {"status": "ended", "ended_at": now.isoformat(), "duration_seconds": dur, "end_reason": "admin_stopped", "admin_stop": {"by": current_user["id"], "reason": reason, "at": now.isoformat()}}})
+        await _broadcast(live_id, {"type": "live_ended", "reason": "admin_stopped", "message": reason})
+        if live.get("room_name"):
+            try:
+                await _daily("DELETE", f"/rooms/{live['room_name']}")
+            except Exception:
+                pass
+        active_lives.pop(live_id, None)
+        if live["status"] == "preparing":
+            await _refund_live_tickets(live_id, "admin_stopped_before_start")
+        await db.notifications.insert_one({"id": str(uuid.uuid4()), "user_id": live["host_id"], "actor_id": current_user["id"], "type": "moderation", "message": f"Tu live «{live['title']}» fue detenido por moderación: {reason}", "target_id": live_id, "target_type": "live", "is_read": False, "created_at": now.isoformat()})
+    if report_id:
+        from bson import ObjectId
+        try:
+            await db.reports.update_one({"_id": ObjectId(report_id)}, {"$set": {"status": "resolved", "reviewed_at": now.isoformat(), "reviewed_by": current_user["id"], "action_taken": "stop_live"}})
+        except Exception:
+            pass
+    return {"stopped": True, "live_id": live_id}
+
+
 @router.get("/api/admin/reports")
 async def get_pending_reports(
     status: str = "pending",
@@ -272,16 +314,29 @@ async def get_pending_reports(
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
     
-    # Check if user is admin (subscription tier check or role check)
-    if current_user.get("subscription_tier") not in ["admin", "business"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
-    reports = await db.reports.find(
-        {"status": status},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
-    
-    return reports
+    _require_admin(current_user)
+    q = {} if status == "all" else {"status": status}
+    docs = await db.reports.find(q).sort("created_at", -1).to_list(200)
+    out = []
+    for d in docs:
+        d["id"] = str(d.pop("_id"))
+        rep = await db.users.find_one({"id": d.get("reporter_id")}, {"_id": 0, "name": 1, "email": 1}) or {}
+        d["reporter_name"] = rep.get("name") or rep.get("email") or "—"
+        d["target"] = None
+        if d.get("content_type") == "live":
+            live = await db.lives.find_one({"id": d.get("content_id")}, {"_id": 0, "id": 1, "title": 1, "status": 1, "host_name": 1, "host_id": 1, "is_private": 1})
+            if live:
+                d["target"] = {**live, "kind": "live", "can_stop": live.get("status") in ("live", "preparing")}
+        elif d.get("content_type") == "post":
+            post = await db.posts.find_one({"id": d.get("content_id")}, {"_id": 0, "id": 1, "content": 1, "user_id": 1, "visibility": 1})
+            if post:
+                d["target"] = {"kind": "post", "id": post["id"], "preview": (post.get("content") or "")[:120], "user_id": post.get("user_id"), "visibility": post.get("visibility")}
+        elif d.get("content_type") == "user":
+            u = await db.users.find_one({"id": d.get("content_id")}, {"_id": 0, "id": 1, "name": 1, "is_active": 1})
+            if u:
+                d["target"] = {"kind": "user", **u}
+        out.append(d)
+    return out
 
 @router.put("/api/admin/reports/{report_id}")
 async def update_report_status(
@@ -293,24 +348,59 @@ async def update_report_status(
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
     
-    if current_user.get("subscription_tier") not in ["admin", "business"]:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
+    _require_admin(current_user)
+
     from bson import ObjectId
-    
-    result = await db.reports.update_one(
-        {"_id": ObjectId(report_id)},
-        {
-            "$set": {
-                "status": "resolved",
-                "reviewed_at": datetime.now(timezone.utc).isoformat(),
-                "reviewed_by": current_user["id"],
-                "action_taken": action
-            }
-        }
-    )
-    
-    if result.modified_count == 0:
+
+    try:
+        report = await db.reports.find_one({"_id": ObjectId(report_id)})
+    except Exception:
+        report = None
+    if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    
+    if action not in ("dismiss", "warn_user", "remove_content", "suspend_user"):
+        raise HTTPException(status_code=400, detail="Acción no válida")
+
+    now = datetime.now(timezone.utc).isoformat()
+    ctype, cid = report.get("content_type"), report.get("content_id")
+    target_user = None
+    if ctype == "user":
+        target_user = cid
+    elif ctype == "post":
+        p = await db.posts.find_one({"id": cid}, {"_id": 0, "user_id": 1}); target_user = (p or {}).get("user_id")
+    elif ctype == "live":
+        l = await db.lives.find_one({"id": cid}, {"_id": 0, "host_id": 1}); target_user = (l or {}).get("host_id")
+    elif ctype == "product":
+        pr = await db.marketplace_products.find_one({"id": cid}, {"_id": 0, "seller_id": 1, "user_id": 1}); target_user = (pr or {}).get("seller_id") or (pr or {}).get("user_id")
+    elif ctype == "comment":
+        c = await db.comments.find_one({"id": cid}, {"_id": 0, "user_id": 1}); target_user = (c or {}).get("user_id")
+
+    # Efecto real de cada acción (no solo marcar el reporte)
+    if action == "remove_content":
+        if ctype == "post":
+            await db.posts.update_one({"id": cid}, {"$set": {"visibility": "removed", "removed_by_moderation": True, "removed_at": now}})
+        elif ctype == "comment":
+            await db.comments.update_one({"id": cid}, {"$set": {"content": "[eliminado por moderación]", "removed_by_moderation": True}})
+        elif ctype == "product":
+            await db.marketplace_products.update_one({"id": cid}, {"$set": {"status": "removed", "removed_by_moderation": True}})
+        elif ctype == "live":
+            await admin_stop_live(cid, report_id=None, reason=f"Reporte: {report.get('reason', '')}", current_user=current_user)
+    elif action == "suspend_user" and target_user:
+        await db.users.update_one({"id": target_user}, {"$set": {"is_active": False, "suspended_at": now, "suspended_reason": report.get("reason")}})
+        from utils.security import revoke_all_user_tokens
+        try:
+            await revoke_all_user_tokens(target_user)
+        except Exception:
+            pass
+        await db.lives.update_many({"host_id": target_user, "status": {"$in": ["live", "preparing"]}}, {"$set": {"status": "ended", "ended_at": now, "end_reason": "admin_suspended"}})
+    if action in ("warn_user", "remove_content", "suspend_user") and target_user:
+        msgs = {"warn_user": "Advertencia de moderación: tu contenido fue reportado y revisado. Respeta las normas de BRUNO.",
+                "remove_content": "Moderación retiró contenido tuyo por incumplir las normas de BRUNO.",
+                "suspend_user": "Tu cuenta fue suspendida por moderación."}
+        await db.notifications.insert_one({"id": str(uuid.uuid4()), "user_id": target_user, "actor_id": current_user["id"], "type": "moderation", "message": msgs[action], "target_id": cid, "target_type": ctype, "is_read": False, "created_at": now})
+
+    await db.reports.update_one(
+        {"_id": ObjectId(report_id)},
+        {"$set": {"status": "dismissed" if action == "dismiss" else "resolved", "reviewed_at": now, "reviewed_by": current_user["id"], "action_taken": action, "target_user_id": target_user}}
+    )
     return {"success": True, "action": action}
