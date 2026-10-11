@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 105 regression on BRUNO live state machine, PIN+edad, créditos/regalos, likes, fees. Backend: 20/20 PASS in /app/backend/tests/test_iteration105_lives_credits.py (JUnit at /app/test_reports/pytest/iter105.xml). Covers full lifecycle (create→start→heartbeat→end), preparing NOT listed in GET /api/lives, 400 on empty title / foreign card_id, cancel+mine/active, private PIN (6-char, host-only, hash never exposed via GET /api/lives/{id}), 428 birth_date_required for new user, 403 underage after setting minor DOB, 409 on DOB change, 5 wrong PIN attempts → 403 pin_invalid (with 'te quedan N intentos'), 6th → 429 pin_locked, by-code resolves live, rotate-code invalidates old, persistent live_access after correct PIN (second join without body returns 200). Credits: /gifts returns 11 items with bruno_fee_pct=20, /wallet shape OK, self-gift 400, allow_gifts=false 403, heart×2 → sent, total_minor=100, balance drops by 100, rocket w/ low balance → 402 credits_required with balance_minor+needed_minor, /host-stats forbidden to viewer, host sees gifts.{gross,fee,net,count,refunded} + estimated_pending_minor, /summary includes money.gifts_minor, /money/earnings row for the live has fee_pct=20.0, admin/gifts 403 to viewer, /money/quote credits option c10 returns total=10 and is_platform_sale=true. Likes: /heart?count=50 on allow_likes=false → 403; on allow_likes=true → 200 with hearts_count capped at 30. /money/config returns live_ticket_pct=15, gift_pct=20, marketplace_pct=5. FRONTEND @390x844 host testb@brunoqa.com: /lives/start shows live-setup-card + live-missing 'Falta: título' + live-go-btn disabled; after fill title → go btn becomes enabled; FloatingBubbles ([data-testid='floating-bubbles']) NOT present on /lives/start nor on /lives/:id (regex guard in FloatingBubbles.jsx:300 confirmed). Could not run full Playwright for live preparing/EN DIRECTO + gift sheet + double-tap hearts (requires sustained Daily session with fake media + viewer2 context, out of scope for this iteration — code path verified in LiveSetupCard.jsx, StartLivePage.jsx, LiveGiftSheet.jsx, MobileBottomNav.jsx:304 toEditor). Publish import path MobileBottomNav.jsx:304-320 shows `toEditor` navigates to /camera?import=1 for video and /compose?import=1 for image (NEVER publishes directly) — code-reviewed, not UI-exercised.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration105_lives_credits.py",
+    "/app/test_reports/pytest/iter105.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "lives.py file is 1369 lines — exceeds the 700-line threshold; recommend splitting into lives_core.py (state machine), lives_private.py (PIN/age), lives_moderation.py, lives_realtime.py (ws/comments/hearts/gifts), lives_schedule.py (scheduled/polls/questions/guest).",
+    "Legacy POST /api/lives/{id}/gift (lines 708-743) uses `points` system and is unrelated to the real credits/gift flow in /api/credits/gift; this is dead code and could confuse clients — recommend removing or clearly deprecating.",
+    "lives.py:287 restricts ticket_price only when is_private AND >0 AND <0.5; a public live with a negative or decimal price <0.5 would still pass (ticket_price_minor is forced to None unless is_private, so OK in practice, but validation could be tighter via Pydantic Field constraints).",
+    "credits.py:91 blocks gifts from users without live_access on private lives — correct, but the error 403 'No tienes acceso a este live' is not covered by test (edge case of pre-granted ticket vs PIN gate interplay).",
+    "credits.py send_gift _broadcast runs after wallet debit and ledger insert but before error handling; the atomic debit via find_one_and_update is sound. No negative-balance risk observed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration105_lives_credits.py (new)",
+    "/app/test_reports/pytest/iter105.xml (new)"
+  ],
+  "success_rate": {"backend": "100% (20/20)", "frontend": "100% of exercised flows (setup card + go-btn gating + FloatingBubbles hidden on /lives/*). Full host→preparing→EN DIRECTO flow and viewer gift sheet require sustained Daily session + 2nd browser context — code paths reviewed but not UI-exercised."},
+  "test_credentials": "Host: testb@brunoqa.com / Prueba1234! · Viewer: viewer2@bruno.com / Test1234! · Admin: testc@brunoqa.com / Prueba1234! · Minor registered dynamically as minor+<ts>@brunoqa.com / Prueba1234!",
+  "seed_data_creation": "Test transiently creates: (a) multiple short-lived lives (all ended via /end in cleanup fixture), (b) one minor+<ts>@brunoqa.com user (left in DB — small). (c) viewer2 wallet balance_minor set to 60000 cents via direct DB write for insufficient-funds test; final balance left at 60000 for next iteration.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest /app/backend/tests/test_iteration105_lives_credits.py -v` for 20 checks (all pass). To exercise the full host→EN DIRECTO Playwright flow, launch with fake camera/mic (chromium flags: --use-fake-ui-for-media-stream --use-fake-device-for-media-stream) and wait up to 15 s after clicking live-go-btn for live-host-connection to flip to EN DIRECTO. For viewer side, open a 2nd browser context and visit /lives/{id} to see live-code-gate, then live-gift-sheet. FloatingBubbles hide guard: FloatingBubbles.jsx:300 regex ^/lives/[^/]+$ + explicit /lives/start — do not break this when editing. The toast icon in the bottom-right of the screenshot is NOT FloatingBubbles; it's a separate chat FAB badge. Session cookie SameSite deviation from iter104 still present but out of scope here.",
+  "rca_of_the_issue": "N/A — no issues found in this iteration."
+}
