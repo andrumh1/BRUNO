@@ -7,6 +7,7 @@ import BrunoPublishMenu from "@/components/bruno/BrunoPublishMenu";
 import axios from "axios";
 import { isVideoFile, videoTooLarge, videoTooLargeMsg, setVideoLimit } from "@/lib/media";
 import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
+import { setPendingMedia } from "@/lib/pendingMedia";
 import { 
   Film, Map, ShoppingBag, User, Plus, Bell,
   ChevronDown
@@ -299,8 +300,10 @@ const MobileBottomNav = () => {
           };
 
           // Route by type
+          // Elegir un archivo NUNCA publica: va al editor (video) o al compositor (imagen) y se publica con un botón explícito.
+          const toEditor = (f) => { setPendingMedia(f, { type }); navigate(isVideoFile(f) ? "/camera?import=1" : "/compose?import=1"); };
           if (type === "post") {
-            if (source === "gallery" && file) { await publishPost(file); return; }
+            if (source === "gallery" && file) { toEditor(file); return; }
             if (source === "camera") {
               openCamera({ mode: "both", onCapture: async (capturedFile, meta) => publishPost(capturedFile, meta) });
               return;
@@ -314,7 +317,7 @@ const MobileBottomNav = () => {
           }
           if (type === "reel") {
             // Reels are permanent video posts (not 24h stories)
-            if (source === "gallery" && file) { await publishPost(file); return; }
+            if (source === "gallery" && file) { toEditor(file); return; }
             openCamera({
               mode: "video",
               onCapture: async (capturedFile, meta) => publishPost(capturedFile, meta),

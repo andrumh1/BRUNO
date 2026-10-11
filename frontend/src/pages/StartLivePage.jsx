@@ -18,6 +18,8 @@ import LiveInteractSheet, { LivePollCard, GuestTiles } from "@/components/live/L
 import { Shield, Wifi, WifiOff, Pin, Sparkles, CalendarClock } from "lucide-react";
 import { LiveEvents, LiveInputRow, LiveTopBar } from "@/components/live/LiveOverlay";
 import PrivacyShield from "@/components/live/PrivacyShield";
+import LiveSetupCard from "@/components/live/LiveSetupCard";
+import LiveHostStats from "@/components/live/LiveHostStats";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -25,7 +27,8 @@ export default function StartLivePage() {
   const navigate = useNavigate();
   const { token, user } = useAuth();
   const [categories, setCategories] = useState([]);
-  const [form, setForm] = useState({ title: "", category: "general", is_private: false, anti_capture: true, allow_comments: true, allow_gifts: true });
+  const [form, setForm] = useState({ title: "", description: "", category: "general", is_private: false, ticket_mode: "free", ticket_price: "", ticket_currency: "usd", anti_capture: true, allow_comments: true, allow_gifts: true, allow_likes: true, allow_share: true, record: false, cover_url: null, card_id: null });
+  const payload = () => ({ ...form, ticket_price: form.is_private && form.ticket_mode === "paid" ? Number(form.ticket_price) : null });
   const [live, setLive] = useState(null);
   const [starting, setStarting] = useState(false);
   const [stream, setStream] = useState(null);
@@ -42,7 +45,7 @@ export default function StartLivePage() {
   const schedule = async () => {
     if (!form.title.trim()) return brunoToast.error("Escribe un título");
     if (!scheduleAt) return brunoToast.error("Elige fecha y hora");
-    try { const r = await axios.post(`${API}/lives/schedule`, { ...form, scheduled_at: new Date(scheduleAt).toISOString() }, { headers: { Authorization: `Bearer ${token}` } }); setUpcoming((p) => [...p, { ...r.data, is_host: true }]); setScheduleAt(""); brunoToast.success("Live programado", { description: "Quienes toquen «Avisarme» recibirán recordatorio." }); }
+    try { const r = await axios.post(`${API}/lives/schedule`, { ...payload(), scheduled_at: new Date(scheduleAt).toISOString() }, { headers: { Authorization: `Bearer ${token}` } }); setUpcoming((p) => [...p, { ...r.data, is_host: true }]); setScheduleAt(""); brunoToast.success("Live programado", { description: "Quienes toquen «Avisarme» recibirán recordatorio." }); }
     catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo programar"); }
   };
   const goLive = async (id) => {
@@ -89,13 +92,30 @@ export default function StartLivePage() {
 
   const flip = () => { if (live) return daily.cycleCamera(); const f = facing === "user" ? "environment" : "user"; setFacing(f); openCamera(f); };
 
+  // Crear → sala en estado "preparando" → Daily confirma que publicamos → /start → EN DIRECTO. Nunca se lista antes.
   const start = async () => {
     if (!form.title.trim()) return brunoToast.error("Ponle un título a tu live");
     if (!stream) return brunoToast.error("Activa la cámara primero");
     setStarting(true);
-    try { stream?.getTracks().forEach((t) => t.stop()); const r = await axios.post(`${API}/lives`, form, { headers }); setLive(r.data); if (r.data.is_private) setCodePanel(true); }
-    catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo iniciar el live"); openCamera(); }
+    try { stream?.getTracks().forEach((t) => t.stop()); const r = await axios.post(`${API}/lives`, payload(), { headers }); setLive(r.data); if (r.data.is_private) setCodePanel(true); }
+    catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo preparar el live"); openCamera(); }
     setStarting(false);
+  };
+  const confirmedRef = useRef(false);
+  useEffect(() => {
+    if (!live || live.status !== "preparing" || daily.state !== "connected" || confirmedRef.current) return;
+    confirmedRef.current = true;
+    axios.post(`${API}/lives/${live.id}/start`, {}, { headers }).then((r) => { setLive((l) => ({ ...l, ...r.data, rtc: l.rtc })); brunoToast.success("¡Estás en directo!"); if (form.record) toggleRecording(true); })
+      .catch((e) => { confirmedRef.current = false; brunoToast.error(e?.response?.data?.detail || "No se pudo confirmar el inicio"); });
+  }, [live?.status, daily.state]);
+  useEffect(() => {
+    if (!live?.id || !["live", "preparing"].includes(live.status)) return;
+    const id = setInterval(() => axios.post(`${API}/lives/${live.id}/heartbeat`, {}, { headers }).catch(() => {}), 20000);
+    return () => clearInterval(id);
+  }, [live?.id, live?.status]);
+  const cancelPrep = async () => {
+    try { await axios.post(`${API}/lives/${live.id}/cancel`, {}, { headers }); } catch (_) { /* ignore */ }
+    confirmedRef.current = false; setLive(null); openCamera();
   };
   const end = async () => {
     const id = live.id;
@@ -106,10 +126,10 @@ export default function StartLivePage() {
     navigate(`/lives/${id}/summary`, { replace: true });
   };
   const [recBusy, setRecBusy] = useState(false);
-  const toggleRecording = async () => {
+  const toggleRecording = async (forceStart = false) => {
     if (recBusy) return; setRecBusy(true);
     try {
-      const r = await axios.post(`${API}/lives/${live.id}/recording/${rtc.recording ? "stop" : "start"}`, {}, { headers });
+      const r = await axios.post(`${API}/lives/${live.id}/recording/${rtc.recording && forceStart !== true ? "stop" : "start"}`, {}, { headers });
       rtc.setRecording(r.data?.status === "recording");
       brunoToast.success(r.data?.status === "recording" ? "Grabación iniciada" : "Grabación detenida", { description: r.data?.status === "recording" ? "Los participantes ven el aviso REC. Al terminar podrás publicarla como video." : "Puedes volver a grabar cuando quieras." });
     } catch (e) { brunoToast.error("No se pudo grabar", { description: e?.response?.data?.detail || "Inténtalo de nuevo" }); }
@@ -148,12 +168,23 @@ export default function StartLivePage() {
           {rtc.recording && <span className="h-7 px-2.5 rounded-full bg-red-600 text-white text-[11px] font-bold inline-flex items-center gap-1" data-testid="live-rec-badge"><span className="w-2 h-2 rounded-full bg-white animate-pulse" /> REC</span>}
           <span className={`h-7 px-2.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 ${daily.state === "connected" ? "bg-emerald-500/85 text-white" : daily.state === "error" ? "bg-red-500/85 text-white" : "bg-amber-500/90 text-black"}`} data-testid="live-host-connection" data-state={daily.state}>
             {daily.state === "connected" ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            {daily.state === "connected" ? (daily.quality === "good" ? "En vivo" : "Señal débil") : daily.state === "interrupted" ? "Reconectando…" : daily.state === "error" ? "Sin conexión" : "Conectando…"}
+            {live.status === "preparing" ? "Preparando…" : daily.state === "connected" ? (daily.quality === "good" ? "EN DIRECTO" : "Señal débil") : daily.state === "interrupted" ? "Reconectando…" : daily.state === "error" ? "Sin conexión" : "Conectando…"}
           </span>
         </div>
         <LiveTopBar live={live} viewerCount={rtc.viewerCount} hostOnline={rtc.connected} onClose={() => setEndConfirm(true)}
           right={live.is_private && <button onClick={() => setCodePanel((v) => !v)} className="h-9 px-3 rounded-full bg-primary text-white text-xs font-bold inline-flex items-center gap-1" data-testid="live-code-toggle"><KeyRound className="w-3.5 h-3.5" /> Código</button>} />
 
+        {live.status === "preparing" && (
+          <div className="absolute inset-0 z-[55] bg-black/55 backdrop-blur-sm grid place-items-center p-6" data-testid="live-preparing">
+            <div className="w-full max-w-xs rounded-3xl bg-card text-foreground p-5 text-center space-y-3">
+              {daily.state === "error" ? <><p className="font-bold">No se pudo conectar la cámara al servidor</p><p className="text-xs text-muted-foreground">{daily.error}</p></> : <><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /><p className="font-bold">Preparando tu live…</p><p className="text-xs text-muted-foreground">Conectando cámara y micrófono. Pasarás a EN DIRECTO solo cuando el servidor confirme la señal.</p></>}
+              <div className="flex gap-2">
+                <button onClick={cancelPrep} className="flex-1 h-10 rounded-full bg-foreground/[0.06] text-sm font-semibold" data-testid="live-prep-cancel">Cancelar</button>
+                {daily.state === "error" && <button onClick={() => { const l = live; setLive(null); setTimeout(() => setLive({ ...l }), 50); }} className="flex-1 h-10 rounded-full bg-primary text-white text-sm font-semibold" data-testid="live-prep-retry">Reintentar</button>}
+              </div>
+            </div>
+          </div>
+        )}
         {endConfirm && (
           <div className="absolute inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" data-testid="live-end-confirm" onClick={() => setEndConfirm(false)}>
             <div className="w-full max-w-sm rounded-3xl bg-card text-foreground p-5 space-y-3" style={{ marginBottom: "var(--safe-bottom)" }} onClick={(e) => e.stopPropagation()}>
@@ -180,7 +211,8 @@ export default function StartLivePage() {
             </select>
           )}
         </div>
-        {rtc.pinned && <div className="absolute left-3 right-16 z-30 rounded-2xl bg-primary/90 text-white px-3 py-2 text-xs flex items-start gap-2" style={{ top: "calc(var(--safe-top) + 100px)" }} data-testid="live-pinned-bar"><Pin className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span className="truncate"><b>{rtc.pinned.user_name}</b>: {rtc.pinned.text}</span></div>}
+        {live.status === "live" && !codePanel && <LiveHostStats liveId={live.id} token={token} elapsed={fmtDur(elapsed)} connection={daily.state === "connected" ? "estable" : daily.state} />}
+        {rtc.pinned && <div className="absolute left-3 right-16 z-30 rounded-2xl bg-primary/90 text-white px-3 py-2 text-xs flex items-start gap-2" style={{ top: "calc(var(--safe-top) + 140px)" }} data-testid="live-pinned-bar"><Pin className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span className="truncate"><b>{rtc.pinned.user_name}</b>: {rtc.pinned.text}</span></div>}
         <GuestTiles participants={daily.remoteParticipants} />
         {rtc.poll?.id && <LivePollCard poll={rtc.poll} liveId={live.id} token={token} canModerate onClose={() => rtc.setPoll(null)} />}
         {interactOpen && <LiveInteractSheet live={live} token={token} rtc={rtc} canModerate isHost userId={user?.id} onClose={() => setInteractOpen(false)} initialTab={rtc.guestRequests.length ? "guests" : "poll"} />}
@@ -216,38 +248,7 @@ export default function StartLivePage() {
         <button onClick={flip} className="w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-setup-flip"><FlipHorizontal className="w-5 h-5" /></button>
       </div>
 
-      <div className="absolute inset-x-3 z-30 bruno-glass rounded-[28px] border p-4 space-y-3" style={{ bottom: "calc(var(--safe-bottom) + 16px)", maxWidth: 480, marginInline: "auto" }} data-testid="live-setup-card">
-        <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={80} placeholder="Título del live"
-          className="w-full h-11 rounded-2xl bg-foreground/[0.06] px-4 text-sm outline-none focus:ring-2 ring-primary/40" data-testid="live-title-input" />
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
-          {categories.map((c) => (
-            <button key={c.id} onClick={() => setForm({ ...form, category: c.id })} className={`shrink-0 h-8 px-3 rounded-full text-xs font-medium ${form.category === c.id ? "bg-primary text-white" : "bg-foreground/[0.06]"}`} data-testid={`live-category-${c.id}`}>{c.name}</button>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <button onClick={() => setForm({ ...form, is_private: false })} className={`h-12 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold ${!form.is_private ? "bg-primary text-white" : "bg-foreground/[0.06]"}`} data-testid="live-visibility-public"><Globe className="w-4 h-4" /> Público</button>
-          <button onClick={() => setForm({ ...form, is_private: true })} className={`h-12 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold ${form.is_private ? "bg-primary text-white" : "bg-foreground/[0.06]"}`} data-testid="live-visibility-private"><Lock className="w-4 h-4" /> Privado</button>
-        </div>
-        {form.is_private && (
-          <label className="flex items-center gap-3 rounded-2xl bg-foreground/[0.05] p-3 cursor-pointer" data-testid="live-anticapture-row">
-            <ShieldCheck className="w-5 h-5 text-emerald-500 shrink-0" />
-            <div className="flex-1 leading-tight"><p className="text-sm font-semibold">Protección anti-captura</p><p className="text-[11px] text-muted-foreground">Código de acceso · marca de agua · bloqueo de capturas (app nativa)</p></div>
-            <input type="checkbox" checked={form.anti_capture} onChange={(e) => setForm({ ...form, anti_capture: e.target.checked })} className="accent-orange-500 w-5 h-5" data-testid="live-anticapture-toggle" />
-          </label>
-        )}
-        {upcoming.length > 0 && (
-          <div className="space-y-2" data-testid="live-upcoming-mine">
-            {upcoming.map((l) => <div key={l.id} className="flex items-center gap-2 rounded-2xl bg-primary/10 px-3 py-2"><CalendarClock className="w-4 h-4 text-primary shrink-0" /><div className="flex-1 min-w-0 leading-tight"><p className="text-sm font-semibold truncate">{l.title}</p><p className="text-[11px] text-muted-foreground">{new Date(l.scheduled_at).toLocaleString()} · {l.reminder_count || 0} avisos</p></div><button onClick={() => goLive(l.id)} className="h-8 px-3 rounded-full bg-red-500 text-white text-xs font-bold" data-testid={`live-golive-${l.id}`}>Iniciar ahora</button></div>)}
-          </div>
-        )}
-        <div className="rounded-2xl border border-border p-3 space-y-2" data-testid="live-schedule-box">
-          <p className="text-xs font-semibold inline-flex items-center gap-1.5"><CalendarClock className="w-3.5 h-3.5" /> Programar para después</p>
-          <div className="flex gap-2"><input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} className="flex-1 h-10 rounded-xl bg-foreground/[0.06] px-3 text-sm outline-none" data-testid="live-schedule-input" /><button onClick={schedule} className="h-10 px-3 rounded-xl bg-primary text-white text-xs font-semibold" data-testid="live-schedule-btn">Programar</button></div>
-        </div>
-        <button onClick={start} disabled={starting || !!camError} className="w-full h-12 rounded-full bg-red-500 text-white font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50" data-testid="live-go-btn">
-          {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radio className="w-4 h-4" />} {form.is_private ? "Iniciar live privado" : "Iniciar live"}
-        </button>
-      </div>
+      <LiveSetupCard form={form} setForm={setForm} categories={categories} videoRef={videoRef} onStart={start} starting={starting} camError={camError} upcoming={upcoming} onGoLive={goLive} scheduleAt={scheduleAt} setScheduleAt={setScheduleAt} onSchedule={schedule} />
     </div>
   );
 }

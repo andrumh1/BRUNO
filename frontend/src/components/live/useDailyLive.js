@@ -40,18 +40,25 @@ export function useDailyLive({ url, token, role, hostId, enabled = true }) {
   useEffect(() => {
     if (!enabled || !url || !token) return;
     let destroyed = false;
-    const call = Daily.createCallObject({ subscribeToTracksAutomatically: true });
-    callRef.current = call;
-    setState("connecting"); setError(null);
-    call.on("joined-meeting", () => { setState("connected"); syncTracks(); if (publish) call.enumerateDevices().then((d) => setDevices({ cameras: d.devices.filter((x) => x.kind === "videoinput"), mics: d.devices.filter((x) => x.kind === "audioinput") })).catch(() => {}); })
-      .on("participant-joined", syncTracks).on("participant-updated", syncTracks).on("participant-left", syncTracks).on("track-started", syncTracks).on("track-stopped", syncTracks)
-      .on("network-connection", (e) => { if (e.event === "interrupted") setState("interrupted"); else if (e.event === "connected") setState("connected"); })
-      .on("network-quality-change", (e) => setQuality(e.threshold || e.networkState || "good"))
-      .on("left-meeting", () => setState("left"))
-      .on("error", (e) => { setState("error"); setError(e?.errorMsg || "Error de conexión con el servidor de video"); })
-      .on("camera-error", (e) => setError(e?.errorMsg?.errorMsg || "No se pudo acceder a la cámara o el micrófono"));
-    call.join({ url, token, startVideoOff: !publish, startAudioOff: !publish }).catch((e) => { if (!destroyed) { setState("error"); setError(e?.message || "No se pudo conectar"); } });
-    return () => { destroyed = true; callRef.current = null; call.leave().catch(() => {}).finally(() => call.destroy()); };
+    let call = null;
+    (async () => {
+      // Daily permite una sola instancia: si quedó una viva (reload, re-render rápido) la cerramos antes de crear otra.
+      const prev = Daily.getCallInstance?.();
+      if (prev) { try { await prev.leave(); } catch (_) { /* ignore */ } try { await prev.destroy(); } catch (_) { /* ignore */ } }
+      if (destroyed) return;
+      call = Daily.createCallObject({ subscribeToTracksAutomatically: true });
+      callRef.current = call;
+      setState("connecting"); setError(null);
+      call.on("joined-meeting", () => { setState("connected"); syncTracks(); if (publish) call.enumerateDevices().then((d) => setDevices({ cameras: d.devices.filter((x) => x.kind === "videoinput"), mics: d.devices.filter((x) => x.kind === "audioinput") })).catch(() => {}); })
+        .on("participant-joined", syncTracks).on("participant-updated", syncTracks).on("participant-left", syncTracks).on("track-started", syncTracks).on("track-stopped", syncTracks)
+        .on("network-connection", (e) => { if (e.event === "interrupted") setState("interrupted"); else if (e.event === "connected") setState("connected"); })
+        .on("network-quality-change", (e) => setQuality(e.threshold || e.networkState || "good"))
+        .on("left-meeting", () => setState("left"))
+        .on("error", (e) => { setState("error"); setError(e?.errorMsg || "Error de conexión con el servidor de video"); })
+        .on("camera-error", (e) => setError(e?.errorMsg?.errorMsg || "No se pudo acceder a la cámara o el micrófono"));
+      call.join({ url, token, startVideoOff: !publish, startAudioOff: !publish }).catch((e) => { if (!destroyed) { setState("error"); setError(e?.message || "No se pudo conectar"); } });
+    })();
+    return () => { destroyed = true; callRef.current = null; if (call) call.leave().catch(() => {}).finally(() => call.destroy()); };
   }, [url, token, role, enabled]);
 
   const setMic = useCallback((on) => callRef.current?.setLocalAudio(on), []);

@@ -1,12 +1,10 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { useBrunoCheckout } from "@/hooks/useBrunoCheckout";
-import { QuoteCard } from "@/components/money/QuoteCard";
-const PAID_USD = { rose: 99, heart: 299, star: 499, diamond: 1999, rocket: 4999, crown: 9999 };
 import { Heart, Send, Gift, Eye, X, Loader2 } from "lucide-react";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 
+import LiveGiftSheet from "@/components/live/LiveGiftSheet";
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 const GIFTS = [
   { id: "rose", emoji: "🌹", label: "Rosa", value: 1 },
@@ -16,7 +14,7 @@ const GIFTS = [
   { id: "rocket", emoji: "🚀", label: "Cohete", value: 100 },
   { id: "crown", emoji: "👑", label: "Corona", value: 500 },
 ];
-const giftEmoji = (t) => GIFTS.find((g) => g.id === t)?.emoji || "🎁";
+const giftEmoji = (t, fallback) => fallback || GIFTS.find((g) => g.id === t)?.emoji || "🎁";
 
 /** Realtime chat column + floating hearts + input row (viewer or host). */
 export function LiveEvents({ events, hearts }) {
@@ -33,7 +31,7 @@ export function LiveEvents({ events, hearts }) {
         {events.map((e) => (
           <div key={e.id} className="inline-flex max-w-full items-start gap-2 rounded-2xl bg-black/35 backdrop-blur-sm px-3 py-1.5 text-white text-[12px]">
             {e.kind === "join" && <span className="text-white/70">{e.user_name || "Alguien"} se unió 👋</span>}
-            {e.kind === "gift" && <span><b className="text-amber-300">{e.user_name}</b> envió {giftEmoji(e.gift_type)} ×{e.amount}</span>}
+            {e.kind === "gift" && <span><b className="text-amber-300">{e.user_name}</b> envió {giftEmoji(e.gift_type, e.emoji)} {e.name || ""} ×{e.amount}</span>}
             {e.kind === "comment" && <span className="break-words"><b className="text-white/80 mr-1">{e.user_name}</b>{e.text}</span>}
           </div>
         ))}
@@ -42,7 +40,7 @@ export function LiveEvents({ events, hearts }) {
   );
 }
 
-export function LiveInputRow({ liveId, token, allowGifts, allowComments = true, onHeart, isHost }) {
+export function LiveInputRow({ liveId, token, allowGifts, allowComments = true, allowLikes = true, onHeart, isHost }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [giftsOpen, setGiftsOpen] = useState(false);
@@ -55,31 +53,10 @@ export function LiveInputRow({ liveId, token, allowGifts, allowComments = true, 
     catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo enviar"); }
     setSending(false);
   };
-  const [payMode, setPayMode] = useState("points");
-  const [pendingGift, setPendingGift] = useState(null);
-  const checkout = useBrunoCheckout();
-  const pickPaid = async (g) => { setPendingGift(g.id); await checkout.getQuote({ kind: "gift", ref_id: liveId, option: g.id }); };
-  const sendGift = async (g) => {
-    try { await axios.post(`${API}/lives/${liveId}/gift`, { gift_type: g.id, amount: 1 }, { headers }); setGiftsOpen(false); brunoToast.success(`Enviaste ${g.emoji} ${g.label}`); }
-    catch (e) { brunoToast.error(e?.response?.data?.detail === "Insufficient points" ? "No tienes puntos suficientes" : "No se pudo enviar el regalo"); }
-  };
 
   return (
     <div className="absolute inset-x-0 z-30 px-3" style={{ bottom: "calc(var(--safe-bottom) + 14px)" }}>
-      {giftsOpen && (<>
-        <div className="bruno-glass rounded-[22px] border px-2 py-1.5 mb-1 flex items-center gap-1" data-testid="live-gifts-note">
-          <button onClick={() => setPayMode("points")} className={`flex-1 h-7 rounded-full text-[10px] font-semibold ${payMode === "points" ? "bg-primary text-white" : "text-muted-foreground"}`} data-testid="live-gift-mode-points">Puntos BRUNO</button>
-          <button onClick={() => setPayMode("card")} className={`flex-1 h-7 rounded-full text-[10px] font-semibold ${payMode === "card" ? "bg-primary text-white" : "text-muted-foreground"}`} data-testid="live-gift-mode-card">Con tarjeta (USD) · 15 % BRUNO</button>
-        </div>
-        {payMode === "card" && checkout.quote && <div className="mb-2"><QuoteCard quote={checkout.quote} busy={checkout.busy} error={checkout.error} couponError={checkout.couponError} onApplyCoupon={checkout.applyCoupon} cta="Enviar regalo" onPay={() => checkout.pay({ kind: "gift", ref_id: liveId, option: pendingGift })} onCancel={() => setPendingGift(null)} /></div>}
-        <div className="bruno-glass rounded-[22px] border p-3 mb-2 grid grid-cols-6 gap-1" data-testid="live-gifts-panel">
-          {GIFTS.map((g) => (
-            <button key={g.id} onClick={() => (payMode === "card" ? pickPaid(g) : sendGift(g))} className="flex flex-col items-center gap-0.5 rounded-xl py-1.5 hover:bg-foreground/[0.06] active:scale-95" data-testid={`live-gift-${g.id}`}>
-              <span className="text-xl">{g.emoji}</span><span className="text-[9px] text-muted-foreground">{payMode === "card" ? `$${(PAID_USD[g.id] / 100).toFixed(2)}` : `${g.value} pts`}</span>
-            </button>
-          ))}
-        </div>
-      </>)}
+      {giftsOpen && <LiveGiftSheet liveId={liveId} onClose={() => setGiftsOpen(false)} />}
       <div className="flex items-center gap-2">
         <div className="flex-1 flex items-center bruno-glass rounded-full border h-11 px-4">
           <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder={allowComments === false && !isHost ? "Comentarios desactivados por el anfitrión" : "Di algo…"} disabled={allowComments === false && !isHost} className="flex-1 bg-transparent outline-none text-sm disabled:opacity-60" data-testid="live-comment-input" />
@@ -88,7 +65,7 @@ export function LiveInputRow({ liveId, token, allowGifts, allowComments = true, 
         {!isHost && allowGifts && (
           <button onClick={() => setGiftsOpen((v) => !v)} className="w-11 h-11 rounded-full bruno-glass border grid place-items-center" data-testid="live-gift-btn" aria-label="Regalos">{giftsOpen ? <X className="w-5 h-5" /> : <Gift className="w-5 h-5 text-amber-500" />}</button>
         )}
-        <button onClick={onHeart} className="w-11 h-11 rounded-full bg-red-500 text-white grid place-items-center active:scale-90 transition-transform" data-testid="live-heart-btn" aria-label="Corazón"><Heart className="w-5 h-5 fill-white" /></button>
+        {allowLikes && <button onClick={onHeart} className="w-11 h-11 rounded-full bg-red-500 text-white grid place-items-center active:scale-90 transition-transform" data-testid="live-heart-btn" aria-label="Corazón"><Heart className="w-5 h-5 fill-white" /></button>}
       </div>
     </div>
   );

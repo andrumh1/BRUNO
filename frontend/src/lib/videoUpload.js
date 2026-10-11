@@ -36,7 +36,7 @@ const sendChunk = async ({ uploadUrl, params, uploadId, file, start, end, onProg
  * - When the last chunk lands, BRUNO verifies the asset and returns the media descriptor (mp4/poster/hls, duration).
  * Errors carry `.userMessage` for the UI.
  */
-export async function uploadVideoDirect(file, { token, folder = "bruno", trim, coverAt, onProgress, signal } = {}) {
+export async function uploadVideoDirect(file, { token, folder = "bruno", trim, coverAt, overlays, onProgress, signal } = {}) {
   const key = fileKey(file);
   let st = loadState(key);
   const fresh = !st || Date.now() - st.at > 50 * 60 * 1000 || st.size !== file.size;
@@ -72,7 +72,7 @@ export async function uploadVideoDirect(file, { token, folder = "bruno", trim, c
   if (!result?.public_id) { clearState(key); throw Object.assign(new Error("no public_id"), { userMessage: "El almacenamiento no confirmó el video. Inténtalo de nuevo." }); }
   report(file.size, "process");
   const params = { ...(trim?.start > 0 ? { trim_start: trim.start.toFixed(2) } : {}), ...(trim?.end > 0 ? { trim_end: trim.end.toFixed(2) } : {}), ...(coverAt != null ? { cover_at: coverAt.toFixed(2) } : {}) };
-  const done = await axios.post(`${API}/upload/video/complete`, { public_id: result.public_id }, { params, headers: { Authorization: `Bearer ${token}` } });
+  const done = await axios.post(`${API}/upload/video/complete`, { public_id: result.public_id, overlays: overlays || [] }, { params, headers: { Authorization: `Bearer ${token}` } });
   clearState(key);
   return done.data;
 }

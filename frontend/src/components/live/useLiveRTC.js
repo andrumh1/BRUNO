@@ -62,7 +62,7 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
         case "host_offline": setHostOnline(false); break;
         case "new_comment": pushEvent({ kind: "comment", ...msg.comment }); break;
         case "new_gift": pushEvent({ kind: "gift", id: msg.gift.id, user_name: msg.gift.sender_name, gift_type: msg.gift.gift_type, amount: msg.gift.amount }); break;
-        case "heart": { const id = `${Date.now()}-${Math.random()}`; setHearts((p) => [...p.slice(-20), { id, dx: Math.round(Math.random() * 80 - 40) }]); setTimeout(() => setHearts((p) => p.filter((h) => h.id !== id)), 2500); break; }
+        case "heart": { const n = Math.min(6, Number(msg.count) || 1); const ids = Array.from({ length: n }, (_, i) => `${Date.now()}-${i}-${Math.random()}`); setHearts((p) => [...p.slice(-20), ...ids.map((id) => ({ id, dx: Math.round(Math.random() * 80 - 40) }))]); setTimeout(() => setHearts((p) => p.filter((h) => !ids.includes(h.id))), 2500); break; }
         case "pinned": setPinned(msg.comment || null); break;
         case "user_muted": setMutedIds((p) => [...new Set([...p, msg.user_id])]); break;
         case "user_unmuted": setMutedIds((p) => p.filter((x) => x !== msg.user_id)); break;
@@ -86,7 +86,13 @@ export function useLiveRTC({ liveId, token, role, accessCode, enabled = true }) 
     return () => { closedByUs = true; clearInterval(ping); clearTimeout(retry); try { ws.close(); } catch (_) { /* ignore */ } wsRef.current = null; };
   }, [liveId, token, role, accessCode, enabled, attempt, ended, kicked, denied]);
 
-  const sendHeart = useCallback(() => send({ type: "heart" }), [send]);
+  // Tap-tap: agrega los toques y envía un solo mensaje cada 400 ms (sin una petición por cuadro de animación).
+  const heartBatch = useRef(0); const heartTimer = useRef(null);
+  const sendHeart = useCallback(() => {
+    heartBatch.current += 1;
+    if (heartTimer.current) return;
+    heartTimer.current = setTimeout(() => { const n = Math.min(30, heartBatch.current); heartBatch.current = 0; heartTimer.current = null; if (n > 0) send({ type: "heart", count: n }); }, 400);
+  }, [send]);
 
   return { connected, hostOnline, viewerCount, events, hearts, pinned, settings, mutedIds, ended, denied, kicked, sendHeart, reconnecting: !connected && attempt > 0,
     guestRequests, guests, guestStatus, setGuestStatus, guestRtc, setGuestRtc, poll, setPoll, questions, setQuestions, recording, setRecording };

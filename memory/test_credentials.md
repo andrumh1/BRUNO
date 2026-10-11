@@ -43,3 +43,8 @@
 ## Sesión web con cookie httpOnly (2026-06)
 - Login web → cookie `bruno_session` (httpOnly, Secure, SameSite=Lax, path=/api) + token en memoria (no en localStorage). `POST /api/auth/session/restore` devuelve el token a partir de la cookie. Nativo (platform=native) sigue con Bearer en almacenamiento cifrado.
 - Compra simulada QA del comprador delivered+brunoqa@resend.dev (vendedor testa@brunoqa.com) para /purchases y reenvío de recibo.
+
+## Lives / PIN / créditos (2026-06)
+- Host QA: testb@brunoqa.com / Prueba1234! · Espectador adulto: viewer2@bruno.com / Test1234! (birth_date 1990-05-05, saldo de créditos ~6 USD) · Menor: ninguno (usar un usuario nuevo y POST /api/users/me/birth-date con fecha reciente).
+- Flujo live: POST /api/lives (status preparing) → POST /api/lives/{id}/start (live) → POST /heartbeat cada 20 s → POST /end. Privados: PIN en respuesta de creación (`access_code`, solo host); espectador POST /join {access_code}; 5 fallos → 429 15 min (colección pin_attempts).
+- Créditos: GET /api/credits/wallet, /gifts, POST /api/credits/gift {live_id,gift_id,quantity}. Recarga: POST /api/money/checkout kind "credits" option c5|c10|c20|c50.

@@ -62,11 +62,22 @@ export default function LiveSummaryPage() {
           </div>
         </div>
 
+        {sum.money && (sum.money.gross_minor > 0) && (
+          <div className="rounded-3xl border border-border/60 p-4 text-sm space-y-1" data-testid="live-summary-money">
+            <p className="font-bold mb-1">Ingresos de este live (confirmados)</p>
+            <div className="flex justify-between"><span className="text-muted-foreground">Entradas ({sum.money.tickets_count})</span><span>{(sum.money.tickets_minor / 100).toFixed(2)} USD</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Regalos ({sum.money.gifts_count})</span><span>{(sum.money.gifts_minor / 100).toFixed(2)} USD</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Comisión BRUNO</span><span>−{(sum.money.fee_minor / 100).toFixed(2)} USD</span></div>
+            {sum.money.refunded_minor > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Devoluciones</span><span>−{(sum.money.refunded_minor / 100).toFixed(2)} USD</span></div>}
+            <div className="flex justify-between font-bold border-t pt-1"><span>Ganancia estimada</span><span data-testid="live-summary-net">{(sum.money.net_minor / 100).toFixed(2)} USD</span></div>
+            <p className="text-[11px] text-muted-foreground">Pasa a saldo disponible cuando el procesador liquida; retira desde Mis ingresos.</p>
+          </div>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <Stat Icon={Users} label="Espectadores únicos" value={sum.total_viewers} testId="stat-viewers" />
           <Stat Icon={MessageCircle} label="Mensajes" value={sum.comments} testId="stat-comments" />
           <Stat Icon={Heart} label="Corazones" value={sum.hearts} testId="stat-hearts" />
-          <Stat Icon={Gift} label="Regalos" value={sum.gifts} hint={sum.gift_value ? `${sum.gift_value} puntos BRUNO` : undefined} testId="stat-gifts" />
+          <Stat Icon={Gift} label="Regalos" value={sum.gifts} hint={sum.money?.gifts_minor ? `${(sum.money.gifts_minor / 100).toFixed(2)} USD brutos` : undefined} testId="stat-gifts" />
           <Stat Icon={MessageCircleQuestion} label="Preguntas" value={sum.questions} hint={sum.questions ? `${sum.questions_answered} respondidas` : undefined} testId="stat-questions" />
           <Stat Icon={BarChart3} label="Encuestas" value={sum.polls} hint={sum.polls ? `${sum.poll_votes} votos` : undefined} testId="stat-polls" />
           <Stat Icon={UserPlus} label="Invitados" value={sum.guests} testId="stat-guests" />

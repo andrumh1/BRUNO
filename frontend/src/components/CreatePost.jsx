@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import axios from "axios";
 import { isVideoFile, videoTooLarge, videoTooLargeMsg, setVideoLimit } from "@/lib/media";
 import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
+import { takePendingMedia } from "@/lib/pendingMedia";
 import TextStylePicker from "@/components/TextStylePicker";
 import { TEXT_BGS, TEXT_FONTS } from "@/lib/textStyles";
 import { 
@@ -46,6 +47,11 @@ const CreatePost = ({ onPostCreated, userCards = [] }) => {
   const [showMentions, setShowMentions] = useState(false);
   const [mentionStart, setMentionStart] = useState(-1);
 
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).get("import")) return;
+    const p = takePendingMedia(); if (p?.file) handleFileSelect({ target: { files: [p.file] } });
+    // eslint-disable-next-line
+  }, []);
   const handleFileSelect = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;

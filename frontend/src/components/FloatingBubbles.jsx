@@ -297,7 +297,7 @@ const FloatingBubbles = () => {
   const longPressTimer = useRef(null);
 
   const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno', '/chat/'];
-  const shouldHide = hiddenPaths.some(p => location.pathname.startsWith(p));
+  const shouldHide = hiddenPaths.some(p => location.pathname.startsWith(p)) || /^\/lives\/[^/]+$/.test(location.pathname) || location.pathname === '/lives/start' || /^\/call\//.test(location.pathname);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

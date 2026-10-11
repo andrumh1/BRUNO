@@ -31,9 +31,9 @@ router = APIRouter(prefix="/api/money", tags=["money"])
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or os.environ.get("STRIPE_API_KEY")
 WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
-DEFAULT_FEES = {"live_ticket_pct": 10.0, "gift_pct": 15.0, "marketplace_pct": 5.0}
+DEFAULT_FEES = {"live_ticket_pct": 15.0, "gift_pct": 20.0, "marketplace_pct": 5.0}
 # Kinds whose revenue is BRUNO's own (no creator share, no commission split)
-PLATFORM_KINDS = {"piup", "promotion"}
+PLATFORM_KINDS = {"piup", "promotion", "credits"}
 CREATOR_KINDS = {"live_ticket": "live_ticket_pct", "gift": "gift_pct", "marketplace": "marketplace_pct"}
 
 # Stripe Connect Express payout eligibility (seller side). Accepting a buyer card from a country ≠ paying a seller there.
@@ -207,6 +207,12 @@ async def _price_for(body: CheckoutBody, buyer: User) -> dict:
             raise HTTPException(status_code=404, detail="Pedido PIUP no encontrado")
         cur = (o.get("currency") or "usd").lower()
         return {"name": f"PIUP · {o.get('product_name') or o.get('design') or 'Tarjeta NFC'}", "unit_minor": to_minor(float(o.get("total") or o.get("price") or 0), cur), "currency": cur, "seller_id": None, "meta": {"piup_order_id": o["id"]}, "shipping_minor": 0}
+    if k == "credits":
+        from routers.credits import CREDIT_PACKS
+        pk = CREDIT_PACKS.get(body.option or "")
+        if not pk:
+            raise HTTPException(status_code=404, detail="Paquete de créditos no válido")
+        return {"name": pk["name"], "unit_minor": pk["usd"], "currency": "usd", "seller_id": None, "meta": {"pack": body.option, "credits_minor": pk["usd"], "return_live_id": body.ref_id if body.ref_id and body.ref_id != "none" else None}}
     if k == "promotion":
         pk = PROMO_PACKAGES.get(body.option or "")
         post = await db.posts.find_one({"id": body.ref_id, "user_id": buyer.id}, {"_id": 0, "id": 1})
@@ -414,6 +420,9 @@ async def _fulfil(entry: dict):
         await db.marketplace_orders.update_one({"ledger_id": entry["id"]}, {"$set": {"id": str(uuid.uuid4()), "ledger_id": entry["id"], "product_id": m["product_id"], "buyer_id": entry["buyer_id"], "seller_id": entry["seller_id"], "quantity": entry["quantity"], "total_minor": entry["total_minor"], "currency": entry["currency"], "status": "paid", "paid_in_bruno": True, "created_at": ts}}, upsert=True)
     elif k == "piup":
         await db.piup_orders.update_one({"id": m["piup_order_id"]}, {"$set": {"payment_status": "paid", "status": "paid", "ledger_id": entry["id"], "paid_at": ts}})
+    elif k == "credits":
+        from routers.credits import credit_wallet
+        await credit_wallet(entry["buyer_id"], int(m.get("credits_minor") or entry["subtotal_minor"]) * int(entry.get("quantity") or 1), entry["id"], entry["name"])
     elif k == "promotion":
         from datetime import timedelta
         ends = (datetime.now(timezone.utc) + timedelta(days=int(m.get("days") or 7))).isoformat()
@@ -473,7 +482,7 @@ async def _notify_sale(entry: dict):
         logger.warning(f"sale email failed for {entry['id']}: {getattr(e, 'detail', e)}")
 
 
-KIND_RECEIPT = {"live_ticket": "Entrada a live privado", "gift": "Regalo en vivo", "marketplace": "Compra en Marketplace", "piup": "Pedido PIUP", "promotion": "Promoción de publicación"}
+KIND_RECEIPT = {"live_ticket": "Entrada a live privado", "gift": "Regalo en vivo", "marketplace": "Compra en Marketplace", "piup": "Pedido PIUP", "promotion": "Promoción de publicación", "credits": "Créditos BRUNO"}
 
 
 async def _send_receipt(entry: dict, quiet: bool = False) -> Optional[str]:

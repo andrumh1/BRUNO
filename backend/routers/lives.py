@@ -9,7 +9,7 @@ code that only the host can see/share.
 from fastapi import APIRouter, HTTPException, Depends, Header, WebSocket, WebSocketDisconnect, Query
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import os
 import re
 import time
@@ -47,7 +47,31 @@ class CreateLiveRequest(BaseModel):
     ticket_currency: Optional[str] = "usd"
     allow_comments: bool = True
     allow_gifts: bool = True
+    allow_likes: bool = True
+    allow_share: bool = True
+    record: bool = False
+    cover_url: Optional[str] = None
+    card_id: Optional[str] = None
     anti_capture: bool = True
+
+
+HOST_STALE_SECONDS = 120   # live sin latido del anfitrión → se cierra (sin sesiones fantasma)
+PREPARING_TTL_SECONDS = 900  # preparando sin "Iniciar" → se descarta
+
+
+async def _reap_stale_lives():
+    """Cierra lives cuyo anfitrión desapareció y descarta preparaciones abandonadas (se ejecuta al listar)."""
+    now = datetime.now(timezone.utc)
+    stale = (now - timedelta(seconds=HOST_STALE_SECONDS)).isoformat()
+    async for l in db.lives.find({"status": "live", "last_host_seen_at": {"$lt": stale}}, {"_id": 0, "id": 1, "started_at": 1}):
+        try:
+            dur = int((now - datetime.fromisoformat(l["started_at"])).total_seconds()) if l.get("started_at") else 0
+        except ValueError:
+            dur = 0
+        await db.lives.update_one({"id": l["id"], "status": "live"}, {"$set": {"status": "ended", "ended_at": now.isoformat(), "duration_seconds": dur, "end_reason": "host_lost"}})
+        await _broadcast(l["id"], {"type": "live_ended", "reason": "host_lost"})
+    old = (now - timedelta(seconds=PREPARING_TTL_SECONDS)).isoformat()
+    await db.lives.update_many({"status": "preparing", "created_at": {"$lt": old}}, {"$set": {"status": "cancelled", "ended_at": now.isoformat(), "end_reason": "abandoned"}})
 
 
 class LiveComment(BaseModel):
@@ -120,11 +144,80 @@ def _gen_code(n: int = 6) -> str:
 
 
 def _public(live: dict, viewer_id: Optional[str]) -> dict:
-    """Strip private fields unless the requester is the host."""
-    out = {k: v for k, v in live.items() if k != "_id"}
+    """Strip private fields unless the requester is the host (the PIN hash never leaves the server)."""
+    out = {k: v for k, v in live.items() if k not in ("_id", "access_code_hash")}
     if viewer_id != out.get("host_id"):
         out.pop("access_code", None)
     return out
+
+
+# ───────── PIN privado: hash salado en `lives`, texto solo para el anfitrión en `live_secrets` ─────────
+import hashlib
+
+PIN_MAX_FAILS, PIN_LOCK_SECONDS = 5, 15 * 60
+
+
+def _pin_hash(live_id: str, code: str) -> str:
+    return hashlib.sha256(f"{live_id}:{os.environ.get('SECRET_KEY', '')}:{code.strip().upper()}".encode()).hexdigest()
+
+
+async def _set_pin(live_id: str, code: str) -> None:
+    await db.lives.update_one({"id": live_id}, {"$set": {"access_code_hash": _pin_hash(live_id, code)}, "$unset": {"access_code": ""}})
+    await db.live_secrets.update_one({"live_id": live_id}, {"$set": {"access_code": code, "rotated_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+
+
+async def _host_pin(live_id: str) -> Optional[str]:
+    sec = await db.live_secrets.find_one({"live_id": live_id}, {"_id": 0, "access_code": 1})
+    return (sec or {}).get("access_code")
+
+
+async def _has_grant(live_id: str, user_id: str) -> bool:
+    return await db.live_access.find_one({"live_id": live_id, "user_id": user_id, "revoked": {"$ne": True}}, {"_id": 0, "id": 1}) is not None
+
+
+async def _check_pin(live: dict, user_id: str, code: Optional[str]) -> None:
+    """Valida el PIN con límite de intentos (5 fallos → 15 min). Concede acceso persistente al acertar."""
+    if await _has_grant(live["id"], user_id):
+        return
+    key = {"live_id": live["id"], "user_id": user_id}
+    att = await db.pin_attempts.find_one(key, {"_id": 0}) or {}
+    now = time.time()
+    if att.get("locked_until", 0) > now:
+        raise HTTPException(status_code=429, detail={"code": "pin_locked", "message": f"Demasiados intentos. Prueba en {int((att['locked_until'] - now) // 60) + 1} min."})
+    code = (code or "").strip().upper()
+    if not code:
+        raise HTTPException(status_code=403, detail={"code": "pin_required", "message": "Este live privado requiere PIN"})
+    if _pin_hash(live["id"], code) != live.get("access_code_hash"):
+        fails = (att.get("fails", 0) if att.get("window_start", 0) > now - PIN_LOCK_SECONDS else 0) + 1
+        upd = {"fails": fails, "window_start": att.get("window_start") if fails > 1 else now, "last_fail": now}
+        if fails >= PIN_MAX_FAILS:
+            upd["locked_until"] = now + PIN_LOCK_SECONDS
+        await db.pin_attempts.update_one(key, {"$set": upd}, upsert=True)
+        left = max(0, PIN_MAX_FAILS - fails)
+        raise HTTPException(status_code=403, detail={"code": "pin_invalid", "message": "PIN incorrecto" + (f" · te quedan {left} intentos" if left else " · acceso bloqueado 15 min")})
+    await db.pin_attempts.delete_one(key)
+    await db.live_access.update_one({"live_id": live["id"], "user_id": user_id}, {"$set": {"id": str(uuid.uuid4()), "live_id": live["id"], "user_id": user_id, "via": "pin", "granted_at": datetime.now(timezone.utc).isoformat(), "revoked": False}}, upsert=True)
+
+
+def _age_from(birth: Optional[str]) -> Optional[int]:
+    if not birth:
+        return None
+    try:
+        d = datetime.fromisoformat(str(birth)[:10]).date()
+    except ValueError:
+        return None
+    t = datetime.now(timezone.utc).date()
+    return t.year - d.year - ((t.month, t.day) < (d.month, d.day))
+
+
+async def _check_adult(user_id: str) -> None:
+    """Privados = 18+. Edad declarada (fecha del perfil), validada en servidor; nunca se expone a terceros."""
+    u = await db.users.find_one({"id": user_id}, {"_id": 0, "birth_date": 1})
+    age = _age_from((u or {}).get("birth_date"))
+    if age is None:
+        raise HTTPException(status_code=428, detail={"code": "birth_date_required", "message": "Añade tu fecha de nacimiento para entrar a lives privados (solo mayores de 18)."})
+    if age < 18:
+        raise HTTPException(status_code=403, detail={"code": "underage", "message": "Los lives privados son solo para mayores de 18 años."})
 
 
 async def _user_from_token(token: Optional[str]):
@@ -147,6 +240,7 @@ async def get_optional_user(authorization: str = Header(None)):
     return await _user_from_token(authorization.replace("Bearer ", ""))
 
 
+heart_windows: dict = {}
 GIFT_VALUES = {"rose": 1, "heart": 5, "star": 10, "diamond": 50, "rocket": 100, "crown": 500}
 
 LIVE_CATEGORIES = [
@@ -182,9 +276,17 @@ async def create_live(request: CreateLiveRequest, current_user: dict = Depends(g
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
+    await _reap_stale_lives()
     existing = await db.lives.find_one({"host_id": current_user["id"], "status": "live"})
     if existing:
         raise HTTPException(status_code=400, detail="Ya tienes un live activo")
+    await db.lives.update_many({"host_id": current_user["id"], "status": "preparing"}, {"$set": {"status": "cancelled", "end_reason": "replaced"}})
+    if not request.title.strip():
+        raise HTTPException(status_code=400, detail="Ponle un título a tu live")
+    if request.is_private and request.ticket_price and request.ticket_price > 0 and request.ticket_price < 0.5:
+        raise HTTPException(status_code=400, detail="El precio mínimo de entrada es 0,50")
+    if request.card_id and not await db.cards.find_one({"id": request.card_id, "user_id": current_user["id"]}, {"_id": 0, "id": 1}):
+        raise HTTPException(status_code=400, detail="Solo puedes vincular una tarjeta tuya")
 
     if not _daily_ready():
         raise HTTPException(status_code=503, detail="Transmisiones no disponibles: falta configurar DAILY_API_KEY en el servidor")
@@ -215,11 +317,17 @@ async def create_live(request: CreateLiveRequest, current_user: dict = Depends(g
         "is_private": request.is_private,
         "ticket_price_minor": (int(round(request.ticket_price * 100)) if (request.is_private and request.ticket_price and request.ticket_price > 0) else None),
         "ticket_currency": (request.ticket_currency or "usd").lower(),
-        "access_code": _gen_code() if request.is_private else None,
         "anti_capture": request.anti_capture if request.is_private else False,
         "allow_comments": request.allow_comments,
         "allow_gifts": request.allow_gifts,
-        "status": "live",
+        "allow_likes": request.allow_likes,
+        "allow_share": request.allow_share,
+        "record_requested": request.record,
+        "cover_url": request.cover_url,
+        "card_id": request.card_id,
+        "status": "preparing",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "last_host_seen_at": datetime.now(timezone.utc).isoformat(),
         "viewer_count": 0,
         "peak_viewers": 0,
         "total_viewers": 0,
@@ -227,36 +335,80 @@ async def create_live(request: CreateLiveRequest, current_user: dict = Depends(g
         "total_gift_value": 0,
         "hearts_count": 0,
         "comments_count": 0,
-        "started_at": datetime.now(timezone.utc).isoformat(),
+        "started_at": None,
         "ended_at": None,
         "duration_seconds": 0,
-        "thumbnail_url": None,
+        "thumbnail_url": request.cover_url,
     }
     await db.lives.insert_one(dict(live_doc))
-
+    pin = None
+    if request.is_private:
+        pin = _gen_code()
+        await _set_pin(live_id, pin)
     active_lives[live_id] = {"host_id": current_user["id"], "viewers": [], "started_at": datetime.now(timezone.utc)}
     live_connections[live_id] = {}
+    return {**live_doc, "access_code": pin, "is_host": True, "rtc": {"url": live_doc["room_url"], "token": host_token}}
 
-    if not request.is_private:
+
+async def _notify_followers_live(current_user: dict, live_id: str, title: str):
+    try:
+        from utils.notification_realtime import emit_notification_ws
+        now = datetime.now(timezone.utc).isoformat()
+        async for f in db.follows.find({"following_id": current_user["id"]}, {"_id": 0, "follower_id": 1}).limit(2000):
+            doc = {"id": str(uuid.uuid4()), "user_id": f["follower_id"], "actor_id": current_user["id"], "type": "live_started",
+                   "target_id": live_id, "target_type": "live", "message": f"{current_user.get('name', 'Alguien')} está en vivo: {title}",
+                   "is_read": False, "created_at": now}
+            await db.notifications.insert_one(dict(doc))
+            await emit_notification_ws(doc)
+    except Exception:
+        pass
+
+
+@router.post("/api/lives/{live_id}/start")
+async def start_live(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    """El anfitrión confirma que su cámara ya está publicando en la sala → solo entonces el live pasa a EN DIRECTO."""
+    live = await db.lives.find_one({"id": live_id, "host_id": current_user["id"]}, {"_id": 0})
+    if not live:
+        raise HTTPException(status_code=404, detail="Live no encontrado")
+    if live["status"] == "live":
+        return {**live, "is_host": True}
+    if live["status"] != "preparing":
+        raise HTTPException(status_code=400, detail="Este live ya terminó")
+    now = datetime.now(timezone.utc).isoformat()
+    await db.lives.update_one({"id": live_id}, {"$set": {"status": "live", "started_at": now, "last_host_seen_at": now}})
+    if not live.get("is_private"):
+        await _notify_followers_live(current_user, live_id, live["title"])
+    await _broadcast(live_id, {"type": "live_started"})
+    return {**live, "status": "live", "started_at": now, "is_host": True}
+
+
+@router.post("/api/lives/{live_id}/heartbeat")
+async def live_heartbeat(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    r = await db.lives.update_one({"id": live_id, "host_id": current_user["id"], "status": {"$in": ["live", "preparing"]}}, {"$set": {"last_host_seen_at": datetime.now(timezone.utc).isoformat()}})
+    return {"alive": r.matched_count == 1}
+
+
+@router.post("/api/lives/{live_id}/cancel")
+async def cancel_live(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    """Descarta una preparación (nunca llegó a emitir): sin resumen, sin notificaciones, libera la sala."""
+    live = await db.lives.find_one({"id": live_id, "host_id": current_user["id"], "status": "preparing"}, {"_id": 0, "room_name": 1})
+    if not live:
+        raise HTTPException(status_code=404, detail="No hay ninguna preparación que cancelar")
+    await db.lives.update_one({"id": live_id}, {"$set": {"status": "cancelled", "ended_at": datetime.now(timezone.utc).isoformat(), "end_reason": "host_cancelled"}})
+    if live.get("room_name"):
         try:
-            from utils.notification_realtime import emit_notification_ws
-            now = datetime.now(timezone.utc).isoformat()
-            async for f in db.follows.find({"following_id": current_user["id"]}, {"_id": 0, "follower_id": 1}).limit(2000):
-                doc = {"id": str(uuid.uuid4()), "user_id": f["follower_id"], "actor_id": current_user["id"], "type": "live_started",
-                       "target_id": live_id, "target_type": "live", "message": f"{current_user.get('name', 'Alguien')} está en vivo: {request.title}",
-                       "is_read": False, "created_at": now}
-                await db.notifications.insert_one(dict(doc))
-                await emit_notification_ws(doc)
+            await _daily("DELETE", f"/rooms/{live['room_name']}")
         except Exception:
             pass
-
-    return {**live_doc, "is_host": True, "rtc": {"url": live_doc["room_url"], "token": host_token}}
+    active_lives.pop(live_id, None)
+    return {"cancelled": True}
 
 
 @router.get("/api/lives")
 async def get_active_lives(category: Optional[str] = None, limit: int = 20, offset: int = 0):
     if db is None:
         raise HTTPException(status_code=500, detail="Database not configured")
+    await _reap_stale_lives()
     query = {"status": "live", "is_private": False}
     if category:
         query["category"] = category
@@ -283,10 +435,10 @@ async def get_following_lives(current_user: dict = Depends(get_current_user_from
 
 @router.get("/api/lives/mine/active")
 async def get_my_active_live(current_user: dict = Depends(get_current_user_from_token)):
-    live = await db.lives.find_one({"host_id": current_user["id"], "status": "live"}, {"_id": 0})
+    live = await db.lives.find_one({"host_id": current_user["id"], "status": {"$in": ["live", "preparing"]}}, {"_id": 0})
     if not live:
         return {}
-    out = {**live, "is_host": True}
+    out = {**_public(live, current_user["id"]), "is_host": True, "access_code": await _host_pin(live["id"]) if live.get("is_private") else None}
     if live.get("room_name") and _daily_ready():
         out["rtc"] = {"url": live.get("room_url"), "token": await _daily_token(live["room_name"], current_user, True, live.get("room_exp") or int(time.time()) + 3600)}
     return out
@@ -294,10 +446,11 @@ async def get_my_active_live(current_user: dict = Depends(get_current_user_from_
 
 @router.get("/api/lives/by-code/{code}")
 async def resolve_live_by_code(code: str):
-    live = await db.lives.find_one({"access_code": code.strip().upper(), "status": "live"}, {"_id": 0, "id": 1, "title": 1, "host_name": 1})
-    if not live:
-        raise HTTPException(status_code=404, detail="Código inválido o live finalizado")
-    return live
+    code = code.strip().upper()
+    async for l in db.lives.find({"is_private": True, "status": "live"}, {"_id": 0, "id": 1, "title": 1, "host_name": 1, "access_code_hash": 1}):
+        if l.get("access_code_hash") == _pin_hash(l["id"], code):
+            return {"id": l["id"], "title": l["title"], "host_name": l["host_name"]}
+    raise HTTPException(status_code=404, detail="Código inválido o live finalizado")
 
 
 @router.get("/api/lives/upcoming")
@@ -322,9 +475,13 @@ async def get_live_details(live_id: str, current_user: Optional[dict] = Depends(
         raise HTTPException(status_code=404, detail="Live not found")
     out = _public(live, current_user["id"] if current_user else None)
     not_host = (not current_user or current_user["id"] != live["host_id"])
-    out["requires_ticket"] = bool(live.get("ticket_price_minor")) and not_host
+    granted = bool(current_user) and not_host and live.get("is_private") and await _has_grant(live_id, current_user["id"])
+    has_ticket = bool(current_user) and not_host and live.get("ticket_price_minor") and await db.live_tickets.find_one({"live_id": live_id, "user_id": current_user["id"]}, {"_id": 0, "id": 1}) is not None
+    out["requires_ticket"] = bool(live.get("ticket_price_minor")) and not_host and not has_ticket
     out["ticket_price"] = (live["ticket_price_minor"] / 100) if live.get("ticket_price_minor") else None
-    out["requires_code"] = bool(live.get("is_private")) and not_host and not out["requires_ticket"]
+    # PIN primero (una sola vez por usuario y live); la entrada de pago se pide después y nunca se salta con el PIN.
+    out["requires_code"] = bool(live.get("is_private")) and not_host and not granted
+    out["adults_only"] = bool(live.get("is_private"))
     out["is_host"] = bool(current_user) and current_user["id"] == live["host_id"]
     out["is_moderator"] = bool(current_user) and _can_moderate(live, current_user["id"])
     out["viewer_count"] = _viewer_count(live_id, live["host_id"]) if live.get("status") == "live" else live.get("viewer_count", 0)
@@ -344,7 +501,8 @@ async def rotate_access_code(live_id: str, current_user: dict = Depends(get_curr
     if not live.get("is_private"):
         raise HTTPException(status_code=400, detail="Este live no es privado")
     code = _gen_code()
-    await db.lives.update_one({"id": live_id}, {"$set": {"access_code": code}})
+    await _set_pin(live_id, code)
+    # Nuevo PIN: bloquea nuevos ingresos con el anterior; quien ya entró (o pagó) conserva su acceso.
     return {"access_code": code}
 
 
@@ -357,12 +515,14 @@ async def end_live(live_id: str, current_user: dict = Depends(get_current_user_f
         raise HTTPException(status_code=404, detail="Live not found")
     if live["host_id"] != current_user["id"]:
         raise HTTPException(status_code=403, detail="Not authorized")
+    if live["status"] == "preparing":
+        return await cancel_live(live_id, current_user)
     if live["status"] != "live":
         raise HTTPException(status_code=400, detail="Live already ended")
 
     ended_at = datetime.now(timezone.utc)
-    started_at = datetime.fromisoformat(live["started_at"].replace("Z", "+00:00"))
-    duration = int((ended_at - started_at).total_seconds())
+    started_at = datetime.fromisoformat((live.get("started_at") or live.get("created_at") or ended_at.isoformat()).replace("Z", "+00:00"))
+    duration = max(0, int((ended_at - started_at).total_seconds()))
     await db.lives.update_one(
         {"id": live_id},
         {"$set": {"status": "ended", "ended_at": ended_at.isoformat(), "duration_seconds": duration}},
@@ -401,18 +561,16 @@ async def join_live(live_id: str, body: JoinLiveRequest = None, current_user: di
         raise HTTPException(status_code=404, detail="Live not found or ended")
 
     is_host = live["host_id"] == current_user["id"]
-    if live.get("ticket_price_minor") and not is_host:
-        # Paid private live: access only with a confirmed ticket (server-side; sharing the link/code is not enough)
-        ticket = await db.live_tickets.find_one({"live_id": live_id, "user_id": current_user["id"]}, {"_id": 0, "id": 1})
-        if not ticket:
-            raise HTTPException(status_code=402, detail={"code": "ticket_required", "message": "Este live requiere entrada de pago", "price_minor": live["ticket_price_minor"], "currency": live.get("ticket_currency", "usd")})
-    elif live.get("is_private") and not is_host:
-        code = ((body.access_code if body else None) or "").strip().upper()
-        if not code or code != live.get("access_code"):
-            raise HTTPException(status_code=403, detail="Código de acceso incorrecto")
-
     if current_user["id"] in (live.get("banned_user_ids") or []):
         raise HTTPException(status_code=403, detail="Fuiste expulsado de este live")
+    if live.get("is_private") and not is_host:
+        # Orden: sesión → edad 18+ → PIN (con límite de intentos) → entrada pagada si la hay. El PIN nunca sustituye el pago.
+        await _check_adult(current_user["id"])
+        await _check_pin(live, current_user["id"], body.access_code if body else None)
+        if live.get("ticket_price_minor"):
+            ticket = await db.live_tickets.find_one({"live_id": live_id, "user_id": current_user["id"]}, {"_id": 0, "id": 1})
+            if not ticket:
+                raise HTTPException(status_code=402, detail={"code": "ticket_required", "message": "Este live requiere entrada de pago", "price_minor": live["ticket_price_minor"], "currency": live.get("ticket_currency", "usd")})
 
     if not is_host:
         state = active_lives.setdefault(live_id, {"host_id": live["host_id"], "viewers": [], "started_at": datetime.now(timezone.utc)})
@@ -532,9 +690,18 @@ async def moderate_live(live_id: str, body: ModerationAction, current_user: dict
 
 
 @router.post("/api/lives/{live_id}/heart")
-async def send_heart(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
-    await db.lives.update_one({"id": live_id, "status": "live"}, {"$inc": {"hearts_count": 1}})
-    await _broadcast(live_id, {"type": "heart", "user_id": current_user["id"]})
+async def send_heart(live_id: str, count: int = 1, current_user: dict = Depends(get_current_user_from_token)):
+    """Corazones gratuitos agregados por el cliente (count ≤ 30 por envío) · respetan allow_likes."""
+    live = await db.lives.find_one({"id": live_id, "status": "live"}, {"_id": 0, "allow_likes": 1, "banned_user_ids": 1})
+    if not live:
+        raise HTTPException(status_code=404, detail="El live no está activo")
+    if live.get("allow_likes") is False:
+        raise HTTPException(status_code=403, detail="El anfitrión desactivó los likes")
+    if current_user["id"] in (live.get("banned_user_ids") or []):
+        raise HTTPException(status_code=403, detail="No puedes interactuar en este live")
+    n = max(1, min(int(count), 30))
+    await db.lives.update_one({"id": live_id, "status": "live"}, {"$inc": {"hearts_count": n}})
+    await _broadcast(live_id, {"type": "heart", "user_id": current_user["id"], "count": n})
     return {"success": True}
 
 
@@ -602,7 +769,7 @@ async def live_ws(websocket: WebSocket, live_id: str, token: str = Query(None), 
     if user["id"] in (live.get("banned_user_ids") or []):
         await websocket.close(code=4005, reason="Kicked")
         return
-    if live.get("is_private") and not is_host and (code or "").strip().upper() != live.get("access_code"):
+    if live.get("is_private") and not is_host and not await _has_grant(live_id, user["id"]):
         await websocket.accept()
         await websocket.send_json({"type": "error", "code": 4003, "detail": "Código de acceso incorrecto"})
         await websocket.close(code=4003, reason="Bad access code")
@@ -641,8 +808,20 @@ async def live_ws(websocket: WebSocket, live_id: str, token: str = Query(None), 
             if t == "ping":
                 await websocket.send_json({"type": "pong"})
             elif t == "heart":
-                await db.lives.update_one({"id": live_id}, {"$inc": {"hearts_count": 1}})
-                await _broadcast(live_id, {"type": "heart", "user_id": user["id"]})
+                # Corazones gratuitos agregados (tap-tap): máx 30 por mensaje y 120 por 10 s por usuario · respetan allow_likes.
+                n = max(1, min(int(data.get("count") or 1), 30))
+                now_ts = time.time()
+                win = heart_windows.setdefault((live_id, user["id"]), [now_ts, 0])
+                if now_ts - win[0] > 10:
+                    win[0], win[1] = now_ts, 0
+                if win[1] + n > 120:
+                    continue
+                cur = await db.lives.find_one({"id": live_id, "status": "live"}, {"_id": 0, "allow_likes": 1})
+                if not cur or cur.get("allow_likes") is False:
+                    continue
+                win[1] += n
+                await db.lives.update_one({"id": live_id}, {"$inc": {"hearts_count": n}})
+                await _broadcast(live_id, {"type": "heart", "user_id": user["id"], "count": n})
     except WebSocketDisconnect:
         pass
     except Exception:
@@ -907,11 +1086,14 @@ async def schedule_live(request: ScheduleLiveRequest, current_user: dict = Depen
     live_id = str(uuid.uuid4())
     doc = {"id": live_id, "host_id": current_user["id"], "host_name": current_user.get("name", "Usuario"), "host_avatar": current_user.get("avatar_url"),
            "title": request.title[:120], "description": (request.description or "")[:500], "category": request.category or "general", "status": "scheduled",
-           "scheduled_at": when.isoformat(), "is_private": request.is_private, "access_code": _gen_code() if request.is_private else None,
+           "scheduled_at": when.isoformat(), "is_private": request.is_private,
            "ticket_price_minor": (int(round(request.ticket_price * 100)) if (request.is_private and request.ticket_price and request.ticket_price > 0) else None), "ticket_currency": (request.ticket_currency or "usd").lower(),
            "allow_comments": request.allow_comments, "allow_gifts": request.allow_gifts, "created_at": datetime.now(timezone.utc).isoformat(), "reminder_count": 0,
            "viewer_count": 0, "total_viewers": 0, "peak_viewers": 0, "comment_count": 0, "like_count": 0, "gift_total": 0, "moderators": [], "muted_user_ids": [], "banned_user_ids": [], "blocked_words": []}
     await db.lives.insert_one(doc)
+    if request.is_private:
+        await _set_pin(doc["id"], _gen_code())
+    doc["access_code"] = await _host_pin(doc["id"]) if request.is_private else None
     doc.pop("_id", None)
     return doc
 
@@ -954,7 +1136,7 @@ async def go_live_from_schedule(live_id: str, background: BackgroundTasks, curre
     room = await _daily("POST", "/rooms", {"name": room_name, "privacy": "private", "properties": {"exp": exp, "max_participants": LIVE_MAX_PARTICIPANTS, "eject_at_room_exp": True, "enable_chat": False, "enable_knocking": False, "enable_screenshare": False, "enable_recording": "cloud"}})
     host_token = await _daily_token(room_name, current_user, True, exp)
     now = datetime.now(timezone.utc)
-    await db.lives.update_one({"id": live_id}, {"$set": {"status": "live", "started_at": now.isoformat(), "room_name": room_name, "room_url": room.get("url"), "room_exp": exp}})
+    await db.lives.update_one({"id": live_id}, {"$set": {"status": "preparing", "created_at": now.isoformat(), "last_host_seen_at": now.isoformat(), "room_name": room_name, "room_url": room.get("url"), "room_exp": exp}})
     active_lives[live_id] = {"host_id": current_user["id"], "viewers": [], "started_at": now}
 
     async def _notify():
@@ -962,7 +1144,7 @@ async def go_live_from_schedule(live_id: str, background: BackgroundTasks, curre
             await notify_user(r["user_id"], "live_started", "¡Empezó el live!", f"{live['host_name']} está en vivo: «{live['title']}»", {"live_id": live_id}, f"/lives/{live_id}")
     background.add_task(_notify)
     fresh = await db.lives.find_one({"id": live_id}, {"_id": 0})
-    return {**fresh, "is_host": True, "rtc": {"url": room.get("url"), "token": host_token}}
+    return {**_public(fresh, current_user["id"]), "access_code": await _host_pin(live_id) if fresh.get("is_private") else None, "is_host": True, "rtc": {"url": room.get("url"), "token": host_token}}
 
 
 @router.post("/api/cron/live-reminders")
@@ -1111,6 +1293,18 @@ async def replay_published(live_id: str, body: ReplayPublished, background: Back
     return {"notified": len(ids)}
 
 
+async def _live_money(live_id: str, host_id: str) -> dict:
+    """Importes confirmados del ledger para este live (bruto, comisión, reembolsos, ganancia estimada)."""
+    out = {"currency": "usd", "gross_minor": 0, "fee_minor": 0, "refunded_minor": 0, "net_minor": 0, "tickets_minor": 0, "gifts_minor": 0, "tickets_count": 0, "gifts_count": 0}
+    async for e in db.ledger_entries.find({"ref_id": live_id, "seller_id": host_id, "status": {"$in": ["paid", "partially_refunded", "refunded"]}}, {"_id": 0, "kind": 1, "total_minor": 1, "fee_minor": 1, "seller_net_minor": 1, "refunded_minor": 1, "quantity": 1}):
+        out["gross_minor"] += e["total_minor"]; out["fee_minor"] += e["fee_minor"]; out["refunded_minor"] += int(e.get("refunded_minor") or 0); out["net_minor"] += e["seller_net_minor"] - int(e.get("refunded_minor") or 0)
+        if e["kind"] == "live_ticket":
+            out["tickets_minor"] += e["total_minor"]; out["tickets_count"] += int(e.get("quantity") or 1)
+        elif e["kind"] == "gift":
+            out["gifts_minor"] += e["total_minor"]; out["gifts_count"] += int(e.get("quantity") or 1)
+    return out
+
+
 @router.get("/api/lives/{live_id}/summary")
 async def live_summary(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
     live = await _host_live(live_id, current_user["id"])
@@ -1127,4 +1321,48 @@ async def live_summary(live_id: str, current_user: dict = Depends(get_current_us
         "comments": live.get("comments_count") or 0, "hearts": live.get("hearts_count") or 0, "gifts": live.get("total_gifts") or 0, "gift_value": live.get("total_gift_value") or 0,
         "questions": questions, "questions_answered": answered, "polls": len(polls), "poll_votes": poll_votes,
         "guests": len(set(live.get("guest_history") or [])), "recording": live.get("recording") or {"status": "none"}, "replay_post_id": live.get("replay_post_id"),
+        "money": await _live_money(live_id, current_user["id"])
     }
+
+
+class BirthDateBody(BaseModel):
+    birth_date: str  # YYYY-MM-DD
+
+
+@router.get("/api/users/me/age-status")
+async def my_age_status(current_user: dict = Depends(get_current_user_from_token)):
+    u = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "birth_date": 1})
+    age = _age_from((u or {}).get("birth_date"))
+    return {"has_birth_date": age is not None, "is_adult": bool(age is not None and age >= 18), "verified": False}
+
+
+@router.post("/api/users/me/birth-date")
+async def set_birth_date(body: BirthDateBody, current_user: dict = Depends(get_current_user_from_token)):
+    """Se declara una sola vez; correcciones posteriores solo vía soporte (evita eludir restricciones editándola)."""
+    u = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "birth_date": 1})
+    if (u or {}).get("birth_date"):
+        raise HTTPException(status_code=409, detail="Tu fecha de nacimiento ya está registrada. Para corregirla, contacta con soporte.")
+    age = _age_from(body.birth_date)
+    if age is None or age < 0 or age > 120:
+        raise HTTPException(status_code=400, detail="Fecha de nacimiento no válida")
+    await db.users.update_one({"id": current_user["id"]}, {"$set": {"birth_date": body.birth_date[:10], "birth_date_set_at": datetime.now(timezone.utc).isoformat()}})
+    return {"has_birth_date": True, "is_adult": age >= 18, "verified": False}
+
+
+@router.get("/api/lives/{live_id}/host-stats")
+async def live_host_stats(live_id: str, current_user: dict = Depends(get_current_user_from_token)):
+    """Panel económico del anfitrión (solo host/moderador-host): importes reales confirmados del ledger."""
+    live = await db.lives.find_one({"id": live_id}, {"_id": 0, "host_id": 1, "hearts_count": 1, "comments_count": 1, "total_viewers": 1, "peak_viewers": 1, "viewer_count": 1, "status": 1, "started_at": 1})
+    if not live or live["host_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Solo el anfitrión")
+    agg = {"gift": {"gross": 0, "fee": 0, "net": 0, "count": 0, "refunded": 0}, "live_ticket": {"gross": 0, "fee": 0, "net": 0, "count": 0, "refunded": 0}}
+    async for e in db.ledger_entries.find({"ref_id": live_id, "seller_id": current_user["id"], "status": {"$in": ["paid", "partially_refunded", "refunded"]}}, {"_id": 0, "kind": 1, "total_minor": 1, "fee_minor": 1, "seller_net_minor": 1, "refunded_minor": 1, "quantity": 1}):
+        a = agg.get(e["kind"])
+        if a is None:
+            continue
+        a["gross"] += e["total_minor"]; a["fee"] += e["fee_minor"]; a["net"] += e["seller_net_minor"]; a["count"] += int(e.get("quantity") or 1); a["refunded"] += int(e.get("refunded_minor") or 0)
+    pending = sum(a["net"] - a["refunded"] for a in agg.values())
+    return {"currency": "usd", "hearts": live.get("hearts_count", 0), "comments": live.get("comments_count", 0), "viewers_now": _viewer_count(live_id, live["host_id"]) if live.get("status") == "live" else 0,
+            "unique_viewers": live.get("total_viewers", 0), "peak_viewers": live.get("peak_viewers", 0), "gifts": agg["gift"], "tickets": agg["live_ticket"],
+            "bruno_fee_minor": agg["gift"]["fee"] + agg["live_ticket"]["fee"], "estimated_pending_minor": pending,
+            "note": "Importes confirmados. Tu parte pasa a saldo disponible cuando el procesador liquida; los retiros se hacen desde Mis ingresos."}

@@ -43,6 +43,9 @@ export default function LiveViewerPage() {
   const [interactOpen, setInteractOpen] = useState(false);
   const [needsGesture, setNeedsGesture] = useState(false);
   const videoRef = useRef(null);
+  const tapRef = useRef(0);
+  const [bursts, setBursts] = useState([]);
+  const tapBurst = (e) => { const id = `${Date.now()}-${Math.random()}`; setBursts((b) => [...b.slice(-12), { id, x: e.clientX, y: e.clientY }]); setTimeout(() => setBursts((b) => b.filter((x) => x.id !== id)), 900); };
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const isJoinRoute = liveId === "join";
 
@@ -70,8 +73,15 @@ export default function LiveViewerPage() {
     if (!live.requires_code || code.length === 6) join();
   }, [live]);
 
+  const [ageGate, setAgeGate] = useState(null); // null | "ask" | "blocked"
+  const [birth, setBirth] = useState("");
+  const [gateError, setGateError] = useState(null);
+  const saveBirth = async () => {
+    try { const r = await axios.post(`${API}/users/me/birth-date`, { birth_date: birth }, { headers }); if (!r.data.is_adult) return setAgeGate("blocked"); setAgeGate(null); join(); }
+    catch (e) { const d = e?.response?.data?.detail; brunoToast.error(typeof d === "string" ? d : d?.message || "Fecha no válida"); }
+  };
   const join = async () => {
-    setJoining(true);
+    setJoining(true); setGateError(null);
     try {
       const r = await axios.post(`${API}/lives/${liveId}/join`, { access_code: code || null }, { headers });
       setLive((l) => ({ ...l, ...r.data.live }));
@@ -80,8 +90,10 @@ export default function LiveViewerPage() {
       setJoined(true);
     } catch (e) {
       const d = e?.response?.data?.detail;
-      if (e?.response?.status === 402 && d?.code === "ticket_required") { setTicket({ price_minor: d.price_minor, currency: d.currency }); const q = await checkout.getQuote({ kind: "live_ticket", ref_id: liveId }); if (!q) setTicket(null); }
-      else brunoToast.error((typeof d === "string" ? d : d?.message) || "No se pudo entrar al live");
+      if (e?.response?.status === 402 && d?.code === "ticket_required") { setLive((l) => ({ ...l, requires_code: false })); setTicket({ price_minor: d.price_minor, currency: d.currency }); const q = await checkout.getQuote({ kind: "live_ticket", ref_id: liveId }); if (!q) setTicket(null); }
+      else if (d?.code === "birth_date_required") setAgeGate("ask");
+      else if (d?.code === "underage") setAgeGate("blocked");
+      else { setGateError((typeof d === "string" ? d : d?.message) || "No se pudo entrar al live"); if (d?.code !== "pin_invalid" && d?.code !== "pin_locked") brunoToast.error((typeof d === "string" ? d : d?.message) || "No se pudo entrar al live"); }
     }
     setJoining(false);
   };
@@ -173,6 +185,26 @@ export default function LiveViewerPage() {
 
   /* Private gate */
   if (live?.requires_code && !joined) {
+    if (ageGate) {
+      return (
+        <div className="fixed inset-0 bg-black overflow-hidden" data-testid="live-age-gate">
+          <button onClick={() => navigate(-1)} className="absolute left-3 z-10 w-10 h-10 rounded-full bg-black/45 text-white grid place-items-center" style={{ top: "calc(var(--safe-top) + 10px)" }} data-testid="live-gate-back"><ArrowLeft className="w-5 h-5" /></button>
+          <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 bruno-glass rounded-[28px] border p-6 text-center" style={{ maxWidth: 400, marginInline: "auto" }}>
+            <div className="w-14 h-14 mx-auto rounded-full bg-primary/15 grid place-items-center mb-3"><Shield className="w-6 h-6 text-primary" /></div>
+            {ageGate === "blocked" ? (
+              <><p className="font-bold">Solo para mayores de 18</p><p className="text-sm text-muted-foreground mt-1" data-testid="live-age-blocked">Según tu fecha de nacimiento no puedes entrar a lives privados.</p></>
+            ) : (
+              <>
+                <p className="font-bold">Confirma tu fecha de nacimiento</p>
+                <p className="text-sm text-muted-foreground mt-1">Los lives privados son para mayores de 18. Se guarda una sola vez y no se muestra a nadie.</p>
+                <input type="date" value={birth} onChange={(e) => setBirth(e.target.value)} max={new Date().toISOString().slice(0, 10)} className="mt-4 w-full h-12 rounded-2xl bg-foreground/[0.06] px-4 text-sm outline-none" data-testid="live-birth-input" />
+                <button onClick={saveBirth} disabled={!birth} className="mt-3 w-full h-12 rounded-full bg-primary text-white font-semibold text-sm disabled:opacity-50" data-testid="live-birth-save">Continuar</button>
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="fixed inset-0 bg-black overflow-hidden" data-testid="live-code-gate">
         <div className="absolute inset-0 bg-center bg-cover opacity-30" style={{ backgroundImage: live.host_avatar ? `url(${live.host_avatar})` : undefined, filter: "blur(28px)" }} />
@@ -180,7 +212,8 @@ export default function LiveViewerPage() {
         <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 bruno-glass rounded-[28px] border p-6 text-center" style={{ maxWidth: 400, marginInline: "auto" }}>
           <div className="w-14 h-14 mx-auto rounded-full bg-primary/15 grid place-items-center mb-3"><Lock className="w-6 h-6 text-primary" /></div>
           <p className="font-bold">Live privado</p>
-          <p className="text-sm text-muted-foreground mt-1">{live.host_name} está transmitiendo en privado. Ingresa el código que te compartió.</p>
+          <p className="text-sm text-muted-foreground mt-1">{live.host_name} está transmitiendo en privado (18+). Ingresa el PIN que te compartió.{live.requires_ticket ? " Después verás el precio de la entrada." : ""}</p>
+          {gateError && <p className="mt-2 text-xs text-destructive font-medium" role="alert" data-testid="live-gate-error">{gateError}</p>}
           <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))} maxLength={6} placeholder="••••••"
             className="mt-4 w-full h-14 rounded-2xl bg-foreground/[0.06] text-center font-mono text-2xl tracking-[0.4em] outline-none focus:ring-2 ring-primary/40" data-testid="live-gate-code-input" />
           <button onClick={join} disabled={joining || code.length !== 6} className="mt-3 w-full h-12 rounded-full bg-primary text-white font-semibold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50" data-testid="live-gate-join-btn">
@@ -194,8 +227,14 @@ export default function LiveViewerPage() {
   return (
     <div className="fixed inset-0 bg-black overflow-hidden" data-testid="live-viewer-page">
       <PrivacyShield active={!!live?.is_private && !!live?.anti_capture} label={`BRUNO · ${user?.name || user?.email || "viewer"} · ${new Date().toLocaleTimeString()}`}>
-        <div className="live-stage absolute inset-0 bg-black" onClick={() => setMuted((m) => !m)}>
+        <div className="live-stage absolute inset-0 bg-black" data-testid="live-stage" onClick={(e) => {
+          // Tap-tap: toques rápidos repetidos lanzan corazones gratuitos; un toque aislado alterna el sonido.
+          const now = Date.now(); const prev = tapRef.current; tapRef.current = now;
+          if (now - prev < 350) { if (live?.allow_likes !== false) { rtc.sendHeart(); tapBurst(e); } return; }
+          setTimeout(() => { if (tapRef.current === now) setMuted((m) => !m); }, 360);
+        }}>
           <video ref={videoRef} autoPlay playsInline muted={muted} className="absolute inset-0 w-full h-full object-cover" disablePictureInPicture controlsList="nodownload noremoteplayback" data-testid="live-remote-video" />
+          {bursts.map((b) => <span key={b.id} className="pointer-events-none fixed text-4xl select-none animate-[tapheart_.9s_ease-out_forwards] motion-reduce:hidden" style={{ left: b.x - 18, top: b.y - 18 }} aria-hidden>❤️</span>)}
           {!remoteStream && <LiveWaitingRoom live={live} viewerCount={rtc.viewerCount} hostOnline={rtc.hostOnline && daily.state !== "error"} />}
           {!remoteStream && !rtcInfo && joined && <div className="absolute inset-x-6 bottom-40 z-20 rounded-2xl bg-black/60 text-white text-xs p-3 text-center" data-testid="live-no-rtc">El servidor de video no está configurado (DAILY_API_KEY). Solo chat disponible.</div>}
         </div>
@@ -205,7 +244,7 @@ export default function LiveViewerPage() {
       <LiveTopBar live={live} viewerCount={rtc.viewerCount} hostOnline={rtc.hostOnline} onClose={leaveLive}
         right={<div className="flex items-center gap-1.5">
           {live?.host_id !== user?.id && <button onClick={toggleFollow} className={`h-9 px-3 rounded-full text-xs font-bold inline-flex items-center gap-1 ${following ? "bg-white/20 text-white" : "bg-primary text-white"}`} data-testid="live-follow-btn" aria-pressed={following}>{following ? <Check className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}{following ? "Siguiendo" : "Seguir"}</button>}
-          <button onClick={shareLive} className="w-9 h-9 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-share-btn" aria-label="Compartir"><Share2 className="w-4 h-4" /></button>
+          {live?.allow_share !== false && <button onClick={shareLive} className="w-9 h-9 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-share-btn" aria-label="Compartir"><Share2 className="w-4 h-4" /></button>}
           {isMod && <button onClick={() => setModOpen(true)} className="w-9 h-9 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-viewer-moderation-btn" aria-label="Moderación"><Shield className="w-4 h-4" /></button>}
           <button onClick={reportLive} className="w-9 h-9 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-report-btn" aria-label="Reportar"><Flag className="w-4 h-4" /></button>
           <button onClick={() => setMuted((m) => !m)} className="w-9 h-9 rounded-full bg-black/45 text-white grid place-items-center" data-testid="live-viewer-mute">{muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}</button>
@@ -219,7 +258,7 @@ export default function LiveViewerPage() {
       <button onClick={() => setInteractOpen(true)} className="absolute right-3 z-30 h-10 px-3 rounded-full bg-black/55 text-white text-xs font-semibold inline-flex items-center gap-1.5" style={{ bottom: "calc(var(--safe-bottom) + 76px)" }} data-testid="live-interact-btn">{rtc.guestStatus === "pending" ? <Hand className="w-4 h-4 animate-pulse" /> : <Sparkles className="w-4 h-4" />}{rtc.guestStatus === "pending" ? "Esperando…" : "Participar"}</button>
       {interactOpen && <LiveInteractSheet live={live} token={token} rtc={rtc} canModerate={isMod} isHost={false} userId={user?.id} onClose={() => setInteractOpen(false)} />}
       <LiveEvents events={rtc.events} hearts={rtc.hearts} />
-      <LiveInputRow liveId={liveId} token={token} allowGifts={live?.allow_gifts} allowComments={rtc.settings.allow_comments ?? live?.allow_comments} onHeart={rtc.sendHeart} />
+      <LiveInputRow liveId={liveId} token={token} allowGifts={live?.allow_gifts} allowComments={rtc.settings.allow_comments ?? live?.allow_comments} allowLikes={live?.allow_likes !== false} onHeart={rtc.sendHeart} />
       {modOpen && <LiveModerationSheet live={live} events={rtc.events} pinned={rtc.pinned} mutedIds={rtc.mutedIds} isHost={false} token={token} onClose={() => setModOpen(false)} onLiveChange={(patch) => setLive((l) => ({ ...l, ...patch }))} />}
     </div>
   );

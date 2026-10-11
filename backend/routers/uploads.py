@@ -127,17 +127,30 @@ async def complete_video_upload(body: dict, trim_start: Optional[float] = None, 
     if trim_end is not None and trim_end > 0 and (trim_start is None or trim_end > trim_start):
         trim += f"eo_{trim_end:.2f},"
     cover = f"so_{max(0.0, cover_at):.2f}" if cover_at is not None else "so_auto"
-    mp4_url = base_url.replace("/upload/", f"/upload/{trim}f_mp4,vc_h264,ac_aac,br_2500k,w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/").rsplit(".", 1)[0] + ".mp4"
-    poster_url = base_url.replace("/upload/", f"/upload/{cover},w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/").rsplit(".", 1)[0] + ".jpg"
+    # Textos incrustados de verdad en el archivo exportado (capas Cloudinary), no solo en la vista previa.
+    from urllib.parse import quote
+    text_layers = ""
+    for ov in ((body or {}).get("overlays") or [])[:8]:
+        txt = str(ov.get("text") or "").strip()[:80]
+        if not txt:
+            continue
+        safe = quote(txt.replace(",", "%2C").replace("/", "%2F"), safe="%")
+        color = str(ov.get("color") or "#ffffff").lstrip("#")[:6] or "ffffff"
+        x = min(max(float(ov.get("x") or 50), 0), 100) / 100
+        y = min(max(float(ov.get("y") or 50), 0), 100) / 100
+        size = int(ov.get("size") or 56)
+        text_layers += f"l_text:Arial_{size}_bold:{safe},co_rgb:{color},g_center,fl_relative,x_{x - 0.5:.3f},y_{y - 0.5:.3f},fl_layer_apply/"
+    mp4_url = base_url.replace("/upload/", f"/upload/{trim}f_mp4,vc_h264,ac_aac,br_2500k,w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/{text_layers}").rsplit(".", 1)[0] + ".mp4"
+    poster_url = base_url.replace("/upload/", f"/upload/{cover},w_{VIDEO_MAX_W},h_{VIDEO_MAX_H},c_limit/{text_layers}").rsplit(".", 1)[0] + ".jpg"
     hls_url = None
     if duration >= HLS_MIN_SECONDS:
-        hls_url = base_url.replace("/upload/", f"/upload/{trim}sp_auto/").rsplit(".", 1)[0] + ".m3u8"
+        hls_url = base_url.replace("/upload/", f"/upload/{trim}{text_layers}sp_auto/").rsplit(".", 1)[0] + ".m3u8"
         try:
             await run_in_threadpool(lambda: cloudinary.uploader.explicit(public_id, type="upload", resource_type="video", eager=[{"streaming_profile": "auto", "format": "m3u8"}], eager_async=True))
         except Exception as e:
             logger.warning(f"HLS eager failed for {public_id}: {e}")
     return {"url": mp4_url, "original_url": base_url, "mp4_url": mp4_url, "f_auto_url": base_url.replace("/upload/", "/upload/f_auto,q_auto/"), "poster_url": poster_url, "hls_url": hls_url,
-            "public_id": public_id, "width": res.get("width"), "height": res.get("height"), "format": res.get("format"), "resource_type": "video", "duration": duration, "bytes": res.get("bytes"), "is_long": duration >= HLS_MIN_SECONDS}
+            "public_id": public_id, "width": res.get("width"), "height": res.get("height"), "format": res.get("format"), "resource_type": "video", "duration": duration, "bytes": res.get("bytes"), "is_long": duration >= HLS_MIN_SECONDS, "burned_texts": bool(text_layers)}
 
 
 def _upload_video(contents: bytes, folder: str, filename: str | None):

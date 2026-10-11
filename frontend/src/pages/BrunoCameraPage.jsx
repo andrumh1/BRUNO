@@ -10,6 +10,7 @@ import axios from "axios";
 import * as faceapi from "face-api.js";
 import { VideoTrimCover, UploadProgress, DraftsSheet } from "@/components/camera/VideoPublishTools";
 import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
+import { takePendingMedia } from "@/lib/pendingMedia";
 import { setVideoLimit, videoTooLarge, videoTooLargeMsg } from "@/lib/media";
 import {
   Camera,
@@ -186,6 +187,14 @@ const BrunoCameraPage = () => {
   const lastAction = useRef(null);
   useEffect(() => { if (token) axios.get(`${API}/post-drafts`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setDraftCount(r.data.length)).catch(() => {}); }, [token]);
   useEffect(() => { if (searchParams.get("drafts") === "1") setDraftsOpen(true); }, [searchParams]);
+  // Archivo elegido desde el menú Publicar → abre el editor (recorte, portada, texto) sin publicar nada.
+  useEffect(() => {
+    if (searchParams.get("import") !== "1") return;
+    const p = takePendingMedia(); if (!p?.file) return;
+    const file = p.file; const isVideo = isVideoFile(file);
+    setCapturedMedia({ type: isVideo ? "video" : "photo", data: URL.createObjectURL(file), blob: file, fileKey: `${file.size}_${file.lastModified}`, lastModified: file.lastModified });
+    if (isVideo) setMode("video60");
+  }, [searchParams]);
 
   /* Sube el video/foto con progreso real; aplica recorte y portada elegidos en la vista previa. Reutiliza el media de un borrador. */
   const uploadMedia = async () => {
@@ -201,7 +210,7 @@ const BrunoCameraPage = () => {
       const lim = await getUploadLimits(token).catch(() => null);
       if (lim?.video_max_bytes) setVideoLimit(lim.video_max_bytes);
       if (videoTooLarge(file)) throw Object.assign(new Error("too large"), { userMessage: videoTooLargeMsg() });
-      return uploadVideoDirect(file, { token, trim, coverAt, onProgress: (p) => setUpload({ pct: p.pct, phase: p.phase === "retry" ? "retry" : p.phase, error: null, loaded: p.loaded, total: p.total }) });
+      return uploadVideoDirect(file, { token, trim, coverAt, overlays: texts.map((t) => ({ text: t.text, x: t.x, y: t.y, color: t.color })), onProgress: (p) => setUpload({ pct: p.pct, phase: p.phase === "retry" ? "retry" : p.phase, error: null, loaded: p.loaded, total: p.total }) });
     }
     const formData = new FormData();
     formData.append("file", blob, fileName);
