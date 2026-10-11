@@ -1,0 +1,22 @@
+{
+  "summary": "Iteration 107 scope fully validated. Backend: 6/6 pytest cases pass (recommended-videos long filter inclusion & exclusion, long-video progress save+auto-reset-on-complete, chapters PUT owner success with sorting + non-owner 401/403/404, coupon stats shape + public clicks counter increments by 2, /search?type=videos returns is_long=true with url=/video/...). Frontend: mobile 390x844 nav shows 7 icon-only buttons (grid-cols-7) with equal 51px cells (x=16,67,118,169,221,272,323), aria-labels present, exactly one nav-active-bubble inside the active tab, bubble follows click to /marketplace within 700ms, active color rgb(71,71,71) (not orange rgb(255,106,0)), notifications badge still shows '2', no horizontal overflow. Long-video player at /video/{id} renders long-player-title='Videos largos', long-chapters-strip with 4 chips (Introducción/Primeros pasos/Caso práctico/Preguntas), long-chapters-open opens sheet with editor + save (owner), floating AI/chat FABs hidden on /video/*. /earnings coupon cards VERANO20 and FIJO5 show stats grids with clicks/redemptions/revenue/discount sub-testids (VERANO20 clicks=2 reflects backend increments). /search mic button search-voice-btn visible when logged in; AskBruno flow produces search-ask-speak which triggers /api/ai/speak returning 200 audio/mpeg. Regression: /search?q=disenador still renders search groups; /admin/users for non-admin shows 'Solo administración'; desktop nav remains visible at 1920. No critical issues found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration107.py",
+    "/app/test_reports/pytest/iteration_107.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "posts_feed.py update_post endpoint is registered without a trailing slash (/posts/{post_id}); clients that call with trailing slash get a 307 redirect that drops the Authorization header and fails with 401. Not a bug per se but worth documenting for mobile clients.",
+    "Coupon public endpoint increments clicks on every GET; consider throttling or dedup by IP/session to avoid skewed stats from reload spam. Not blocking."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration107.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "newtest@bruno.com / Test1234! ; viewer2@bruno.com / Test1234!",
+  "seed_data_creation": "None. Chapters on 12b28791 were temporarily edited to 2 entries then restored to the original 4 (00:00 Introducción, 01:30 Primeros pasos, 03:00 Caso práctico, 05:00 Preguntas).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests live at /app/backend/tests/test_iteration107.py and read REACT_APP_BACKEND_URL from env or /app/frontend/.env fallback. Use PUT /api/posts/{id} WITHOUT trailing slash (307 drops auth). VERANO20 clicks counter increments on every GET /api/money/coupons/{id}/public — subsequent runs may see higher baseline. Headless chrome can't decode H.264 so long-video playback itself isn't verifiable; only chrome UI (chapters strip/sheet/editor/save/scroll container).",
+  "rca of the issue": "N/A - no bugs."
+}
