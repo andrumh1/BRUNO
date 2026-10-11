@@ -5,6 +5,7 @@ import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { BrunoHeaderMark } from "@/components/bruno/BrunoLogo";
 import { Link, useNavigate } from "react-router-dom";
 import { SeriesList } from "@/components/series/SeriesList";
+import { ExamplesGrid } from "@/pages/CardExamplesPage";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -828,6 +829,16 @@ const MyProfilePage = () => {
                 </button>
               </div>
             </div>
+
+            {/* Inspírate con ejemplos (separado de las tarjetas propias) */}
+            <section className="mb-5 rounded-2xl border border-border/40 bg-card/40 backdrop-blur-md p-3" data-testid="cards-examples-section">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div><p className="text-sm font-bold">Inspírate con ejemplos</p><p className="text-xs text-muted-foreground">Explora tarjetas completas y elige cómo quieres presentarte.</p></div>
+                <Link to="/cards/examples" className="text-xs font-semibold text-primary shrink-0" data-testid="cards-examples-all">Ver ejemplos</Link>
+              </div>
+              <ExamplesGrid compact />
+            </section>
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Mis tarjetas</p>
 
             {/* Cards Display */}
             {cards.length === 0 ? (

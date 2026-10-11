@@ -67,9 +67,10 @@ export const LocationBlock = ({ data, design }) => {
   );
 };
 
-export const QRBlock = ({ cardId, design }) => {
+export const QRBlock = ({ cardId, design, data }) => {
   const [qr, setQr] = useState(null);
-  useEffect(() => { if (!cardId) return; axios.get(`${API}/cards/${cardId}/qr`).then((r) => setQr(r.data.qr_code)).catch(() => {}); }, [cardId]);
+  const exq = data?.is_example ? `?template=${data.example_preset}&lang=${data.example_lang}` : "";
+  useEffect(() => { if (!cardId) return; axios.get(`${API}/cards/${cardId}/qr${exq}`).then((r) => setQr(r.data.qr_code)).catch(() => {}); }, [cardId, exq]);
   return (
     <Surface design={design} className="p-4 flex items-center gap-4" data-testid="card-qr-block">
       <div className="w-24 h-24 rounded-xl bg-white p-1.5 shrink-0 flex items-center justify-center">{qr ? <img src={qr} alt="QR" className="w-full h-full" /> : <QrCode className="w-10 h-10 text-neutral-400" />}</div>
@@ -98,6 +99,25 @@ export const TypeFieldsBlock = ({ data, design }) => {
   if (jd && (jd.salary_min || jd.salary_max || jd.contract_type || jd.remote_option || (jd.requirements || []).length)) {
     const chips = [jd.contract_type, jd.remote_option, jd.experience_required && `Exp: ${jd.experience_required}`, jd.vacancies > 1 && `${jd.vacancies} vacantes`, jd.urgency === "urgent" && "Urgente"].filter(Boolean);
     card("Detalles", Briefcase, <div className="space-y-2">{(jd.salary_min || jd.salary_max) && <p className="text-sm font-semibold">{jd.salary_min}{jd.salary_max ? ` – ${jd.salary_max}` : ""} {jd.salary_currency}</p>}<div className="flex flex-wrap gap-2">{chips.map((c, i) => <span key={i} className="px-2.5 py-1 rounded-full text-xs" style={{ backgroundColor: rgba(t, 0.12) }}>{c}</span>)}</div>{(jd.requirements || []).length > 0 && <ul className="text-xs list-disc pl-4 space-y-0.5 opacity-85">{jd.requirements.map((r, i) => <li key={i}>{typeof r === "string" ? r : r.text || r.name}</li>)}</ul>}</div>, "job");
+  }
+  // Campos específicos del tipo (negocio, servicios, lugares, empresa, mascota, guardián…) en formato genérico
+  const LABELS = { services: "Servicios", products: "Productos", team: "Equipo", schedule: "Horario", openingHours: "Horario", attractions: "Qué encontrarás", interests: "Intereses", emergencyContacts: "Contactos de emergencia", ownerContacts: "Contacto del dueño", medications: "Medicación", allergies: "Alergias", medicalConditions: "Condiciones médicas", benefits: "Beneficios" };
+  const INFO = { profession: "Profesión", company: "Empresa", availability: "Disponibilidad", position: "Cargo", department: "Departamento", officeLocation: "Oficina", directPhone: "Teléfono directo", businessType: "Tipo", foundedYear: "Desde", priceRange: "Precios", locationType: "Tipo de lugar", admissionFee: "Entrada", accessibility: "Accesibilidad", warnings: "Avisos", personName: "Nombre", age: "Edad", bloodType: "Grupo sanguíneo", petName: "Nombre", species: "Especie", breed: "Raza", color: "Color", size: "Tamaño", microchip: "Microchip", identifyingMarks: "Señas", lostInstructions: "Si se pierde", reward: "Recompensa", vaccinated: "Vacunado", sterilized: "Esterilizado", responsibilities: "Responsabilidades" };
+  const val = (v) => (v === true ? "Sí" : v === false ? "No" : String(v));
+  const info = Object.keys(INFO).filter((k) => cf[k] !== undefined && cf[k] !== "" && cf[k] !== null && !(Array.isArray(cf[k]) && !cf[k].length));
+  if (info.length) card("Información", Sparkles, <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">{info.map((k) => <p key={k} className="text-sm"><span className="opacity-60 text-xs uppercase tracking-wide mr-1.5">{INFO[k]}</span>{val(cf[k])}</p>)}</div>, "info");
+  for (const k of Object.keys(LABELS)) {
+    const v = cf[k];
+    if (!v || (Array.isArray(v) && !v.length) || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length)) continue;
+    if (Array.isArray(v)) {
+      const body = typeof v[0] === "string" ? <div className="flex flex-wrap gap-2">{v.map((x, i) => <span key={i} className="px-2.5 py-1 rounded-full text-xs font-medium" style={{ backgroundColor: rgba(t, 0.1) }}>{x}</span>)}</div>
+        : <List items={v} render={(it) => <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold">{it.name || it.title}</p>{(it.role || it.description || it.phone) && <p className="text-xs opacity-70">{it.role || it.description || it.phone}</p>}</div>{it.price && <span className="text-sm font-bold shrink-0">{it.price}</span>}</div>} />;
+      card(LABELS[k], Briefcase, body, k);
+    } else if (typeof v === "object") {
+      card(LABELS[k], Briefcase, <div className="grid grid-cols-2 gap-x-4 gap-y-1">{Object.entries(v).map(([d, h]) => <p key={d} className="text-xs flex justify-between gap-2"><span className="capitalize opacity-70">{d}</span><span className="font-medium">{h}</span></p>)}</div>, k);
+    } else {
+      card(LABELS[k], Briefcase, <p className="text-sm">{val(v)}</p>, k);
+    }
   }
   if (!sections.length) return null;
   return <div className="space-y-3" data-testid="card-type-fields">{sections}</div>;

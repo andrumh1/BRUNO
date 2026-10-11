@@ -219,11 +219,20 @@ async def reorder_cards(req: ReorderRequest, current_user: User = Depends(get_cu
     return {"status": "ok", "count": len(req.card_ids)}
 
 
-@router.get("/{card_id}", response_model=Card)
+@router.get("/{card_id}")
 async def get_card(
     card_id: str,
+    template: Optional[str] = None,
+    lang: str = "es",
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
+    if card_id.startswith("example-"):
+        # Tarjeta de ejemplo (ficticia): pública, no editable, sin contar vistas ni analítica
+        from routers.card_examples import build_card, find_example
+        ex = find_example(card_id)
+        if not ex:
+            raise HTTPException(status_code=404, detail="Card not found")
+        return build_card(ex, template or ex["presets"][0], lang if lang in ("es", "en") else "es")
     card_dict = await db.cards.find_one({"id": card_id}, {"_id": 0})
     if not card_dict:
         raise HTTPException(status_code=404, detail="Card not found")
@@ -285,14 +294,21 @@ async def delete_card(card_id: str, current_user: User = Depends(get_current_use
 
 
 @router.get("/{card_id}/qr")
-async def get_card_qr(card_id: str):
+async def get_card_qr(card_id: str, template: Optional[str] = None, lang: Optional[str] = None):
     """Generate a branded QR code (PNG data-URL) that deep-links to the card."""
-    card_dict = await db.cards.find_one({"id": card_id}, {"_id": 0})
-    if not card_dict:
-        raise HTTPException(status_code=404, detail="Card not found")
-
-    frontend_url = os.environ.get('FRONTEND_URL')
-    card_url = f"{frontend_url}/c/{card_id}"
+    frontend_url = os.environ.get('PUBLIC_BASE_URL') or os.environ.get('FRONTEND_URL')
+    if card_id.startswith("example-"):
+        from routers.card_examples import find_example
+        ex = find_example(card_id)
+        if not ex:
+            raise HTTPException(status_code=404, detail="Card not found")
+        card_dict = {"background_color": "#474747"}
+        card_url = f"{frontend_url}/c/{card_id}?template={template or ex['presets'][0]}&lang={lang if lang in ('es', 'en') else 'es'}"
+    else:
+        card_dict = await db.cards.find_one({"id": card_id}, {"_id": 0})
+        if not card_dict:
+            raise HTTPException(status_code=404, detail="Card not found")
+        card_url = f"{frontend_url}/c/{card_id}"
     fill_color = card_dict.get('background_color', '#FF5A00')
 
     qr = qrcode.QRCode(

@@ -33,11 +33,13 @@ const ViewCardPage = () => {
   const [qrData, setQrData] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  const isOwner = user && card && user.id === card.user_id;
+  const isOwner = user && card && user.id === card.user_id && !card.is_example;
+  const [demo, setDemo] = useState(null);
+  useEffect(() => { const on = (e) => setDemo(e.detail); window.addEventListener("bruno:example-action", on); return () => window.removeEventListener("bruno:example-action", on); }, []);
 
   const fetchCard = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/cards/${cardId}`);
+      const response = await axios.get(`${API}/cards/${cardId}${cardId.startsWith("example-") ? window.location.search : ""}`);
       setCard(response.data);
     } catch (err) {
       setError(err.response?.data?.detail || "Tarjeta no encontrada");
@@ -184,7 +186,22 @@ const ViewCardPage = () => {
       {/* Full-width card container */}
       <div className="relative z-10 w-full px-3 sm:px-6 lg:px-10 xl:px-16">
         {/* ===== ONE CARD ENGINE ===== */}
-        <CardRenderer data={card} design={design} cardId={cardId} onChat={card.user_id && (!user || card.user_id !== user.id) ? handleStartChat : null} className="lg:rounded-3xl" />
+        <CardRenderer data={card} design={design} cardId={cardId} onChat={card.is_example ? () => window.dispatchEvent(new CustomEvent("bruno:example-action", { detail: { label: "Chat", href: "chat" } })) : card.user_id && (!user || card.user_id !== user.id) ? handleStartChat : null} className="lg:rounded-3xl" />
+        {demo && (
+          <div className="fixed inset-0 z-[120] bg-black/60 grid place-items-center p-6" onClick={() => setDemo(null)} role="dialog" aria-modal="true" data-testid="example-demo-modal">
+            <div className="w-full max-w-sm rounded-2xl bg-background p-5 space-y-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <p className="font-bold">{card.example_lang === "en" ? "This is a sample card" : "Esta es una tarjeta de ejemplo"}</p>
+              <p className="text-sm text-muted-foreground">{card.example_lang === "en" ? `On a real card, "${demo.label}" would contact the owner or open their real link.` : `En una tarjeta real, «${demo.label}» contactaría al titular o abriría su enlace real.`}</p>
+              <div className="flex gap-2"><button onClick={() => setDemo(null)} className="flex-1 h-10 rounded-full bg-foreground/[0.06] text-sm font-semibold" data-testid="example-demo-close">{card.example_lang === "en" ? "Close" : "Cerrar"}</button><button onClick={() => navigate(`/cards/examples/${card.card_type}?template=${card.example_preset}`)} className="flex-1 h-10 rounded-full bg-primary text-white text-sm font-semibold">{card.example_lang === "en" ? "Create my card" : "Crear mi tarjeta"}</button></div>
+            </div>
+          </div>
+        )}
+        {card.is_example && (
+          <div className="mt-3 rounded-2xl border border-primary/30 bg-primary/[0.06] p-3 flex items-center gap-3" data-testid="example-public-cta">
+            <p className="text-xs flex-1">{card.example_lang === "en" ? "Fictional sample card. Like this design?" : "Tarjeta de ejemplo ficticia. ¿Te gusta este diseño?"}</p>
+            <button onClick={() => navigate(`/cards/examples/${card.card_type}?template=${card.example_preset}`)} className="h-9 px-3 rounded-full bg-primary text-white text-xs font-semibold shrink-0" data-testid="example-public-use">{card.example_lang === "en" ? "Use this template" : "Usar esta plantilla"}</button>
+          </div>
+        )}
         {/* Share bar */}
         <div className="mt-5 flex items-center justify-center gap-3 flex-wrap">
           <Button variant="outline" size="sm" onClick={copyLink} data-testid="card-copy-link">

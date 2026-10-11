@@ -29,6 +29,8 @@ async def _get_user_from_token(credentials: HTTPAuthorizationCredentials = Depen
 
 @router.post("/cards/{card_id}/view")
 async def track_card_view(card_id: str, request: Request, source_url: Optional[str] = None):
+    if card_id.startswith("example-"):
+        return {"ok": True, "example": True}
     """Track a card view - can be called without auth (public cards)"""
     viewer_id = None
     try:

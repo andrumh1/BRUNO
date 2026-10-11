@@ -22,8 +22,18 @@ const toPayload = (card) => {
 };
 
 // State + undo/redo + debounced autosave for the BRUNO Card Builder.
+const fromSelection = () => {
+  const q = new URLSearchParams(window.location.search);
+  let type = q.get("type"), template = q.get("template");
+  if (!type) { try { const p = JSON.parse(localStorage.getItem("bruno_pending_template") || "null"); if (p) { type = p.type; template = p.template; } } catch { /* ignore */ } }
+  try { localStorage.removeItem("bruno_pending_template"); } catch { /* ignore */ }
+  const c = newCard(type || "personal");
+  if (template) c.card_design = applyPreset(c.card_design, template);
+  return c;
+};
+
 export const useCardBuilder = ({ cardId, token, onCreated }) => {
-  const [card, setCardState] = useState(cardId ? null : newCard());
+  const [card, setCardState] = useState(cardId ? null : fromSelection());
   const [id, setId] = useState(cardId || null);
   const [status, setStatus] = useState(cardId ? "loading" : "idle");
   const [error, setError] = useState("");

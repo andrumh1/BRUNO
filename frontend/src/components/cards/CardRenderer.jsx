@@ -34,7 +34,7 @@ const CardRenderer = ({ data = {}, design, cardId, onChat, seal = true, classNam
     gallery: () => on("gallery") && <GalleryBlock key="gallery" data={data} design={design} />,
     location: () => on("location") && <LocationBlock key="location" data={data} design={design} />,
     typeFields: () => on("typeFields") && <TypeFieldsBlock key="typeFields" data={data} design={design} />,
-    qr: () => on("qr") && <QRBlock key="qr" cardId={cardId} design={design} />,
+    qr: () => on("qr") && <QRBlock key="qr" cardId={cardId} design={design} data={data} />,
     cta: () => on("cta") && <CtaBlock key="cta" design={design} />,
   };
   const order = [...(design.componentOrder || []), ...Object.keys(modules).filter((k) => !(design.componentOrder || []).includes(k))];
@@ -49,8 +49,21 @@ const CardRenderer = ({ data = {}, design, cardId, onChat, seal = true, classNam
       style={{ borderRadius: design.layout.radius, color: t, fontFamily: bodyFont(design), boxShadow: depthShadow(design), border: `1px solid ${rgba(t, 0.08)}`, ...style }}
       data-testid="card-container"
       data-preset={design.preset}
+      data-example={data?.is_example ? "1" : undefined}
+      onClickCapture={(e) => {
+        // Tarjeta de ejemplo: las acciones de contacto/compra se simulan, nunca se abren terceros
+        if (!data?.is_example) return;
+        const a = e.target.closest("a");
+        if (!a) return;
+        const h = a.getAttribute("href") || "";
+        if (/^(tel:|mailto:|sms:)/.test(h) || /wa\.me|example\.com|maps\./.test(h)) {
+          e.preventDefault(); e.stopPropagation();
+          window.dispatchEvent(new CustomEvent("bruno:example-action", { detail: { label: a.textContent?.trim(), href: h } }));
+        }
+      }}
     >
       <CardBackground design={design} data={data} />
+      {data?.is_example && <span className="absolute top-3 left-3 z-20 rounded-full bg-black/55 text-white text-[10px] font-semibold px-2 py-0.5 backdrop-blur" data-testid="card-example-badge">{data.example_lang === "en" ? "Fictional example" : "Ejemplo ficticio"}</span>}
       <div className="relative">
         <CardHeader data={data} design={design} onChat={onChat} pad={pad} narrow={narrow} />
         <div style={{ padding: pad, display: "flex", flexDirection: "column", gap: pad * 0.9 }}>

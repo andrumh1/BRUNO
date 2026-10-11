@@ -2456,6 +2456,8 @@ from routers.search import router as search_router
 api_router.include_router(search_router)
 from routers.series import router as series_router
 api_router.include_router(series_router)
+from routers.card_examples import router as card_examples_router
+api_router.include_router(card_examples_router)
 from routers.user_data import router as user_data_router
 api_router.include_router(user_data_router)
 
@@ -2543,6 +2545,11 @@ async def auth_hardening_startup():
         await db.messages.create_index([("chat_id", 1), ("created_at", -1)])
     except Exception as e:
         logger.error(f"auth startup hardening failed: {e}")
+    try:
+        from routers.card_examples import seed_examples
+        logger.info(f"card examples: {await seed_examples()}")
+    except Exception as e:
+        logger.error(f"card examples seed failed: {e}")
     try:
         from utils.search_sync import sync_loop
         asyncio.get_event_loop().create_task(sync_loop())

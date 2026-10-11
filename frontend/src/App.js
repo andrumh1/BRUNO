@@ -98,6 +98,8 @@ import AdminReportsPage from "@/pages/AdminReportsPage";
 import AdminUserModerationPage from "@/pages/AdminUserModerationPage";
 import SearchPage from "@/pages/SearchPage";
 import SeriesPage from "@/pages/SeriesPage";
+import CardExamplesPage from "@/pages/CardExamplesPage";
+import CardExampleViewerPage from "@/pages/CardExampleViewerPage";
 import CouponLandingPage from "@/pages/CouponLandingPage";
 import AdminMoneyPage from "@/pages/AdminMoneyPage";
 import HashtagPage from "@/pages/HashtagPage";
@@ -183,6 +185,8 @@ function AppRouter() {
       <Route path="/marketplace/my-products" element={<ProtectedRoute><MyProductsPage /></ProtectedRoute>} />
       <Route path="/marketplace/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Navigate to="/my-profile" replace /></ProtectedRoute>} />
+      <Route path="/cards/examples" element={<CardExamplesPage />} />
+      <Route path="/cards/examples/:type" element={<CardExampleViewerPage />} />
       <Route path="/cards/new" element={<ProtectedRoute><CardBuilderPage /></ProtectedRoute>} />
       <Route path="/cards/:cardId/edit" element={<ProtectedRoute><CardBuilderPage /></ProtectedRoute>} />
       <Route path="/cards/:cardId/qr" element={<ProtectedRoute><QRCodePage /></ProtectedRoute>} />
