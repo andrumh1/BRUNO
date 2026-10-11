@@ -59,3 +59,4 @@
 - Progreso: POST/GET /api/posts/{id}/progress. Capítulos: PUT /api/posts/{id} {chapters:[{time,title}]} (solo dueño).
 - Cupones: GET /api/money/coupons/stats (clics se cuentan al abrir GET /api/money/coupons/{id}/public).
 - Serie semilla (newtest): 6ff8761f-215b-423d-a934-d0bd9a017824 "Curso BRUNO completo" (2 videos). Rutas /series/:id, /series/new, /video/:id?series=:sid. Capítulos IA: POST /api/posts/{id}/chapters/ai (422 en videos sin voz).
+- Ejemplos de tarjetas: /cards/examples, /cards/examples/{type}?template=..., público /c/example-{type}?template&lang. API: /api/card-examples, /api/card-examples/coverage/report. Sin login.

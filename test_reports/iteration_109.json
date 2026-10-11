@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 109: Full coverage of BRUNO card-examples gallery feature. Backend: 26/26 pytest cases passed (list/coverage, get by type with template fallback, QR data-URL via /api/cards/example-{t}/qr, is_example flag, no view counting on repeat GET, PUT/DELETE blocked, analytics POST no-op with example:true, search exclusion of example-* ids, and 12 /examples/*.jpg static image fetches). Frontend: /cards/examples lists 11 example-tile-* with cover images (naturalWidth=1200), navigating to curriculum viewer shows example-type-name, example-preset-name, card-example-badge, card-type-fields (TypeFieldsBlock). Template bar renders 8 example-template-* buttons; clicking example-template-formal updates URL ?template=formal and preset label without full reload. example-lang-toggle switches locale and preserves template. example-qr-btn opens example-qr-modal with example-qr-img and example-public-url containing /c/example-curriculum?template=formal&lang=es. For negocio viewer: 5 gallery images, lightbox opens on click, prev/next navigable. Clicking tel:/mailto: inside card opens example-demo-modal and prevents navigation; example-demo-close dismisses it. Logged-out 'Usar esta plantilla' redirects to /login (bruno_pending_template stored). Logged in: /cards/new?type=negocio&template=glass opens builder with the Glass preset preselected (highlighted/outlined among 11 preset tiles — card-container[data-preset=glass] rendered, no fictional title/desc copied). Public /c/example-mascotas renders with card-example-badge and example-public-cta → clicking example-public-use button navigates to /cards/examples/mascotas?template=photo. /my-profile?tab=cards shows cards-examples-section with 'Ver ejemplos' link above the user's cards list. Regression on a real public card (Panadería Doña Ñoña) shows no badge, no CTA, and no demo modal (actions keep real hrefs).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "CardExampleViewerPage (curriculum)", "issues": ["React console warning: 'Cannot update a component while rendering a different component' — likely a setState inside render in CardRenderer/InfoBlocks when ViewCardPage dispatches to parent. Non-blocking but should be audited; see also known face-api.js webpack warnings (ignored per request)."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration109.py",
+    "/app/test_reports/pytest/iter109.xml"
+  ],
+  "action_items": [
+    "(Low) Investigate React setState-in-render warning triggered on the example viewer (navigate(-1)/useEffect ordering in CardExampleViewerPage or CardRenderer). Does not affect functionality."
+  ],
+  "critical_code_review_comments": [
+    "card_examples.py keeps logic compact (<120 LOC) and reuses build_card() from both /card-examples/{type} and the example branch inside cards.get_card — single source of truth, good.",
+    "card_examples_seed.py: EXAMPLES includes all 11 types with correct preset counts (personal=11, curriculum=8, guardian/oferta_trabajo/busqueda_personal/solicitud_servicio=7). assert at module import ensures PRESET_NAMES ↔ ALL_PRESETS ↔ PRESETS.keys() parity — a nice safety net.",
+    "cards.py get_card/get_card_qr properly short-circuit example-* ids (no DB write, no view increments) and PUT/DELETE naturally 404 because they filter by user_id and the ficticious user_id 'bruno-examples' never matches current_user.id — effectively non-editable.",
+    "card_analytics.py tracks views no-op for example-* and returns {ok,true,example:true} — matches contract.",
+    "Search exclusion is handled implicitly: examples live in a separate `card_examples` collection, so /api/search?q=Luma&type=cards returns no example items (verified).",
+    "ViewCardPage: example-public-cta is a wrapping div; the actionable element is the nested button example-public-use. Spec text 'click example-public-cta' is slightly ambiguous but works via the inner button. Consider making the whole CTA clickable OR renaming so the testid is on the button.",
+    "fromSelection() in useCardBuilder.js correctly reads type/template from query string, falls back to localStorage bruno_pending_template, and clears it. applyPreset sets design.preset=template id — verified end-to-end."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration109.py"],
+  "success_rate": {"backend": "100% (26/26)", "frontend": "100% of specified flows passed"},
+  "test_credentials": "newtest@bruno.com / Test1234! (as /app/memory/test_credentials.md)",
+  "seed_data_creation": "None. No example cards were ever persisted into the regular `cards` collection; examples are served from `card_examples` + in-memory EXAMPLES. No real user cards were modified or deleted. Any autosave draft from /cards/new was NOT created because the builder shows a preset picker first (user must choose before autosave begins).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend regression suite for the examples gallery lives at /app/backend/tests/test_iteration109.py (26 cases incl. parametrized image fetches). The example public viewer carries two separate testids: example-public-cta (wrapping div) and example-public-use (clickable button) — use the latter to drive the CTA. The builder (/cards/new?type=&template=) first renders a preset-picker page where the targeted template appears highlighted among 11 preview tiles (each is a [data-testid=card-container] showing SAMPLE data like 'Andrea Ruiz' — this is placeholder preview, not fictional data copied from the example). Only a React 'setState during render' warning was observed on the viewer — minor.",
+  "rca of the issue": "No functional bugs found. The only noise is a React render-phase setState warning in the example viewer which does not affect behaviour; likely originates from a nested CardRenderer effect that updates a parent state during the render pass of a sibling. Reproduce: open /cards/examples/curriculum and check devtools console."
+}

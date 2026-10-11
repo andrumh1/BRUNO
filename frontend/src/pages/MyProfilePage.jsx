@@ -5,7 +5,6 @@ import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { BrunoHeaderMark } from "@/components/bruno/BrunoLogo";
 import { Link, useNavigate } from "react-router-dom";
 import { SeriesList } from "@/components/series/SeriesList";
-import { ExamplesGrid } from "@/pages/CardExamplesPage";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -831,13 +830,11 @@ const MyProfilePage = () => {
             </div>
 
             {/* Inspírate con ejemplos (separado de las tarjetas propias) */}
-            <section className="mb-5 rounded-2xl border border-border/40 bg-card/40 backdrop-blur-md p-3" data-testid="cards-examples-section">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div><p className="text-sm font-bold">Inspírate con ejemplos</p><p className="text-xs text-muted-foreground">Explora tarjetas completas y elige cómo quieres presentarte.</p></div>
-                <Link to="/cards/examples" className="text-xs font-semibold text-primary shrink-0" data-testid="cards-examples-all">Ver ejemplos</Link>
-              </div>
-              <ExamplesGrid compact />
-            </section>
+            <Link to="/cards/examples" className="mb-5 flex items-center gap-3 rounded-2xl border border-border/40 bg-card/40 backdrop-blur-md p-3 hover:bg-card/70 transition-colors" data-testid="cards-examples-section">
+              <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary grid place-items-center shrink-0"><Sparkles className="w-5 h-5" /></span>
+              <span className="min-w-0 flex-1"><span className="block text-sm font-bold">Inspírate con ejemplos</span><span className="block text-xs text-muted-foreground truncate">Explora tarjetas completas y elige cómo quieres presentarte.</span></span>
+              <span className="text-xs font-semibold text-primary shrink-0 inline-flex items-center" data-testid="cards-examples-all">Ver ejemplos<ChevronRight className="w-4 h-4" /></span>
+            </Link>
             <p className="text-xs font-semibold text-muted-foreground mb-2">Mis tarjetas</p>
 
             {/* Cards Display */}
