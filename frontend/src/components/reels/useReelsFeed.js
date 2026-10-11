@@ -65,7 +65,9 @@ export function useReelsFeed({ token, mode, profileUserId, initialReelId }) {
     const exclude = reset ? [] : [...seenRef.current];
     const url = profileUserId
       ? `${API}/posts?user_id=${profileUserId}&media_only=true&limit=60`
-      : `${API}/posts/recommended-videos?kind=all&limit=${PAGE}&mode=${mode}&seed=${seedRef.current}&exclude=${exclude.join(",")}`;
+      : mode === "long"
+        ? `${API}/posts/recommended-videos?kind=video&long=1&limit=${PAGE}&mode=for_you&seed=${seedRef.current}&exclude=${exclude.join(",")}`
+        : `${API}/posts/recommended-videos?kind=all&limit=${PAGE}&mode=${mode}&seed=${seedRef.current}&exclude=${exclude.join(",")}`;
     const res = await axios.get(url, { headers }).catch(() => ({ data: [] }));
     let list = (Array.isArray(res.data) ? res.data : [])
       .map(normalizeReel)

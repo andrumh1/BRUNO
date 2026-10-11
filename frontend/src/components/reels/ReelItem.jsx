@@ -1,6 +1,8 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { ChaptersStrip, useResume, getChapters, isLongVideo, fmtClock } from "@/components/reels/LongVideoExtras";
+import { Clapperboard } from "lucide-react";
 import { Heart, MessageCircle, Music2, Play, User, Plus, Minimize2, Maximize2, RotateCcw, Scissors, Columns2, MoreHorizontal } from "lucide-react";
 import ReelTextCard from "@/components/reels/ReelTextCard";
 import ReelCarousel from "@/components/reels/ReelCarousel";
@@ -24,9 +26,14 @@ const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1
 export default function ReelItem({
   reel, isActive, isNear, globalMuted, onToggleMute, onLike, onFollow,
   onOpenComments, onOpenRemixes, onOpenSound, onOpenLikers, onOpenOptions, onSwipeLeft, onSwipeRight, onMinimize, hideChrome, currentUserId,
+  longMode = false, onOpenChapters, token,
 }) {
   const [expanded, setExpanded] = useState(false);
   const videoRef = useRef(null);
+  const navigate = useNavigate();
+  const chapters = longMode ? getChapters(reel) : [];
+  const resume = useResume({ reel, videoRef, token, enabled: longMode });
+  const seekAbs = (t) => { const v = videoRef.current; if (!v) return; v.currentTime = Math.max(0, Math.min(t, (v.duration || t) - 0.05)); v.play?.().catch(() => {}); };
   const barRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [buffering, setBuffering] = useState(false);
@@ -273,8 +280,8 @@ export default function ReelItem({
           loop playsInline muted={globalMuted}
           preload={isActive || isNear ? "auto" : "metadata"}
           poster={reel.poster_url || reel.thumbnail_url || undefined}
-          onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) { setProgress((v.currentTime / v.duration) * 100); setTime({ cur: v.currentTime, dur: v.duration }); } }}
-          onLoadedMetadata={(e) => { const v = e.currentTarget; setTime({ cur: v.currentTime, dur: v.duration || 0 }); v.playbackRate = rateRef.current; setLandscape(v.videoWidth > v.videoHeight); }}
+          onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) { setProgress((v.currentTime / v.duration) * 100); setTime({ cur: v.currentTime, dur: v.duration }); if (longMode && isActive) resume.onProgress(v.currentTime, v.duration); } }}
+          onLoadedMetadata={(e) => { const v = e.currentTarget; setTime({ cur: v.currentTime, dur: v.duration || 0 }); v.playbackRate = rateRef.current; setLandscape(v.videoWidth > v.videoHeight); if (longMode) resume.applyResume(); }}
           onWaiting={() => setBuffering(true)}
           onPlaying={() => { setBuffering(false); setError(false); setProcessing(false); autoRetries.current = 0; }}
           onCanPlay={() => { setBuffering(false); setProcessing(false); }}
@@ -414,10 +421,20 @@ export default function ReelItem({
           onMouseLeave={() => setScrub(null)}
           data-testid="reel-progress-bar"
         >
-          <div className={`w-full ${scrub ? "h-[5px]" : "h-[3px]"} bg-white/25 transition-[height]`}>
+          <div className={`relative w-full ${scrub ? "h-[5px]" : "h-[3px]"} bg-white/25 transition-[height]`}>
             <div className="h-full bg-white transition-[width] duration-100" style={{ width: `${progress}%` }} />
+            {longMode && time.dur > 0 && chapters.slice(1).map((c, i) => <span key={i} className="absolute top-0 bottom-0 w-[2px] bg-black/60" style={{ left: `${(c.time / time.dur) * 100}%` }} />)}
           </div>
         </div>
+      )}
+      {src && longMode && !hideChrome && (
+        <ChaptersStrip chapters={chapters} currentTime={time.cur} onSeek={seekAbs} onOpen={() => onOpenChapters?.(reel, seekAbs)} bottom="calc(var(--nav-reserve, 64px) + 30px)" />
+      )}
+      {src && longMode && resume.resumedFrom != null && (
+        <div className="absolute left-1/2 -translate-x-1/2 z-30 rounded-full bg-black/70 text-white text-xs px-3 py-1.5 reel-chrome" style={{ top: "calc(var(--safe-top, 0px) + 64px)" }} data-testid="long-resumed-toast">Reanudando desde {fmtClock(resume.resumedFrom)}</div>
+      )}
+      {src && !longMode && isLongVideo(reel) && !hideChrome && (
+        <button onClick={(e) => { e.stopPropagation(); navigate(`/video/${reel.id}`); }} className="absolute left-3 z-30 inline-flex items-center gap-1.5 rounded-full bg-white text-black text-xs font-bold px-3 h-8 reel-chrome shadow-lg" style={{ bottom: "calc(var(--nav-reserve, 96px) + 150px)" }} data-testid="reel-watch-full-btn"><Clapperboard className="w-3.5 h-3.5" />Ver completo · {fmtClock(reel.duration)}</button>
       )}
       <ReelMinimizeMenu open={minOpen} onClose={() => setMinOpen(false)} onPick={pickMinimize} nativeSupported={nativePipSupported} />
       {src && (

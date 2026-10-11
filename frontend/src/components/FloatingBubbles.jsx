@@ -298,7 +298,7 @@ const FloatingBubbles = () => {
   const fileInputRef = useRef(null);
   const longPressTimer = useRef(null);
 
-  const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno', '/chat/'];
+  const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno', '/chat/', '/video/'];
   const shouldHide = hiddenPaths.some(p => location.pathname.startsWith(p)) || /^\/lives\/[^/]+$/.test(location.pathname) || location.pathname === '/lives/start' || /^\/call\//.test(location.pathname);
 
   useEffect(() => {

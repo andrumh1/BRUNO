@@ -1,5 +1,5 @@
 import React from "react";
-import { Clock, X, TrendingUp, History, Sparkles, Loader2, ExternalLink } from "lucide-react";
+import { Clock, X, TrendingUp, History, Sparkles, Loader2, ExternalLink, Volume2, Square } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 /** Pantalla inicial: historial personal (reejecutar / borrar / desactivar) + tendencias agregadas de contenido público. */
@@ -43,7 +43,7 @@ export function SearchHome({ history, trending, onPick, onRemove, onToggle, logg
 }
 
 /** Acción separada: genera una respuesta nueva de BRUNO IA a partir de los resultados visibles (nunca se mezcla con ellos). */
-export function AskBrunoCard({ q, asking, answer, onAsk, onOpenSource }) {
+export function AskBrunoCard({ q, asking, answer, onAsk, onOpenSource, onSpeak, speaking }) {
   if (!q) return null;
   return (
     <div className="rounded-2xl border border-primary/30 bg-primary/[0.06] p-3" data-testid="search-ask-card">
@@ -54,7 +54,10 @@ export function AskBrunoCard({ q, asking, answer, onAsk, onOpenSource }) {
         </button>
       ) : (
         <div className="space-y-2">
-          <p className="text-[11px] uppercase tracking-wide text-primary font-semibold flex items-center gap-1"><Sparkles className="w-3 h-3" />Respuesta generada por BRUNO IA · no es una publicación</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] uppercase tracking-wide text-primary font-semibold flex items-center gap-1"><Sparkles className="w-3 h-3" />Respuesta generada por BRUNO IA · no es una publicación</p>
+            {onSpeak && <button onClick={() => onSpeak(answer.answer)} className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 h-7 text-[11px] font-semibold ${speaking ? "bg-primary text-white" : "bg-card/70 border border-border/40"}`} aria-label={speaking ? "Detener lectura" : "Escuchar resumen"} data-testid="search-ask-speak">{speaking ? <Square className="w-3 h-3" /> : <Volume2 className="w-3.5 h-3.5" />}{speaking ? "Detener" : "Escuchar"}</button>}
+          </div>
           <p className="text-sm whitespace-pre-wrap" data-testid="search-ask-answer">{answer.answer}</p>
           {answer.sources?.length > 0 && (
             <div className="flex flex-wrap gap-1.5 pt-1">

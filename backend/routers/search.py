@@ -195,7 +195,8 @@ async def hydrate(cands: list, parsed: dict, ctx: dict, business_only: bool = Fa
             au = users.get(p["user_id"]) or {}
             item.update({"title": c.get("title"), "snippet": snippet(p.get("content"), parsed["tokens"]), "thumb": meta.get("thumb"), "duration": meta.get("duration"),
                          "author": {"id": p["user_id"], "name": au.get("name"), "avatar": au.get("avatar_url") or (au.get("profile") or {}).get("avatar_url")},
-                         "likes": p.get("likes_count", 0), "comments": p.get("comments_count", 0), "url": f"/reels?id={rid}" if k == "video" else f"/post/{rid}"})
+                         "likes": p.get("likes_count", 0), "comments": p.get("comments_count", 0), "is_long": bool((meta.get("duration") or 0) >= 180),
+                         "url": (f"/video/{rid}" if (meta.get("duration") or 0) >= 180 else f"/reels?id={rid}") if k == "video" else f"/post/{rid}"})
             if k == "ai_public":
                 item["badge"] = "Respuesta pública de BRUNO IA"
         elif k == "comment":

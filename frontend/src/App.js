@@ -206,6 +206,7 @@ function AppRouter() {
       <Route path="/admin/users" element={<ProtectedRoute><AdminUserModerationPage /></ProtectedRoute>} />
       <Route path="/search" element={<SearchPage />} />
       <Route path="/reels" element={<ReelsPage />} />
+      <Route path="/video/:videoId" element={<ReelsPage />} />
       <Route path="/profile/:userId/reels" element={<ReelsPage />} />
       <Route path="/lives" element={<ReelsPage />} />
       <Route path="/lives/start" element={<ProtectedRoute><StartLivePage /></ProtectedRoute>} />

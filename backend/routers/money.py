@@ -309,12 +309,36 @@ async def create_coupon(body: CouponBody, current_user: User = Depends(get_curre
     return _coupon_out(doc)
 
 
+@router.get("/coupons/stats")
+async def coupon_stats(current_user: User = Depends(get_current_user)):
+    """Clics del enlace compartido, canjes pagados e ingresos generados por cada cupón del creador."""
+    coupons = await db.discount_codes.find({"seller_id": current_user.id}, {"_id": 0}).to_list(200)
+    ids = [c["id"] for c in coupons]
+    agg = {}
+    if ids:
+        rows = await db.ledger_entries.aggregate([
+            {"$match": {"coupon_id": {"$in": ids}, "status": {"$in": ["paid", "refunded", "partially_refunded"]}}},
+            {"$group": {"_id": "$coupon_id", "redemptions": {"$sum": 1}, "revenue_minor": {"$sum": "$total_minor"}, "discount_minor": {"$sum": "$discount_minor"}, "net_minor": {"$sum": "$seller_net_minor"}, "last": {"$max": "$created_at"}}},
+        ]).to_list(None)
+        agg = {r["_id"]: r for r in rows}
+    out = []
+    for c in coupons:
+        a = agg.get(c["id"], {})
+        cur = c.get("currency") or "usd"
+        clicks = int(c.get("clicks_count") or 0); red = int(a.get("redemptions") or 0)
+        out.append({"id": c["id"], "code": c["code"], "clicks": clicks, "redemptions": red, "conversion_pct": round(red * 100 / clicks, 1) if clicks else None,
+                    "revenue": fmt_minor(int(a.get("revenue_minor") or 0), cur), "discount_given": fmt_minor(int(a.get("discount_minor") or 0), cur), "net": fmt_minor(int(a.get("net_minor") or 0), cur), "currency": cur, "last_used_at": a.get("last") or c.get("last_used_at"), "last_click_at": c.get("last_click_at")})
+    totals = {"clicks": sum(o["clicks"] for o in out), "redemptions": sum(o["redemptions"] for o in out), "revenue": fmt_minor(sum(int((agg.get(c["id"]) or {}).get("revenue_minor") or 0) for c in coupons), "usd")}
+    return {"items": out, "totals": totals}
+
+
 @router.get("/coupons/{coupon_id}/public")
 async def public_coupon(coupon_id: str):
     """Shareable coupon landing data (no auth): who offers it and what it gives."""
     d = await db.discount_codes.find_one({"id": coupon_id}, {"_id": 0})
     if not d:
         raise HTTPException(status_code=404, detail="Cupón no encontrado")
+    await db.discount_codes.update_one({"id": coupon_id}, {"$inc": {"clicks_count": 1}, "$set": {"last_click_at": now_iso()}})
     seller = await db.users.find_one({"id": d["seller_id"]}, {"_id": 0, "id": 1, "name": 1, "username": 1})
     prof = await db.user_profiles.find_one({"user_id": d["seller_id"]}, {"_id": 0, "display_name": 1, "avatar_url": 1})
     out = _coupon_out(d)

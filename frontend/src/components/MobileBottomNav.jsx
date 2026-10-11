@@ -8,6 +8,7 @@ import axios from "axios";
 import { isVideoFile, videoTooLarge, videoTooLargeMsg, setVideoLimit } from "@/lib/media";
 import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
 import { setPendingMedia } from "@/lib/pendingMedia";
+import { motion } from "framer-motion";
 import { 
   Film, Map, ShoppingBag, User, Plus, Bell, Search,
   ChevronDown
@@ -68,17 +69,17 @@ const MobileBottomNav = () => {
 
   // Orden: Reels · Tienda · Mapa · Crear (+) · Buscar · Notificaciones · Perfil
   const navItems = [
-    { id: 'reels', icon: Film, label: 'Reels', path: '/reels', matchPaths: ['/', '/feed', '/reels', '/lives'], hasIndicator: true },
+    { id: 'reels', icon: Film, label: 'Reels', path: '/reels', matchPaths: ['/', '/feed', '/reels', '/lives', '/video'], hasIndicator: true },
     { id: 'marketplace', icon: ShoppingBag, label: 'Tienda', path: '/marketplace', matchPaths: ['/marketplace', '/store'] },
     { id: 'map', icon: Map, label: 'Mapa', path: '/map', matchPaths: ['/map'] },
     { id: 'create', icon: Plus, label: '', path: '/camera', isCreate: true },
     { id: 'search', icon: Search, label: 'Buscar', path: '/search', matchPaths: ['/search', '/hashtag'] },
-    { id: 'notifications', icon: Bell, label: 'Notificaciones', wide: true, path: '/notifications', matchPaths: ['/notifications', '/settings/notifications'], hasBadge: true },
+    { id: 'notifications', icon: Bell, label: 'Notificaciones', path: '/notifications', matchPaths: ['/notifications', '/settings/notifications'], hasBadge: true },
     { id: 'profile', icon: User, label: 'Perfil', path: '/my-profile', matchPaths: ['/my-profile', '/dashboard'], showAvatar: true }
   ];
 
   // Pages that fill the viewport themselves (video/map/chat) must not get a trailing scroll reserve.
-  const fixedViewport = ['/reels', '/camera', '/chat', '/map', '/lives/', '/stories', '/call'].some((p) => location.pathname.startsWith(p));
+  const fixedViewport = ['/reels', '/video/', '/camera', '/chat', '/map', '/lives/', '/stories', '/call'].some((p) => location.pathname.startsWith(p));
 
   const isActive = (item) => {
     if (item.matchPaths) {
@@ -123,11 +124,11 @@ const MobileBottomNav = () => {
             <div className={`flex items-center justify-center gap-1.5 w-32 max-w-[40vw] transition-all duration-500 ${
               idle ? 'blur-[1px]' : ''
             }`}>
-              <span className={`h-1 w-1 rounded-full transition-colors ${idle ? 'bg-foreground/30' : 'bg-orange-500/80 animate-pulse'}`} />
+              <span className={`h-1 w-1 rounded-full transition-colors ${idle ? 'bg-foreground/30' : 'bg-foreground/60 animate-pulse'}`} />
               <span
-                className="h-[3px] flex-1 rounded-full bg-foreground/25 group-hover:bg-foreground/40 group-active:bg-primary transition-colors"
+                className="h-[3px] flex-1 rounded-full bg-foreground/25 group-hover:bg-foreground/40 group-active:bg-foreground/60 transition-colors"
               />
-              <span className={`h-1 w-1 rounded-full transition-colors ${idle ? 'bg-foreground/30' : 'bg-orange-500/80 animate-pulse'}`} />
+              <span className={`h-1 w-1 rounded-full transition-colors ${idle ? 'bg-foreground/30' : 'bg-foreground/60 animate-pulse'}`} />
             </div>
           </button>
         </div>
@@ -148,84 +149,60 @@ const MobileBottomNav = () => {
         {...touchHandlers}
       >
         <div className="relative max-w-md mx-auto">
-          {/* Floating bubble background */}
-          <div className="absolute inset-0 bg-background/85 backdrop-blur-2xl rounded-2xl border border-border/40 shadow-xl shadow-black/10 pointer-events-none" />
-          
-          {/* Subtle top glow */}
-          <div 
-            className="absolute top-0 left-4 right-4 h-[1px] rounded-full"
-            style={{
-              background: 'linear-gradient(90deg, transparent, rgba(255,106,0,0.45), rgba(255,106,0,0.25), transparent)'
-            }}
-          />
+          {/* Fondo de la pill: vidrio ultra transparente */}
+          <div className="absolute inset-0 bg-background/45 dark:bg-background/35 backdrop-blur-2xl rounded-2xl border border-white/40 dark:border-white/10 shadow-xl shadow-black/[0.08] pointer-events-none" />
 
-          {/* Navigation Items */}
-          <div className="relative flex items-center justify-around px-0.5 nav-items-7" style={{ height: 'var(--nav-h, 48px)' }}>
+          {/* Iconos: solo iconos, 7 celdas iguales, centrados */}
+          <div className="relative grid grid-cols-7 items-center px-1" style={{ height: 'var(--nav-h, 48px)' }}>
             {navItems.map((item) => {
               const Icon = item.icon;
-              const active = isActive(item);
-              
-              if (item.isCreate) {
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setPublishMenuOpen(true)}
-                    className="relative flex flex-col items-center justify-center flex-1 min-w-[40px] h-11 rounded-xl transition-all duration-200 hover:scale-105 active:scale-90"
-                    data-testid={`nav-${item.id}`}
-                    aria-label="Publicar"
-                  >
-                    {/* Subtle contour ring — hints at "action" without shouting orange */}
-                    <div className="relative w-6 h-6 rounded-full border border-foreground/25 flex items-center justify-center bg-foreground/[0.03] group-active:bg-primary/10 transition-colors">
-                      <Icon
-                        className="w-4 h-4 text-foreground/70"
-                        strokeWidth={2}
-                      />
-                    </div>
-                    <span className="text-[9px] leading-none mt-0.5 font-medium text-muted-foreground/70">
-                      Crear
-                    </span>
-                  </button>
-                );
-              }
-              
+              const active = !item.isCreate && isActive(item);
+              const go = () => { if (item.isCreate) setPublishMenuOpen(true); else navigate(item.path); };
               return (
                 <button
                   key={item.id}
-                  onClick={() => navigate(item.path)}
-                  className={`relative flex flex-col items-center justify-center ${item.wide ? 'flex-[1.45]' : 'flex-1'} min-w-[40px] h-11 rounded-xl transition-all duration-200 ${
-                    active ? 'scale-105' : 'hover:scale-105 active:scale-95'
-                  }`}
+                  onClick={go}
+                  className="relative flex items-center justify-center h-11 w-full min-w-[40px] rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-foreground/30 transition-transform duration-200 active:scale-90"
                   data-testid={`nav-${item.id}`}
-                  aria-label={item.label}
+                  aria-label={item.isCreate ? 'Crear' : item.label}
+                  aria-current={active ? 'page' : undefined}
+                  title={item.isCreate ? 'Crear' : item.label}
                 >
                   {active && (
-                    <div className="absolute -top-0.5 w-4 h-1 rounded-full bg-primary" />
+                    <motion.span
+                      layoutId="nav-active-bubble"
+                      className="absolute inset-y-[5px] inset-x-[6px] rounded-[14px] bg-foreground/[0.09] dark:bg-white/[0.12] border border-white/50 dark:border-white/15 backdrop-blur-md shadow-[0_6px_14px_-8px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.45)] pointer-events-none"
+                      transition={{ type: 'spring', stiffness: 560, damping: 30, mass: 0.75 }}
+                      initial={false}
+                      data-testid="nav-active-bubble"
+                    >
+                      <motion.span key={item.id} className="absolute inset-0 rounded-[14px]" initial={{ scale: 1.14, y: -3, opacity: 0.6 }} animate={{ scale: 1, y: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 480, damping: 22 }} />
+                    </motion.span>
                   )}
-                  
-                  <div className="relative flex flex-col items-center">
-                    {item.showAvatar && user?.avatar_url ? (
-                      <div className={`w-5.5 h-5.5 rounded-full overflow-hidden ${active ? 'ring-2 ring-primary ring-offset-1 ring-offset-background' : ''}`}>
+                  <span className="relative z-10 flex items-center justify-center">
+                    {item.isCreate ? (
+                      <span className="w-7 h-7 rounded-full border border-foreground/30 dark:border-white/30 flex items-center justify-center bg-foreground/[0.03]">
+                        <Icon className="w-4 h-4 text-foreground/75" strokeWidth={2} />
+                      </span>
+                    ) : item.showAvatar && user?.avatar_url ? (
+                      <span className={`block w-6 h-6 rounded-full overflow-hidden ${active ? 'ring-2 ring-zinc-600/70 dark:ring-zinc-200/70 ring-offset-1 ring-offset-background' : ''}`}>
                         <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                      </div>
+                      </span>
                     ) : (
-                      <div className="relative">
-                        <Icon 
-                          className={`w-5 h-5 transition-all duration-200 ${active ? 'text-primary' : 'text-muted-foreground'}`}
-                          strokeWidth={active ? 2.5 : 1.5}
+                      <span className="relative">
+                        <Icon
+                          className={`w-[22px] h-[22px] transition-colors duration-200 ${active ? 'text-zinc-700 dark:text-zinc-100' : 'text-muted-foreground/75'}`}
+                          strokeWidth={active ? 2.3 : 1.6}
                         />
-                        {item.hasIndicator && (
+                        {item.hasIndicator && !active && (
                           <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
                         )}
                         {item.hasBadge && unread > 0 && (
                           <span className="absolute -top-1.5 -right-2 min-w-[14px] h-3.5 px-0.5 bg-red-500 rounded-full flex items-center justify-center text-[8px] leading-none text-white font-bold" data-testid="nav-notifications-badge">{unread > 99 ? "99+" : unread}</span>
                         )}
-                      </div>
+                      </span>
                     )}
-                    
-                    <span className={`${item.wide ? 'text-[8px] tracking-tight' : 'text-[9px]'} leading-none mt-0.5 font-medium transition-colors whitespace-nowrap ${active ? 'text-primary' : 'text-muted-foreground/70'}`}>
-                      {item.label}
-                    </span>
-                  </div>
+                  </span>
                 </button>
               );
             })}

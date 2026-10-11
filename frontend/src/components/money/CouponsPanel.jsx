@@ -23,11 +23,16 @@ export const shareCoupon = async (c) => {
   catch { brunoToast.info?.(url); }
 };
 
-const CouponRow = ({ c, onToggle, onDelete, onStory, storyBusy }) => {
+const Stat = ({ label, value, testid }) => (
+  <div className="rounded-xl bg-foreground/[0.04] px-2 py-1.5 text-center min-w-0"><p className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">{label}</p><p className="text-sm font-bold tabular-nums truncate" data-testid={testid}>{value}</p></div>
+);
+
+const CouponRow = ({ c, st, onToggle, onDelete, onStory, storyBusy }) => {
   const dead = c.expired || c.exhausted;
   const value = couponValue(c);
   return (
-    <div className={`rounded-2xl border border-border/60 p-3 text-sm flex items-center gap-3 ${!c.active || dead ? "opacity-60" : ""}`} data-testid={`coupon-${c.code}`}>
+    <div className={`rounded-2xl border border-border/60 p-3 text-sm space-y-2 ${!c.active || dead ? "opacity-60" : ""}`} data-testid={`coupon-${c.code}`}>
+    <div className="flex items-center gap-3">
       <div className="min-w-0 flex-1">
         <p className="font-mono font-bold tracking-wider">{c.code} <span className="font-sans font-semibold text-primary ml-1">−{value}</span></p>
         <p className="text-[11px] text-muted-foreground">{SCOPE[c.applies_to] || c.applies_to} · usos {c.uses_count}{c.max_uses ? `/${c.max_uses}` : ""}{c.expires_at ? ` · caduca ${new Date(c.expires_at).toLocaleDateString("es")}` : ""}</p>
@@ -37,6 +42,15 @@ const CouponRow = ({ c, onToggle, onDelete, onStory, storyBusy }) => {
       {c.active && !dead && <button onClick={() => onStory(c)} disabled={storyBusy} className="w-9 h-9 rounded-full bg-primary/10 text-primary grid place-items-center" aria-label="Publicar en historia" data-testid={`coupon-story-${c.code}`}>{storyBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}</button>}
       <button onClick={() => onToggle(c)} className="w-9 h-9 rounded-full bg-foreground/[0.05] grid place-items-center" aria-label={c.active ? "Desactivar" : "Activar"} data-testid={`coupon-toggle-${c.code}`}><Power className={`w-4 h-4 ${c.active ? "text-emerald-600" : "text-muted-foreground"}`} /></button>
       <button onClick={() => onDelete(c)} className="w-9 h-9 rounded-full bg-destructive/10 text-destructive grid place-items-center" aria-label="Eliminar" data-testid={`coupon-delete-${c.code}`}><Trash2 className="w-4 h-4" /></button>
+    </div>
+    {st && (
+      <div className="grid grid-cols-4 gap-1.5" data-testid={`coupon-stats-${c.code}`}>
+        <Stat label="Clics" value={st.clicks} testid={`coupon-clicks-${c.code}`} />
+        <Stat label="Canjes" value={`${st.redemptions}${st.conversion_pct != null ? ` · ${st.conversion_pct}%` : ""}`} testid={`coupon-redemptions-${c.code}`} />
+        <Stat label="Ingresos" value={fmtMoney(st.revenue, st.currency)} testid={`coupon-revenue-${c.code}`} />
+        <Stat label="Descuento" value={`−${fmtMoney(st.discount_given, st.currency)}`} testid={`coupon-discount-${c.code}`} />
+      </div>
+    )}
     </div>
   );
 };
@@ -51,7 +65,11 @@ export const CouponsPanel = ({ token }) => {
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const load = () => axios.get(`${API}/money/coupons`, { headers }).then((r) => setList(r.data)).catch(() => setList([]));
+  const [stats, setStats] = useState({});
+  const load = () => {
+    axios.get(`${API}/money/coupons`, { headers }).then((r) => setList(r.data)).catch(() => setList([]));
+    axios.get(`${API}/money/coupons/stats`, { headers }).then((r) => setStats(Object.fromEntries((r.data.items || []).map((i) => [i.id, i])))).catch(() => {});
+  };
   useEffect(() => { if (token) load(); /* eslint-disable-next-line */ }, [token]);
 
   const create = async () => {
@@ -86,7 +104,7 @@ export const CouponsPanel = ({ token }) => {
           <Button className="rounded-full" onClick={create} disabled={busy || form.code.trim().length < 3 || (form.mode === "pct" ? !form.pct : !form.amount)} data-testid="coupon-form-submit">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Crear cupón"}</Button>
         </div>
       )}
-      {list === null ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> : list.length === 0 ? <p className="text-xs text-muted-foreground" data-testid="coupons-empty">Aún no tienes cupones.</p> : <div className="space-y-2" data-testid="coupons-list">{list.map((c) => <CouponRow key={c.id} c={c} onToggle={toggle} onDelete={remove} storyBusy={storyBusy === c.id} onStory={async (cp) => {
+      {list === null ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> : list.length === 0 ? <p className="text-xs text-muted-foreground" data-testid="coupons-empty">Aún no tienes cupones.</p> : <div className="space-y-2" data-testid="coupons-list">{list.map((c) => <CouponRow key={c.id} c={c} st={stats[c.id]} onToggle={toggle} onDelete={remove} storyBusy={storyBusy === c.id} onStory={async (cp) => {
             setStoryBusy(cp.id);
             try { await publishCouponStory({ code: cp.code, value: couponValue(cp), url: couponLink(cp) }, token, user?.name); brunoToast.publish?.("Cupón publicado en tu historia", { description: "Visible 24 h con enlace para aplicarlo." }) || brunoToast.success("Cupón publicado en tu historia"); }
             catch (e) { brunoToast.error(detailMsg(e) || "No se pudo publicar la historia"); }

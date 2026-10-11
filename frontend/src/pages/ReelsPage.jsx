@@ -21,17 +21,20 @@ import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet, ReelLikersSheet, ReelOptionsSheet, ReelEditSheet } from "@/components/reels/ReelSheets";
 import RemixStudio from "@/components/reels/RemixStudio";
 import ReelsStoriesStrip from "@/components/reels/ReelsStoriesStrip";
+import { ChaptersSheet, getChapters } from "@/components/reels/LongVideoExtras";
 import { AnimatePresence } from "framer-motion";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
 export default function ReelsPage() {
   const navigate = useNavigate();
-  const { userId: profileUserId } = useParams();
+  const { userId: profileUserId, videoId } = useParams();
   const [searchParams] = useSearchParams();
   useShareHit("reel");
-  const initialReelId = searchParams.get("id");
+  const longMode = !!videoId || window.location.pathname.startsWith("/video");
+  const initialReelId = videoId || searchParams.get("id");
   const profileMode = !!profileUserId;
+  const [chaptersFor, setChaptersFor] = useState(null); // { reel, seek }
   const { token, user } = useAuth();
   const { addMinimizedItem } = useNavScroll();
 
@@ -52,7 +55,7 @@ export default function ReelsPage() {
   const containerRef = useRef(null);
   const itemRefs = useRef([]);
 
-  const feedMode = tab === "following" ? "following" : "for_you";
+  const feedMode = longMode ? "long" : tab === "following" ? "following" : "for_you";
   const { reels, loading, loadingMore, loadMore, trackView, patchReel, removeReel, removeByAuthor, restoredIndex, cacheKey } = useReelsFeed({ token, mode: feedMode, profileUserId, initialReelId });
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -159,12 +162,14 @@ export default function ReelsPage() {
     <div className="fixed inset-0 reels-surface overflow-hidden" data-testid="reels-page">
       {/* Header */}
       <div className="absolute top-0 inset-x-0 z-30 flex items-center justify-between px-3 pb-3 bg-gradient-to-b from-black/70 via-black/30 to-transparent reel-chrome pointer-events-none [&>*]:pointer-events-auto" style={{ paddingTop: topPad }} data-no-safe-top>
-        {profileMode ? (
+        {(profileMode || longMode) ? (
           <button onClick={() => navigate(-1)} className="w-9 h-9 grid place-items-center rounded-full bg-black/35 text-white" data-testid="reels-back-btn"><ArrowLeft className="w-5 h-5" /></button>
         ) : (
           <button onClick={() => setHistoryOpen(true)} className="w-9 h-9 grid place-items-center rounded-full bg-black/35 text-white" data-testid="reels-history-btn" aria-label="Historial"><Clock className="w-5 h-5" /></button>
         )}
-        {profileMode ? (
+        {longMode ? (
+          <span className="text-white font-bold text-sm" data-testid="long-player-title">Videos largos</span>
+        ) : profileMode ? (
           <span className="text-white font-bold text-sm">Reels del perfil</span>
         ) : (
           <div className="flex items-center gap-5" data-testid="reels-tabs">
@@ -182,7 +187,7 @@ export default function ReelsPage() {
         </button>
       </div>
 
-      {!profileMode && tab !== "lives" && <ReelsStoriesStrip token={token} user={user} visible={activeIndex === 0 && !loading && reels.length > 0} />}
+      {!profileMode && !longMode && tab !== "lives" && <ReelsStoriesStrip token={token} user={user} visible={activeIndex === 0 && !loading && reels.length > 0} />}
 
       {tab !== "lives" ? (
         loading ? (
@@ -201,6 +206,7 @@ export default function ReelsPage() {
                     onOpenComments={setCommentsFor} onMinimize={handleMinimize}
                     onOpenRemixes={(r) => setRemixesOf(r.id)} onOpenSound={setSoundFor} onOpenLikers={setLikersFor} onOpenOptions={setOptionsFor}
                     onSwipeLeft={swipeLeft} onSwipeRight={swipeRight} currentUserId={user?.id}
+                    longMode={longMode} token={token} onOpenChapters={(r, seek) => setChaptersFor({ reel: r, seek })}
                   />
                 ) : (
                   <div className="h-full w-full reels-surface bg-center bg-cover opacity-70" style={{ backgroundImage: reel.poster_url || reel.thumbnail_url ? `url(${reel.poster_url || reel.thumbnail_url})` : undefined }} />
@@ -217,6 +223,7 @@ export default function ReelsPage() {
       <ReelCommentsSheet reel={commentsFor} token={token} currentUserId={user?.id} highlightId={commentsFor?.id === initialReelId ? highlightCommentId : null} onClose={() => setCommentsFor(null)} onPosted={(id) => patchReel(id, (r) => ({ comments_count: (r.comments_count || 0) + 1 }))} onDeleted={(id, count) => patchReel(id, (r) => ({ comments_count: count ?? Math.max(0, (r.comments_count || 0) - 1) }))} />
       {optionsFor && <ReelOptionsSheet reel={optionsFor} token={token} currentUserId={user?.id} onClose={() => setOptionsFor(null)} onDeleted={(id) => removeReel(id)} onEdit={setEditFor} onHidden={(id) => removeReel(id)} onBlocked={(uid) => removeByAuthor(uid)} onSave={handleSave} onShare={setShareFor} onRemix={(r) => { if (requireAuth()) setRemixFor(r); }} />}
       {editFor && <ReelEditSheet reel={editFor} token={token} onClose={() => setEditFor(null)} onSaved={(id, patch) => patchReel(id, patch)} />}
+      {chaptersFor && <ChaptersSheet reel={chaptersFor.reel} chapters={getChapters(chaptersFor.reel)} currentTime={0} onSeek={chaptersFor.seek} isOwner={user?.id && user.id === (chaptersFor.reel.user_id || chaptersFor.reel.author?.id)} token={token} onSaved={(p) => patchReel(chaptersFor.reel.id, { chapters: p.chapters })} onClose={() => setChaptersFor(null)} />}
       {soundFor && <ReelSoundSheet reel={soundFor} token={token} onClose={() => setSoundFor(null)} onPick={(r) => { setSoundFor(null); navigate(`/reels?id=${r.id}`); }} />}
       <ReelLikersSheet reel={likersFor} token={token} onClose={() => setLikersFor(null)} onFollow={(uid, next) => reels.forEach((r) => { if ((r.author?.id || r.user_id) === uid) patchReel(r.id, { is_following: next }); })} />
       {shareFor && <ReelShareSheet reel={shareFor} token={token} onClose={() => setShareFor(null)} />}

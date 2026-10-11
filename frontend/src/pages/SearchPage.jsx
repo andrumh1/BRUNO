@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Search, X, Loader2, WifiOff, RotateCcw, SearchX, ChevronRight, ArrowUpDown } from "lucide-react";
+import { ArrowLeft, Search, X, Loader2, WifiOff, RotateCcw, SearchX, ChevronRight, ArrowUpDown, Mic, Square } from "lucide-react";
+import { useVoiceSearch } from "@/components/search/useVoiceSearch";
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { useSearch, FILTERS, saveScroll, readScroll } from "@/components/search/useSearch";
@@ -24,6 +25,8 @@ export default function SearchPage() {
   const [answer, setAnswer] = useState(null);
   const [online, setOnline] = useState(navigator.onLine);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const voice = useVoiceSearch({ token, onText: (text) => { s.submit(text); brunoToast.success(`Buscando “${text}”`); } });
+  useEffect(() => { if (voice.error) brunoToast.error(voice.error); }, [voice.error]);
 
   // Deep-link /search?ai=session:id (abre mi conversación) o /search?q=
   useEffect(() => {
@@ -76,6 +79,11 @@ export default function SearchPage() {
               <Search className="w-4 h-4 text-muted-foreground shrink-0" />
               <input ref={inputRef} value={s.q} onChange={(e) => s.onType(e.target.value)} placeholder="Busca en BRUNO" enterKeyHint="search" autoComplete="off" maxLength={100} className="flex-1 min-w-0 bg-transparent outline-none text-base placeholder:text-muted-foreground" data-testid="search-input" />
               {s.q && <button type="button" onClick={() => { s.clear(); inputRef.current?.focus(); }} className="w-7 h-7 rounded-full bg-foreground/[0.08] grid place-items-center" aria-label="Limpiar" data-testid="search-clear"><X className="w-3.5 h-3.5" /></button>}
+              {voice.supported && token && (
+                <button type="button" onClick={voice.toggleRecording} disabled={voice.transcribing} className={`w-7 h-7 rounded-full grid place-items-center transition-colors ${voice.recording ? "bg-red-500 text-white animate-pulse" : "bg-foreground/[0.08]"}`} aria-label={voice.recording ? "Detener dictado" : "Buscar por voz"} data-testid="search-voice-btn">
+                  {voice.transcribing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : voice.recording ? <Square className="w-3 h-3" /> : <Mic className="w-3.5 h-3.5" />}
+                </button>
+              )}
             </div>
             <button type="submit" className="h-10 w-10 sm:w-auto sm:px-3 shrink-0 rounded-full bg-primary text-white text-sm font-semibold active:scale-95 transition-transform grid place-items-center" aria-label="Buscar" data-testid="search-submit"><Search className="w-4 h-4 sm:hidden" /><span className="hidden sm:inline">Buscar</span></button>
           </form>
@@ -125,7 +133,7 @@ export default function SearchPage() {
         {(s.status === "results" || (s.status === "typing" && s.result)) && (
           <>
             {s.result?.fuzzy_terms?.length > 0 && <p className="text-xs text-muted-foreground" data-testid="search-fuzzy-hint">Incluye coincidencias parecidas: {s.result.fuzzy_terms.slice(0, 4).join(", ")}</p>}
-            {token && <AskBrunoCard q={s.q} asking={asking} answer={answer} onAsk={ask} onOpenSource={(src) => { if (src.url) { onOpen(); navigate(src.url); } }} />}
+            {token && <AskBrunoCard q={s.q} asking={asking} answer={answer} onAsk={ask} onOpenSource={(src) => { if (src.url) { onOpen(); navigate(src.url); } }} onSpeak={(t) => voice.speak(t)} speaking={voice.speaking} />}
 
             {s.type === "all" && (s.result?.groups || []).map((g) => (
               <section key={g.kind} data-testid={`search-group-${g.kind}`}>

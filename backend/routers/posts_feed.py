@@ -380,6 +380,7 @@ async def get_recommended_videos(
     kind: str = "video",
     exclude: Optional[str] = None,
     seed: Optional[int] = None,
+    long: bool = False,
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """Algorithmic video feed for /reels (TikTok-style fair distribution).
@@ -414,7 +415,7 @@ async def get_recommended_videos(
 
     base_q = {"visibility": "public"} if kind == "all" else {"visibility": "public", **VIDEO_QUERY}
     # Reels are short-form: long videos (≥ 3 min, HLS) stay in the feed/profile/long-video player, not in the vertical swipe feed.
-    base_q["media.duration"] = {"$not": {"$gte": 180}}
+    base_q["media.duration"] = {"$gte": 180} if long else {"$not": {"$gte": 180}}
     if mode == "following":
         if not follow_ids:
             return []
@@ -428,7 +429,7 @@ async def get_recommended_videos(
         if p.get("id") not in exclude_ids:
             pool.append(p)
 
-    if not pool and mode != "following":
+    if not pool and mode != "following" and not long:
         async for p in db.posts.find({"visibility": "public", "media": {"$ne": []}, **({"user_id": {"$nin": list(hidden_authors)}} if hidden_authors else {})}, {"_id": 0}).sort("created_at", -1).limit(100):
             if p.get("id") not in exclude_ids: pool.append(p)
 
@@ -608,6 +609,26 @@ class PostUpdate(BaseModel):
     content: Optional[str] = None
     text_style: Optional[dict] = None
     visibility: Optional[str] = None
+    chapters: Optional[List[dict]] = None  # [{time: seconds, title}] para videos largos
+
+
+class ProgressBody(BaseModel):
+    position: float
+    duration: Optional[float] = None
+
+
+@router.post("/posts/{post_id}/progress")
+async def save_video_progress(post_id: str, body: ProgressBody, current_user: User = Depends(get_current_user)):
+    """Guarda dónde se quedó el usuario en un video largo (reanudar en cualquier dispositivo)."""
+    done = bool(body.duration and body.position >= body.duration - 8)
+    await db.video_progress.update_one({"post_id": post_id, "user_id": current_user.id}, {"$set": {"post_id": post_id, "user_id": current_user.id, "position": 0 if done else max(0.0, body.position), "duration": body.duration, "completed": done, "updated_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    return {"saved": True, "position": 0 if done else body.position}
+
+
+@router.get("/posts/{post_id}/progress")
+async def get_video_progress(post_id: str, current_user: User = Depends(get_current_user)):
+    doc = await db.video_progress.find_one({"post_id": post_id, "user_id": current_user.id}, {"_id": 0})
+    return doc or {"post_id": post_id, "position": 0, "completed": False}
 
 
 @router.put("/posts/{post_id}")
@@ -626,6 +647,16 @@ async def update_post(post_id: str, data: PostUpdate, current_user: User = Depen
         upd["text_style"] = data.text_style
     if data.visibility in ("public", "followers", "private"):
         upd["visibility"] = data.visibility
+    if data.chapters is not None:
+        clean = []
+        for c in data.chapters[:60]:
+            try:
+                t = float(c.get("time", 0)); title = str(c.get("title") or "").strip()[:80]
+            except (TypeError, ValueError, AttributeError):
+                continue
+            if t >= 0 and title:
+                clean.append({"time": t, "title": title})
+        upd["chapters"] = sorted(clean, key=lambda c: c["time"])
     await db.posts.update_one({"id": post_id}, {"$set": upd})
     fresh = await db.posts.find_one({"id": post_id}, {"_id": 0})
     try:

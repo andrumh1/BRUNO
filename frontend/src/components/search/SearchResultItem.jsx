@@ -24,7 +24,7 @@ export function SearchResultItem({ item, onOpen, onFollow }) {
       return (
         <Row onClick={open} testid={tid}>
           <div className="relative w-16 h-24 rounded-xl overflow-hidden bg-black/60 shrink-0">{item.thumb && <img src={item.thumb} alt="" className="w-full h-full object-cover" loading="lazy" />}<Play className="absolute inset-0 m-auto w-5 h-5 text-white drop-shadow" />{item.duration && <span className="absolute bottom-1 right-1 text-[10px] bg-black/70 text-white rounded px-1">{fmtDuration(item.duration)}</span>}</div>
-          <div className="min-w-0 flex-1"><p className="text-sm font-medium line-clamp-2">{item.snippet || item.title || "Video"}</p><p className="text-xs text-muted-foreground mt-1 truncate">{item.author?.name || "Creador"} · {fmtDate(item.created_at)}</p><p className="text-[11px] text-muted-foreground">{item.likes} me gusta · {item.comments} comentarios</p></div>
+          <div className="min-w-0 flex-1"><p className="text-sm font-medium line-clamp-2">{item.snippet || item.title || "Video"}</p><p className="text-xs text-muted-foreground mt-1 truncate">{item.author?.name || "Creador"} · {fmtDate(item.created_at)}</p><p className="text-[11px] text-muted-foreground">{item.likes} me gusta · {item.comments} comentarios</p>{item.is_long && <span className="inline-flex items-center gap-1 mt-1 rounded-full bg-foreground/[0.08] px-2 py-0.5 text-[10px] font-semibold" data-testid={`search-watch-full-${item.id}`}><Play className="w-3 h-3" />Ver completo</span>}</div>
         </Row>
       );
     case "post":

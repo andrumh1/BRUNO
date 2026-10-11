@@ -53,3 +53,8 @@
 - Datos semilla: tarjeta privada "Tarjeta Secreta Zanahoria" (newtest, is_public=false → NO debe aparecer); tarjeta pública de negocio "Panadería Doña Ñoña" (viewer3 → aparece en Tarjetas y Empresas); viewer4@bruno.com es cuenta PRIVADA con post "Xilófono privado…" (solo visible para sus seguidores); post antiguo público "Canción antigua del río Magdalena" (viewer3, 2026-01-05).
 - Admin reindex: POST /api/search/admin/reindex (testc@brunoqa.com). Estado: GET /api/search/status.
 - Historial de moderación: /admin/users (buscar usuario) y /admin/users/{id}/moderation (admin testc). Usuario con acción registrada: Prueba B (testb@brunoqa.com, id b1838f61-9fcf-4f4f-b4cb-2da82280dada).
+
+## Videos largos / cupones / voz (2026-06)
+- Videos largos semilla (newtest): 12b28791-edff-4be8-875d-f23742f6b758 (420 s, capítulos en descripción) y bdce489a-6f05-46b3-93c4-a0e70360bd64 (600 s). Ruta /video/:id. Feed: GET /api/posts/recommended-videos?kind=video&long=1.
+- Progreso: POST/GET /api/posts/{id}/progress. Capítulos: PUT /api/posts/{id} {chapters:[{time,title}]} (solo dueño).
+- Cupones: GET /api/money/coupons/stats (clics se cuentan al abrir GET /api/money/coupons/{id}/public).
