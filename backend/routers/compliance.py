@@ -461,7 +461,7 @@ async def admin_user_moderation_timeline(user_id: str, current_user: dict = Depe
     mods = {m["id"]: m async for m in db.users.find({"id": {"$in": list(mod_ids)}}, {"_id": 0, "id": 1, "name": 1, "avatar_url": 1})} if mod_ids else {}
     for e in events:
         m = mods.get(e.get("by"))
-        e["by"] = {"id": e["by"], "name": m.get("name") if m else ("Sistema" if not e.get("by") else "Admin")} if (e.get("by") or True) else None
+        e["by"] = {"id": e.get("by"), "name": m.get("name") if m else ("Sistema" if not e.get("by") else "Admin")}
     events.sort(key=lambda e: e.get("at") or "", reverse=True)
     strikes = sum(1 for e in events if e["action"] in ("warn_user", "warn", "remove_content", "remove", "suspend_user", "suspend", "ban", "stop_live"))
     return {"user": user, "events": events, "strikes": strikes, "reports_received": reports_received, "reports_made": reports_made}

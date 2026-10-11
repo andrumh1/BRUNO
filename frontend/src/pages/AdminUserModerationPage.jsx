@@ -32,11 +32,12 @@ const TimelineEvent = ({ e, i }) => {
 
 export default function AdminUserModerationPage() {
   const { userId } = useParams();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const headers = { Authorization: `Bearer ${token}` };
   const [data, setData] = useState(null);
   const [forbidden, setForbidden] = useState(false);
+  useEffect(() => { if (user && user.role !== "admin" && !user.is_admin) setForbidden(true); }, [user]);
   const [q, setQ] = useState("");
   const [found, setFound] = useState([]);
 
