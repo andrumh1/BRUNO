@@ -61,6 +61,7 @@ const NewProductPage = () => {
     tags: [],
     shipping_available: false,
     shipping_cost: "",
+    chat_delivery: true,
     stock: "",
     deal_enabled: false,
     deal_partner_id: "",
@@ -169,6 +170,7 @@ const NewProductPage = () => {
         tags: formData.tags,
         shipping_available: formData.shipping_available,
         shipping_cost: formData.shipping_cost ? parseFloat(formData.shipping_cost) : null,
+        chat_delivery: formData.chat_delivery,
         stock: formData.stock ? parseInt(formData.stock) : null,
         deal_enabled: formData.deal_enabled,
         deal_partner_id: formData.deal_partner_id.trim() || null,
@@ -440,6 +442,23 @@ const NewProductPage = () => {
               </div>
             </div>
           )}
+
+          <div className="flex items-center justify-between pt-2 border-t border-border/60">
+            <div>
+              <span className="font-medium text-sm">Entrega coordinada por chat</span>
+              <p className="text-[11px] text-muted-foreground">El comprador paga en BRUNO y acuerdan la entrega por mensaje (sin transportadora).</p>
+            </div>
+            <button
+              type="button"
+              data-testid="toggle-chat-delivery"
+              onClick={() => setFormData({ ...formData, chat_delivery: !formData.chat_delivery })}
+              className={`w-12 h-6 rounded-full transition-colors shrink-0 ${formData.chat_delivery ? 'bg-primary' : 'bg-gray-300'}`}
+            >
+              <span className={`block w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${formData.chat_delivery ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+          {!formData.shipping_available && !formData.chat_delivery && <p className="text-xs text-destructive">Activa al menos una forma de entrega.</p>}
+          <p className="text-[11px] text-muted-foreground">Transportadoras integradas: próximamente (OVC está gestionando convenios).</p>
         </div>
 
         {/* Stock */}

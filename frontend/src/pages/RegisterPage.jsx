@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
+import { OvcAttribution } from "@/components/brand/OvcAttribution";
 import { Mail, Lock, User, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -190,6 +191,7 @@ const RegisterPage = () => {
               ← Volver al inicio
             </Link>
           </p>
+          <OvcAttribution className="mt-6 pt-5 border-t border-border/60" />
         </CardContent>
       </Card>
     </div>

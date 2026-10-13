@@ -29,6 +29,7 @@ class ProductCreate(BaseModel):
     shipping_available: bool = False
     shipping_cost: Optional[float] = None
     condition: str = "new"  # new, used, refurbished
+    chat_delivery: bool = True  # entrega coordinada por chat (sin envío)
     tags: List[str] = []
     deal_enabled: bool = False  # Enable purchase via DEAL
     deal_partner_id: Optional[str] = None
@@ -47,6 +48,7 @@ class ProductUpdate(BaseModel):
     shipping_available: Optional[bool] = None
     shipping_cost: Optional[float] = None
     condition: Optional[str] = None
+    chat_delivery: Optional[bool] = None
     status: Optional[str] = None  # active, sold, paused
     tags: Optional[List[str]] = None
     deal_enabled: Optional[bool] = None
@@ -169,9 +171,24 @@ async def list_products(
             }
     
     total = await db.marketplace_products.count_documents(query)
-    
+
+    # Productos oficiales PIUP (OVC): se muestran marcados como oficiales y enlazan a su sección, nunca se mezclan como ítems de usuarios.
+    piup_official = []
+    if skip == 0 and not category and not condition and min_price is None and max_price is None:
+        try:
+            from routers.piup_admin import db_catalog
+            needle = (search or "").strip().lower()
+            for p in await db_catalog():
+                hay = f"{p.get('name','')} {p.get('description','')} {p.get('category','')} piup ovc nfc".lower()
+                if not needle or needle in hay:
+                    piup_official.append({"id": p["id"], "title": p["name"], "price": p["base_price"], "currency": "USD", "category": p["category"], "images": p.get("images") or [], "stock": p.get("stock"),
+                                          "is_official_piup": True, "brand": "PIUP · OVC", "url": f"/marketplace/piup?product={p['id']}"})
+        except Exception:
+            piup_official = []
+
     return {
         "products": products,
+        "piup_official": piup_official[:8],
         "total": total,
         "skip": skip,
         "limit": limit

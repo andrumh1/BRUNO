@@ -85,6 +85,7 @@ export default function AdminMoneyPage() {
           </section>
         )}
         <Button variant="outline" className="rounded-full" onClick={() => navigate("/admin/reports")} data-testid="admin-reports-link">Ver reportes y moderación</Button>
+        <Button variant="outline" className="rounded-full" onClick={() => navigate("/admin/piup")} data-testid="admin-piup-link">PIUP · Administración OVC</Button>
 
         <section data-testid="admin-ledger">
           <h2 className="text-sm font-bold mb-2">Movimientos recientes</h2>

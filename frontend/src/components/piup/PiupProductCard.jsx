@@ -19,7 +19,7 @@ export default function PiupProductCard({ product, onOpen }) {
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
             {product.category_label}
           </p>
-          <h3 className="text-sm font-semibold truncate">{product.name}</h3>
+          <h3 className="text-sm font-semibold line-clamp-2 leading-snug">{product.name}</h3>
           <p className="text-xs text-muted-foreground mt-1">
             {product.style_count} estilo{product.style_count > 1 ? "s" : ""} disponibles
           </p>

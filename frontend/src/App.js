@@ -81,6 +81,8 @@ import TermsOfServicePage from "@/pages/TermsOfServicePage";
 import DeleteAccountPage from "@/pages/DeleteAccountPage";
 import CookiePolicyPage from "@/pages/CookiePolicyPage";
 import LegalHubPage from "@/pages/LegalHubPage";
+import MarketplacePiupPage from "@/pages/MarketplacePiupPage";
+import AdminPiupPage from "@/pages/AdminPiupPage";
 import CommunityGuidelinesPage from "@/pages/CommunityGuidelinesPage";
 import DataRightsPage from "@/pages/DataRightsPage";
 import LivesListPage from "@/pages/LivesListPage";
@@ -156,6 +158,7 @@ function AppRouter() {
       <Route path="/cards/:cardId/transfer" element={<ProtectedRoute><CardTransferPage /></ProtectedRoute>} />
       <Route path="/n/:nfcId" element={<NFCRedirectPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />
+      <Route path="/marketplace/piup" element={<MarketplacePiupPage />} />
       <Route path="/marketplace/:productId" element={<ProductDetailPage />} />
       <Route path="/profile/:userId" element={<UserProfilePage />} />
       <Route path="/hashtag/:tag" element={<HashtagPage />} />
@@ -206,6 +209,7 @@ function AppRouter() {
       <Route path="/payment/cancel" element={<ProtectedRoute><PaymentResultPage cancelled /></ProtectedRoute>} />
       <Route path="/earnings" element={<ProtectedRoute><MyEarningsPage /></ProtectedRoute>} />
       <Route path="/admin/money" element={<ProtectedRoute><AdminMoneyPage /></ProtectedRoute>} />
+      <Route path="/admin/piup" element={<ProtectedRoute><AdminPiupPage /></ProtectedRoute>} />
       <Route path="/admin/reports" element={<ProtectedRoute><AdminReportsPage /></ProtectedRoute>} />
       <Route path="/admin/users/:userId/moderation" element={<ProtectedRoute><AdminUserModerationPage /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute><AdminUserModerationPage /></ProtectedRoute>} />

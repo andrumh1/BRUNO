@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, FileText, AlertTriangle, Ban, CheckCircle, Shield } from "lucide-react";
+import { OvcAttribution } from "@/components/brand/OvcAttribution";
 
 const TermsOfServicePage = () => {
   const navigate = useNavigate();
@@ -113,7 +114,7 @@ const TermsOfServicePage = () => {
             </p>
             <p className="text-muted-foreground">
               <strong>Nuestra propiedad:</strong> BRUNO, su logo, diseño y tecnología son propiedad de 
-              BRUNO Inc. y están protegidos por leyes de propiedad intelectual.
+              Octopus Vision Company (OVC) y están protegidos por leyes de propiedad intelectual.
             </p>
           </section>
 
@@ -203,6 +204,7 @@ const TermsOfServicePage = () => {
               </div>
             </div>
           </section>
+          <OvcAttribution variant="legal" className="pt-8 pb-6" />
         </div>
       </div>
     </div>

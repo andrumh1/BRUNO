@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
+import { OvcAttribution } from "@/components/brand/OvcAttribution";
 import { isNative } from "@/native/capacitor";
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 
@@ -97,6 +98,7 @@ const LoginPage = () => {
           <CardDescription className="text-center">
             Accede a tu cuenta de BRUNO
           </CardDescription>
+          <div className="flex justify-center pt-1"><OvcAttribution variant="inline" /></div>
         </CardHeader>
         <CardContent>
           {!authLoading && isAuthenticated && sessionUser && !switching && (
@@ -237,6 +239,7 @@ const LoginPage = () => {
               ← Volver al inicio
             </Link>
           </p>
+          <OvcAttribution className="mt-6 pt-5 border-t border-border/60" />
         </CardContent>
       </Card>
     </div>

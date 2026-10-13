@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, FileText, Shield, Cookie, Trash2, Scale, Users, ChevronRight } from "lucide-react";
+import { OvcAttribution } from "@/components/brand/OvcAttribution";
 
 const legalPages = [
   { path: "/terms", icon: FileText, title: "Terminos de Servicio", desc: "Condiciones de uso de la plataforma BRUNO", color: "from-blue-500 to-cyan-500" },
@@ -48,6 +49,7 @@ const LegalHubPage = () => {
             </Link>
           );
         })}
+        <OvcAttribution variant="legal" className="pt-8 pb-6" />
       </main>
     </div>
   );

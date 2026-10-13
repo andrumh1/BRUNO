@@ -2419,6 +2419,10 @@ from routers.nfc import router as nfc_router
 api_router.include_router(nfc_router)
 from routers.piup import router as piup_router
 api_router.include_router(piup_router)
+from routers.piup_admin import router as piup_admin_router  # noqa: E402
+api_router.include_router(piup_admin_router)
+from routers.marketplace_orders import router as marketplace_orders_router  # noqa: E402
+api_router.include_router(marketplace_orders_router)
 from routers.ai import router as ai_router
 api_router.include_router(ai_router)
 from routers.location_share import router as location_share_router

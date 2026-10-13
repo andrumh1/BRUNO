@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { MarketplaceOrderCard } from "@/components/marketplace/OrderCards";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
@@ -46,6 +47,14 @@ const MyProductsPage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = searchParams.get("tab") === "orders" ? "orders" : "products";
+  const [sales, setSales] = useState(null);
+  useEffect(() => {
+    if (view !== "orders" || !token) return;
+    axios.get(`${API}/marketplace/orders/sales`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setSales(r.data)).catch(() => setSales({ orders: [], counts: {}, statuses: {} }));
+    // eslint-disable-next-line
+  }, [view, token]);
 
   useEffect(() => {
     if (!token) {
@@ -145,6 +154,21 @@ const MyProductsPage = () => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        <div className="flex gap-1 p-1 rounded-full bg-muted w-fit" data-testid="my-products-tabs">
+          <button onClick={() => setSearchParams({})} className={`px-4 h-8 rounded-full text-xs font-semibold ${view === "products" ? "bg-background shadow" : "text-muted-foreground"}`} data-testid="my-products-tab-products">Productos</button>
+          <button onClick={() => setSearchParams({ tab: "orders" })} className={`px-4 h-8 rounded-full text-xs font-semibold ${view === "orders" ? "bg-background shadow" : "text-muted-foreground"}`} data-testid="my-products-tab-orders">Pedidos recibidos{sales?.orders?.length ? ` (${sales.orders.length})` : ""}</button>
+        </div>
+
+        {view === "orders" && (
+          <div className="space-y-3" data-testid="seller-orders">
+            <p className="text-xs text-muted-foreground">Pedidos pagados en BRUNO. Actualiza el estado para avisar al comprador; si cancelas, el reembolso se hace por Stripe automáticamente. Lo que ganas se acumula en <Link to="/earnings" className="text-primary underline">Mis ingresos</Link>.</p>
+            {sales === null ? <BrunoLoader fullScreen={false} className="rounded-3xl min-h-[200px]" />
+              : sales.orders.length === 0 ? <p className="text-sm text-muted-foreground text-center py-12" data-testid="seller-orders-empty">Aún no has recibido pedidos.</p>
+              : sales.orders.map((o) => <MarketplaceOrderCard key={o.id} order={o} role="seller" statuses={sales.statuses} headers={{ Authorization: `Bearer ${token}` }} onChange={(u) => setSales((s) => ({ ...s, orders: s.orders.map((x) => (x.id === u.id ? u : x)) }))} />)}
+          </div>
+        )}
+
+        {view === "products" && <>
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="p-4 bg-card rounded-xl border text-center">
@@ -303,6 +327,7 @@ const MyProductsPage = () => {
             ))}
           </div>
         )}
+        </>}
       </div>
     </div>
   );

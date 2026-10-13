@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { OvcMark } from "@/components/brand/OvcAttribution";
+import PiupProductCard from "@/components/piup/PiupProductCard";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { BrunoHeaderMark } from "@/components/bruno/BrunoLogo";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -27,7 +29,8 @@ import {
   Share2,
   Crown,
   Sparkles,
-  Zap
+  Zap,
+  BadgeCheck
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
@@ -237,10 +240,37 @@ const FilterPanel = ({ isOpen, onClose, filters, setFilters, categories }) => {
 };
 
 // Main Marketplace Page
+
+const PiupTab = ({ catalog, navigate }) => {
+  const [cat, setCat] = useState("all");
+  if (!catalog) return <BrunoLoader fullScreen={false} className="rounded-3xl min-h-[300px]" />;
+  const items = catalog.products.filter((p) => cat === "all" || p.category === cat);
+  return (
+    <div className="space-y-4" data-testid="marketplace-piup-tab">
+      <div className="rounded-2xl border border-orange-300/50 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/10 p-4 flex items-start gap-3">
+        <OvcMark size={40} />
+        <div className="flex-1 text-sm">
+          <p className="font-bold flex items-center gap-2">PIUP <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 text-white px-2 py-0.5 text-[10px] font-bold uppercase"><BadgeCheck className="w-3 h-3" /> Oficial OVC</span></p>
+          <p className="text-xs text-muted-foreground mt-0.5">Productos NFC fabricados y enviados por Octopus Vision Company. Catálogo, inventario y pedidos gestionados por OVC, separados de los productos de usuarios.</p>
+        </div>
+        <Button size="sm" variant="outline" className="rounded-full shrink-0" onClick={() => navigate("/marketplace/piup")} data-testid="piup-open-section">Ver sección</Button>
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {[{ id: "all", label: "Todos" }, ...(catalog.categories || [])].map((c) => (
+          <button key={c.id} onClick={() => setCat(c.id)} className={`px-4 h-8 rounded-full text-xs font-semibold whitespace-nowrap ${cat === c.id ? "bg-orange-500 text-white" : "bg-muted"}`} data-testid={`mkt-piup-cat-${c.id}`}>{c.label}</button>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" data-testid="mkt-piup-grid">
+        {items.map((p) => <PiupProductCard key={p.id} product={p} onOpen={() => navigate(`/marketplace/piup?product=${p.id}`)} />)}
+      </div>
+    </div>
+  );
+};
+
 const MarketplacePage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -259,6 +289,15 @@ const MarketplacePage = () => {
   const [piupGroups, setPiupGroups] = useState([]);
   const [billing, setBilling] = useState("monthly");
   const [showPiupSection, setShowPiupSection] = useState(true);
+  const tab = searchParams.get('tab') === 'piup' ? 'piup' : 'community';
+  const setTab = (t) => { const next = new URLSearchParams(searchParams); if (t === 'piup') next.set('tab', 'piup'); else next.delete('tab'); setSearchParams(next); };
+  const [piupOfficial, setPiupOfficial] = useState([]);
+  const [piupCatalog, setPiupCatalog] = useState(null);
+
+  useEffect(() => {
+    if (tab !== 'piup' || piupCatalog) return;
+    axios.get(`${API}/piup/catalog`).then((r) => setPiupCatalog(r.data)).catch(() => setPiupCatalog({ products: [], categories: [] }));
+  }, [tab, piupCatalog]);
 
   // Fetch PIUP store products (featured)
   useEffect(() => {
@@ -307,6 +346,7 @@ const MarketplacePage = () => {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await axios.get(`${API}/marketplace/products?${params.toString()}`, { headers });
       setProducts(response.data.products || []);
+      setPiupOfficial(response.data.piup_official || []);
     } catch (error) {
       // error handled
     } finally {
@@ -412,8 +452,14 @@ const MarketplacePage = () => {
           </div>
         </div>
         
+        {/* Comunidad / PIUP */}
+        <div className="px-4 pt-2 flex gap-1 p-1 mx-4 mt-1 rounded-full bg-muted w-fit" data-testid="marketplace-tabs">
+          <button onClick={() => setTab('community')} className={`px-4 h-8 rounded-full text-xs font-semibold transition-colors ${tab === 'community' ? 'bg-background shadow text-foreground' : 'text-muted-foreground'}`} data-testid="marketplace-tab-community">Comunidad</button>
+          <button onClick={() => setTab('piup')} className={`px-4 h-8 rounded-full text-xs font-semibold transition-colors flex items-center gap-1.5 ${tab === 'piup' ? 'bg-orange-500 text-white shadow' : 'text-muted-foreground'}`} data-testid="marketplace-tab-piup"><BadgeCheck className="w-3.5 h-3.5" /> PIUP · Oficial OVC</button>
+        </div>
+
         {/* Categories horizontal scroll */}
-        <div className="overflow-x-auto px-4 py-2 border-t">
+        {tab === 'community' && <div className="overflow-x-auto px-4 py-2 border-t mt-2">
           <div className="flex gap-2 min-w-max">
             <button
               onClick={() => setFilters({ ...filters, category: null })}
@@ -436,7 +482,7 @@ const MarketplacePage = () => {
               </button>
             ))}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Filter Panel */}
@@ -450,9 +496,27 @@ const MarketplacePage = () => {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-8">
-        
-        {/* PIUP Featured Section */}
-        {showPiupSection && !searchQuery && !filters.category && (
+
+        {tab === 'piup' && <PiupTab catalog={piupCatalog} navigate={navigate} />}
+
+        {/* Resultados oficiales PIUP marcados dentro de la búsqueda general */}
+        {tab === 'community' && searchQuery && piupOfficial.length > 0 && (
+          <div className="space-y-2" data-testid="piup-official-results">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Productos oficiales PIUP · OVC</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {piupOfficial.map((p) => (
+                <button key={p.id} onClick={() => navigate(p.url)} className="shrink-0 w-44 text-left rounded-xl border border-orange-300/60 bg-orange-50/60 dark:bg-orange-950/20 p-3 hover:shadow transition-shadow" data-testid={`piup-official-${p.id}`}>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 text-white px-1.5 py-0.5 text-[9px] font-bold uppercase"><BadgeCheck className="w-2.5 h-2.5" /> Oficial PIUP</span>
+                  <p className="text-sm font-semibold mt-1.5 line-clamp-2">{p.title}</p>
+                  <p className="text-xs text-primary font-bold">desde ${p.price}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* PIUP Featured Section (planes BRUNO) */}
+        {tab === 'community' && showPiupSection && !searchQuery && !filters.category && (
           <div className="space-y-6">
             {/* Subscriptions */}
             <div>
@@ -496,8 +560,18 @@ const MarketplacePage = () => {
               </div>
             </div>
 
+            {/* Acceso a la sección PIUP oficial */}
+            <button onClick={() => setTab('piup')} className="w-full rounded-2xl border border-orange-300/60 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/10 p-4 flex items-center gap-3 text-left hover:shadow-md transition-shadow" data-testid="piup-section-cta">
+              <OvcMark size={36} />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold flex items-center gap-2">PIUP <span className="inline-flex items-center gap-1 rounded-full bg-orange-500 text-white px-2 py-0.5 text-[10px] font-bold uppercase"><BadgeCheck className="w-3 h-3" /> Oficial OVC</span></p>
+                <p className="text-xs text-muted-foreground">Tags y tarjetas NFC de Octopus Vision Company · sección exclusiva, separada de las tiendas de la comunidad</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+            </button>
+
             {/* PIUP Products */}
-            {piupProducts.length > 0 && (
+            {false && piupProducts.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold flex items-center gap-2">
@@ -553,7 +627,7 @@ const MarketplacePage = () => {
         )}
         
         {/* User Products */}
-        {loading ? (
+        {tab === 'piup' ? null : loading ? (
           <BrunoLoader fullScreen={false} className="rounded-3xl min-h-[380px]" />
         ) : products.length === 0 ? (
           <div className="text-center py-20">

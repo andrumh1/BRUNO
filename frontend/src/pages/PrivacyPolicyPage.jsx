@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Shield, FileText, AlertTriangle, Trash2, CheckCircle } from "lucide-react";
+import { OvcAttribution } from "@/components/brand/OvcAttribution";
 
 const PrivacyPolicyPage = () => {
   const navigate = useNavigate();
@@ -185,6 +186,7 @@ const PrivacyPolicyPage = () => {
               de datos aplicables a nivel mundial.
             </p>
           </section>
+          <OvcAttribution variant="legal" className="pt-8 pb-6" />
         </div>
       </div>
     </div>

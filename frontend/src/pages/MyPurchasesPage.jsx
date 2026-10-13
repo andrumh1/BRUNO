@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Mail, Receipt, CheckCircle2, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { fmtMoney, detailMsg } from "@/hooks/useBrunoCheckout";
+import { MarketplaceOrderCard, PiupOrderCard } from "@/components/marketplace/OrderCards";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const KIND = { live_ticket: "Entrada a live", gift: "Regalo en vivo", marketplace: "Marketplace", piup: "PIUP", promotion: "Promoción" };
+const KIND = { live_ticket: "Entrada a live", gift: "Regalo en vivo", marketplace: "Marketplace", marketplace_order: "Marketplace", piup: "PIUP · OVC", promotion: "Promoción", credits: "Créditos" };
 const STATUS = { paid: "Pagado", partially_refunded: "Reembolso parcial", refunded: "Reembolsado", initiated: "Pendiente", failed: "Fallido", expired: "Caducado" };
-const LINK = { live_ticket: (r) => `/lives/${r}`, gift: (r) => `/lives/${r}`, marketplace: (r) => `/marketplace/product/${r}`, piup: () => "/piup", promotion: () => "/monetization" };
+const LINK = { live_ticket: (r) => `/lives/${r}`, gift: (r) => `/lives/${r}`, marketplace: (r) => `/marketplace/${r}`, marketplace_order: () => "/purchases?tab=orders", piup: () => "/purchases?tab=piup", promotion: () => "/monetization" };
+const PIUP_STATUSES = { pending_payment: "Pendiente de pago", pending: "Solicitud manual", paid: "Pagado", processing: "En producción", encoding: "Grabando NFC", shipped: "Enviado", delivered: "Entregado", cancelled: "Cancelado", refunded: "Reembolsado", partially_refunded: "Reembolso parcial", failed: "Pago rechazado", expired: "Expirado" };
 
 const PurchaseRow = ({ p, onResend, busy }) => (
   <div className="rounded-2xl border border-border/60 p-3 text-sm space-y-2" data-testid={`purchase-${p.id}`}>
@@ -34,14 +36,26 @@ const PurchaseRow = ({ p, onResend, busy }) => (
   </div>
 );
 
+const TABS = [{ id: "all", label: "Pagos" }, { id: "orders", label: "Pedidos Marketplace" }, { id: "piup", label: "Pedidos PIUP" }];
+
 export default function MyPurchasesPage() {
   const { token } = useAuth();
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") || "all";
   const [list, setList] = useState(null);
+  const [orders, setOrders] = useState(null);
+  const [piup, setPiup] = useState(null);
   const [busy, setBusy] = useState("");
   const headers = { Authorization: `Bearer ${token}` };
 
-  useEffect(() => { if (token) axios.get(`${API}/money/purchases`, { headers }).then((r) => setList(r.data)).catch(() => setList([])); /* eslint-disable-next-line */ }, [token]);
+  useEffect(() => {
+    if (!token) return;
+    axios.get(`${API}/money/purchases`, { headers }).then((r) => setList(r.data)).catch(() => setList([]));
+    axios.get(`${API}/marketplace/orders/mine`, { headers }).then((r) => setOrders(r.data)).catch(() => setOrders({ orders: [], statuses: {} }));
+    axios.get(`${API}/piup/orders`, { headers }).then((r) => setPiup(r.data.orders || [])).catch(() => setPiup([]));
+    // eslint-disable-next-line
+  }, [token]);
 
   const resend = async (p) => {
     setBusy(p.id);
@@ -50,16 +64,25 @@ export default function MyPurchasesPage() {
     finally { setBusy(""); }
   };
 
+  const Spinner = <div className="grid place-items-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+
   return (
     <div className="min-h-screen bg-background" data-testid="purchases-page">
       <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl border-b border-border/40" style={{ paddingTop: "var(--safe-top, 0px)" }}>
         <div className="h-14 px-3 flex items-center gap-2"><Button variant="ghost" size="icon" onClick={() => navigate(-1)} data-testid="purchases-back"><ArrowLeft className="w-5 h-5" /></Button><h1 className="text-base font-bold">Mis compras</h1></div>
+        <div className="flex gap-1 px-3 pb-2 overflow-x-auto">
+          {TABS.map((t) => <button key={t.id} onClick={() => setParams({ tab: t.id })} className={`px-3 h-8 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${tab === t.id ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`} data-testid={`purchases-tab-${t.id}`}>{t.label}</button>)}
+        </div>
       </div>
       <div className="max-w-2xl mx-auto p-4 space-y-3">
-        <p className="text-xs text-muted-foreground">Cada pago confirmado te llega también por correo. Si no lo encuentras, reenvíalo desde aquí.</p>
-        {list === null ? <div className="grid place-items-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-          : list.length === 0 ? <p className="text-sm text-muted-foreground text-center py-16" data-testid="purchases-empty">Aún no has comprado nada en BRUNO.</p>
-          : list.map((p) => <PurchaseRow key={p.id} p={p} onResend={resend} busy={busy} />)}
+        {tab === "all" && (<>
+          <p className="text-xs text-muted-foreground">Cada pago confirmado te llega también por correo. Si no lo encuentras, reenvíalo desde aquí.</p>
+          {list === null ? Spinner : list.length === 0 ? <p className="text-sm text-muted-foreground text-center py-16" data-testid="purchases-empty">Aún no has comprado nada en BRUNO.</p> : list.map((p) => <PurchaseRow key={p.id} p={p} onResend={resend} busy={busy} />)}
+        </>)}
+        {tab === "orders" && (orders === null ? Spinner : orders.orders.length === 0 ? <p className="text-sm text-muted-foreground text-center py-16" data-testid="orders-empty">No tienes pedidos del Marketplace.</p>
+          : orders.orders.map((o) => <MarketplaceOrderCard key={o.id} order={o} role="buyer" statuses={orders.statuses} headers={headers} onChange={(u) => setOrders((s) => ({ ...s, orders: s.orders.map((x) => (x.id === u.id ? u : x)) }))} />))}
+        {tab === "piup" && (piup === null ? Spinner : piup.length === 0 ? <p className="text-sm text-muted-foreground text-center py-16" data-testid="piup-orders-empty">No tienes pedidos PIUP.</p>
+          : piup.map((o) => <PiupOrderCard key={o.id} order={o} statuses={PIUP_STATUSES} />))}
         <div style={{ height: "var(--content-bottom)" }} />
       </div>
     </div>

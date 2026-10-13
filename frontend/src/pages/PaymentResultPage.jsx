@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import PremiumPage from "@/pages/PremiumPage";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const NEXT = { live_ticket: (ref) => `/lives/${ref}?paid=1`, gift: (ref) => `/lives/${ref}`, marketplace: (ref) => `/marketplace/product/${ref}`, piup: () => "/piup", promotion: () => "/monetization" };
-const LABEL = { live_ticket: "Tu entrada está confirmada", gift: "Regalo enviado al creador", marketplace: "Pedido pagado", piup: "Pedido PIUP pagado", promotion: "Promoción activada" };
+const NEXT = { live_ticket: (ref) => `/lives/${ref}?paid=1`, gift: (ref) => `/lives/${ref}`, marketplace: (ref) => `/marketplace/${ref}`, marketplace_order: () => "/purchases?tab=orders", piup: () => "/piup?tab=my-tags", promotion: () => "/monetization" };
+const LABEL = { live_ticket: "Tu entrada está confirmada", gift: "Regalo enviado al creador", marketplace: "Pedido pagado", marketplace_order: "Pedido pagado · los vendedores ya fueron avisados", piup: "Pedido PIUP pagado · OVC lo prepara", promotion: "Promoción activada" };
 
 // Success page never grants anything by itself: it polls the server, which only flips to "paid" via Stripe (webhook or verified session).
 export default function PaymentResultPage({ cancelled = false }) {

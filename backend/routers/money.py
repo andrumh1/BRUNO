@@ -215,7 +215,9 @@ async def _price_for(body: CheckoutBody, buyer: User) -> dict:
         if not o:
             raise HTTPException(status_code=404, detail="Pedido PIUP no encontrado")
         cur = (o.get("currency") or "usd").lower()
-        return {"name": f"PIUP · {o.get('product_name') or o.get('design') or 'Tarjeta NFC'}", "unit_minor": to_minor(float(o.get("total") or o.get("price") or 0), cur), "currency": cur, "seller_id": None, "meta": {"piup_order_id": o["id"]}, "shipping_minor": 0}
+        if o.get("payment_status") == "paid":
+            raise HTTPException(status_code=400, detail="Este pedido PIUP ya está pagado")
+        return {"name": f"PIUP · {o.get('product_name') or o.get('design') or 'Tarjeta NFC'}", "unit_minor": to_minor(float(o.get("total_price") or o.get("total") or o.get("price") or 0), cur), "currency": cur, "seller_id": None, "meta": {"piup_order_id": o["id"]}, "shipping_minor": 0}
     if k == "credits":
         from routers.credits import CREDIT_PACKS
         pk = CREDIT_PACKS.get(body.option or "")
@@ -453,7 +455,13 @@ async def _fulfil(entry: dict):
     elif k == "marketplace":
         await db.marketplace_orders.update_one({"ledger_id": entry["id"]}, {"$set": {"id": str(uuid.uuid4()), "ledger_id": entry["id"], "product_id": m["product_id"], "buyer_id": entry["buyer_id"], "seller_id": entry["seller_id"], "quantity": entry["quantity"], "total_minor": entry["total_minor"], "currency": entry["currency"], "status": "paid", "paid_in_bruno": True, "created_at": ts}}, upsert=True)
     elif k == "piup":
-        await db.piup_orders.update_one({"id": m["piup_order_id"]}, {"$set": {"payment_status": "paid", "status": "paid", "ledger_id": entry["id"], "paid_at": ts}})
+        await db.piup_orders.update_one({"id": m["piup_order_id"]}, {"$set": {"payment_status": "paid", "status": "paid", "ledger_id": entry["id"], "paid_at": ts, "payment_intent": entry.get("payment_intent")}, "$push": {"history": {"status": "paid", "at": ts, "by": "stripe"}}})
+        o = await db.piup_orders.find_one({"id": m["piup_order_id"]}, {"_id": 0, "product_id": 1, "quantity": 1})
+        if o:
+            await db.piup_products.update_one({"id": o["product_id"], "stock": {"$ne": None}}, {"$inc": {"stock": -int(o.get("quantity") or 1), "sold": int(o.get("quantity") or 1)}})
+            await db.piup_products.update_one({"id": o["product_id"], "stock": None}, {"$inc": {"sold": int(o.get("quantity") or 1)}})
+    elif k == "marketplace_order":
+        await _fulfil_marketplace_order(entry)
     elif k == "credits":
         from routers.credits import credit_wallet
         await credit_wallet(entry["buyer_id"], int(m.get("credits_minor") or entry["subtotal_minor"]) * int(entry.get("quantity") or 1), entry["id"], entry["name"])
@@ -464,8 +472,41 @@ async def _fulfil(entry: dict):
         await db.posts.update_one({"id": m["post_id"]}, {"$set": {"is_promoted": True, "promoted_until": ends, "is_ad": True}})
 
 
+async def _fulfil_marketplace_order(entry: dict):
+    """Cart paid: children → paid, stock down, cart cleared, transfers to each seller (multi-seller), sellers notified."""
+    ts = now_iso()
+    pi = entry.get("payment_intent")
+    charge_id = None
+    children = await db.ledger_entries.find({"parent_id": entry["id"]}, {"_id": 0}).to_list(50)
+    if any(c.get("meta", {}).get("needs_transfer") for c in children) and pi:
+        try:
+            intent = stripe.PaymentIntent.retrieve(pi)
+            charge_id = intent.get("latest_charge")
+        except stripe.error.StripeError as e:
+            logger.error(f"marketplace_order {entry['id']}: cannot read charge for transfers: {e}")
+    for c in children:
+        await db.ledger_entries.update_one({"id": c["id"]}, {"$set": {"status": "paid", "paid_at": ts, "payment_intent": pi, "updated_at": ts}})
+        upd = {"status": "paid", "paid_at": ts, "payment_intent": pi, "updated_at": ts}
+        if c.get("meta", {}).get("needs_transfer") and c.get("seller_account") and c["seller_net_minor"] > 0:
+            try:
+                tr = stripe.Transfer.create(amount=c["seller_net_minor"], currency=c["currency"], destination=c["seller_account"], transfer_group=entry["id"],
+                                            metadata={"ledger_id": c["id"], "order_id": entry["id"]}, idempotency_key=f"transfer-{c['id']}", **({"source_transaction": charge_id} if charge_id else {}))
+                upd["transfer_id"] = tr.id
+                await db.ledger_entries.update_one({"id": c["id"]}, {"$set": {"transfer_id": tr.id, "transfer_status": "created"}})
+            except stripe.error.StripeError as e:
+                logger.error(f"transfer failed for {c['id']}: {e}")
+                await db.ledger_entries.update_one({"id": c["id"]}, {"$set": {"transfer_error": str(e)[:300], "transfer_status": "failed"}})
+                upd["transfer_error"] = str(e)[:300]
+        await db.marketplace_orders.update_one({"id": c["id"]}, {"$set": upd, "$push": {"history": {"status": "paid", "at": ts, "by": "stripe"}}})
+        for it in c.get("meta", {}).get("items", []):
+            await db.marketplace_products.update_one({"id": it["product_id"], "stock": {"$ne": None}}, {"$inc": {"stock": -int(it["quantity"]), "sold_count": int(it["quantity"])}})
+            await db.marketplace_products.update_one({"id": it["product_id"], "stock": {"$lte": 0, "$ne": None}}, {"$set": {"status": "sold"}})
+        asyncio.create_task(_notify_sale({**c, "kind": "marketplace", "status": "paid"}))
+    await db.shopping_carts.delete_one({"user_id": entry["buyer_id"]})
+
+
 async def _mark_paid(session: dict) -> Optional[dict]:
-    entry = await db.ledger_entries.find_one_and_update({"session_id": session["id"], "status": {"$nin": ["paid", "refunded", "partially_refunded"]}},
+    entry = await db.ledger_entries.find_one_and_update({"session_id": session["id"], "status": {"$nin": ["paid", "refunded", "partially_refunded"]}, "parent_id": {"$exists": False}},
                                                         {"$set": {"status": "paid", "paid_at": now_iso(), "payment_intent": session.get("payment_intent"), "updated_at": now_iso()}}, projection={"_id": 0})
     if entry:
         await _fulfil({**entry, "payment_intent": session.get("payment_intent")})
@@ -477,7 +518,7 @@ async def _mark_paid(session: dict) -> Optional[dict]:
     return entry
 
 
-SALE_LABEL = {"live_ticket": "una entrada a tu live", "gift": "un regalo en tu live", "marketplace": "un producto de tu tienda"}
+SALE_LABEL = {"live_ticket": "una entrada a tu live", "gift": "un regalo en tu live", "marketplace": "un producto de tu tienda", "marketplace_order": "productos de tu tienda"}
 
 
 async def _notify_sale(entry: dict):
@@ -516,7 +557,7 @@ async def _notify_sale(entry: dict):
         logger.warning(f"sale email failed for {entry['id']}: {getattr(e, 'detail', e)}")
 
 
-KIND_RECEIPT = {"live_ticket": "Entrada a live privado", "gift": "Regalo en vivo", "marketplace": "Compra en Marketplace", "piup": "Pedido PIUP", "promotion": "Promoción de publicación", "credits": "Créditos BRUNO"}
+KIND_RECEIPT = {"live_ticket": "Entrada a live privado", "gift": "Regalo en vivo", "marketplace": "Compra en Marketplace", "marketplace_order": "Pedido Marketplace", "piup": "Pedido PIUP", "promotion": "Promoción de publicación", "credits": "Créditos BRUNO"}
 
 
 async def _send_receipt(entry: dict, quiet: bool = False) -> Optional[str]:
@@ -594,23 +635,43 @@ async def handle_stripe_event(event: dict) -> dict:
     obj, t = event["data"]["object"], event["type"]
     if t in ("checkout.session.completed", "checkout.session.async_payment_succeeded") and obj.get("payment_status", "paid") == "paid":
         await _mark_paid(obj)
-    elif t in ("checkout.session.async_payment_failed",):
-        await db.ledger_entries.update_one({"session_id": obj["id"], "status": "initiated"}, {"$set": {"status": "failed", "updated_at": now_iso()}})
-    elif t == "checkout.session.expired":
-        await db.ledger_entries.update_one({"session_id": obj["id"], "status": "initiated"}, {"$set": {"status": "expired", "updated_at": now_iso()}})
+    elif t in ("checkout.session.async_payment_failed", "checkout.session.expired"):
+        st = "failed" if t.endswith("failed") else "expired"
+        await db.ledger_entries.update_many({"session_id": obj["id"], "status": "initiated"}, {"$set": {"status": st, "updated_at": now_iso()}})
+        await db.marketplace_orders.update_many({"order_id": (obj.get("metadata") or {}).get("ledger_id"), "status": "pending_payment"}, {"$set": {"status": st, "updated_at": now_iso()}})
+        await db.piup_orders.update_many({"stripe_session_id": obj["id"], "payment_status": "pending"}, {"$set": {"status": st, "payment_status": st, "updated_at": now_iso()}})
+    elif t == "payment_intent.payment_failed":
+        await db.ledger_entries.update_many({"payment_intent": obj.get("id"), "status": "initiated"}, {"$set": {"status": "failed", "last_payment_error": ((obj.get("last_payment_error") or {}).get("message") or "")[:200], "updated_at": now_iso()}})
     elif t == "charge.refunded":
         refunded = int(obj.get("amount_refunded") or 0)
-        entry = await db.ledger_entries.find_one({"payment_intent": obj.get("payment_intent")}, {"_id": 0})
-        if entry:
-            full = refunded >= entry["total_minor"]
-            ratio = refunded / entry["total_minor"] if entry["total_minor"] else 0
-            await db.ledger_entries.update_one({"id": entry["id"]}, {"$set": {"refunded_minor": refunded, "fee_refunded_minor": int(round(entry["fee_minor"] * ratio)), "status": "refunded" if full else "partially_refunded", "updated_at": now_iso()}})
-            if full and entry["kind"] == "live_ticket":
-                await db.live_tickets.delete_one({"ledger_id": entry["id"]})
+        pi = obj.get("payment_intent")
+        parent = await db.ledger_entries.find_one({"payment_intent": pi, "parent_id": {"$exists": False}}, {"_id": 0})
+        if parent:
+            ratio = min(1.0, refunded / parent["total_minor"]) if parent["total_minor"] else 0
+            full = refunded >= parent["total_minor"]
+            st = "refunded" if full else "partially_refunded"
+            await db.ledger_entries.update_one({"id": parent["id"]}, {"$set": {"refunded_minor": refunded, "fee_refunded_minor": int(round(parent["fee_minor"] * ratio)), "status": st, "updated_at": now_iso()}})
+            async for ch in db.ledger_entries.find({"parent_id": parent["id"]}, {"_id": 0}):
+                if ch.get("refunded_minor_manual"):
+                    continue
+                r_minor = int(round(ch["total_minor"] * ratio))
+                await db.ledger_entries.update_one({"id": ch["id"]}, {"$set": {"refunded_minor": r_minor, "fee_refunded_minor": int(round(ch["fee_minor"] * ratio)), "status": st, "updated_at": now_iso()}})
+                await db.marketplace_orders.update_one({"id": ch["id"]}, {"$set": {"status": st, "refunded_minor": r_minor, "updated_at": now_iso()}, "$push": {"history": {"status": st, "at": now_iso(), "by": "stripe"}}})
+            if full and parent["kind"] == "live_ticket":
+                await db.live_tickets.delete_one({"ledger_id": parent["id"]})
+            if parent["kind"] == "piup":
+                await db.piup_orders.update_one({"ledger_id": parent["id"]}, {"$set": {"status": st, "payment_status": st, "refunded_minor": refunded, "updated_at": now_iso()}, "$push": {"history": {"status": st, "at": now_iso(), "by": "stripe"}}})
+            if parent["kind"] == "marketplace":
+                await db.marketplace_orders.update_one({"ledger_id": parent["id"]}, {"$set": {"status": st, "updated_at": now_iso()}})
     elif t == "charge.dispute.created":
-        await db.ledger_entries.update_one({"payment_intent": obj.get("payment_intent")}, {"$set": {"disputed": True, "dispute_status": obj.get("status"), "dispute_amount_minor": obj.get("amount"), "updated_at": now_iso()}})
+        await db.ledger_entries.update_many({"payment_intent": obj.get("payment_intent")}, {"$set": {"disputed": True, "dispute_status": obj.get("status"), "dispute_amount_minor": obj.get("amount"), "updated_at": now_iso()}})
+        await db.marketplace_orders.update_many({"payment_intent": obj.get("payment_intent")}, {"$set": {"disputed": True, "dispute_status": obj.get("status"), "updated_at": now_iso()}})
+        await db.piup_orders.update_many({"payment_intent": obj.get("payment_intent")}, {"$set": {"disputed": True, "dispute_status": obj.get("status"), "updated_at": now_iso()}})
     elif t == "charge.dispute.closed":
-        await db.ledger_entries.update_one({"payment_intent": obj.get("payment_intent")}, {"$set": {"dispute_status": obj.get("status"), "updated_at": now_iso()}})
+        await db.ledger_entries.update_many({"payment_intent": obj.get("payment_intent")}, {"$set": {"dispute_status": obj.get("status"), "disputed": obj.get("status") not in ("won", "warning_closed"), "updated_at": now_iso()}})
+        await db.marketplace_orders.update_many({"payment_intent": obj.get("payment_intent")}, {"$set": {"dispute_status": obj.get("status"), "disputed": obj.get("status") not in ("won", "warning_closed"), "updated_at": now_iso()}})
+    elif t == "transfer.reversed":
+        await db.ledger_entries.update_one({"transfer_id": obj.get("id")}, {"$set": {"transfer_status": "reversed", "updated_at": now_iso()}})
     elif t == "account.updated":
         await db.connected_accounts.update_one({"account_id": obj["id"]}, {"$set": {"charges_enabled": bool(obj.get("charges_enabled")), "payouts_enabled": bool(obj.get("payouts_enabled")), "requirements_due": list((obj.get("requirements") or {}).get("currently_due") or []), "checked_at": now_iso()}})
     elif t in ("payout.paid", "payout.failed"):
@@ -741,17 +802,32 @@ async def refund(body: RefundBody, current_user: User = Depends(get_current_user
         raise HTTPException(status_code=404, detail="Operación no encontrada o no pagada")
     if not (is_admin(current_user) or entry.get("seller_id") == current_user.id):
         raise HTTPException(status_code=403, detail="Sin permiso")
-    kwargs = {"payment_intent": entry["payment_intent"], "metadata": {"ledger_id": entry["id"], "by": current_user.id, "reason": body.reason or ""}}
-    if body.amount:
-        kwargs["amount"] = to_minor(body.amount, entry["currency"])
-    if entry.get("seller_account"):
+    if entry.get("is_parent"):
+        raise HTTPException(status_code=400, detail="Reembolsa cada pedido (vendedor) por separado")
+    remaining = entry["total_minor"] - int(entry.get("refunded_minor") or 0)
+    amount = to_minor(body.amount, entry["currency"]) if body.amount else remaining
+    if amount <= 0 or amount > remaining:
+        raise HTTPException(status_code=400, detail="Importe de reembolso no válido")
+    kwargs = {"payment_intent": entry["payment_intent"], "amount": amount, "metadata": {"ledger_id": entry["id"], "by": current_user.id, "reason": body.reason or ""}}
+    if entry.get("seller_account") and not entry.get("transfer_id") and not entry.get("parent_id"):
         kwargs.update({"reverse_transfer": True, "refund_application_fee": True})
+    elif entry.get("seller_account") and entry.get("parent_id") and not entry.get("transfer_id"):
+        kwargs.update({"reverse_transfer": True, "refund_application_fee": True})  # destination charge de un pedido con un solo vendedor
     try:
-        r = stripe.Refund.create(**kwargs, idempotency_key=f"refund-{entry['id']}-{kwargs.get('amount', 'full')}")
+        r = stripe.Refund.create(**kwargs, idempotency_key=f"refund-{entry['id']}-{amount}-{int(entry.get('refunded_minor') or 0)}")
+        if entry.get("transfer_id"):
+            ratio = amount / entry["total_minor"] if entry["total_minor"] else 0
+            rev = int(round(entry["seller_net_minor"] * ratio))
+            if rev > 0:
+                stripe.Transfer.create_reversal(entry["transfer_id"], amount=rev, metadata={"ledger_id": entry["id"]}, idempotency_key=f"reversal-{entry['id']}-{amount}-{int(entry.get('refunded_minor') or 0)}")
     except stripe.error.StripeError as e:
         raise _stripe_unavailable(e)
-    full = r.amount >= entry["total_minor"] - int(entry.get("refunded_minor") or 0)
-    await db.ledger_entries.update_one({"id": entry["id"]}, {"$set": {"status": "refunded" if full else "partially_refunded", "refund_id": r.id, "refunded_at": now_iso(), "updated_at": now_iso()}, "$inc": {"refunded_minor": r.amount}, "$unset": {"refund_pending": "", "refund_error": ""}})
+    full = r.amount >= remaining
+    st = "refunded" if full else "partially_refunded"
+    ratio = (int(entry.get("refunded_minor") or 0) + r.amount) / entry["total_minor"] if entry["total_minor"] else 1
+    await db.ledger_entries.update_one({"id": entry["id"]}, {"$set": {"status": st, "refund_id": r.id, "refunded_at": now_iso(), "updated_at": now_iso(), "refunded_minor_manual": True, "fee_refunded_minor": int(round(entry["fee_minor"] * ratio))}, "$inc": {"refunded_minor": r.amount}, "$unset": {"refund_pending": "", "refund_error": ""}})
+    await db.marketplace_orders.update_one({"ledger_id": entry["id"]}, {"$set": {"status": st, "updated_at": now_iso()}, "$inc": {"refunded_minor": r.amount}, "$push": {"history": {"status": st, "at": now_iso(), "by": current_user.id, "note": body.reason}}})
+    await db.piup_orders.update_one({"ledger_id": entry["id"]}, {"$set": {"status": st, "payment_status": st, "updated_at": now_iso()}, "$inc": {"refunded_minor": r.amount}, "$push": {"history": {"status": st, "at": now_iso(), "by": current_user.id, "note": body.reason}}})
     return {"refund_id": r.id, "status": r.status, "amount": fmt_minor(r.amount, entry["currency"])}
 
 
@@ -762,6 +838,8 @@ async def admin_overview(current_user: User = Depends(get_current_user)):
     entries = await db.ledger_entries.find({}, {"_id": 0}).sort("created_at", -1).to_list(2000)
     agg = {}
     for e in entries:
+        if e.get("is_parent"):
+            continue
         c = agg.setdefault(e["currency"], {"third_party_gross": 0, "bruno_fees": 0, "commercial_revenue": 0, "transfers_to_sellers": 0, "refunds": 0, "disputes": 0, "fees_refunded": 0, "count_paid": 0})
         if e["status"] in ("paid", "partially_refunded", "refunded"):
             c["count_paid"] += 1
@@ -797,7 +875,7 @@ async def admin_overview(current_user: User = Depends(get_current_user)):
 
 @router.get("/purchases")
 async def my_purchases(current_user: User = Depends(get_current_user)):
-    entries = await db.ledger_entries.find({"buyer_id": current_user.id}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    entries = await db.ledger_entries.find({"buyer_id": current_user.id, "parent_id": {"$exists": False}}, {"_id": 0}).sort("created_at", -1).to_list(200)
     return [{"id": e["id"], "date": e.get("paid_at") or e["created_at"], "kind": e["kind"], "name": e["name"], "currency": e["currency"], "total": fmt_minor(e["total_minor"], e["currency"]), "status": e["status"], "refunded": fmt_minor(int(e.get("refunded_minor") or 0), e["currency"]), "ref_id": e["ref_id"], "receipt_sent_at": e.get("receipt_sent_at"), "receipt_to": e.get("receipt_to")} for e in entries]
 
 

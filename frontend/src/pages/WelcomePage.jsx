@@ -17,6 +17,7 @@ import {
 import ExpandableCard from "@/components/bruno/ExpandableCard";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import BrunoModal from "@/components/bruno/BrunoModal";
+import { OvcAttribution } from "@/components/brand/OvcAttribution";
 
 /* ─── Step bodies ──────────────────────────────────────────────────────── */
 
@@ -341,6 +342,7 @@ export default function WelcomePage() {
           <span className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             BRUNO
           </span>
+          <span className="hidden sm:inline-flex"><OvcAttribution variant="inline" /></span>
         </div>
         {step < STEPS.length - 1 && (
           <button

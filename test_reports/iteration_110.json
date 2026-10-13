@@ -1,0 +1,23 @@
+{
+  "summary": "Frontend smoke regression for Capacitor native shell integration on web build. Login, bottom nav, settings (biometric row), QR, card transfer, and chats routes verified. No Capacitor/@exxili/@aparajita module errors; no uncaught exceptions on web.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "SettingsPage", "issues": ["React hydration warning: <option>/<select> wrapped by visual-editor <span data-ve-dynamic='true'> instrumentation at translate-language-select (SettingsPage line 417-418). Not caused by Capacitor changes; appears to be pre-existing visual-editor side-effect but noisy in console."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "SettingsPage.jsx line 417: <select>/<option> are rendered inside a visual-editor-injected <span style={display:contents}> causing React hydration warnings. Consider marking the translate-language select as x-excluded or wrapping differently to silence the warning."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "100% of requested regression checks"},
+  "test_credentials": "newtest@bruno.com / Test1234! (worked)",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Verified Capacitor integration did not regress web build. Checked at viewport 390x844: (1) login lands on /my-profile with 0 pageerrors; (2) no console errors mentioning capacitor/exxili/aparajita/module-not-found/undefined-plugin; (3) /settings shows data-testid=setting-biometric-lock with toggle (data-testid=toggle-biometric-lock) correctly disabled and subtitle 'Disponible en la app de BRUNO para iPhone y Android'; both 'Cambiar contrasena' and 'Usuarios bloqueados' rows still present; (4) QR page /cards/<id>/qr renders QR (14 img/canvas elements including the QR) and 'Descargar QR' button; (5) /cards/<id>/transfer renders Transfer screen with NFC-not-available fallback message, no errors; (6) /chats redirects to /reels (expected behavior; not a regression); (7) MobileBottomNav uses data-testid='mobile-bottom-nav' (not individual bottom-nav-<tab> ids) - 8 nav items confirmed rendered. Only noise in console: pre-existing WebSocket chat reconnect warnings and visual-editor-induced hydration warnings on <select>/<option>. No regressions from craco.config.js webpack rule changes or native/* additions."
+}
