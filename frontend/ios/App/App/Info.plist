@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>es</string>
+	<key>CFBundleDisplayName</key>
+	<string>BRUNO</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>es</string>
+		<string>en</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.brunocard.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.brunocard.app</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>audio</string>
+		<string>voip</string>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
+	<!-- Textos de permisos (los revisa Apple; deben explicar el uso real) -->
+	<key>NSCameraUsageDescription</key>
+	<string>BRUNO usa la cámara para grabar reels e historias, hacer videollamadas, transmitir en vivo y escanear códigos QR.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>BRUNO usa el micrófono para grabar video, notas de voz, llamadas, lives y hablar con BRUNO IA.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BRUNO accede a tus fotos y videos para publicarlos, usarlos en tu tarjeta o enviarlos por chat.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>BRUNO guarda en tu galería los códigos QR, imágenes de tu tarjeta y archivos que descargues.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>BRUNO usa tu ubicación para mostrarte negocios y tarjetas cercanas en el mapa y compartir tu posición cuando tú lo elijas.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>BRUNO usa tu ubicación para mostrarte negocios y tarjetas cercanas en el mapa y compartir tu posición cuando tú lo elijas.</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>BRUNO lee tags NFC (PIUP) para abrir tarjetas digitales y transferir tu tarjeta con un toque.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>BRUNO usa Face ID para desbloquear la app y proteger tu cuenta.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>BRUNO no te rastrea entre apps; este permiso solo se usa si activas estadísticas personalizadas.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>BRUNO puede usar auriculares Bluetooth durante llamadas y lives.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>BRUNO usa la red local para mejorar la calidad de las videollamadas.</string>
+
+	<!-- Formatos NFC que puede leer la app -->
+	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+	<array>
+		<string>D2760000850101</string>
+	</array>
+</dict>
+</plist>

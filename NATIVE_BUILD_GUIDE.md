@@ -1,464 +1,255 @@
-# 📱 BRUNO — Guía de compilación nativa iOS + Android
+# 📱 BRUNO — Guía de compilación nativa (Android APK/AAB + iOS)
 
-Esta guía te lleva paso a paso desde el estado actual (código listo, Capacitor
-integrado) hasta tener tu app publicada en **App Store** y **Google Play**.
+La app nativa es **la misma web de BRUNO** empaquetada con Capacitor: misma UI, mismas funciones,
+mismo backend. Lo único que cambia es la "cáscara" (WebView nativo + plugins) y cómo se distribuye.
 
----
-
-## 📋 Índice
-
-1. [Estado actual del código](#1-estado-actual-del-código)
-2. [Crear cuentas de desarrollador](#2-crear-cuentas-de-desarrollador)
-3. [Descargar código a tu Mac](#3-descargar-el-código-a-tu-mac)
-4. [Setup local (Node, Xcode, Android Studio)](#4-setup-local)
-5. [Añadir plataformas nativas](#5-añadir-plataformas-nativas)
-6. [Iconos y Splash screens](#6-iconos-y-splash-screens)
-7. [Configurar Firebase (Push nativas)](#7-configurar-firebase-para-push-nativas)
-8. [Configurar APNs (iOS push)](#8-configurar-apns-ios-push)
-9. [Compilar y probar en dispositivo](#9-compilar-y-probar-en-dispositivo-real)
-10. [Publicar en App Store](#10-publicar-en-app-store)
-11. [Publicar en Google Play](#11-publicar-en-google-play)
-12. [Troubleshooting](#12-troubleshooting)
+> Todo lo que está en este repositorio ya está hecho. Lo que **tú** tienes que aportar está marcado con 🧑‍💻.
 
 ---
 
-## 1. Estado actual del código
+## 0. Resumen de 2 minutos
 
-✅ **Ya integrado en tu proyecto BRUNO:**
-
-- `@capacitor/core` + `@capacitor/ios` + `@capacitor/android` (v7)
-- Plugins nativos: `camera`, `geolocation`, `push-notifications`, `share`,
-  `splash-screen`, `status-bar`, `haptics`, `app`, `filesystem`,
-  `preferences`, `network`.
-- `capacitor.config.ts` — bundle ID `com.brunocard.app`, nombre "BRUNO"
-- `/app/frontend/src/native/` — helpers reutilizables:
-  - `capacitor.js` — detección de plataforma
-  - `useNativePush.js` — registro FCM/APNs → backend
-  - `nativeApis.js` — cámara, geo, share, haptics (con fallback web)
-  - `NativeBootstrap.jsx` — mounted globalmente, integra todo
-- Backend `utils/native_push.py` — envía FCM/APNs cuando hay device tokens
-- Endpoint `/api/mobile/devices/register` — recibe tokens de dispositivos
-
-Faltan solo pasos **fuera del código** (cuentas + build local).
-
----
-
-## 2. Crear cuentas de desarrollador
-
-### 2.1 Apple Developer Program ($99 USD/año)
-
-1. Ve a **https://developer.apple.com/programs/enroll/**
-2. Necesitas un **Apple ID** con autenticación de dos factores activada.
-3. Elige **Individual** (más rápido, sin papeleo D-U-N-S) o **Organization**
-   (nombre de empresa, requiere D-U-N-S Number gratis).
-4. Paga $99 USD. Aprobación: 24-48h típico.
-5. Cuando esté activa, entra a **App Store Connect**:
-   https://appstoreconnect.apple.com/
-
-### 2.2 Google Play Console ($25 USD único)
-
-1. Ve a **https://play.google.com/console/signup**
-2. Elige **Cuenta personal** o **Organización**.
-3. Paga $25 USD (una sola vez, cuenta de por vida).
-4. Verificación: 24-48h. Necesitarás foto de documento oficial.
-
-### 2.3 (Opcional) Firebase — gratis
-
-1. https://console.firebase.google.com/ → **Add project**
-2. Nombre: `bruno-app` (o el que prefieras)
-3. **NO** actives Google Analytics para este paso (opcional después)
-4. Espera 30s a que se cree.
-
----
-
-## 3. Descargar el código a tu Mac
-
-En el chat de Emergent, usa el botón **"Save to GitHub"**:
-
-1. Conecta tu cuenta de GitHub
-2. Crea un repo nuevo llamado `bruno-app`
-3. Push automático → tu código está en GitHub
-
-En tu Mac:
 ```bash
-cd ~/Developer
-git clone https://github.com/TU_USUARIO/bruno-app.git
-cd bruno-app/frontend
-```
-
-Copia el `.env` de producción (te lo genero al final, con las URLs correctas):
-```bash
-cat > .env << 'EOF'
-REACT_APP_BACKEND_URL=https://brunocard.com
-EOF
-```
-
-Instala dependencias:
-```bash
+cd frontend
+cp .env.native.example .env.native      # pon tu dominio público en REACT_APP_BACKEND_URL
 yarn install
+yarn native:build                       # build web + copia a android/ e ios/ + verificación
+yarn native:apk                         # APK de prueba (necesita Android Studio / SDK)
+yarn native:aab                         # AAB firmado para Google Play (necesita keystore)
+yarn native:open:ios                    # Xcode (solo en Mac) → Archive → App Store Connect
 ```
 
 ---
 
-## 4. Setup local
+## 1. Qué hay en el repositorio
 
-### Mac (para iOS):
+| Pieza | Dónde | Estado |
+|---|---|---|
+| Config Capacitor (`appId com.brunocard.app`, `appName BRUNO`, `webDir build`) | `frontend/capacitor.config.json` | ✅ |
+| Proyecto Android generado + permisos + deep links + HCE NFC | `frontend/android/` | ✅ |
+| Proyecto iOS generado + `Info.plist` con textos de permisos + `App.entitlements` | `frontend/ios/` | ✅ |
+| Iconos adaptativos (claro/oscuro) y splash claro/oscuro con el logo naranja | `frontend/resources/` → generados en `android/app/src/main/res` y `ios/App/App/Assets.xcassets` | ✅ |
+| Plugins nativos | `@capacitor/push-notifications`, `@aparajita/capacitor-biometric-auth`, `@capacitor/camera`, `@capacitor/geolocation`, `@capacitor/filesystem`, `@capacitor/haptics`, `@capacitor/share`, `@exxili/capacitor-nfc`, `@capacitor/keyboard`, `@capacitor/status-bar`, `@capacitor/splash-screen`, `@capacitor-community/safe-area`, `@capacitor/app`, `@capacitor/preferences`, `@capacitor/network` | ✅ |
+| Código puente (sin romper la web: en navegador todo cae a la API web equivalente) | `frontend/src/native/` | ✅ |
+| Scripts | `frontend/scripts/*.sh`, `yarn native:*` | ✅ |
 
+### `frontend/src/native/`
+- `capacitor.js` — `isNative() / isIOS() / isAndroid()`.
+- `NativeBootstrap.jsx` — montado globalmente: safe-areas reales (notch/gesture bar), barra de estado
+  acorde al tema, splash, teclado (iOS sin barra accesoria, sin zoom), **botón atrás de Android**
+  (cierra teclado → cierra hoja/modal → atrás → salir solo desde Reels/Login), **deep links**
+  (`com.brunocard.app://c/ID` y `https://TU-DOMINIO/...`), registro de push y **bloqueo biométrico**.
+- `useNativePush.js` — permiso + token FCM/APNs → `POST /api/mobile/devices/register`; tocar una push navega a su `url`.
+- `biometric.js` + `BiometricGate.jsx` — Face ID / huella / rostro Android. Ajustes → Cuenta → "Bloquear con…".
+  Pide biometría al abrir la app y al volver tras >20 s en segundo plano. Fallback a PIN del teléfono.
+- `nativeApis.js` — `takePhoto`, `getCurrentLocation`, `shareContent`, `triggerHaptic`, `hapticNotify`, `saveToDevice`.
+- `files.js` — `saveToDevice(blob|dataURL, nombre)` → en nativo escribe en Filesystem y abre la hoja
+  "Guardar en Fotos / Archivos / AirDrop"; en web descarga. Usado en QR y en imágenes de tarjeta.
+- `nfcShare.js` — NFC unificado: app nativa (Android + iPhone) lee/escribe tags PIUP con `@exxili/capacitor-nfc`;
+  Android Chrome usa Web NFC; Android nativo además **emite la tarjeta como tag (HCE)**
+  (`native-android/nfc-hce`, ya integrado en `android/`). iPhone solo lee (límite de Apple).
+- `privacyScreen.js` — oculta el contenido en el selector de apps (lives privados).
+
+### Permisos declarados
+**Android** (`android/app/src/main/AndroidManifest.xml`): INTERNET, CAMERA, RECORD_AUDIO, MODIFY_AUDIO_SETTINGS,
+ACCESS_FINE/COARSE_LOCATION, NFC (+ `hce`), READ_MEDIA_IMAGES/VIDEO (+ storage ≤ API 32), POST_NOTIFICATIONS,
+USE_BIOMETRIC, VIBRATE. Cámara/micrófono/NFC/GPS marcados como `required=false` (la app se instala en cualquier teléfono).
+`windowSoftInputMode=adjustResize` + `Keyboard.resizeOnFullScreen` para que el chat y el pill de navegación
+suban con el teclado.
+
+**iOS** (`ios/App/App/Info.plist`): `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`,
+`NSPhotoLibraryUsageDescription`, `NSPhotoLibraryAddUsageDescription`, `NSLocationWhenInUseUsageDescription`,
+`NFCReaderUsageDescription`, `NSFaceIDUsageDescription`, `UIBackgroundModes` (remote-notification, audio, voip),
+solo retrato en iPhone. `App.entitlements`: push (`aps-environment`), NFC (`NDEF`, `TAG`), Associated Domains.
+
+### Cómo se mantiene "la misma web"
+- `REACT_APP_BACKEND_URL` se incrusta en el bundle al compilar. `yarn native:build` lo toma de `.env.native`
+  y **rechaza** `localhost` o `http://`.
+- `yarn native:verify` comprueba que el JS copiado en `android/` e `ios/` contiene exactamente ese dominio,
+  que no hay `localhost:8001`, que el `applicationId`/bundle id coinciden y que todos los permisos están.
+- La sesión en nativo va por **token Bearer** guardado cifrado en el dispositivo (`AuthContext` ya lo hace
+  cuando `isNative()`); en web sigue siendo cookie httpOnly. El backend acepta ambos. CORS ya admite el
+  origen de la app (`https://localhost` en Android, `capacitor://localhost` en iOS) porque `CORS_ORIGINS=*`;
+  si en producción lo restringes, añade esos dos orígenes.
+- WebSockets (chat, mapa, lives), Daily.co (llamadas/lives), Stripe Checkout (se abre en navegador del sistema
+  y vuelve por deep link) y subidas por chunks funcionan igual que en la web.
+
+---
+
+## 2. 🧑‍💻 Lo que tienes que aportar
+
+| Para | Qué | Dónde se usa |
+|---|---|---|
+| Que la app hable con tu backend | **Dominio público https** de producción | `frontend/.env.native` → `REACT_APP_BACKEND_URL` |
+| Deep links `https://` | El mismo dominio | `android/app/src/main/res/values/strings.xml` → `deeplink_host`; `ios/App/App/App.entitlements` → `applinks:`; publicar `/.well-known/assetlinks.json` y `/.well-known/apple-app-site-association` (§9) |
+| APK/AAB | **Android Studio** (SDK + Java 17) en tu PC/Mac | `yarn native:apk`, `yarn native:aab` |
+| Firmar Android | **Keystore** `.jks` (lo creas tú una vez, §6) | `android/keystore.properties` |
+| Google Play | Cuenta **Google Play Console** (25 USD una vez) | §7 |
+| iOS | **Mac con Xcode** + cuenta **Apple Developer** (99 USD/año) | §8 |
+| Push nativas | Proyecto **Firebase**: `google-services.json` (Android), `GoogleService-Info.plist` (iOS), clave `.p8` de APNs y service account para el backend | §5 |
+| Mapas | Clave de Google Maps con facturación (opcional; hay fallback OpenStreetMap) | `.env.native` |
+
+---
+
+## 3. Preparar el entorno
+
+### Cualquier sistema (Android)
+1. Instala **Android Studio** → SDK Manager → *Android SDK Platform 35*, *Build-Tools*, *Command-line Tools*, *Platform-Tools*.
+2. Variables:
+   ```bash
+   export ANDROID_HOME=$HOME/Android/Sdk          # Mac: $HOME/Library/Android/sdk
+   export PATH=$PATH:$ANDROID_HOME/platform-tools
+   export JAVA_HOME=/Applications/Android\ Studio.app/Contents/jbr/Contents/Home   # Java 17 incluido
+   ```
+3. Node 20+, `yarn`.
+
+### Mac (iOS)
 ```bash
-# Xcode — desde App Store, ~15 GB. Requerido para iOS.
 xcode-select --install
-
-# CocoaPods — gestor de dependencias iOS
 sudo gem install cocoapods
-
-# Verificar Node 20+
-node --version   # debe ser >= 20
 ```
 
-### Cualquier OS (para Android):
-
-1. Descarga **Android Studio**: https://developer.android.com/studio
-2. Abre → Preferences → Appearance → System Settings → Android SDK
-3. Instala:
-   - **Android SDK Platform** (API 34 o superior)
-   - **Android SDK Build-Tools** (última)
-   - **Android SDK Command-line Tools**
-   - **Android Emulator** (para testing sin dispositivo)
-4. Añade variables de entorno:
-   ```bash
-   # ~/.zshrc o ~/.bash_profile
-   export ANDROID_HOME=$HOME/Library/Android/sdk
-   export PATH=$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools
-   ```
-
----
-
-## 5. Añadir plataformas nativas
-
-En `frontend/`:
-
+### Clonar el código
+Chat de Emergent → **Save to GitHub** → en tu equipo:
 ```bash
-# Genera el build web primero
-yarn build
-
-# Añadir iOS (se crea carpeta ios/)
-yarn cap:add:ios
-
-# Añadir Android (se crea carpeta android/)
-yarn cap:add:android
-
-# Sincronizar el build web dentro de las carpetas nativas
-yarn cap:sync
-```
-
-Ahora tienes dos proyectos nativos:
-- `frontend/ios/` — abre con Xcode
-- `frontend/android/` — abre con Android Studio
-
-Cada vez que cambies código React:
-```bash
-yarn build && npx cap sync
+git clone https://github.com/TU_USUARIO/bruno-app.git && cd bruno-app/frontend && yarn install
 ```
 
 ---
 
-## 6. Iconos y Splash screens
-
-### Opción A — Usar CLI oficial (recomendado)
-
-```bash
-# Instalar assets tool
-yarn add -D @capacitor/assets
-
-# Prepara los archivos fuente:
-mkdir -p frontend/resources
-# Copia tu icono (mínimo 1024x1024 PNG) → frontend/resources/icon.png
-# Copia tu splash (mínimo 2732x2732 PNG) → frontend/resources/splash.png
-# Opcional: splash-dark.png para modo oscuro
-
-# Generar todos los tamaños automáticamente:
-npx capacitor-assets generate
-```
-
-Esto genera **decenas de tamaños** para iOS + Android automáticamente.
-
-### Opción B — Manual
-
-- iOS icono: `ios/App/App/Assets.xcassets/AppIcon.appiconset/` (arrastra tu 1024x1024)
-- Android icono: `android/app/src/main/res/mipmap-*` (5 tamaños)
-- Splash Android: `android/app/src/main/res/drawable/splash.png`
-
-**Ya tienes** `/app/frontend/public/bruno-mascot.png` que puedes usar como base.
-Recomiendo redimensionar a 1024x1024 fondo naranja `#FF6B35` y logo blanco encima.
-
----
-
-## 7. Configurar Firebase (para push nativas)
-
-### 7.1 Añadir la app a Firebase
-
-**Android:**
-1. Firebase Console → tu proyecto → ⚙️ → Project Settings
-2. **Add app** → Android
-3. Package name: `com.brunocard.app`
-4. Nickname: BRUNO Android
-5. **Register app** → descarga `google-services.json`
-6. Guarda en: `frontend/android/app/google-services.json`
-
-**iOS:**
-1. Firebase Console → **Add app** → iOS
-2. Bundle ID: `com.brunocard.app`
-3. Descarga `GoogleService-Info.plist`
-4. Abre `frontend/ios/App/App.xcworkspace` con Xcode
-5. Arrastra el `.plist` a la carpeta `App` (marca "Copy items if needed")
-
-### 7.2 Configurar Gradle (Android)
-
-Edita `frontend/android/build.gradle`:
-```gradle
-buildscript {
-    dependencies {
-        classpath 'com.google.gms:google-services:4.4.2'
-    }
-}
-```
-
-Edita `frontend/android/app/build.gradle`, al final del archivo:
-```gradle
-apply plugin: 'com.google.gms.google-services'
-```
-
-### 7.3 Backend — service account
-
-1. Firebase Console → ⚙️ → Service accounts
-2. **Generate new private key** → descarga JSON
-3. **NO** subas este archivo a Git. Guarda su ruta.
-4. En Emergent, configura la variable de entorno:
-   ```bash
-   # Añade a /app/backend/.env
-   FIREBASE_SERVICE_ACCOUNT_JSON=/app/backend/secrets/firebase-admin.json
-   ```
-   O pega el JSON completo inline:
-   ```bash
-   FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"..."}
-   ```
-5. Reinicia backend: `sudo supervisorctl restart backend`
-
-**Verificación** — el log debe mostrar:
-```
-Firebase Admin SDK initialized — native push enabled
-```
-
----
-
-## 8. Configurar APNs (iOS push)
-
-En **Apple Developer**:
-
-1. https://developer.apple.com/account/resources/authkeys/list
-2. **Keys** → **+** → **Apple Push Notifications service (APNs)** → Continue
-3. Descarga el `.p8` (SOLO UNA VEZ, guárdalo bien) → anota **Key ID**
-4. Anota tu **Team ID** (arriba a la derecha)
-
-En **Firebase**:
-
-1. Project Settings → Cloud Messaging → **Apple app configuration**
-2. Sube el `.p8` con Key ID + Team ID
-
-Firebase ya sabrá enrutar tus push a iOS. ✅
-
-**En Xcode**, activa capabilities:
-1. Abre `frontend/ios/App/App.xcworkspace`
-2. Signing & Capabilities → **+ Capability** → **Push Notifications**
-3. **+ Capability** → **Background Modes** → activa **Remote notifications**
-
----
-
-## 9. Compilar y probar en dispositivo real
-
-### iOS (necesitas cable + Mac):
+## 4. Compilar la web para la app
 
 ```bash
 cd frontend
-yarn build && npx cap sync ios
-npx cap open ios   # abre Xcode
+cp .env.native.example .env.native
+# edita .env.native → REACT_APP_BACKEND_URL=https://tu-dominio.com  (el dominio donde está desplegado BRUNO)
+yarn native:build
 ```
+Hace: `yarn build` → `npx cap sync android` → `npx cap copy ios` (en Mac `sync ios` con pods) → `native:verify`.
+Repite `yarn native:build` cada vez que cambie el código React.
 
-En Xcode:
-1. Signing & Capabilities → **Team**: elige tu Apple Developer
-2. Conecta iPhone por USB → confía en el ordenador
-3. Selecciona tu iPhone arriba a la izquierda
-4. Presiona ▶️ Play
+> Las carpetas `android/` e `ios/` ya están en el repo: **no** ejecutes `npx cap add`.
 
-Primera vez: en iPhone → Settings → General → VPN & Device Management →
-confía en tu developer certificate.
+---
 
-### Android (más flexible):
+## 5. Push nativas (Firebase)
+
+1. https://console.firebase.google.com → proyecto `bruno-app`.
+2. **Android**: Add app → package `com.brunocard.app` → descarga `google-services.json` → `frontend/android/app/google-services.json`
+   (Gradle lo aplica automáticamente si existe).
+3. **iOS**: Add app → bundle `com.brunocard.app` → `GoogleService-Info.plist` → arrástralo a `ios/App/App` en Xcode.
+   Xcode → Signing & Capabilities → **Push Notifications** y **Background Modes → Remote notifications** (ya vienen en `App.entitlements`).
+4. **APNs**: developer.apple.com → Keys → APNs → descarga `.p8` → Firebase → Cloud Messaging → sube `.p8` + Key ID + Team ID.
+5. **Backend**: Firebase → Service accounts → *Generate new private key* → en el `.env` del backend
+   `FIREBASE_SERVICE_ACCOUNT_JSON={...json...}` → reinicia. Log esperado: `Firebase Admin SDK initialized — native push enabled`.
+6. Prueba: inicia sesión en la app, acepta el permiso; `GET /api/mobile/devices` debe listar tu token.
+
+---
+
+## 6. Android: APK de prueba y AAB para Play
+
+### APK de prueba (debug, sin firma propia)
+```bash
+yarn native:apk
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+```
+O abre `yarn native:open:android` y pulsa ▶ con el teléfono conectado (depuración USB activada).
+
+### Crear la keystore (una sola vez — **guárdala y sus contraseñas, sin ella no podrás actualizar la app**)
+```bash
+keytool -genkeypair -v -keystore ~/bruno-release.jks -alias bruno-key -keyalg RSA -keysize 2048 -validity 10000
+cp android/keystore.properties.example android/keystore.properties   # rellena ruta y contraseñas
+```
+`android/keystore.properties` y `*.jks` están en `.gitignore`.
+
+### AAB firmado
+```bash
+yarn native:aab        # → android/app/build/outputs/bundle/release/app-release.aab
+yarn native:apk:release # → APK release firmado para probar fuera de Play
+```
+Versión: `android/app/build.gradle` → `versionCode` (+1 en cada subida) y `versionName`.
+
+---
+
+## 7. Publicar en Google Play
+
+1. https://play.google.com/console → **Create app** → BRUNO, español, App, Gratis.
+2. **App content**: política de privacidad (`https://tu-dominio.com/privacy`), *Data safety*, anuncios (No),
+   público objetivo, declaración de **permisos sensibles** (cámara/micrófono/ubicación: explica reels, llamadas, mapa).
+3. **Main store listing**: icono 512×512 (`android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png` o `resources/icon.png`),
+   gráfico 1024×500, ≥2 capturas por tipo de dispositivo.
+4. **Testing → Internal testing** primero (recomendado): sube el AAB, añade tus correos, instala desde el enlace.
+5. **Production → Create release** → sube `app-release.aab` → notas → *Start rollout*. Revisión 1-3 días la primera vez.
+
+---
+
+## 8. iOS: compilar y publicar en App Store (Mac)
 
 ```bash
-cd frontend
-yarn build && npx cap sync android
-npx cap open android   # abre Android Studio
+cd frontend && yarn native:build && npx cap sync ios && yarn native:open:ios
 ```
-
-En Android Studio:
-1. Sync Gradle (esquina superior derecha)
-2. Conecta Android por USB con **USB debugging** activado (Settings → About →
-   toca 7x en Build number → Developer options → USB debugging)
-3. Selecciona tu dispositivo arriba
-4. Presiona ▶️ Run
-
-O directo por CLI:
-```bash
-npx cap run android
-```
-
----
-
-## 10. Publicar en App Store
-
-### 10.1 Build para producción
-
 En Xcode:
-1. Product → Scheme → Edit Scheme → Build Configuration = **Release**
-2. Selecciona **Any iOS Device (arm64)** arriba
-3. Product → **Archive** (tarda 5-10 min)
-4. Organizer se abre → **Distribute App** → App Store Connect → Upload
+1. Target **App** → Signing & Capabilities → *Automatically manage signing* → **Team** = tu cuenta.
+   Capabilities ya declaradas en `App.entitlements`: Push, **Near Field Communication Tag Reading**, Associated Domains,
+   Background Modes. Si Xcode las marca en rojo, pulsa "+ Capability" y añádelas (se sincronizan con el portal).
+2. Conecta el iPhone → selecciónalo → ▶ para probar. Primera vez: Ajustes → General → VPN y gestión de dispositivos → confiar.
+3. **Archive**: esquema *Any iOS Device (arm64)* → Product → Archive → *Distribute App* → App Store Connect → Upload.
+4. https://appstoreconnect.apple.com → My Apps → + → bundle `com.brunocard.app`, SKU `brunocard-app-001`.
+   Ficha: nombre BRUNO, categoría Social Networking, capturas 6,7" (1290×2796), icono 1024 sin alfa (`resources/icon.png`),
+   URL de privacidad, **cuenta demo para revisión** (`newtest@bruno.com` / `Test1234!`).
+   *App Privacy*: declara cámara, micrófono, ubicación, contactos (no), identificadores (no).
+5. **Submit for Review**. 24-48 h.
 
-### 10.2 Ficha en App Store Connect
-
-1. https://appstoreconnect.apple.com/ → My Apps → **+** → New App
-2. Bundle ID: `com.brunocard.app`
-3. SKU: `brunocard-app-001`
-4. Rellena:
-   - **Nombre**: BRUNO
-   - **Subtítulo**: Tu red social profesional
-   - **Categoría primaria**: Social Networking (o Business)
-   - **Descripción**: (500 caracteres+)
-   - **Palabras clave**: red social, negocios, tarjetas, digital, NFC, videos
-   - **Screenshots**: 6.7" iPhone (1290x2796) — mínimo 3, máximo 10
-   - **Ícono**: 1024x1024 sin transparencia
-   - **Privacy Policy URL**: https://brunocard.com/privacy
-5. **App Review Information**: nombre, email, teléfono, cuenta demo
-   (credenciales de prueba: `newtest@bruno.com` / `Test1234!`)
-6. Cuando el build subido aparezca (30 min), selecciónalo.
-7. **Submit for Review**
-
-⏱️ Apple review: 24-48h típico (a veces más si es tu primera app).
+Versión: Xcode → General → *Version* (`MARKETING_VERSION`) y *Build* (`CURRENT_PROJECT_VERSION`, +1 por subida).
 
 ---
 
-## 11. Publicar en Google Play
+## 9. Deep links https (opcional pero recomendado)
 
-### 11.1 Firmar el AAB
-
-En Android Studio:
-1. Build → **Generate Signed Bundle / APK** → Android App Bundle → Next
-2. Create new keystore (**guarda bien** este .jks + contraseñas — sin él no
-   puedes actualizar la app):
-   - Path: `~/Documents/bruno-keystore.jks`
-   - Password: (tú eliges, mínimo 6 caracteres)
-   - Alias: `bruno-key`
-   - Validity: 25 años
-   - Certificate: rellena tu nombre + organización
-3. **Release** build → Finish
-
-Se genera: `android/app/release/app-release.aab`
-
-### 11.2 Ficha en Play Console
-
-1. https://play.google.com/console → **Create app**
-2. Nombre: BRUNO
-3. Idioma default: Spanish
-4. Tipo: App
-5. Free / Paid: Free
-6. Declaraciones (contenido no restringido, etc.)
-7. Menú lateral:
-   - **App content** → completa Privacy Policy, Data safety, Ads (No), etc.
-   - **Store settings** → categoría Social o Business
-   - **Main store listing** → nombre, breve descripción (80c), descripción
-     completa (4000c), ícono (512x512), gráfico destacado (1024x500),
-     mínimo 2 screenshots por dispositivo (teléfono 1080x1920)
-   - **Production** → Create new release
-     - Upload `app-release.aab`
-     - Release name: `1.0.0 (1)`
-     - Release notes: "Primera versión de BRUNO 🎉"
-   - **Save** → **Review release** → **Start rollout to production**
-
-⏱️ Google review: 1-3 días la primera vez, luego horas.
+1. `android/app/src/main/res/values/strings.xml` → `deeplink_host` = `tu-dominio.com`.
+2. `ios/App/App/App.entitlements` → `applinks:tu-dominio.com`.
+3. Publica en el backend:
+   - `https://tu-dominio.com/.well-known/assetlinks.json` con el SHA-256 de tu keystore (`keytool -list -v -keystore ~/bruno-release.jks`).
+   - `https://tu-dominio.com/.well-known/apple-app-site-association` con `TEAMID.com.brunocard.app`.
+   Así `https://tu-dominio.com/c/<tarjeta>` y los tags NFC PIUP abren la app directamente.
 
 ---
 
-## 12. Troubleshooting
+## 10. Checklist antes de publicar
 
-### "Firebase Admin SDK initialized" no aparece en logs
-- Verifica que `FIREBASE_SERVICE_ACCOUNT_JSON` esté en `/app/backend/.env`
-- Reinicia: `sudo supervisorctl restart backend`
-- Testea:
-  ```bash
-  curl -X POST https://brunocard.com/api/push/test \
-    -H "Authorization: Bearer $TOKEN"
-  ```
-
-### "No matching signing identity" en Xcode
-- Xcode → Settings → Accounts → añade tu Apple ID de developer
-- Signing & Capabilities → **Automatically manage signing** = ON
-- Team = tu developer account
-
-### App crashea al abrir en Android
-- Verifica `google-services.json` está en `android/app/`
-- `cd android && ./gradlew clean` luego `yarn cap:sync android`
-
-### Push nativa no llega
-- Revisa `/api/mobile/devices` — debería listar tu device_token
-- Firebase Console → Cloud Messaging → **Send test message** al token
-- Si llega en Firebase pero no en la app: revisa capabilities iOS
-  (Push Notifications + Background Modes → Remote notifications)
-
-### Frontend en web deja de compilar tras `yarn add @capacitor/*`
-- Los imports son tree-shakeable en web (Capacitor detecta plataforma en
-  runtime). Si aparece "Module not found" tras un cambio, ejecuta:
-  ```bash
-  rm -rf node_modules/.cache && yarn start
-  ```
-
-### "Cannot connect to backend" en la app instalada
-- Verifica `.env` frontend antes de `yarn build`:
-  ```
-  REACT_APP_BACKEND_URL=https://brunocard.com
-  ```
-- **NO** uses `localhost` (el móvil no puede resolverlo)
-- Después de cambiar `.env`, siempre `yarn build && npx cap sync`
+- [ ] `yarn native:build` termina con "✅ Paquete nativo coherente con la web (https://…)"
+- [ ] Login, Reels, chat con teclado, mapa, cámara (reel), llamada y NFC probados en un teléfono real
+- [ ] Push de prueba recibida (Android e iOS)
+- [ ] `google-services.json` / `GoogleService-Info.plist` presentes (no se suben a git)
+- [ ] Iconos y splash en claro y oscuro (`yarn native:assets` si cambias `resources/`)
+- [ ] `versionCode`/`versionName` (Android) y Version/Build (iOS) actualizados
+- [ ] Política de privacidad publicada y cuenta demo lista
 
 ---
 
-## 🎯 Checklist final antes de publicar
+## 11. Problemas frecuentes
 
-- [ ] Build web funciona (`yarn build` sin errores)
-- [ ] iOS abre en simulador
-- [ ] Android abre en emulador
-- [ ] Push notification test llega al móvil
-- [ ] Login funciona apuntando al backend correcto (no localhost)
-- [ ] Iconos y splash generados
-- [ ] Privacy Policy publicada en `/privacy`
-- [ ] Screenshots (3+ por tienda)
-- [ ] Cuenta demo lista para reviewers
-- [ ] Versión: `1.0.0` en ambos `Info.plist` (iOS) + `build.gradle` (Android)
+| Síntoma | Causa / solución |
+|---|---|
+| "Cannot connect" / pantalla de login no responde | `.env.native` apunta a `localhost` o a un dominio sin https. `yarn native:verify https://tu-dominio.com`. |
+| CORS en consola del WebView | Si restringiste `CORS_ORIGINS` en el backend, añade `https://localhost` y `capacitor://localhost`. |
+| Teclado tapa el chat en Android | Confirma `windowSoftInputMode="adjustResize"` en el manifest y `Keyboard.resizeOnFullScreen=true` en `capacitor.config.json`. |
+| Face ID no aparece | iOS Simulator → Features → Face ID → Enrolled. En Android, registra una huella en el sistema. |
+| NFC no escribe en iPhone | Capability *Near Field Communication Tag Reading* no activada en Xcode; iPhone solo lee/escribe tags, no emite. |
+| Splash en blanco o icono por defecto | Ejecuta `yarn native:assets` y vuelve a `yarn native:build`. |
+| `google-services.json not found` | Push desactivadas hasta añadir el archivo de Firebase; el resto funciona. |
+| Build iOS falla por pods | `cd ios/App && pod install --repo-update`. |
+| Android: "SDK location not found" | `export ANDROID_HOME=...` o crea `android/local.properties` con `sdk.dir=/ruta/al/sdk`. |
 
 ---
 
-## 📞 Ayuda
+## 12. NFC: qué puede hacer cada teléfono
 
-Si te trabas en cualquier paso, escríbeme en el chat y te ayudo a
-diagnosticar. Los pasos que requieren tu Mac (Xcode, keystore, upload a
-tiendas) no puedo hacerlos yo, pero puedo verificar código, endpoints,
-configuración Firebase y errores específicos.
+| | Leer tag PIUP | Escribir tag PIUP | Emitir la tarjeta a otro teléfono |
+|---|---|---|---|
+| Android app | ✅ | ✅ | ✅ (HCE, lo lee un iPhone o Android) |
+| Android Chrome (web) | ✅ Web NFC | ✅ Web NFC | ❌ |
+| iPhone app | ✅ | ✅ | ❌ (Apple no lo permite) → AirDrop / QR |
+| iPhone Safari | ❌ | ❌ | ❌ → QR / enlace |
 
-**Última actualización:** Fase 64 · Feb 2026
-
-
-## 13. NFC HCE Android — transferir tarjeta a un iPhone con un toque
-El código está en `frontend/native-android/nfc-hce/` (plugin `BrunoNfcHce` + `NdefHostApduService`).
-Sigue el `README.md` de esa carpeta: copiar los `.java`, el `apdu_service.xml`, el snippet del manifest,
-la cadena `nfc_service_desc` y registrar el plugin en `MainActivity`. Sin pasos extra en el frontend.
-Limitación de plataforma: iPhone solo **lee** (XS+, pantalla encendida); no puede emitir NFC a otros teléfonos.
+**Última actualización:** Fase 86 · Junio 2026

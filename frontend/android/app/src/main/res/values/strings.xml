@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BRUNO</string>
+    <string name="title_activity_main">BRUNO</string>
+    <string name="package_name">com.brunocard.app</string>
+    <string name="custom_url_scheme">com.brunocard.app</string>
+    <string name="deeplink_host">CAMBIA-POR-TU-DOMINIO.com</string>
+    <string name="nfc_service_desc">BRUNO · transferencia de tarjeta por NFC</string>
+</resources>

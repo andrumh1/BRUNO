@@ -4,6 +4,8 @@ import QRCode from "qrcode";
 import { getCustomSeal } from "@/lib/shareHistory";
 import { rasterizeCard } from "@/lib/cardRasterize";
 import { resolveDesign, deepMerge } from "@/lib/cardDesign";
+import { isNative } from "@/native/capacitor";
+import { saveToDevice } from "@/native/files";
 
 const FORMATS = { story: { W: 1080, H: 1920, cy: 300, ch: 1180 }, square: { W: 1080, H: 1080, cy: 70, ch: 800 } };
 const ORANGE = "#ff6a00", CREAM = "#f9f1ea", GRAY = "#474747";
@@ -106,6 +108,7 @@ export async function shareCardImage(card, opts) {
   const blob = await renderCardImage(card, opts);
   if (!blob) throw new Error("render");
   const file = new File([blob], `bruno-${(card.title || "tarjeta").replace(/[^\w-]+/g, "_")}-${opts?.format === "square" ? "feed" : "story"}.png`, { type: "image/png" });
+  if (isNative()) return saveToDevice(blob, file.name, { title: card.title, text: opts?.url || "" });
   if (navigator.canShare?.({ files: [file] })) {
     try { await navigator.share({ files: [file], title: card.title, text: opts?.url || "" }); return "shared"; } catch (e) { if (e?.name === "AbortError") return "cancelled"; }
   }
@@ -155,6 +158,7 @@ export async function renderReelCover(reel, { url, phrase, bgColor } = {}) {
 
 export async function shareBlob(blob, name, text) {
   const file = new File([blob], name, { type: blob.type || "image/png" });
+  if (isNative()) return saveToDevice(blob, name, { text });
   if (navigator.canShare?.({ files: [file] })) {
     try { await navigator.share({ files: [file], text }); return "shared"; } catch (e) { if (e?.name === "AbortError") return "cancelled"; }
   }

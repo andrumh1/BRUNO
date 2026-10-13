@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
-import { nfcCapabilities, writeUrlToTag, startHceEmulation, stopHceEmulation, checkHceSupport } from "@/native/nfcShare";
+import { nfcCapabilities, writeUrlToTag, startHceEmulation, stopHceEmulation, checkHceSupport, checkNativeNfc } from "@/native/nfcShare";
 import { ArrowLeft, Check, Copy, Loader2, Nfc, QrCode, RefreshCw, Share2, Smartphone, Wallet, Wifi } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
@@ -31,7 +31,8 @@ export default function CardTransferPage() {
   const [receivers, setReceivers] = useState([]);
   const abortRef = useRef(null);
   const [hce, setHce] = useState(false);
-  useEffect(() => { checkHceSupport().then(setHce); }, []);
+  const [, setNfcProbe] = useState(false);
+  useEffect(() => { checkHceSupport().then(setHce); checkNativeNfc().then(setNfcProbe); }, []);
   const caps = { ...nfcCapabilities(), hce };
   const headers = { Authorization: `Bearer ${token}` };
 

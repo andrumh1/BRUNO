@@ -8,6 +8,7 @@ import axios from "axios";
 import { isVideoFile, videoTooLarge, videoTooLargeMsg, setVideoLimit } from "@/lib/media";
 import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
 import { setPendingMedia } from "@/lib/pendingMedia";
+import { triggerHaptic } from "@/native/nativeApis";
 import { motion } from "framer-motion";
 import { 
   Film, Map, ShoppingBag, User, Plus, Bell, Search,
@@ -157,7 +158,7 @@ const MobileBottomNav = () => {
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = !item.isCreate && isActive(item);
-              const go = () => { if (item.isCreate) setPublishMenuOpen(true); else navigate(item.path); };
+              const go = () => { triggerHaptic("light"); if (item.isCreate) setPublishMenuOpen(true); else navigate(item.path); };
               return (
                 <button
                   key={item.id}

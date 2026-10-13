@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "react-router-dom";
+import { isNative } from "@/native/capacitor";
+import { triggerHaptic as nativeHaptic } from "@/native/nativeApis";
 
 const NavScrollContext = createContext({
   minimized: false,
@@ -21,7 +23,10 @@ const NavScrollContext = createContext({
 export const useNavScroll = () => useContext(NavScrollContext);
 
 const triggerHaptic = (ms = 8) => {
-  try { if ('vibrate' in navigator) navigator.vibrate(ms); } catch { /* no-op */ }
+  try {
+    if (isNative()) { nativeHaptic(ms > 10 ? 'medium' : 'light').catch(() => {}); return; }
+    if ('vibrate' in navigator) navigator.vibrate(ms);
+  } catch { /* no-op */ }
 };
 
 // Item types: card, profile, post, reel, live

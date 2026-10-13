@@ -1,0 +1,64 @@
+{
+  "appId": "com.brunocard.app",
+  "appName": "BRUNO",
+  "webDir": "build",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor",
+    "cleartext": false
+  },
+  "ios": {
+    "contentInset": "never",
+    "scrollEnabled": true,
+    "backgroundColor": "#f9f1ea",
+    "preferredContentMode": "mobile"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false,
+    "backgroundColor": "#f9f1ea"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": false,
+      "launchFadeOutDuration": 250,
+      "backgroundColor": "#f9f1ea",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true,
+      "useDialog": false
+    },
+    "StatusBar": {
+      "style": "DEFAULT",
+      "overlaysWebView": true,
+      "backgroundColor": "#00000000"
+    },
+    "SafeArea": {
+      "enabled": true,
+      "customColorsForSystemBars": true,
+      "statusBarColor": "#00000000",
+      "statusBarContent": "dark",
+      "navigationBarColor": "#00000000",
+      "navigationBarContent": "dark",
+      "offset": 0
+    },
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true,
+      "style": "DEFAULT"
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "CapacitorCookies": {
+      "enabled": false
+    },
+    "CapacitorHttp": {
+      "enabled": false
+    }
+  }
+}

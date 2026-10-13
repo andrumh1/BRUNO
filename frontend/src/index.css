@@ -1590,3 +1590,8 @@ header.fixed:not([data-no-glass])::after {
 .reel-chrome svg, .reel-chrome span, .reel-chrome button { filter: drop-shadow(0 1px 2px rgba(71, 71, 71, 0.55)); }
 
 @keyframes tapheart { 0% { transform: scale(.6) translateY(0); opacity: 1 } 100% { transform: scale(1.4) translateY(-90px); opacity: 0 } }
+
+/* App nativa (Capacitor): sin rebote de página, sin menú de copiar en long-press sobre la UI, sin resaltado azul al tocar. */
+html.is-native, html.is-native body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+html.is-native img, html.is-native a, html.is-native button { -webkit-touch-callout: none; }
+html.is-native input, html.is-native textarea, html.is-native select { font-size: max(16px, 1em); }

@@ -61,6 +61,11 @@ const webpackConfig = {
         ],
       };
 
+      // Plugins Capacitor publicados como ESM estricto (imports sin extensión) — evita "fullySpecified" en CRA
+      webpackConfig.module.rules.push({ test: /\.m?js$/, include: /node_modules\/(@aparajita|@exxili|@capacitor)/, resolve: { fullySpecified: false } });
+      webpackConfig.resolve.fallback = { ...(webpackConfig.resolve.fallback || {}), fs: false };
+      webpackConfig.ignoreWarnings = [...(webpackConfig.ignoreWarnings || []), /Failed to parse source map/, { module: /face-api\.js/ }];
+
       // Add health check plugin to webpack if enabled
       if (config.enableHealthCheck && healthPluginInstance) {
         webpackConfig.plugins.push(healthPluginInstance);

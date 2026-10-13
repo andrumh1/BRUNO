@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/nfc_service_desc"
+    android:requireDeviceUnlock="false">
+    <!-- NDEF Tag Application AID: any NFC reader (iPhone incluido) lo lee como un tag Type 4 -->
+    <aid-group android:description="@string/nfc_service_desc" android:category="other">
+        <aid-filter android:name="D2760000850101" />
+    </aid-group>
+</host-apdu-service>

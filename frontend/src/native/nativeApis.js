@@ -9,8 +9,9 @@
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Geolocation } from '@capacitor/geolocation';
 import { Share } from '@capacitor/share';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { isNative } from './capacitor';
+export { saveToDevice } from './files';
 
 export async function takePhoto({ source = 'camera' } = {}) {
   if (!isNative()) {
@@ -57,7 +58,13 @@ export async function shareContent({ title, text, url }) {
 }
 
 export async function triggerHaptic(style = 'medium') {
-  if (!isNative()) return;
+  if (!isNative()) { try { navigator.vibrate?.(style === 'light' ? 6 : style === 'heavy' ? 18 : 10); } catch { /* no-op */ } return; }
   const map = { light: ImpactStyle.Light, medium: ImpactStyle.Medium, heavy: ImpactStyle.Heavy };
-  await Haptics.impact({ style: map[style] || ImpactStyle.Medium });
+  await Haptics.impact({ style: map[style] || ImpactStyle.Medium }).catch(() => {});
+}
+
+export async function hapticNotify(type = 'success') {
+  if (!isNative()) return;
+  const map = { success: NotificationType.Success, warning: NotificationType.Warning, error: NotificationType.Error };
+  await Haptics.notification({ type: map[type] || NotificationType.Success }).catch(() => {});
 }

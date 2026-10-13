@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import axios from "axios";
 import { ArrowLeft, Download, Share2 } from "lucide-react";
+import { saveToDevice } from "@/native/files";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -35,14 +36,7 @@ const QRCodePage = () => {
     }
   };
 
-  const handleDownload = () => {
-    const link = document.createElement("a");
-    link.href = qrData.qr_code;
-    link.download = `bruno-qr-${cardId}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const handleDownload = () => saveToDevice(qrData.qr_code, `bruno-qr-${cardId}.png`, { title: "Mi QR de BRUNO" }).catch(() => {});
 
   const handleShare = async () => {
     if (navigator.share) {

@@ -1,30 +1,42 @@
 /**
- * Mounted globally inside AuthProvider so we can read the current auth token.
- * When running on iOS/Android natively, registers for push and forwards the
- * FCM/APNs token to the backend so the server can send push via
- * routers/push_notifications.py.
- *
+ * Mounted globally inside AuthProvider + Router. On iOS/Android it wires:
+ * push (FCM/APNs → backend), safe areas / status bar, splash, keyboard, Android back button,
+ * deep links (com.brunocard.app:// and https App Links) and the biometric lock.
  * On the web this component is a no-op.
  */
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNativePush } from '@/native/useNativePush';
-import { isNative } from '@/native/capacitor';
+import { isNative, isIOS } from '@/native/capacitor';
+import BiometricGate from '@/native/BiometricGate';
+import { App } from '@capacitor/app';
+import { Keyboard } from '@capacitor/keyboard';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { SafeArea } from '@capacitor-community/safe-area';
+
+const API = process.env.REACT_APP_BACKEND_URL;
+const ROOT_PATHS = new Set(['/', '/reels', '/login', '/feed']);
 
 const syncStatusBarStyle = () => {
   const dark = document.documentElement.classList.contains('dark');
   StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light }).catch(() => {});
 };
 
+const pathFromDeepLink = (raw) => {
+  try {
+    const u = new URL(raw);
+    if (u.protocol.startsWith('http')) return `${u.pathname}${u.search}${u.hash}`;
+    return `/${u.host}${u.pathname}${u.search}${u.hash}`.replace(/\/{2,}/g, '/');
+  } catch { return null; }
+};
+
 export default function NativeBootstrap() {
   const { token } = useAuth() || {};
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Deep-link + push routing.
   useNativePush(
     () => token,
     ({ kind, data }) => {
@@ -35,11 +47,10 @@ export default function NativeBootstrap() {
     }
   );
 
-  // Native chrome: edge-to-edge with real safe-area insets (notch / status bar / gesture bar).
-  // @capacitor-community/safe-area injects --safe-area-inset-* on Android where env() reports 0;
-  // index.css combines both into --safe-top / --safe-bottom used by every top/bottom bar.
   useEffect(() => {
-    if (!isNative()) return;
+    if (!isNative()) return undefined;
+    document.documentElement.classList.add('is-native');
+    console.info('[BRUNO native] API base:', API);
     let observer;
     (async () => {
       try {
@@ -51,10 +62,43 @@ export default function NativeBootstrap() {
         observer = new MutationObserver(syncStatusBarStyle);
         observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
       } catch (_) { /* ignore */ }
-      try { await SplashScreen.hide(); } catch (_) { /* ignore */ }
+      if (isIOS()) {
+        Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => {});
+        Keyboard.setScroll({ isDisabled: true }).catch(() => {});
+      }
+      try { await SplashScreen.hide({ fadeOutDuration: 250 }); } catch (_) { /* ignore */ }
     })();
-    return () => observer?.disconnect();
-  }, []);
+    const kbShow = Keyboard.addListener('keyboardWillShow', (info) => {
+      document.documentElement.dataset.keyboard = 'open';
+      document.documentElement.style.setProperty('--native-kb', `${info?.keyboardHeight || 0}px`);
+    });
+    const kbHide = Keyboard.addListener('keyboardWillHide', () => {
+      document.documentElement.dataset.keyboard = 'closed';
+      document.documentElement.style.setProperty('--native-kb', '0px');
+    });
+    const urlOpen = App.addListener('appUrlOpen', ({ url }) => {
+      const path = pathFromDeepLink(url);
+      if (path) navigate(path);
+    });
+    App.getLaunchUrl?.().then((r) => { const p = r?.url && pathFromDeepLink(r.url); if (p && p !== '/') navigate(p); }).catch(() => {});
+    return () => {
+      observer?.disconnect();
+      kbShow.then((h) => h.remove()); kbHide.then((h) => h.remove()); urlOpen.then((h) => h.remove());
+    };
+  }, []); // eslint-disable-line
 
-  return null;
+  // Android hardware back: close keyboard/sheets first, then go back, exit only from a root screen.
+  useEffect(() => {
+    if (!isNative()) return undefined;
+    const sub = App.addListener('backButton', () => {
+      if (document.activeElement && document.activeElement !== document.body) { document.activeElement.blur(); return; }
+      const openSheet = document.querySelector('[data-state="open"][role="dialog"], [data-sheet-open="true"]');
+      if (openSheet) { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return; }
+      if (ROOT_PATHS.has(location.pathname) || window.history.length <= 1) App.exitApp();
+      else navigate(-1);
+    });
+    return () => { sub.then((h) => h.remove()); };
+  }, [location.pathname, navigate]);
+
+  return <BiometricGate />;
 }

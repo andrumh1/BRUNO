@@ -30,9 +30,56 @@ import {
   Check,
   Loader2,
   Smartphone,
-  Languages, Sun, Monitor, Sparkles, Upload } from "lucide-react";
+  Languages, Sun, Monitor, Sparkles, Upload, Fingerprint } from "lucide-react";
+import { isNative } from "@/native/capacitor";
+import { biometricInfo, authenticateBiometric, getBiometricLock, setBiometricLock } from "@/native/biometric";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
+
+/* Bloqueo con Face ID / huella: solo tiene efecto en la app nativa (iOS/Android). */
+const BiometricRow = () => {
+  const native = isNative();
+  const [info, setInfo] = useState({ available: false, type: "none" });
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (!native) return; biometricInfo().then(setInfo); getBiometricLock().then(setEnabled); }, [native]);
+  const toggle = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (!enabled) {
+        const ok = await authenticateBiometric("Confirma tu identidad para activar el bloqueo");
+        if (!ok) { toast.error("No se pudo verificar tu identidad"); return; }
+        await setBiometricLock(true); setEnabled(true); toast.success("Bloqueo biométrico activado");
+      } else {
+        await setBiometricLock(false); setEnabled(false); toast.success("Bloqueo biométrico desactivado");
+      }
+    } finally { setBusy(false); }
+  };
+  const label = info.type === "face" ? "Face ID / rostro" : info.type === "fingerprint" ? "Huella digital" : "Biometría del teléfono";
+  return (
+    <div className="flex items-center gap-3 py-3.5 px-1" data-testid="setting-biometric-lock">
+      <Fingerprint className="w-5 h-5 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">Bloquear con {native ? label.toLowerCase() : "Face ID o huella"}</p>
+        <p className="text-[11px] text-muted-foreground">
+          {!native ? "Disponible en la app de BRUNO para iPhone y Android" : info.available ? "Pide tu biometría al abrir la app o al volver a ella" : "Configura una huella, rostro o código en los ajustes del teléfono"}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={!native || !info.available || busy}
+        className={`relative w-11 h-6 rounded-full transition-colors disabled:opacity-40 ${enabled ? "bg-primary" : "bg-muted"}`}
+        data-testid="toggle-biometric-lock"
+        aria-pressed={enabled}
+        aria-label="Bloqueo biométrico"
+      >
+        <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${enabled ? "translate-x-5" : ""}`} />
+      </button>
+    </div>
+  );
+};
 
 const SettingsPage = () => {
   const navigate = useNavigate();
@@ -372,6 +419,7 @@ const SettingsPage = () => {
                     </select>
                   </div>
                   <OptionRow icon={Lock} label="Cambiar contrasena" onClick={() => navigate("/change-password")} />
+                  <BiometricRow />
                   <OptionRow icon={Shield} label="Usuarios bloqueados" onClick={() => navigate("/settings/blocked")} />
                   <OptionRow icon={Smartphone} label="Dispositivos y sesiones" onClick={() => navigate("/settings/devices")} />
                 </div>

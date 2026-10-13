@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useShareHit } from "@/lib/shareStats";
+import { saveToDevice } from "@/native/files";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -248,12 +249,7 @@ const ViewCardPage = () => {
                 <p className="text-xs text-muted-foreground break-all text-center">{qrData.card_url}</p>
               </div>
               <Button
-                onClick={() => {
-                  const link = document.createElement('a');
-                  link.href = qrData.qr_code;
-                  link.download = `bruno-qr-${cardId}.png`;
-                  link.click();
-                }}
+                onClick={() => saveToDevice(qrData.qr_code, `bruno-qr-${cardId}.png`, { title: "Mi QR de BRUNO" }).catch(() => {})}
                 className="w-full"
               >
                 Descargar QR
