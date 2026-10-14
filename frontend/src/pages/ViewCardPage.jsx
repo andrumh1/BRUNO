@@ -29,6 +29,7 @@ const ViewCardPage = () => {
   useShareHit("card");
   const isDark = resolvedTheme === "dark";
   const [cardLang, setCardLang] = useState(() => detectCardLang());
+  const [langOpen, setLangOpen] = useState(false);
   const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -183,9 +184,16 @@ const ViewCardPage = () => {
               <QrCode className="w-4 h-4" />
             </Button>
             {!card.is_example && (
-              <select value={cardLang} onChange={(e) => { setCardLang(e.target.value); try { localStorage.setItem(CARD_LANG_KEY, e.target.value); } catch { /* ignore */ } }} aria-label={translateCardLabel("Idioma de la tarjeta", cardLang)} className="h-11 rounded-full bg-card shadow-sm border border-input px-3 text-xs font-semibold shrink-0" data-testid="card-lang-select">
-                {CARD_LANGS.map((l) => <option key={l.id} value={l.id}>{l.short}</option>)}
-              </select>
+              <div className="relative shrink-0">
+                <button type="button" onClick={() => setLangOpen((v) => !v)} aria-label={translateCardLabel("Idioma de la tarjeta", cardLang)} aria-expanded={langOpen} className="h-11 min-w-11 px-3 rounded-full bg-card shadow-sm border border-input text-xs font-semibold" data-testid="card-lang-select">{cardLang.toUpperCase()}</button>
+                {langOpen && (
+                  <div className="absolute right-0 top-12 z-40 w-40 rounded-xl border bg-card shadow-lg p-1" role="listbox" data-testid="card-lang-menu">
+                    {CARD_LANGS.map((l) => (
+                      <button key={l.id} type="button" role="option" aria-selected={l.id === cardLang} onClick={() => { setCardLang(l.id); setLangOpen(false); try { localStorage.setItem(CARD_LANG_KEY, l.id); } catch { /* ignore */ } }} className={`w-full text-left px-3 h-9 rounded-lg text-sm flex items-center justify-between ${l.id === cardLang ? "bg-primary/10 text-primary font-semibold" : "hover:bg-muted"}`} data-testid={`card-lang-${l.id}`}>{l.label}<span className="text-[10px] opacity-60">{l.short}</span></button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

@@ -698,11 +698,13 @@ async def continue_watching(limit: int = 12, current_user: User = Depends(get_cu
     ids = [r["post_id"] for r in rows]
     if not ids:
         return []
-    posts = {p["id"]: p async for p in db.posts.find({"id": {"$in": ids}, "video_url": {"$ne": None}}, {"_id": 0})}
+    posts = {p["id"]: p async for p in db.posts.find({"id": {"$in": ids}}, {"_id": 0})}
     out = []
     for r in rows:
         p = posts.get(r["post_id"])
-        dur = r.get("duration") or p.get("duration") if p else None
+        if p and not (p.get("video_url") or any((m or {}).get("type") == "video" for m in (p.get("media") or []))):
+            continue
+        dur = (r.get("duration") or p.get("duration")) if p else None
         if not p or (dur and r["position"] >= dur - 8):
             continue
         p["resume_position"] = r["position"]

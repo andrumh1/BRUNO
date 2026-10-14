@@ -1,0 +1,61 @@
+{
+  "summary": "Iteration 112 testing: OVC logos, forgot/reset password + endpoints, continue-watching, MyProfile watermark, card labels i18n. 7/8 backend tests pass (1 skipped because of a confirmed bug — see below). All frontend UI checks pass except Continue-Watching strips, which never render because the backend endpoint has a buggy filter.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "GET /api/posts/continue-watching",
+        "issue": "Query filters posts by {video_url: {$ne: null}} (posts_feed.py line 701) but reels/videos are stored under media[].type=='video' — zero posts in DB have a top-level video_url field. Result: the endpoint ALWAYS returns [] even when video_progress docs exist with position>3 & completed=false. Reproduced: logged in as newtest@bruno.com, POST /api/posts/{id}/progress {position:6,duration:60} on a reel → 200 saved. Immediately GET /api/posts/continue-watching → 200 [] (empty). This breaks the entire 'Continuar viendo' feature for short-form reels. FIX: change the filter to {$or:[{video_url:{$ne:null}}, {'media.type':'video'}]} (or just drop the video_url constraint — ids already come from video_progress).",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "/reels + /my-profile?tab=reels",
+        "issue": "continue-watching-reels strip and continue-watching-profile row never appear because backend returns []. Cannot verify cw-item-*, cw-dismiss, cw-open-*, cw-remove-* until backend bug is fixed.",
+        "selector": "[data-testid=\"continue-watching-reels\"], [data-testid=\"continue-watching-profile\"]",
+        "priority": "HIGH (blocked by backend bug)"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Continue watching",
+        "issue": "Frontend components depend on GET /api/posts/continue-watching returning items; backend always returns []. End-to-end verification impossible without a top-level video_url post.",
+        "affected_selectors": ["continue-watching-reels", "continue-watching-profile", "cw-item-*", "cw-dismiss", "cw-remove-*", "cw-open-*"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "/c/<cardId> (ViewCardPage)",
+        "issues": ["React console warning: hydration error — <span> cannot be a child of <select> / <option>. Caused by a dev-time wrapping tool injecting <span data-ve-dynamic> around <option> children of the card-lang-select <select>. Not blocking functionality (lang select works), but produces noisy warnings every render."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration112_pwd_cw.py",
+    "/app/test_reports/pytest/iter112.xml"
+  ],
+  "action_items": [
+    "FIX /app/backend/routers/posts_feed.py line 701 continue-watching query: replace {\"video_url\": {\"$ne\": None}} with {\"$or\":[{\"video_url\":{\"$ne\":None}}, {\"media.type\":\"video\"}]} so that reels progress surfaces.",
+    "After fix, verify /reels shows continue-watching-reels strip for a user with saved progress, and /my-profile?tab=reels shows continue-watching-profile row above the grid.",
+    "(Optional) Investigate the dev wrapper that injects <span> inside the lang-select <select>/<option> on ViewCardPage — produces hydration errors."
+  ],
+  "critical_code_review_comments": [
+    "posts_feed.py L701 continue_watching: filter {video_url: {$ne: null}} silently drops ALL reels. Combined with the dur check `if not p or (dur and r['position'] >= dur - 8): continue`, when p is None (post filtered out), it skips — so the user never sees anything. Hard-blocks the whole feature.",
+    "posts_feed.py L705: `dur = r.get('duration') or p.get('duration') if p else None` is parsed as `r.get('duration') or (p.get('duration') if p else None)` — fine, but worth clarifying with parens.",
+    "password_reset.py reset_password L84: on reset success, invalidates all unused tokens for the user (good). Expired-token return path (L82-83) is clean. Token hashing is sha256 (acceptable for short-lived tokens, 60min TTL).",
+    "ViewCardPage lang-select uses browser native <select> — functional but inconsistent with shadcn Select used elsewhere; also the data-ve-dynamic wrapper breaks HTML validity. Consider plain <select> without wrapper or switch to shadcn Select."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration112_pwd_cw.py (new, 8 tests)"
+  ],
+  "success_rate": {"backend": "87.5% (7/8 passed, 1 skipped due to continue-watching bug)", "frontend": "85% (OVC logos, forgot/reset UI, profile watermark, card i18n+selector all pass; continue-watching strips cannot render)"},
+  "test_credentials": "newtest@bruno.com / Test1234! (restored at end of test run — verified login still works)",
+  "seed_data_creation": "Inserted and consumed two single-use password_reset_tokens for newtest@bruno.com (both marked used=true during the test; cleaned by reset flow). Created and then DELETED one video_progress record during continue-watching test.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests: /app/backend/tests/test_iteration112_pwd_cw.py (pymongo-based direct insert for reset token, requires MongoDB on localhost). TestPasswordReset passes end-to-end including password RESTORE to Test1234!. TestContinueWatching has a skipped case: `test_create_progress_then_appears` is designed to find a video post, POST progress, assert resume_position=6 & resume_pct=10, then DELETE. It skips because no post in DB has top-level video_url — ALL reels are media[].type=video. After E1 fixes the filter in posts_feed.py L701, this test should pass automatically. Frontend testids verified: ovc-attribution, ovc-attribution-inline (login), ovc-attribution-legal (/legal), login-forgot-link → /forgot-password → forgot-password-page, forgot-email-input, forgot-submit, forgot-sent; reset-password?token=bad → reset-invalid + reset-request-new. profile-watermark is on an IMG element itself (not a wrapper div) — use `img[data-testid=\"profile-watermark\"]` or `[data-testid=\"profile-watermark\"]` directly, NOT `[data-testid=\"profile-watermark\"] img`. The example card /c/example-negocio hides the lang-select (uses its own ES/EN only). The real card /c/d16c2745-… shows card-lang-select with options ES/EN/PT/FR/IT, persists to localStorage key 'bruno_card_lang' and ?lang=X query param overrides.",
+  "rca of the issue": "Continue-watching: posts_feed.py:701 passes {video_url:{$ne:null}} to db.posts.find, but reels are persisted as {media:[{type:'video', url:'...'}], post_type:'video'} with no top-level video_url. Count: 0 posts match this filter; 16 posts match {media.type:'video'}. Fix the query. Forgot-password restoration: successful end-to-end via two single-use tokens, confirmed by two successful logins at Test1234! after test."
+}
