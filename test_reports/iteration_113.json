@@ -1,0 +1,28 @@
+{
+  "summary": "Iteration 113 retest of fixes from iteration_112. BOTH fixes verified end-to-end: (a) GET /api/posts/continue-watching now surfaces reels stored as media[].type=='video'; (b) card language selector on /c/<id> is now a <button> opening a custom menu, with all 5 options (es/en/pt/fr/it), persistence in localStorage, and ?lang= query override. All regression checks (OVC logos on /login, /forgot-password render, example card English labels) also pass. 0 React warnings about <select>/<option>.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration113_retest.py",
+    "/app/test_reports/pytest/iter113.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "posts_feed.py L706: filter now accepts media[].type=='video' via post-fetch check — correct; no DB-side filter means slightly more docs read but acceptable for N≤24.",
+    "ViewCardPage card-lang-select: good switch to a controlled <button>+listbox pattern — no more hydration warnings about <span> inside <option>."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration113_retest.py (new, 2 tests, both pass)"
+  ],
+  "success_rate": { "backend": "100% (2/2)", "frontend": "100%" },
+  "test_credentials": "newtest@bruno.com / Test1234! (unchanged)",
+  "seed_data_creation": "Created and then DELETED one video_progress record for reel 153e7772-46e9-4cd0-bea9-83f768ce8a23 (cleaned by cw-remove in test). Cleared bruno_cw_dismissed_at and bruno_card_lang from browser localStorage after use.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Both iteration_112 blockers are fixed and verified. Continue-watching endpoint uses post-fetch media[].type=='video' check in /app/backend/routers/posts_feed.py L706. Card lang selector in /app/frontend/src/pages/ViewCardPage.jsx uses a <button data-testid=card-lang-select> opening a listbox [data-testid=card-lang-menu] with options [card-lang-es|en|pt|fr|it]. Persistence key: localStorage 'bruno_card_lang'; URL ?lang=xx overrides. CW dismiss key: localStorage 'bruno_cw_dismissed_at' (6h TTL). Observed test IDs: continue-watching-reels, continue-watching-profile, cw-item-<id>, cw-open-<id>, cw-remove-<id>, cw-progress-<id>, cw-dismiss.",
+  "rca of the issue": "Not applicable — this iteration was a successful retest; no bugs found."
+}
