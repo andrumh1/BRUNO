@@ -82,6 +82,7 @@ import DeleteAccountPage from "@/pages/DeleteAccountPage";
 import CookiePolicyPage from "@/pages/CookiePolicyPage";
 import LegalHubPage from "@/pages/LegalHubPage";
 import MarketplacePiupPage from "@/pages/MarketplacePiupPage";
+import { ForgotPasswordPage, ResetPasswordPage } from "@/pages/PasswordRecoveryPages";
 import AdminPiupPage from "@/pages/AdminPiupPage";
 import CommunityGuidelinesPage from "@/pages/CommunityGuidelinesPage";
 import DataRightsPage from "@/pages/DataRightsPage";
@@ -159,6 +160,8 @@ function AppRouter() {
       <Route path="/n/:nfcId" element={<NFCRedirectPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />
       <Route path="/marketplace/piup" element={<MarketplacePiupPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/marketplace/:productId" element={<ProductDetailPage />} />
       <Route path="/profile/:userId" element={<UserProfilePage />} />
       <Route path="/hashtag/:tag" element={<HashtagPage />} />

@@ -13,6 +13,7 @@ import { useTheme } from "@/contexts/ThemeProvider";
 import { renderCardImage } from "@/lib/cardShareImage";
 import ShareImageSheet from "@/components/bruno/ShareImageSheet";
 import CardRenderer from "@/components/cards/CardRenderer";
+import { CARD_LANGS, CARD_LANG_KEY, detectCardLang, translateCardLabel } from "@/lib/cardLabels";
 import { resolveDesign, deepMerge, luminance } from "@/lib/cardDesign";
 import { useNavScroll } from "@/contexts/NavScrollContext";
 
@@ -27,6 +28,7 @@ const ViewCardPage = () => {
   const { resolved: resolvedTheme, setTheme } = useTheme();
   useShareHit("card");
   const isDark = resolvedTheme === "dark";
+  const [cardLang, setCardLang] = useState(() => detectCardLang());
   const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -180,6 +182,11 @@ const ViewCardPage = () => {
             <Button variant="outline" size="icon" onClick={fetchQRCode} data-testid="card-qr-btn" aria-label="Código QR" className="h-11 w-11 rounded-full bg-card shadow-sm shrink-0">
               <QrCode className="w-4 h-4" />
             </Button>
+            {!card.is_example && (
+              <select value={cardLang} onChange={(e) => { setCardLang(e.target.value); try { localStorage.setItem(CARD_LANG_KEY, e.target.value); } catch { /* ignore */ } }} aria-label={translateCardLabel("Idioma de la tarjeta", cardLang)} className="h-11 rounded-full bg-card shadow-sm border border-input px-3 text-xs font-semibold shrink-0" data-testid="card-lang-select">
+                {CARD_LANGS.map((l) => <option key={l.id} value={l.id}>{l.short}</option>)}
+              </select>
+            )}
           </div>
         </div>
       </div>
@@ -187,7 +194,7 @@ const ViewCardPage = () => {
       {/* Full-width card container */}
       <div className="relative z-10 w-full px-3 sm:px-6 lg:px-10 xl:px-16">
         {/* ===== ONE CARD ENGINE ===== */}
-        <CardRenderer data={card} design={design} cardId={cardId} onChat={card.is_example ? () => window.dispatchEvent(new CustomEvent("bruno:example-action", { detail: { label: "Chat", href: "chat" } })) : card.user_id && (!user || card.user_id !== user.id) ? handleStartChat : null} className="lg:rounded-3xl" />
+        <CardRenderer lang={card.is_example ? undefined : cardLang} data={card} design={design} cardId={cardId} onChat={card.is_example ? () => window.dispatchEvent(new CustomEvent("bruno:example-action", { detail: { label: "Chat", href: "chat" } })) : card.user_id && (!user || card.user_id !== user.id) ? handleStartChat : null} className="lg:rounded-3xl" />
         {demo && (
           <div className="fixed inset-0 z-[120] bg-black/60 grid place-items-center p-6" onClick={() => setDemo(null)} role="dialog" aria-modal="true" data-testid="example-demo-modal">
             <div className="w-full max-w-sm rounded-2xl bg-background p-5 space-y-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>

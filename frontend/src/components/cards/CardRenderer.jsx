@@ -7,10 +7,12 @@ import { GalleryBlock, LocationBlock, QRBlock, TypeFieldsBlock } from "./modules
 import { LinksBlock, FeaturedBlock, ProBlock, PurposeContactsBlock } from "./modules/ShowcaseBlocks";
 import { SectionTitle } from "./modules/Surface";
 import { bodyFont, spacingPx, depthShadow, rgba } from "@/lib/cardDesign";
+import { CardLangContext, detectCardLang, translateCardLabel } from "@/lib/cardLabels";
 
 // ONE CARD ENGINE: every card (public, preview, builder, thumbnails) renders through this component.
-const CardRenderer = ({ data = {}, design, cardId, onChat, seal = true, className = "", style }) => {
+const CardRenderer = ({ data = {}, design, cardId, onChat, seal = true, className = "", style, lang }) => {
   const ref = useRef(null);
+  const cardLang = lang || (data?.is_example && data.example_lang) || detectCardLang();
   const [narrow, setNarrow] = useState(true);
   useEffect(() => { const el = ref.current; if (!el || typeof ResizeObserver === "undefined") return; const ro = new ResizeObserver(([e]) => setNarrow(e.contentRect.width < 600)); ro.observe(el); return () => ro.disconnect(); }, []);
   const pad = spacingPx(design);
@@ -41,6 +43,7 @@ const CardRenderer = ({ data = {}, design, cardId, onChat, seal = true, classNam
   const body = order.map((k) => modules[k]?.()).filter(Boolean);
 
   return (
+    <CardLangContext.Provider value={cardLang}>
     <div
       ref={ref}
       data-card-renderer
@@ -63,7 +66,7 @@ const CardRenderer = ({ data = {}, design, cardId, onChat, seal = true, classNam
       }}
     >
       <CardBackground design={design} data={data} />
-      {data?.is_example && <span className="absolute top-3 left-3 z-20 rounded-full bg-black/55 text-white text-[10px] font-semibold px-2 py-0.5 backdrop-blur" data-testid="card-example-badge">{data.example_lang === "en" ? "Fictional example" : "Ejemplo ficticio"}</span>}
+      {data?.is_example && <span className="absolute top-3 left-3 z-20 rounded-full bg-black/55 text-white text-[10px] font-semibold px-2 py-0.5 backdrop-blur" data-testid="card-example-badge">{translateCardLabel("Ejemplo ficticio", cardLang)}</span>}
       <div className="relative">
         <CardHeader data={data} design={design} onChat={onChat} pad={pad} narrow={narrow} />
         <div style={{ padding: pad, display: "flex", flexDirection: "column", gap: pad * 0.9 }}>
@@ -78,6 +81,7 @@ const CardRenderer = ({ data = {}, design, cardId, onChat, seal = true, classNam
         )}
       </div>
     </div>
+    </CardLangContext.Provider>
   );
 };
 

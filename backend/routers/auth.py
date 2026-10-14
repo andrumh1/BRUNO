@@ -177,3 +177,4 @@ async def google_auth(request: GoogleAuthRequest):
         raise HTTPException(status_code=500, detail=f"Error connecting to auth service: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Authentication error: {str(e)}")
+

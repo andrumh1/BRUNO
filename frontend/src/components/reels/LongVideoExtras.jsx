@@ -115,9 +115,9 @@ export function useResume({ reel, videoRef, token, enabled }) {
     const dur = v.duration || reel.duration || 0;
     if (pos > 5 && dur && pos < dur - 10) { v.currentTime = pos; setResumedFrom(pos); setTimeout(() => setResumedFrom(null), 3500); }
   };
-  const onProgress = (t, dur) => {
+  const onProgress = (t, dur, force = false) => {
     if (!enabled || !reel?.id) return;
-    const now = Date.now(); if (now - lastSave.current < 5000) return; lastSave.current = now;
+    const now = Date.now(); if (!force && now - lastSave.current < 5000) return; lastSave.current = now;
     try { localStorage.setItem(key, String(dur && t >= dur - 8 ? 0 : t)); } catch { /* ignore */ }
     if (token) axios.post(`${API}/posts/${reel.id}/progress`, { position: t, duration: dur }, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
   };

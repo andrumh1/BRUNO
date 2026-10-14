@@ -21,6 +21,7 @@ import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet, ReelLikersSheet, ReelOptionsSheet, ReelEditSheet } from "@/components/reels/ReelSheets";
 import RemixStudio from "@/components/reels/RemixStudio";
 import ReelsStoriesStrip from "@/components/reels/ReelsStoriesStrip";
+import ContinueWatchingRow from "@/components/reels/ContinueWatchingRow";
 import { ChaptersSheet, getChapters } from "@/components/reels/LongVideoExtras";
 import { AnimatePresence } from "framer-motion";
 
@@ -206,6 +207,7 @@ export default function ReelsPage() {
       </div>
 
       {!profileMode && !longMode && tab !== "lives" && <ReelsStoriesStrip token={token} user={user} visible={activeIndex === 0 && !loading && reels.length > 0} />}
+      {!profileMode && !longMode && tab !== "lives" && <ContinueWatchingRow token={token} variant="reels" visible={activeIndex === 0 && !loading && reels.length > 0} />}
 
       {tab !== "lives" ? (
         loading ? (

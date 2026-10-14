@@ -32,7 +32,9 @@ export default function ReelItem({
   const videoRef = useRef(null);
   const navigate = useNavigate();
   const chapters = longMode ? getChapters(reel) : [];
-  const resume = useResume({ reel, videoRef, token, enabled: longMode });
+  const resume = useResume({ reel, videoRef, token, enabled: longMode || !!reel?.video_url });
+  // "Continuar viendo": al dejar de estar activo guarda el punto exacto (cortos y largos)
+  useEffect(() => { if (!isActive) { const v = videoRef.current; if (v && v.duration && v.currentTime > 3) resume.onProgress(v.currentTime, v.duration, true); } }, [isActive]); // eslint-disable-line
   const seekAbs = (t) => { const v = videoRef.current; if (!v) return; v.currentTime = Math.max(0, Math.min(t, (v.duration || t) - 0.05)); v.play?.().catch(() => {}); };
   const barRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -281,8 +283,8 @@ export default function ReelItem({
           onEnded={() => onEnded?.()}
           preload={isActive || isNear ? "auto" : "metadata"}
           poster={reel.poster_url || reel.thumbnail_url || undefined}
-          onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) { setProgress((v.currentTime / v.duration) * 100); setTime({ cur: v.currentTime, dur: v.duration }); if (longMode && isActive) resume.onProgress(v.currentTime, v.duration); } }}
-          onLoadedMetadata={(e) => { const v = e.currentTarget; setTime({ cur: v.currentTime, dur: v.duration || 0 }); v.playbackRate = rateRef.current; setLandscape(v.videoWidth > v.videoHeight); if (longMode) resume.applyResume(); }}
+          onTimeUpdate={(e) => { const v = e.currentTarget; if (v.duration) { setProgress((v.currentTime / v.duration) * 100); setTime({ cur: v.currentTime, dur: v.duration }); if (isActive) resume.onProgress(v.currentTime, v.duration); } }}
+          onLoadedMetadata={(e) => { const v = e.currentTarget; setTime({ cur: v.currentTime, dur: v.duration || 0 }); v.playbackRate = rateRef.current; setLandscape(v.videoWidth > v.videoHeight); resume.applyResume(); }}
           onWaiting={() => setBuffering(true)}
           onPlaying={() => { setBuffering(false); setError(false); setProcessing(false); autoRetries.current = 0; }}
           onCanPlay={() => { setBuffering(false); setProcessing(false); }}

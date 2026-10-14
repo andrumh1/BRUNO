@@ -3,6 +3,7 @@ import { Phone, Mail, Globe, MessageCircle, MessageSquare, ExternalLink } from "
 import { socialMediaConfig } from "@/components/SocialLinkButton";
 import { Surface, SectionTitle } from "./Surface";
 import { buttonStyle, buttonSizeClass, rgba } from "@/lib/cardDesign";
+import { useCardT } from "@/lib/cardLabels";
 
 const clean = (s) => (s || "").replace(/[^\d+]/g, "");
 
@@ -14,11 +15,15 @@ export const contactActions = (ciIn) => { const ci = ciIn || {}; return [
   ci.website && { id: "website", label: "Sitio web", href: /^https?:/i.test(ci.website) ? ci.website : `https://${ci.website}`, Icon: Globe },
 ].filter(Boolean); };
 
-export const ActionButton = ({ design, href, label, Icon, primary, full, testId, onClick }) => (
+export const ActionButton = ({ design, href, label, Icon, primary, full, testId, onClick }) => {
+  const t = useCardT();
+  const tl = t(label);
+  return (
   <a href={href} onClick={onClick} target={href?.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className={`inline-flex items-center justify-center font-semibold hover:scale-[1.03] active:scale-[0.98] ${buttonSizeClass(design)} ${full ? "w-full" : ""}`} style={buttonStyle(design, { primary })} data-testid={testId}>
-    {Icon && <Icon className="w-4 h-4" />}<span className="truncate">{label}</span>
+    {Icon && <Icon className="w-4 h-4" />}<span className="truncate">{tl}</span>
   </a>
-);
+  );
+};
 
 export const ContactBlock = ({ data, design }) => {
   const actions = contactActions(data.contact_info);

@@ -3,6 +3,7 @@ import { ArrowUpRight, MapPin, CalendarCheck, Building2, Briefcase, Handshake, N
 import { Surface, SectionTitle } from "./Surface";
 import { ActionButton } from "./ActionBlocks";
 import { rgba, contrastText } from "@/lib/cardDesign";
+import { useCardT } from "@/lib/cardLabels";
 
 const ensureHttp = (u) => (/^(https?:|mailto:|tel:|sms:)/i.test(u) ? u : `https://${u}`);
 const hrefFor = (v) => { const s = (v || "").trim(); if (!s) return null; if (s.includes("@") && !/^https?:/i.test(s)) return `mailto:${s}`; if (/^\+?[\d\s()-]{7,}$/.test(s)) return `tel:${s.replace(/[^\d+]/g, "")}`; return ensureHttp(s); };
@@ -53,6 +54,7 @@ export const FeaturedBlock = ({ data, design }) => {
 
 // Professional facts for bookings: city, availability, agency.
 export const ProBlock = ({ data, design }) => {
+  const tr = useCardT();
   const s = data.showcase || {};
   const items = [s.city && ["city", MapPin, "Ciudad", s.city], s.availability && ["availability", CalendarCheck, "Disponibilidad", s.availability], s.agency && ["agency", Building2, "Agencia", s.agency]].filter(Boolean);
   if (!items.length) return null;
@@ -64,7 +66,7 @@ export const ProBlock = ({ data, design }) => {
         {items.map(([k, Icon, label, value]) => (
           <Surface key={k} design={design} className="px-3.5 py-3 flex items-center gap-3 flex-1 min-w-[150px]" data-testid={`card-pro-${k}`}>
             <span className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: rgba(t, 0.1) }}><Icon className="w-4 h-4" /></span>
-            <div className="min-w-0"><p className="text-[10px] uppercase tracking-[0.18em] opacity-60">{label}</p><p className="text-sm font-semibold truncate">{value}</p></div>
+            <div className="min-w-0"><p className="text-[10px] uppercase tracking-[0.18em] opacity-60">{tr(label)}</p><p className="text-sm font-semibold truncate">{value}</p></div>
           </Surface>
         ))}
       </div>
@@ -74,6 +76,7 @@ export const ProBlock = ({ data, design }) => {
 
 // Contacts grouped by purpose (bookings / collaborations / press) — only the ones the user configured.
 export const PurposeContactsBlock = ({ data, design }) => {
+  const tr = useCardT();
   const s = data.showcase || {};
   const rows = [s.booking && ["booking", Briefcase, "Contrataciones", s.booking], s.collab && ["collab", Handshake, "Colaboraciones", s.collab], s.press && ["press", Newspaper, "Prensa", s.press]].filter(Boolean);
   if (!rows.length) return null;
@@ -85,7 +88,7 @@ export const PurposeContactsBlock = ({ data, design }) => {
         {rows.map(([k, Icon, label, value]) => (
           <a key={k} href={hrefFor(value)} target={/^https?:/i.test(hrefFor(value)) ? "_blank" : undefined} rel="noreferrer" className="flex items-center gap-3 px-4 py-3.5 hover:opacity-80 transition-opacity" style={{ borderColor: rgba(t, 0.1) }} data-testid={`card-purpose-${k}`}>
             <Icon className="w-4 h-4 opacity-70 shrink-0" />
-            <div className="min-w-0 flex-1"><p className="text-[10px] uppercase tracking-[0.2em] opacity-60">{label}</p><p className="text-sm font-medium truncate">{value}</p></div>
+            <div className="min-w-0 flex-1"><p className="text-[10px] uppercase tracking-[0.2em] opacity-60">{tr(label)}</p><p className="text-sm font-medium truncate">{value}</p></div>
             <ArrowUpRight className="w-4 h-4 opacity-60 shrink-0" />
           </a>
         ))}

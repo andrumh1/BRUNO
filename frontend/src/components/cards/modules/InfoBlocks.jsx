@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import axios from "axios";
 import { MapPin, QrCode, Briefcase, GraduationCap, Award, Languages, Sparkles, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Surface, SectionTitle } from "./Surface";
+import { useCardT } from "@/lib/cardLabels";
 import { rgba } from "@/lib/cardDesign";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -68,13 +69,14 @@ export const LocationBlock = ({ data, design }) => {
 };
 
 export const QRBlock = ({ cardId, design, data }) => {
+  const t9 = useCardT();
   const [qr, setQr] = useState(null);
   const exq = data?.is_example ? `?template=${data.example_preset}&lang=${data.example_lang}` : "";
   useEffect(() => { if (!cardId) return; axios.get(`${API}/cards/${cardId}/qr${exq}`).then((r) => setQr(r.data.qr_code)).catch(() => {}); }, [cardId, exq]);
   return (
     <Surface design={design} className="p-4 flex items-center gap-4" data-testid="card-qr-block">
       <div className="w-24 h-24 rounded-xl bg-white p-1.5 shrink-0 flex items-center justify-center">{qr ? <img src={qr} alt="QR" className="w-full h-full" /> : <QrCode className="w-10 h-10 text-neutral-400" />}</div>
-      <div className="min-w-0"><p className="text-sm font-semibold">Escanea para guardar</p><p className="text-xs opacity-75 mt-0.5">Abre esta tarjeta al instante desde cualquier cámara.</p></div>
+      <div className="min-w-0"><p className="text-sm font-semibold">{t9("Escanea para guardar")}</p><p className="text-xs opacity-75 mt-0.5">{t9("Abre esta tarjeta al instante desde cualquier cámara.")}</p></div>
     </Surface>
   );
 };
@@ -83,6 +85,7 @@ const List = ({ items, render }) => <div className="space-y-2.5">{items.map((it,
 
 // Renders the type-specific custom_fields (CV, job offers, services) in a compact, generic way.
 export const TypeFieldsBlock = ({ data, design }) => {
+  const tr = useCardT();
   const cf = data.custom_fields || {};
   const t = design.colors.text;
   const sections = [];
@@ -97,15 +100,15 @@ export const TypeFieldsBlock = ({ data, design }) => {
   if (has("certifications")) card("Certificaciones", Award, <List items={cf.certifications} render={(c) => <p className="text-sm">{c.name || c.title}{c.issuer ? <span className="opacity-70"> · {c.issuer}</span> : null}</p>} />, "certs");
   const jd = cf.job_details;
   if (jd && (jd.salary_min || jd.salary_max || jd.contract_type || jd.remote_option || (jd.requirements || []).length)) {
-    const chips = [jd.contract_type, jd.remote_option, jd.experience_required && `Exp: ${jd.experience_required}`, jd.vacancies > 1 && `${jd.vacancies} vacantes`, jd.urgency === "urgent" && "Urgente"].filter(Boolean);
+    const chips = [jd.contract_type, jd.remote_option, jd.experience_required && `Exp: ${jd.experience_required}`, jd.vacancies > 1 && `${jd.vacancies} ${tr("vacantes")}`, jd.urgency === "urgent" && tr("Urgente")].filter(Boolean);
     card("Detalles", Briefcase, <div className="space-y-2">{(jd.salary_min || jd.salary_max) && <p className="text-sm font-semibold">{jd.salary_min}{jd.salary_max ? ` – ${jd.salary_max}` : ""} {jd.salary_currency}</p>}<div className="flex flex-wrap gap-2">{chips.map((c, i) => <span key={i} className="px-2.5 py-1 rounded-full text-xs" style={{ backgroundColor: rgba(t, 0.12) }}>{c}</span>)}</div>{(jd.requirements || []).length > 0 && <ul className="text-xs list-disc pl-4 space-y-0.5 opacity-85">{jd.requirements.map((r, i) => <li key={i}>{typeof r === "string" ? r : r.text || r.name}</li>)}</ul>}</div>, "job");
   }
   // Campos específicos del tipo (negocio, servicios, lugares, empresa, mascota, guardián…) en formato genérico
   const LABELS = { services: "Servicios", products: "Productos", team: "Equipo", schedule: "Horario", openingHours: "Horario", attractions: "Qué encontrarás", interests: "Intereses", emergencyContacts: "Contactos de emergencia", ownerContacts: "Contacto del dueño", medications: "Medicación", allergies: "Alergias", medicalConditions: "Condiciones médicas", benefits: "Beneficios" };
   const INFO = { profession: "Profesión", company: "Empresa", availability: "Disponibilidad", position: "Cargo", department: "Departamento", officeLocation: "Oficina", directPhone: "Teléfono directo", businessType: "Tipo", foundedYear: "Desde", priceRange: "Precios", locationType: "Tipo de lugar", admissionFee: "Entrada", accessibility: "Accesibilidad", warnings: "Avisos", personName: "Nombre", age: "Edad", bloodType: "Grupo sanguíneo", petName: "Nombre", species: "Especie", breed: "Raza", color: "Color", size: "Tamaño", microchip: "Microchip", identifyingMarks: "Señas", lostInstructions: "Si se pierde", reward: "Recompensa", vaccinated: "Vacunado", sterilized: "Esterilizado", responsibilities: "Responsabilidades" };
-  const val = (v) => (v === true ? "Sí" : v === false ? "No" : String(v));
+  const val = (v) => (v === true ? tr("Sí") : v === false ? tr("No") : String(v));
   const info = Object.keys(INFO).filter((k) => cf[k] !== undefined && cf[k] !== "" && cf[k] !== null && !(Array.isArray(cf[k]) && !cf[k].length));
-  if (info.length) card("Información", Sparkles, <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">{info.map((k) => <p key={k} className="text-sm"><span className="opacity-60 text-xs uppercase tracking-wide mr-1.5">{INFO[k]}</span>{val(cf[k])}</p>)}</div>, "info");
+  if (info.length) card("Información", Sparkles, <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">{info.map((k) => <p key={k} className="text-sm"><span className="opacity-60 text-xs uppercase tracking-wide mr-1.5">{tr(INFO[k])}</span>{val(cf[k])}</p>)}</div>, "info");
   for (const k of Object.keys(LABELS)) {
     const v = cf[k];
     if (!v || (Array.isArray(v) && !v.length) || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length)) continue;

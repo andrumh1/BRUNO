@@ -176,3 +176,19 @@ def sale_html(*, seller_name: str, item_name: str, buyer_name: str, kind_label: 
         f'<p style="margin:22px 0 0;font-size:12px;color:#888">Tu parte queda en tu cuenta de cobros y la retiras cuando quieras desde Mis ingresos. Enviado por {brand}.</p>'
         '</td></tr></table></td></tr></table>'
     )
+
+
+def reset_password_html(*, name: str, reset_url: str, minutes: int = 60) -> str:
+    brand = escape(EMAIL_FROM_NAME)
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ec;padding:24px 0;font-family:Arial,Helvetica,sans-serif;color:#1c1c1c">'
+        '<tr><td align="center"><table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:20px;padding:28px">'
+        f'<tr><td><p style="margin:0 0 4px;font-size:12px;letter-spacing:.18em;color:#F26A1B;font-weight:700">{brand}</p>'
+        '<h1 style="margin:0 0 16px;font-size:22px">Restablece tu contraseña</h1>'
+        f'<p style="margin:0 0 10px;font-size:15px">Hola {escape(name)}, recibimos una solicitud para cambiar la contraseña de tu cuenta.</p>'
+        f'<p style="margin:0 0 18px;font-size:14px;color:#6b6b6b">El enlace caduca en {minutes} minutos y solo puede usarse una vez.</p>'
+        f'<p style="margin:0"><a href="{escape(reset_url)}" style="display:inline-block;background:#F26A1B;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;font-size:14px">Crear nueva contraseña</a></p>'
+        '<p style="margin:22px 0 0;font-size:12px;color:#888">Si no fuiste tú, ignora este mensaje: tu contraseña seguirá igual. '
+        f'Enviado por {brand}, una aplicación de Octopus Vision Company (OVC). Nunca te pediremos tu contraseña por correo.</p>'
+        '</td></tr></table></td></tr></table>'
+    )

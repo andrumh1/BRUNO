@@ -22,6 +22,7 @@ import useActiveStories from "@/hooks/useActiveStories";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTour } from "@/components/WelcomeTour";
 import DndSettings from "@/components/DndSettings";
+import ContinueWatchingRow from "@/components/reels/ContinueWatchingRow";
 import axios from "axios";
 import { 
   ArrowLeft,
@@ -694,11 +695,13 @@ const MyProfilePage = () => {
       </div>
 
       {/* Tab Content */}
-      <div className="p-4">
+      <div className="p-4 relative" data-testid="profile-tab-content">
+        <img src="/brand/logo-v-gray.png" alt="" aria-hidden className="pointer-events-none select-none absolute left-1/2 top-24 -translate-x-1/2 w-52 max-w-[60%] opacity-[0.045] dark:opacity-[0.07]" data-testid="profile-watermark" />
         {/* Posts Grid */}
         {activeTab === "posts" && (
           posts.length === 0 ? (
             <div className="text-center py-12">
+              <img src="/brand/logo-h-orange.png" alt="BRUNO" className="h-7 mx-auto mb-4 opacity-80" data-testid="profile-empty-logo" />
               <Grid3X3 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground">No hay publicaciones aún</p>
               <Link to="/compose">
@@ -737,9 +740,11 @@ const MyProfilePage = () => {
         )}
 
         {/* Reels Grid */}
+        {activeTab === "reels" && <ContinueWatchingRow token={token} variant="profile" />}
         {activeTab === "reels" && (
           reels.length === 0 ? (
             <div className="text-center py-12">
+              <img src="/brand/logo-h-orange.png" alt="BRUNO" className="h-7 mx-auto mb-4 opacity-80" />
               <Film className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground">No hay reels aún</p>
               <Button className="mt-4" onClick={() => navigate("/camera")} data-testid="profile-create-reel">Crear reel</Button>

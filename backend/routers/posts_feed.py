@@ -691,6 +691,36 @@ async def get_video_history(
     return await _hydrate_video_posts(out, current_user.id)
 
 
+@router.get("/posts/continue-watching")
+async def continue_watching(limit: int = 12, current_user: User = Depends(get_current_user)):
+    """Videos (cortos o largos) que el usuario dejó a medias, más recientes primero."""
+    rows = [r async for r in db.video_progress.find({"user_id": current_user.id, "completed": {"$ne": True}, "position": {"$gt": 3}}, {"_id": 0}).sort("updated_at", -1).limit(limit * 2)]
+    ids = [r["post_id"] for r in rows]
+    if not ids:
+        return []
+    posts = {p["id"]: p async for p in db.posts.find({"id": {"$in": ids}, "video_url": {"$ne": None}}, {"_id": 0})}
+    out = []
+    for r in rows:
+        p = posts.get(r["post_id"])
+        dur = r.get("duration") or p.get("duration") if p else None
+        if not p or (dur and r["position"] >= dur - 8):
+            continue
+        p["resume_position"] = r["position"]
+        p["resume_duration"] = dur
+        p["resume_pct"] = round(min(100, r["position"] / dur * 100), 1) if dur else None
+        p["resume_updated_at"] = r.get("updated_at")
+        out.append(p)
+        if len(out) >= limit:
+            break
+    return await _hydrate_video_posts(out, current_user.id)
+
+
+@router.delete("/posts/{post_id}/progress")
+async def dismiss_progress(post_id: str, current_user: User = Depends(get_current_user)):
+    await db.video_progress.delete_one({"post_id": post_id, "user_id": current_user.id})
+    return {"deleted": True}
+
+
 @router.post("/posts/{post_id}/view")
 async def track_video_view(
     post_id: str,

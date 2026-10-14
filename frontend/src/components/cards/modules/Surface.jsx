@@ -1,5 +1,6 @@
 import React from "react";
 import { surfaceStyle } from "@/lib/cardDesign";
+import { useCardT } from "@/lib/cardLabels";
 
 // Bubble Glass surface: gradient glass + border highlight + top reflection + depth.
 export const Surface = ({ design, strong = false, className = "", style, children, ...rest }) => {
@@ -15,6 +16,7 @@ export const Surface = ({ design, strong = false, className = "", style, childre
   );
 };
 
-export const SectionTitle = ({ children, design }) => (
-  <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] mb-3" style={{ color: design.colors.text, opacity: 0.6 }}>{children}</h3>
-);
+export const SectionTitle = ({ children, design }) => {
+  const t = useCardT();
+  return <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] mb-3" style={{ color: design.colors.text, opacity: 0.6 }}>{t(children)}</h3>;
+};
