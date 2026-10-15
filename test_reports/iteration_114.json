@@ -1,0 +1,52 @@
+{
+  "summary": "Iteration 114 — full backend + frontend verification of the fix round: profile visibility, cards/drafts, notifications prefs + push gating (dedupe + ALWAYS_PUSH), remembered-accounts picker, account switch isolation, series highlights, AI summary gating, and password-reset token revocation. 14/14 backend pytest cases pass. All targeted frontend flows (account picker, picked-account requires password, multi-account persistence, Media tab tiles with Video badges on other user profile, series-highlights, OVC, forgot-password) verified. One minor security-hardening nit on password reset timing precision (see RCA).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/auth/reset-password + utils/security.resolve_user_from_token",
+        "issue": "tokens_valid_after is stored at the exact second of the reset. The validation uses `iat < int(valid_after.timestamp())`, where `iat` is JWT seconds. If a token was issued in the SAME second the reset occurs (rare but possible), the old token remains valid. With a >=1s gap old tokens correctly 401. Suggested fix: either compare `iat <= int(valid_after.timestamp())` or set `tokens_valid_after = now + timedelta(seconds=1)` in password_reset.py L84 and in revoke_all_user_tokens."
+      },
+      {
+        "endpoint": "POST /api/auth/forgot-password",
+        "issue": "Returns 400 when the configured Resend/email provider is unreachable (preview env has no outbound SMTP for noreply@bruno.app). Only `send_email` raising HTTPException(500/502/503) is remapped to 503; other upstream HTTPException codes bubble up unchanged. Not blocking, but a 503 would be more accurate when email provider is misconfigured."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration114_profile_cards_push.py",
+    "/app/test_reports/pytest/iter114.xml"
+  ],
+  "action_items": [
+    "(Nice-to-have) Harden password reset timing: in /app/backend/routers/password_reset.py L84 use `datetime.now(timezone.utc) + timedelta(seconds=1)` for tokens_valid_after, OR change comparison in /app/backend/utils/security.py L106 to `iat <= int(valid_after.timestamp())`. Prevents the (extreme-edge) same-second window where an attacker's stolen token issued at the moment of password reset still authenticates for ≤1s.",
+    "(Nice-to-have) In password_reset.forgot_password, broaden the email-provider error catch so unavailable email returns a generic 200 (anti-enumeration) or an explicit 503 instead of leaking a 400."
+  ],
+  "critical_code_review_comments": [
+    "push_notifications.push_allowed: correctly honors ALWAYS_PUSH={'account_security'} + 10-minute dedupe via db.push_log by tag. Dedupe does not fire for tag=='incoming_call' (intentional). Verified live.",
+    "GET /api/users/{user_id}/posts (posts_feed.py L1507): visibility filter now uses `{'$in': ['public', None]}` for non-followers and adds 'followers' when the viewer follows the owner. Correctly handles the 6 legacy posts in DB with no visibility field.",
+    "rememberedAccounts.js stores only {id,name,username,email,avatar_url,last_used} in encrypted secureStorage. Tokens are only stored on native (Capacitor). Verified: no plaintext password appears in DOM or any localStorage key (`Test1234!` string search returned 0 matches both in HTML and in localStorage dump).",
+    "AuthContext.clearPrivateCaches purges bruno_draft_*, bruno_outbox_*, bruno_autotranslate_* on login/account switch — correct per spec.",
+    "ViewCardPage.fetchCard sends Authorization bearer when a token is present — fixes 'Tarjeta no encontrada' for owner on fresh drafts. Verified: owner GET draft 200, viewer2 GET draft 403, anonymous 403.",
+    "SeriesHighlights returns null when list is empty — profile header is clean when the user has no series.",
+    "UserProfilePage media tab correctly renders a 3-col grid with thumbnails; videos get a 'Video' badge and tapping navigates to /reels?id=<postId> (observed 17 tiles for newtest viewed by viewer2, first tile has Video badge).",
+    "NotificationPreferences defaults: likes/comments/followers/messages/calls=False and order_updates/account_security/my_activity=True — matches spec exactly."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration114_profile_cards_push.py (new, 14 tests, all pass)"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14)",
+    "frontend": "100% of in-scope flows (account picker, masked emails, no plaintext password in DOM/localStorage, remove account, 2-account persistence, pick→requires password, wrong-password error, Media tab tiles with Video badge, Series highlights, OVC branding, /forgot-password page)"
+  },
+  "test_credentials": "newtest@bruno.com / Test1234! and viewer2@bruno.com / Test1234! — both restored to Test1234! at end of run; verified login still works for both.",
+  "seed_data_creation": "Created and DELETED one QA card draft (title 'Draft QA <ts>') for newtest. Created and consumed two single-use password_reset_tokens for viewer2 during revocation test (second one restored password back to Test1234!). Inserted and deleted three push_log tag rows (like_qa_1, order_qa_1, security_qa_1) for viewer2. Removed per-user notification_preferences override at end of push gating test.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend test file: /app/backend/tests/test_iteration114_profile_cards_push.py — pytest, uses REACT_APP_BACKEND_URL + direct pymongo for seed/cleanup. Password-reset revocation test adds time.sleep(3) before reset — necessary because tokens_valid_after is only second-precise. Push gating uses motor to call push_allowed() directly from the running router module via set_db(). Known UI testids verified: account-picker, account-picker-list, account-item-<id>, account-pick-<id>, account-remove-<id>, account-picker-other, picked-account, picked-account-change, biometric-login-btn (native-only, not rendered on web), login-email-input, login-password-input, login-submit, login-error, login-forgot-link, login-keep-active, existing-session-switch, existing-session-continue, existing-session-name, series-highlights, series-highlight-<id>, tab-posts/-media/-cards/-series, user-media-<postId>, card-draft-badge-<id>, save-status (data-status attr), ovc-attribution-inline, ovc-attribution, forgot-password-page. Push category rules in /app/backend/routers/push_notifications.py L149-156: ALWAYS_PUSH={'account_security'}; 10-min dedupe via push_log by tag; tag=='incoming_call' bypasses dedupe.",
+  "rca of the issue": "Password-reset token-revocation edge case: when reset_password() stores `tokens_valid_after = now_iso` (password_reset.py:84) using the same wall-clock second as a just-issued JWT's iat, the comparison in resolve_user_from_token (`iat < int(valid_after.timestamp())`) returns False because int() truncates sub-second precision, so iat == int(valid_after.ts). Steps to reproduce: (1) POST /api/auth/login (viewer2) → tok1; (2) within the same second, insert a password_reset_token row + POST /api/auth/reset-password → 200; (3) GET /api/auth/me with tok1 → 200 (should be 401). Mitigation: either compare with `iat <= int(valid_after.timestamp())` or shift `tokens_valid_after` by 1 second ahead. Verified: with time.sleep(3) between login and reset, old tok returns 401 as expected. Impact: extremely narrow race window; low exploitability but worth hardening."
+}

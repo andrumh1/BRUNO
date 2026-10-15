@@ -55,9 +55,11 @@ async def forgot_password(body: ForgotBody, request: Request):
         from utils.email import send_email, reset_password_html
         await send_email(to=email, subject="Restablece tu contraseña de BRUNO", html=reset_password_html(name=user.get("name") or "", reset_url=reset_url, minutes=RESET_TTL_MIN))
     except HTTPException as e:
-        if e.status_code in (503, 502, 500):
-            raise HTTPException(status_code=503, detail="No pudimos enviar el correo ahora mismo. Inténtalo en unos minutos.")
-        raise
+        if e.status_code in (503, 502, 500, 400):
+            # Proveedor caído o correo no entregable: respuesta genérica (sin revelar si la cuenta existe) y registro para soporte
+            await db.password_reset_tokens.update_one({"email": email, "user_id": user["id"]}, {"$set": {"email_error": str(e.detail)[:200]}})
+            if e.status_code != 400:
+                raise HTTPException(status_code=503, detail="No pudimos enviar el correo ahora mismo. Inténtalo en unos minutos.")
     return generic
 
 
@@ -81,6 +83,6 @@ async def reset_password(body: ResetBody):
         {"$set": {"used": True, "used_at": now}}, projection={"_id": 0})
     if not doc:
         raise HTTPException(status_code=400, detail="El enlace no es válido o ya caducó. Solicita uno nuevo.")
-    await db.users.update_one({"id": doc["user_id"]}, {"$set": {"hashed_password": get_password_hash(body.new_password), "password_changed_at": now, "tokens_valid_after": now}})
+    await db.users.update_one({"id": doc["user_id"]}, {"$set": {"hashed_password": get_password_hash(body.new_password), "password_changed_at": now, "tokens_valid_after": (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat()}})
     await db.password_reset_tokens.update_many({"user_id": doc["user_id"], "used": False}, {"$set": {"used": True, "used_at": now}})
     return {"reset": True, "message": "Contraseña actualizada. Ya puedes iniciar sesión."}
