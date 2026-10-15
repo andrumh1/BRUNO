@@ -123,16 +123,21 @@ async def get_notification_status(
 class NotificationPreferences(BaseModel):
     # Push notifications
     push_enabled: bool = True
-    calls: bool = True
-    messages: bool = True
-    likes: bool = True
-    comments: bool = True
-    followers: bool = True
-    product_favorites: bool = True
-    product_cart: bool = True
-    stories: bool = True
-    mentions: bool = True
+    # Push solo para lo importante: por defecto pedidos/pagos, seguridad y confirmaciones de tus propias gestiones.
+    # Lo rutinario (likes, comentarios, seguidores…) se queda en el centro de notificaciones de BRUNO.
+    calls: bool = False
+    messages: bool = False
+    likes: bool = False
+    comments: bool = False
+    followers: bool = False
+    product_favorites: bool = False
+    product_cart: bool = False
+    stories: bool = False
+    mentions: bool = False
     order_updates: bool = True
+    account_security: bool = True
+    my_activity: bool = True
+    lives: bool = False
     promotions: bool = False
     
     # Email notifications

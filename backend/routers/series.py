@@ -236,7 +236,7 @@ async def generate_chapters(post: dict) -> list:
         raise HTTPException(status_code=422, detail="No se detectó suficiente voz en el video para proponer capítulos")
     n = max(3, min(12, int(duration // 150) if duration else 6))
     system = ("Eres BRUNO IA. A partir de una transcripción con marcas de tiempo [mm:ss], propone capítulos para el video. "
-              f"Devuelve SOLO JSON: {{\"chapters\":[{{\"time\":segundos_enteros,\"title\":\"título corto en español (máx 6 palabras)\"}}]}}. "
+              f"Devuelve SOLO JSON: {{\"summary\":\"resumen de 2 o 3 frases en español de qué trata el video\",\"chapters\":[{{\"time\":segundos_enteros,\"title\":\"título corto en español (máx 6 palabras)\"}}]}}. "
               f"Entre 3 y {n} capítulos, el primero en 0, en orden, sin inventar contenido que no esté en la transcripción.")
     chat = LlmChat(api_key=api_key, session_id=f"chapters_{uuid.uuid4()}", system_message=system).with_model("openai", "gpt-5.4-mini")
     answer = await chat.send_message(UserMessage(text=f"Duración: {int(duration)} s\n\nTranscripción:\n{transcript}"))
@@ -256,6 +256,9 @@ async def generate_chapters(post: dict) -> list:
     out.sort(key=lambda c: c["time"])
     if out and out[0]["time"] > 0:
         out.insert(0, {"time": 0, "title": "Inicio"})
+    summary = str(parsed.get("summary") or "").strip()[:600]
+    if summary:
+        await db.posts.update_one({"id": post["id"]}, {"$set": {"ai_summary": summary, "ai_summary_at": _now()}})
     return out
 
 
@@ -270,6 +273,29 @@ async def ai_chapters(post_id: str, current_user: User = Depends(get_current_use
     chapters = await generate_chapters(post)
     await db.posts.update_one({"id": post_id}, {"$set": {"chapters_suggested": chapters, "chapters_suggested_at": _now()}})
     return {"chapters": chapters, "generated": True}
+
+
+@router.post("/posts/{post_id}/summary/ai")
+async def ai_summary(post_id: str, current_user: User = Depends(get_current_user)):
+    """Genera (o regenera) el resumen BRUNO IA de un video largo; se muestra a los espectadores antes de reproducir."""
+    post = await db.posts.find_one({"id": post_id, "user_id": current_user.id}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Video no encontrado")
+    if not _is_long(post):
+        raise HTTPException(status_code=400, detail="Solo disponible para videos de más de 3 minutos")
+    chapters = await generate_chapters(post)
+    fresh = await db.posts.find_one({"id": post_id}, {"_id": 0, "ai_summary": 1})
+    if not post.get("chapters"):
+        await db.posts.update_one({"id": post_id}, {"$set": {"chapters_suggested": chapters, "chapters_suggested_at": _now()}})
+    return {"summary": (fresh or {}).get("ai_summary"), "chapters": chapters}
+
+
+@router.delete("/posts/{post_id}/summary")
+async def delete_summary(post_id: str, current_user: User = Depends(get_current_user)):
+    res = await db.posts.update_one({"id": post_id, "user_id": current_user.id}, {"$unset": {"ai_summary": "", "ai_summary_at": ""}})
+    if not res.matched_count:
+        raise HTTPException(status_code=404, detail="Video no encontrado")
+    return {"deleted": True}
 
 
 async def suggest_chapters_background(post_id: str):

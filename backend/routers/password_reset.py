@@ -81,6 +81,6 @@ async def reset_password(body: ResetBody):
         {"$set": {"used": True, "used_at": now}}, projection={"_id": 0})
     if not doc:
         raise HTTPException(status_code=400, detail="El enlace no es válido o ya caducó. Solicita uno nuevo.")
-    await db.users.update_one({"id": doc["user_id"]}, {"$set": {"hashed_password": get_password_hash(body.new_password), "password_changed_at": now}})
+    await db.users.update_one({"id": doc["user_id"]}, {"$set": {"hashed_password": get_password_hash(body.new_password), "password_changed_at": now, "tokens_valid_after": now}})
     await db.password_reset_tokens.update_many({"user_id": doc["user_id"], "used": False}, {"$set": {"used": True, "used_at": now}})
     return {"reset": True, "message": "Contraseña actualizada. Ya puedes iniciar sesión."}

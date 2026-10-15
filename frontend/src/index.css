@@ -1595,3 +1595,11 @@ header.fixed:not([data-no-glass])::after {
 html.is-native, html.is-native body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
 html.is-native img, html.is-native a, html.is-native button { -webkit-touch-callout: none; }
 html.is-native input, html.is-native textarea, html.is-native select { font-size: max(16px, 1em); }
+
+/* Fluidez táctil: respuesta inmediata al toque, sin retraso de doble tap ni resaltado, feedback suave en controles. */
+button, a, [role="button"], input, select, textarea, label { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+@media (hover: none) and (pointer: coarse) {
+  button:not(:disabled):active:not([class*="translate"]):not([class*="scale"]) { opacity: 0.85; transition: opacity 80ms ease-out; }
+  .glass-card, .reel-chrome, nav, [data-testid="mobile-bottom-nav"] { will-change: transform; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }

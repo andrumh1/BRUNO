@@ -23,6 +23,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useTour } from "@/components/WelcomeTour";
 import DndSettings from "@/components/DndSettings";
 import ContinueWatchingRow from "@/components/reels/ContinueWatchingRow";
+import SeriesHighlights from "@/components/series/SeriesHighlights";
 import axios from "axios";
 import { 
   ArrowLeft,
@@ -116,7 +117,7 @@ const MyProfilePage = () => {
   };
   const handleCardRelease = (card) => {
     clearTimeout(longPressRef.current);
-    if (Date.now() - pressStartTime.current < 500 && !previewCard) navigate(`/c/${card.id}`);
+    if (Date.now() - pressStartTime.current < 500 && !previewCard) navigate(card.is_draft ? `/cards/${card.id}/edit` : `/c/${card.id}`);
   };
   const [listLoading, setListLoading] = useState(false);
 
@@ -632,6 +633,7 @@ const MyProfilePage = () => {
       />
 
       <ScheduledStories />
+      <SeriesHighlights userId={user?.id} token={token} />
 
       {/* Tabs */}
       <div className="border-b sticky top-14 bg-background z-20">
@@ -865,9 +867,10 @@ const MyProfilePage = () => {
                   >
                     <div className="h-16 relative" style={{ background: card.banner_url ? undefined : `linear-gradient(135deg, ${card.background_color || '#f97316'}, ${card.background_color || '#ea580c'}dd)` }}>
                       {card.banner_url && <img src={card.banner_url} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+                      {card.is_draft && <span className="absolute top-1 left-1 rounded-full bg-amber-500 text-white text-[8px] font-bold px-1.5 py-0.5" data-testid={`card-draft-badge-${card.id}`}>Borrador</span>}
                     </div>
                     <div className="p-2">
-                      <h4 className="text-[10px] font-bold truncate">{card.title}</h4>
+                      <h4 className="text-[10px] font-bold truncate">{card.title || (card.is_draft ? "Sin título" : "Tarjeta")}</h4>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-[8px] text-muted-foreground flex items-center gap-0.5"><Eye className="w-2 h-2" />{card.views || 0}</span>
                         <div className="flex gap-0.5">

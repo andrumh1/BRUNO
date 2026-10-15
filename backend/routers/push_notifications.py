@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from jose import JWTError, jwt
 from pywebpush import webpush, WebPushException
 import os
@@ -145,22 +145,53 @@ async def get_my_subscriptions(
     return subs
 
 
+# Categoría de push a partir del tag/tipo. Ver NotificationPreferences (routers/notifications.py) para los defaults.
+_CATEGORY_RULES = [
+    ("incoming_call", "calls"), ("call", "calls"), ("message", "messages"), ("chat", "messages"), ("like", "likes"), ("comment", "comments"),
+    ("follower", "followers"), ("follow", "followers"), ("story", "stories"), ("mention", "mentions"), ("order", "order_updates"), ("payment", "order_updates"),
+    ("sale", "order_updates"), ("piup", "order_updates"), ("security", "account_security"), ("login", "account_security"), ("password", "account_security"),
+    ("post_ready", "my_activity"), ("video_ready", "my_activity"), ("upload", "my_activity"), ("published", "my_activity"), ("my_activity", "my_activity"),
+    ("live", "lives"), ("promo", "promotions"), ("favorite", "product_favorites"), ("cart", "product_cart"),
+]
+ALWAYS_PUSH = {"account_security"}
+
+
+def push_category(notification: "NotificationPayload") -> str:
+    key = f"{(notification.data or {}).get('category', '')} {(notification.data or {}).get('type', '')} {notification.tag or ''}".lower()
+    for needle, cat in _CATEGORY_RULES:
+        if needle in key:
+            return cat
+    return "other"
+
+
+async def push_allowed(user_id: str, notification: "NotificationPayload") -> bool:
+    """Preferencias del usuario + anti-duplicados (mismo tag en 10 min). Las notificaciones in-app no pasan por aquí."""
+    from routers.notifications import NotificationPreferences
+    cat = push_category(notification)
+    prefs = await _db.notification_preferences.find_one({"user_id": user_id}, {"_id": 0}) or {}
+    merged = {**NotificationPreferences().model_dump(), **prefs}
+    if cat not in ALWAYS_PUSH and (not merged.get("push_enabled", True) or cat == "other" or not merged.get(cat, False)):
+        return False
+    if notification.tag and notification.tag != "incoming_call":
+        recent = await _db.push_log.find_one({"user_id": user_id, "tag": notification.tag, "at": {"$gte": (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()}}, {"_id": 0})
+        if recent:
+            return False
+    await _db.push_log.insert_one({"user_id": user_id, "tag": notification.tag, "category": cat, "at": datetime.now(timezone.utc).isoformat(), "expires_at": datetime.now(timezone.utc) + timedelta(days=1)})
+    return True
+
+
 async def send_push_notification(user_id: str, notification: NotificationPayload):
-    """Send push notification to all user devices"""
-    if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
-        logging.warning("VAPID keys not configured, skipping push notification")
+    """Send push notification to all user devices (web push + nativo). Respeta preferencias y evita duplicados."""
+    if not await push_allowed(user_id, notification):
         return
+    if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
+        logging.warning("VAPID keys not configured, skipping web push")
 
     from utils.dnd import is_dnd_active
     if is_dnd_active(await _db.users.find_one({"id": user_id}, {"_id": 0, "dnd": 1})):
         return
     
-    subscriptions = await _db.push_subscriptions.find(
-        {"user_id": user_id}
-    ).to_list(10)
-    
-    if not subscriptions:
-        return
+    subscriptions = await _db.push_subscriptions.find({"user_id": user_id}).to_list(10) if VAPID_PRIVATE_KEY and VAPID_PUBLIC_KEY else []
     
     payload = json.dumps({
         "title": notification.title,

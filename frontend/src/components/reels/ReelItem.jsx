@@ -101,10 +101,15 @@ export default function ReelItem({
   };
   const longPress = useRef(null);
   const pausedByHold = useRef(false);
+  // Resumen BRUNO IA antes de reproducir un video largo (una vez por video y sesión)
+  const [summaryOpen, setSummaryOpen] = useState(() => { try { return longMode && !!reel?.ai_summary && !sessionStorage.getItem(`bruno_sum_${reel.id}`); } catch { return longMode && !!reel?.ai_summary; } });
+  const dismissSummary = () => { try { sessionStorage.setItem(`bruno_sum_${reel.id}`, "1"); } catch { /* ignore */ } setSummaryOpen(false); };
+  useEffect(() => { if (!summaryOpen && longMode && isActive) { const v = videoRef.current; v?.play?.().then(() => setIsPlaying(true)).catch(() => {}); } }, [summaryOpen]); // eslint-disable-line
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    if (isActive && summaryOpen) { try { v.pause(); } catch (_) { /* ignore */ } setIsPlaying(false); return; }
     if (isActive) {
       v.muted = globalMuted;
       v.playbackRate = rateRef.current;
@@ -432,6 +437,17 @@ export default function ReelItem({
       )}
       {src && longMode && !hideChrome && (
         <ChaptersStrip chapters={chapters} currentTime={time.cur} onSeek={seekAbs} onOpen={() => onOpenChapters?.(reel, seekAbs)} bottom="calc(var(--nav-reserve, 64px) + 30px)" />
+      )}
+      {src && longMode && summaryOpen && (
+        <div className="absolute inset-0 z-40 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" data-testid="ai-summary-overlay" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-3xl bg-background text-foreground p-5 shadow-2xl space-y-3" style={{ marginBottom: "var(--nav-reserve, 64px)" }}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">Resumen · BRUNO IA</p>
+            <h3 className="text-base font-bold leading-snug line-clamp-2">{reel.content || reel.title || "Video"}</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed" data-testid="ai-summary-text">{reel.ai_summary}</p>
+            {chapters.length > 1 && <p className="text-[11px] text-muted-foreground">{chapters.length} capítulos · {Math.round((reel.media?.find?.((m) => m?.type === "video")?.duration || reel.duration || 0) / 60)} min</p>}
+            <button type="button" onClick={dismissSummary} className="w-full h-11 rounded-full bg-primary text-primary-foreground font-semibold active:scale-[0.98] transition-transform" data-testid="ai-summary-play">Ver video</button>
+          </div>
+        </div>
       )}
       {src && longMode && resume.resumedFrom != null && (
         <div className="absolute left-1/2 -translate-x-1/2 z-30 rounded-full bg-black/70 text-white text-xs px-3 py-1.5 reel-chrome" style={{ top: "calc(var(--safe-top, 0px) + 64px)" }} data-testid="long-resumed-toast">Reanudando desde {fmtClock(resume.resumedFrom)}</div>

@@ -297,6 +297,16 @@ async def create_post(
             post_doc["visibility"] = "scheduled"
     
     await db.posts.insert_one(post_doc)
+    # Confirmación de tu propia gestión (categoría my_activity; push solo si el usuario la tiene activa)
+    try:
+        from routers.push_notifications import send_push_notification, NotificationPayload
+        is_video = bool(post_doc.get("video_url") or any((m or {}).get("type") == "video" for m in (post_doc.get("media") or [])))
+        if post_doc.get("visibility") != "scheduled":
+            asyncio.create_task(send_push_notification(current_user.id, NotificationPayload(
+                title="Video publicado" if is_video else "Publicación lista", body="Tu contenido ya está visible en BRUNO.",
+                url=f"/reels?id={post_doc['id']}" if is_video else f"/post/{post_doc['id']}", tag=f"post_ready_{post_doc['id']}", data={"category": "my_activity"})))
+    except Exception:
+        pass
     try:
         await search_sync.index_post(post_doc)
         await search_sync.index_hashtags()
@@ -573,7 +583,7 @@ async def _publish_due_scheduled_posts():
         try:
             await emit_notification_ws(nd)
             from routers.push_notifications import send_push_notification, NotificationPayload
-            await send_push_notification(p["user_id"], NotificationPayload(title="Publicación en línea", body="Tu publicación programada ya se publicó", url=f"/reels?id={p['id']}"))
+            await send_push_notification(p["user_id"], NotificationPayload(title="Publicación en línea", body="Tu publicación programada ya se publicó", url=f"/reels?id={p['id']}", tag=f"post_ready_{p['id']}", data={"category": "my_activity"}))
         except Exception as e:
             logger.warning(f"scheduled reminder failed: {e}")
     if published:
@@ -1503,7 +1513,10 @@ async def get_user_posts(
     """Get posts from a specific user (owner sees everything incl. private/followers-only)"""
     q = {"user_id": user_id, "is_deleted": {"$ne": True}}
     if not current_user or current_user.id != user_id:
-        q["visibility"] = "public"
+        allowed = ["public", None]
+        if current_user and await db.follows.find_one({"follower_id": current_user.id, "following_id": user_id}, {"_id": 0}):
+            allowed.append("followers")
+        q["visibility"] = {"$in": allowed}
     posts = await db.posts.find(q, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     # Get user info

@@ -43,12 +43,13 @@ const ViewCardPage = () => {
 
   const fetchCard = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/cards/${cardId}${cardId.startsWith("example-") ? window.location.search : ""}`);
+      const response = await axios.get(`${API}/cards/${cardId}${cardId.startsWith("example-") ? window.location.search : ""}`, token ? { headers: { Authorization: `Bearer ${token}` } } : {});
       setCard(response.data);
     } catch (err) {
       setError(err.response?.data?.detail || "Tarjeta no encontrada");
     } finally { setLoading(false); }
-  }, [cardId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardId, token]);
 
   const handleStartChat = async () => {
     if (!token || !user) { navigate("/login"); return; }

@@ -737,6 +737,15 @@ async def login(user_input: UserLogin, request: Request, response: Response):
     await db.audit_logs.insert_one({"id": str(uuid.uuid4()), "user_id": user_obj.id, "action": "login", "ip": ip, "platform": user_input.platform or "web", "created_at": datetime.now(timezone.utc).isoformat()})
     if user_input.platform != "native":
         _sec.set_session_cookie(response, access_token, persistent=user_input.remember is not False)
+    # Seguridad: aviso de nuevo inicio de sesión (in-app + push categoría account_security, 1 por dispositivo/día vía dedupe)
+    try:
+        sec_notif = {"id": str(uuid.uuid4()), "user_id": user_obj.id, "type": "security", "message": f"Nuevo inicio de sesión en BRUNO ({user_input.platform or 'web'}). Si no fuiste tú, cambia tu contraseña.",
+                     "target_id": user_obj.id, "target_type": "security", "url": "/settings", "is_read": False, "created_at": datetime.now(timezone.utc).isoformat()}
+        await db.notifications.insert_one(dict(sec_notif))
+        from routers.push_notifications import send_push_notification, NotificationPayload
+        asyncio.create_task(send_push_notification(user_obj.id, NotificationPayload(title="Nuevo inicio de sesión", body=sec_notif["message"], url="/settings", tag=f"security_login_{(user_input.platform or 'web')}_{datetime.now(timezone.utc).date()}", data={"category": "account_security"})))
+    except Exception:
+        pass
     return Token(access_token=access_token, token_type="bearer", user=user_obj)
 
 @api_router.get("/auth/me/dnd")

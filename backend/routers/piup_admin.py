@@ -162,6 +162,8 @@ async def admin_order_status(order_id: str, body: OrderStatusBody, current_user:
         await db.notifications.insert_one(dict(notif))
         from utils.notification_realtime import emit_notification_ws
         await emit_notification_ws(notif)
+        from routers.push_notifications import send_push_notification, NotificationPayload
+        await send_push_notification(o["user_id"], NotificationPayload(title="Pedido PIUP actualizado", body=notif["message"], url=notif["url"], tag=f"order_piup_{order_id}_{body.status}", data={"category": "order_updates"}))
     except Exception:
         pass
     return await db.piup_orders.find_one({"id": order_id}, {"_id": 0})

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { rememberAccount, dropAccountToken } from "@/lib/rememberedAccounts";
 import { secureStorage } from "@/utils/secureStorage";
 import { isNative } from "@/native/capacitor";
 
@@ -74,7 +75,8 @@ export function AuthProvider({ children }) {
           await refreshUser(storedToken);
         }
       } catch {
-        clearAuth();
+        dropAccountToken(user?.id);
+      clearAuth();
       } finally {
         setIsLoading(false);
       }
@@ -148,6 +150,7 @@ export function AuthProvider({ children }) {
       if (keepSession) await secureStorage.setItem(TOKEN_KEY, userToken); else sessionStorage.setItem(TOKEN_KEY, userToken);
     }
     await secureStorage.setItem(USER_KEY, JSON.stringify(userData));
+    if (keepSession) { try { await rememberAccount(userData, userToken); } catch { /* ignore */ } }
 
     setToken(userToken);
     setUser(userData);

@@ -259,6 +259,8 @@ async def update_status(order_id: str, body: StatusBody, current_user: User = De
         await db.notifications.insert_one(dict(notif))
         from utils.notification_realtime import emit_notification_ws
         await emit_notification_ws(notif)
+        from routers.push_notifications import send_push_notification, NotificationPayload
+        await send_push_notification(target, NotificationPayload(title="Pedido actualizado", body=notif["message"], url=notif["url"], tag=f"order_{order_id}_{body.status}", data={"category": "order_updates"}))
     except Exception:
         pass
     return (await _with_people([await db.marketplace_orders.find_one({"id": order_id}, {"_id": 0})]))[0]

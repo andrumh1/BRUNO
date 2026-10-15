@@ -6,6 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
 import { OvcAttribution } from "@/components/brand/OvcAttribution";
+import AccountPicker from "@/components/auth/AccountPicker";
+import { listAccounts, forgetAccount, storedAccountToken, maskEmail, initials } from "@/lib/rememberedAccounts";
+import { authenticateBiometric, biometricInfo } from "@/native/biometric";
 import { isNative } from "@/native/capacitor";
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 
@@ -22,6 +25,41 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [keepActive, setKeepActive] = useState(true);
+  const [accounts, setAccounts] = useState([]);
+  const [picked, setPicked] = useState(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const [bioReady, setBioReady] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const list = await listAccounts();
+      const withTok = await Promise.all(list.map(async (a) => ({ ...a, hasToken: !!(await storedAccountToken(a.id)) })));
+      setAccounts(withTok);
+      setShowPicker(withTok.length > 0 && !new URLSearchParams(window.location.search).get("email"));
+      if (isNative()) biometricInfo().then((i) => setBioReady(!!i.available));
+    })();
+  }, []);
+
+  const pickAccount = (a) => { setPicked(a); setFormData((p) => ({ ...p, email: a.email, password: "" })); setShowPicker(false); setError(""); };
+  const removeAccount = async (a) => { const list = await forgetAccount(a.id); setAccounts(list); if (list.length === 0) setShowPicker(false); };
+  const biometricLogin = async () => {
+    if (!picked) return;
+    setLoading(true); setError("");
+    try {
+      const stored = await storedAccountToken(picked.id);
+      if (!stored) throw new Error("no-token");
+      const ok = await authenticateBiometric(`Entrar como ${picked.name || picked.email}`);
+      if (!ok) throw new Error("bio-cancel");
+      const me = await axios.get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${stored}` } });
+      if (isAuthenticated && sessionUser && sessionUser.id !== me.data.id) await logout();
+      await login(me.data, me.data.refreshed_token || stored);
+      navigate("/my-profile");
+    } catch (e) {
+      const st = e?.response?.status;
+      setError(st === 401 || e.message === "no-token" ? "La sesión guardada de esta cuenta caducó o fue revocada. Entra con tu contraseña." : e.message === "bio-cancel" ? "Biometría cancelada." : "No se pudo restaurar la sesión.");
+      if (st === 401) { const { dropAccountToken } = await import("@/lib/rememberedAccounts"); dropAccountToken(picked.id); }
+    } finally { setLoading(false); }
+  };
 
   // Restore remembered email on mount
   useEffect(() => {
@@ -110,7 +148,20 @@ const LoginPage = () => {
               </div>
             </div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {showPicker && !isAuthenticated && (
+            <AccountPicker accounts={accounts} onPick={pickAccount} onRemove={removeAccount} onOther={() => { setPicked(null); setFormData({ email: "", password: "" }); setShowPicker(false); }} biometricReady={bioReady} />
+          )}
+          {picked && !showPicker && (
+            <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border/60 p-3" data-testid="picked-account">
+              {picked.avatar_url ? <img src={picked.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" /> : <span className="w-10 h-10 rounded-full bg-primary/15 text-primary font-bold grid place-items-center">{initials(picked.name)}</span>}
+              <div className="min-w-0 flex-1"><p className="text-sm font-semibold truncate">{picked.name}</p><p className="text-[11px] text-muted-foreground truncate">{maskEmail(picked.email)}</p></div>
+              <button type="button" onClick={() => { setPicked(null); setShowPicker(true); }} className="text-xs text-primary font-medium" data-testid="picked-account-change">Cambiar</button>
+            </div>
+          )}
+          {picked && !showPicker && bioReady && picked.hasToken && (
+            <Button type="button" variant="outline" className="w-full rounded-full mb-3" onClick={biometricLogin} disabled={loading} data-testid="biometric-login-btn">Entrar con Face ID / huella</Button>
+          )}
+          <form onSubmit={handleSubmit} className={`space-y-4 ${showPicker && !isAuthenticated ? "hidden" : ""}`}>
             {error && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm" role="alert" data-testid="login-error">
                 <AlertCircle className="w-4 h-4" />

@@ -34,6 +34,7 @@ import {
   Video, ListVideo } from "lucide-react";
 import { useNavScroll } from "@/contexts/NavScrollContext";
 import LocationShareSheet from "@/components/bruno/LocationShareSheet";
+import SeriesHighlights from "@/components/series/SeriesHighlights";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -229,7 +230,7 @@ const UserProfilePage = () => {
     );
   }
 
-  const mediaFromPosts = posts.filter(p => (p.media && p.media.length > 0) || p.image_url);
+  const mediaFromPosts = posts.filter(p => (p.media && p.media.length > 0) || p.image_url || p.video_url);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -390,6 +391,8 @@ const UserProfilePage = () => {
           </div>
         </div>
 
+        <SeriesHighlights userId={userId} token={token} />
+
         {/* Tabs */}
         <div className="border-b sticky top-14 bg-background z-20">
           <div className="flex">
@@ -433,11 +436,18 @@ const UserProfilePage = () => {
               {mediaFromPosts.length === 0 ? (
                 <div className="col-span-3 text-center py-12 text-muted-foreground">No hay contenido multimedia</div>
               ) : (
-                mediaFromPosts.map((p) => (
-                  <div key={p.id} className="aspect-square bg-muted rounded overflow-hidden cursor-pointer hover:opacity-90 transition-opacity">
-                    <img src={p.image_url || p.media?.[0]?.url} alt="" className="w-full h-full object-cover" />
-                  </div>
-                ))
+                mediaFromPosts.map((p) => {
+                  const vid = p.video_url || (p.media || []).find((m) => m?.type === "video");
+                  const videoUrl = p.video_url || vid?.url;
+                  const thumb = p.thumbnail_url || p.image_url || vid?.thumbnail_url || (p.media || []).find((m) => m?.type !== "video")?.url;
+                  return (
+                    <button type="button" key={p.id} onClick={() => navigate(videoUrl ? `/reels?id=${p.id}` : `/post/${p.id}`)} className="aspect-square bg-muted rounded overflow-hidden relative hover:opacity-90 transition-opacity text-left" data-testid={`user-media-${p.id}`}>
+                      {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" loading="lazy" /> : videoUrl ? <video src={videoUrl} muted playsInline preload="metadata" className="w-full h-full object-cover" /> : <div className="w-full h-full p-2 text-[10px] line-clamp-4">{p.content}</div>}
+                      {videoUrl && <span className="absolute top-1 right-1 rounded-full bg-black/55 text-white text-[9px] px-1.5 py-0.5">Video</span>}
+                      {(p.media || []).length > 1 && <span className="absolute bottom-1 right-1 rounded-full bg-black/55 text-white text-[9px] px-1.5 py-0.5">{p.media.length}</span>}
+                    </button>
+                  );
+                })
               )}
             </div>
           )}
