@@ -1,0 +1,29 @@
+{
+  "summary": "Iteration 116 - verified Reels Feed timeline backend + sheet, Saved Places backend + NearbyPlacesPanel UI, and dynamic font loading regression. 9/9 backend pytest cases pass (auth-required 401, desc sort, limit cap 40, cursor pagination with no overlap, followers-only visibility via follow/unfollow, saved places create+idempotent, per-user isolation, delete by id and by place_id, 404 for unknown). Frontend (mobile 390x844, newtest@bruno.com): reels-rail-feed opens reels-feed-sheet, source text 'Aún no sigues a nadie: publicaciones públicas recientes' (newtest follows nobody, matches spec), 78 unique post-card ids after full scroll with 0 duplicates, incremental load works (reels-feed-end 'Estás al día.' at the end), close button returns to reels-page, Historias and Explorar rail sheets still open+close. Saved places: /map?nearby=1 with 'Chapinero, Bogota' returns 25 OSM results, nearby-save-<id> toggles toast and nearby-saved-toggle shows 1, saved list shows item, nearby-card-<id> navigates to /cards/new?type=lugares with 'La Paisita' / 'Restaurante' prefilled in all style previews, unsave restores count to 0. Fonts: /reels loads only Inter + text-style stylesheet (Playfair/Bebas/Caveat/Space Mono) and NO Manrope; /cards/new additionally loads the card fonts stylesheet containing Manrope/DM Sans/Outfit/IBM Plex. /my-profile and /map render without errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration116_feed_places.py",
+    "/app/test_reports/pytest/iter116.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routers/posts_feed.py get_timeline correctly scopes to own + followed with visibility public/followers/null, excludes drafts/scheduled/deleted/hidden/blocked, caps limit at 40, uses created_at < before as cursor and returns next_cursor only when a full page is fetched. _enrich_timeline resolves users/profiles in two batched queries and tags is_liked/is_bookmarked for the viewer.",
+    "routers/places.py saved endpoints: POST idempotent (returns existing doc for same place_id), DELETE by both id and place_id with 404 fallback, GET scoped to user_id. All drop _id properly.",
+    "ReelsFeedSheet handles source=public|following, cursor pagination with reels-feed-load-more / reels-feed-loading-more / reels-feed-end states, and no duplicate rendering under incremental appends.",
+    "Fonts are gated behind component mounts via src/lib/fonts.js — verified /reels does not pull Manrope and /cards/new does, matching the dynamic-loading design."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration116_feed_places.py (new, 9 tests all pass)"
+  ],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% (all critical flows pass)"},
+  "test_credentials": "newtest@bruno.com / Test1234! and viewer2@bruno.com / Test1234! (both verified).",
+  "seed_data_creation": "All test data cleaned up: followers-only post deleted; follow relation newtest->viewer2 unfollowed; TEST_ saved places deleted at end of each test. No residual state.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Pytest file: /app/backend/tests/test_iteration116_feed_places.py. Nominatim is rate-limited 1 req/s — leave a few seconds between nearby UI tests. PostCard like testid is 'post-like-btn' (no suffix). nearby-geocode suggestions are rendered as 'li > button' inside the UL with data-testid=nearby-geocode-suggestions. The source header for Feed shows 'Aún no sigues a nadie...' when the user follows zero accounts; it switches to 'Tus publicaciones y las de N cuenta(s) que sigues' once following_count >= 1."
+}
