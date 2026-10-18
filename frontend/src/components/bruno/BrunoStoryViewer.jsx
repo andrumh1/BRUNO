@@ -5,7 +5,7 @@ import {
   useMotionValue,
   useTransform,
 } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, Eye, Send, Volume2, VolumeX, BarChart3 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Eye, Send, Volume2, VolumeX, BarChart3, MapPin } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
@@ -297,6 +297,19 @@ export default function BrunoStoryViewer({
                   {story.caption}
                 </p>
               </motion.div>
+            )}
+
+            {/* Lugar adjunto → se ve también en la barra del Mapa */}
+            {story.location?.name && (
+              <a
+                href={`/map?lat=${story.location.lat}&lng=${story.location.lng}`}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute left-4 top-[88px] inline-flex items-center gap-1.5 max-w-[70%] bg-black/45 backdrop-blur-sm text-white text-xs font-semibold rounded-full px-3 py-1.5"
+                data-testid="story-location-pill"
+              >
+                <MapPin className="w-3.5 h-3.5 text-primary" />
+                <span className="truncate">{story.location.name}</span>
+              </a>
             )}
 
             {/* Pause indicator */}

@@ -15,6 +15,7 @@ import ShareImageSheet from "@/components/bruno/ShareImageSheet";
 import CardRenderer from "@/components/cards/CardRenderer";
 import { CARD_LANGS, CARD_LANG_KEY, detectCardLang, translateCardLabel } from "@/lib/cardLabels";
 import { resolveDesign, deepMerge, luminance } from "@/lib/cardDesign";
+import { accentStyleFromHex } from "@/lib/accentScope";
 import { useNavScroll } from "@/contexts/NavScrollContext";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -137,9 +138,12 @@ const ViewCardPage = () => {
   const lightCard = ["color", "gradient"].includes(baseDesign.background.type) && luminance(baseDesign.background.color) > 0.72;
   const design = isDark && lightCard ? deepMerge(baseDesign, { background: { color: "#474747", color2: "#2f2f2f" }, colors: { text: "#F9F1EA" } }) : baseDesign;
   const bg = design.background.color;
+  // Acento propio de la tarjeta (solo en esta página; el acento global de la app no cambia)
+  const cardAccent = design.colors?.accent;
+  const accentStyle = cardAccent ? accentStyleFromHex(cardAccent, isDark) : {};
 
   return (
-    <div className="min-h-screen bg-background" style={{ paddingBottom: "calc(var(--content-bottom, 96px) + 72px)" }} data-testid="view-card-page" data-card-theme={isDark ? "dark" : "light"}>
+    <div className="min-h-screen bg-background" style={{ paddingBottom: "calc(var(--content-bottom, 96px) + 72px)", ...accentStyle }} data-testid="view-card-page" data-card-theme={isDark ? "dark" : "light"} data-card-accent={cardAccent || ""}>
       {/* Subtle background glow — decorative only, never above controls nor interactive */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden>
         <div className="absolute top-1/3 left-1/3 w-[500px] h-[500px] rounded-full blur-[140px] opacity-10" style={{ backgroundColor: bg }} />

@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { isVideoFile } from "@/lib/media";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import StoryPlacePicker from "@/components/StoryPlacePicker";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -205,6 +206,7 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
   // Publish
   const [caption, setCaption] = useState("");
   const [visibility, setVisibility] = useState("public");
+  const [place, setPlace] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
 
@@ -322,7 +324,7 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
             caption: i === 0 ? (caption || pollQuestion || "") : "",
             visibility,
             duration: s.type === "video" ? 15 : 5,
-            ...(i === 0 ? { poll_id: pollId, overlays: overlaysMeta } : {}),
+            ...(i === 0 ? { poll_id: pollId, overlays: overlaysMeta, location: place } : {}),
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -348,6 +350,7 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
     setMediaType("image");
     setExtraSlides([]);
     setTextOverlays([]);
+    setPlace(null);
     setStickerOverlays([]);
     setEditingText("");
     setPollQuestion("");
@@ -708,6 +711,7 @@ const StoryEditor = ({ isOpen, onClose, onCreated }) => {
                   ))}
                 </div>
               </div>
+              <StoryPlacePicker token={token} value={place} onChange={setPlace} onClose={() => { setShowPublish(false); onClose?.(); }} />
               <Button className="w-full" onClick={handlePublish} disabled={loading} data-testid="story-publish-confirm">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                 {extraSlides.length > 0 ? `Publicar ${extraSlides.length + 1} historias` : "Publicar ahora"}

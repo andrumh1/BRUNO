@@ -29,6 +29,7 @@ const DesignPanel = ({ card, design, setPreset, updateDesign, resetDesign }) => 
           <ColorField label="Texto" value={d.colors.text} onChange={(v) => updateDesign({ colors: { text: v } })} testId="color-text" />
           <ColorField label="Acento" value={d.colors.accent} onChange={(v) => updateDesign({ colors: { accent: v } })} testId="color-accent" />
         </div>
+        <p className="text-[11px] text-muted-foreground mt-2" data-testid="accent-hint">El acento también colorea los botones y controles de la página al ver tu tarjeta, sin cambiar el color de la app de quien la mira.</p>
       </Section>
 
       <Section title="Fondo" testId="section-background">

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import InternalGalleryPicker from "@/components/bruno/InternalGalleryPicker";
 import axios from "axios";
 import * as faceapi from "face-api.js";
+import StoryPlacePicker from "@/components/StoryPlacePicker";
 import { VideoTrimCover, UploadProgress, DraftsSheet } from "@/components/camera/VideoPublishTools";
 import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
 import { takePendingMedia } from "@/lib/pendingMedia";
@@ -45,6 +46,7 @@ import {
   ArrowLeft,
   Music2,
   AlertCircle,
+  MapPin,
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
@@ -179,6 +181,9 @@ const BrunoCameraPage = () => {
   // Publishing
   const [publishing, setPublishing] = useState(false);
   const [caption, setCaption] = useState("");
+  const [asStory, setAsStory] = useState(false);
+  const [placeOpen, setPlaceOpen] = useState(false);
+  const [storyPlace, setStoryPlace] = useState(null);
   const [trim, setTrim] = useState({ start: 0, end: 0 });
   const [coverAt, setCoverAt] = useState(null);
   const [upload, setUpload] = useState({ pct: 0, phase: null, error: null });
@@ -706,7 +711,7 @@ const BrunoCameraPage = () => {
 
       // Step 3: Create post (for feed) OR a Story when there's interactive content
       const isInteractive = !!pollSticker || stickers.some((s) => s.kind === "question");
-      if (isInteractive) {
+      if (isInteractive || asStory) {
         await axios.post(`${API}/stories`, {
           media_url: mediaUrl,
           media_type: capturedMedia.type === "photo" ? "image" : "video",
@@ -715,7 +720,10 @@ const BrunoCameraPage = () => {
           duration: capturedMedia.type === "photo" ? 5 : 15,
           poll_id: pollId,
           overlays: overlaysMeta,
+          location: storyPlace,
         }, { headers: { Authorization: `Bearer ${token}` } });
+        const { brunoToast } = await import("@/components/bruno/BrunoToast");
+        brunoToast.publish("Historia publicada", { description: storyPlace ? `Con lugar: ${storyPlace.name}. También se verá en la barra del Mapa.` : "Visible 24 horas para quienes te siguen." });
         navigate("/feed");
       } else {
         const created = await axios.post(`${API}/posts`, {
@@ -1152,6 +1160,21 @@ const BrunoCameraPage = () => {
             {capturedMedia.type !== "photo" && !capturedMedia.remote && <VideoTrimCover src={capturedMedia.data} trim={trim} onTrim={setTrim} coverAt={coverAt} onCover={setCoverAt} />}
             <UploadProgress pct={upload.pct} phase={upload.phase} error={upload.error} onRetry={() => lastAction.current?.()} />
             <button onClick={saveDraft} disabled={publishing} className="h-8 px-3 rounded-full bg-white/15 text-white text-xs font-semibold disabled:opacity-50" data-testid="camera-save-draft-btn">Guardar borrador</button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={() => setAsStory((v) => !v)} aria-pressed={asStory} className={`h-8 px-3 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${asStory ? "bg-white text-black" : "bg-white/15 text-white"}`} data-testid="camera-as-story-toggle">
+                <Sparkles className="w-3.5 h-3.5" />{asStory ? "Historia (24 h)" : "Publicar como historia"}
+              </button>
+              {asStory && (
+                <button onClick={() => setPlaceOpen((v) => !v)} className={`h-8 px-3 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${storyPlace ? "bg-primary text-white" : "bg-white/15 text-white"}`} data-testid="camera-story-place-toggle">
+                  <MapPin className="w-3.5 h-3.5" />{storyPlace ? storyPlace.name : "Añadir lugar"}
+                </button>
+              )}
+            </div>
+            {asStory && placeOpen && (
+              <div className="rounded-2xl bg-background text-foreground p-3" data-testid="camera-story-place">
+                <StoryPlacePicker token={token} value={storyPlace} onChange={(v) => { setStoryPlace(v); if (v) setPlaceOpen(false); }} onClose={() => setPlaceOpen(false)} />
+              </div>
+            )}
             {showCaption ? (
               <div className="flex items-center gap-2 mb-2">
                 <Input
