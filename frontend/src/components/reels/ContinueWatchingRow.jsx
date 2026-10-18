@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Play, X, History } from "lucide-react";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const DISMISS_KEY = "bruno_cw_dismissed_at";
@@ -32,10 +33,13 @@ const Thumb = ({ item, onOpen, onRemove, dark }) => (
   </div>
 );
 
-export default function ContinueWatchingRow({ token, variant = "profile", visible = true }) {
+export default function ContinueWatchingRow({ token, variant = "profile", visible = true, reveal }) {
   const navigate = useNavigate();
   const { items, remove } = useContinueWatching(token);
   const [dismissed, setDismissed] = useState(() => { try { return Date.now() - Number(localStorage.getItem(DISMISS_KEY) || 0) < DISMISS_MS; } catch { return false; } });
+  const full = useMotionValue(1);
+  const mv = reveal || full;
+  const y = useTransform(mv, [0, 1], [-14, 0]);
   if (!items || items.length === 0) return null;
   const open = (item) => navigate(`/reels?id=${item.id}`);
   const dark = variant === "reels";
@@ -43,7 +47,7 @@ export default function ContinueWatchingRow({ token, variant = "profile", visibl
   if (variant === "reels") {
     if (!visible || dismissed) return null;
     return (
-      <div className="absolute inset-x-0 z-20" style={{ top: "calc(var(--safe-top, 0px) + 150px)" }} data-testid="continue-watching-reels">
+      <motion.div className="absolute inset-x-0 z-20" style={{ top: "calc(var(--safe-top, 0px) + 150px)", opacity: mv, y }} data-testid="continue-watching-reels">
         <div className="mx-3 rounded-2xl bg-black/55 backdrop-blur-md p-3 border border-white/10" onTouchStart={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold text-white flex items-center gap-1.5"><History className="w-3.5 h-3.5" /> Continuar viendo</p>
@@ -51,7 +55,7 @@ export default function ContinueWatchingRow({ token, variant = "profile", visibl
           </div>
           <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">{items.map((it) => <Thumb key={it.id} item={it} dark onOpen={() => open(it)} onRemove={() => remove(it.id)} />)}</div>
         </div>
-      </div>
+      </motion.div>
     );
   }
   return (

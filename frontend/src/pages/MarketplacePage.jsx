@@ -22,6 +22,7 @@ import {
   List,
   X,
   ChevronRight,
+  ChevronDown,
   MessageCircle,
   Loader2,
   Star,
@@ -288,6 +289,7 @@ const MarketplacePage = () => {
   const [subscriptions, setSubscriptions] = useState([]);
   const [piupGroups, setPiupGroups] = useState([]);
   const [billing, setBilling] = useState("monthly");
+  const [plansOpen, setPlansOpen] = useState(false);
   const [showPiupSection, setShowPiupSection] = useState(true);
   const tab = searchParams.get('tab') === 'piup' ? 'piup' : 'community';
   const setTab = (t) => { const next = new URLSearchParams(searchParams); if (t === 'piup') next.set('tab', 'piup'); else next.delete('tab'); setSearchParams(next); };
@@ -518,21 +520,29 @@ const MarketplacePage = () => {
         {/* PIUP Featured Section (planes BRUNO) */}
         {tab === 'community' && showPiupSection && !searchQuery && !filters.category && (
           <div className="space-y-6">
-            {/* Subscriptions */}
-            <div>
+            {/* Subscriptions — minimizadas como la sección PIUP: una fila compacta que se despliega */}
+            <div data-testid="plans-section">
+              <button onClick={() => setPlansOpen((v) => !v)} aria-expanded={plansOpen} className="w-full rounded-2xl border border-yellow-400/40 bg-gradient-to-r from-yellow-50 to-amber-50/60 dark:from-yellow-950/20 dark:to-amber-950/10 p-4 flex items-center gap-3 text-left hover:shadow-md transition-shadow" data-testid="plans-section-toggle">
+                <span className="w-9 h-9 rounded-full bg-yellow-500/15 grid place-items-center shrink-0"><Crown className="w-5 h-5 text-yellow-500" /></span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold">Suscripciones BRUNO</p>
+                  <p className="text-xs text-muted-foreground truncate" data-testid="plans-section-summary">
+                    {subscriptions.length ? subscriptions.map((b) => `${b.icon} ${b.brand} desde $${Math.min(...b.plans.map((p) => p.monthly)).toLocaleString("en-US")}/mes`).join(" · ") : "Planes mensuales y anuales para tu BRUNO"}
+                  </p>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-muted-foreground shrink-0 transition-transform ${plansOpen ? "rotate-180" : ""}`} />
+              </button>
+              {plansOpen && (
+              <div className="mt-4" data-testid="plans-section-body">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                  <Crown className="w-5 h-5 text-yellow-500" />
-                  Suscripciones BRUNO
-                </h2>
-                <Link to="/store" className="text-sm text-primary hover:underline flex items-center gap-1">
+                <div className="flex items-center gap-1 p-1 rounded-full bg-muted w-fit" data-testid="billing-toggle">
+                  {[{ id: "monthly", label: "Mensual" }, { id: "yearly", label: "Anual · 2 meses gratis" }].map((b) => (
+                    <button key={b.id} onClick={() => setBilling(b.id)} className={`px-4 h-8 rounded-full text-xs font-semibold transition-colors ${billing === b.id ? "bg-primary text-white" : "text-muted-foreground"}`} data-testid={`billing-${b.id}`}>{b.label}</button>
+                  ))}
+                </div>
+                <Link to="/store" className="text-sm text-primary hover:underline flex items-center gap-1" data-testid="plans-store-link">
                   Ver tienda <ChevronRight className="w-4 h-4" />
                 </Link>
-              </div>
-              <div className="flex items-center gap-1 p-1 rounded-full bg-muted w-fit mb-4" data-testid="billing-toggle">
-                {[{ id: "monthly", label: "Mensual" }, { id: "yearly", label: "Anual · 2 meses gratis" }].map((b) => (
-                  <button key={b.id} onClick={() => setBilling(b.id)} className={`px-4 h-8 rounded-full text-xs font-semibold transition-colors ${billing === b.id ? "bg-primary text-white" : "text-muted-foreground"}`} data-testid={`billing-${b.id}`}>{b.label}</button>
-                ))}
               </div>
               <div className="space-y-6">
                 {subscriptions.map((brand) => (
@@ -558,6 +568,8 @@ const MarketplacePage = () => {
                   </div>
                 ))}
               </div>
+              </div>
+              )}
             </div>
 
             {/* Acceso a la sección PIUP oficial */}

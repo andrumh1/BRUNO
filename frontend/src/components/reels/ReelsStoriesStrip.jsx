@@ -2,17 +2,20 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 import { Plus } from "lucide-react";
 import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
-// Active stories of followed users, shown as a strip on the first reel (TikTok/IG hybrid).
-export default function ReelsStoriesStrip({ token, user, visible }) {
+// Active stories of followed users, shown as a strip over the reels; `reveal` (0..1) follows the upward scroll gesture.
+export default function ReelsStoriesStrip({ token, user, visible, reveal }) {
   const navigate = useNavigate();
   const [groups, setGroups] = useState([]);
   const [viewing, setViewing] = useState(null);
+  const full = useMotionValue(1);
+  const mv = reveal || full;
+  const y = useTransform(mv, [0, 1], [-14, 0]);
 
   useEffect(() => {
     if (!token) return;
@@ -25,11 +28,9 @@ export default function ReelsStoriesStrip({ token, user, visible }) {
 
   return (
     <>
-      <AnimatePresence>
-        {visible && (
+      {visible && (
           <motion.div
-            initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.22 }}
-            className="absolute inset-x-0 z-20 pointer-events-none" style={{ top: "calc(var(--safe-top) + 52px)" }}
+            className="absolute inset-x-0 z-20 pointer-events-none" style={{ top: "calc(var(--safe-top) + 52px)", opacity: mv, y }}
             data-testid="reels-stories-strip"
           >
             <div className="flex gap-3 overflow-x-auto scrollbar-none px-3 py-2 pointer-events-auto" onTouchStart={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
@@ -53,7 +54,6 @@ export default function ReelsStoriesStrip({ token, user, visible }) {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
       {viewing && <BrunoStoryViewer userStories={viewing} allUsers={groups} onClose={() => setViewing(null)} onNavigate={(g) => setViewing(g)} />}
     </>
   );

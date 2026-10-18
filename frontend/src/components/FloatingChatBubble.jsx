@@ -556,7 +556,7 @@ const FloatingChatBubble = () => {
             onClick={(e) => { e.stopPropagation(); bumpIdle(); setMinimized(false); setIsOpen(true); }}
             onTouchStart={(e) => { touchHandlers.onTouchStart(e); bumpIdle(); }}
             onTouchEnd={touchHandlers.onTouchEnd}
-            className="relative group transition-transform duration-200 active:scale-90"
+            className="relative block group transition-transform duration-200 active:scale-90"
             style={{ WebkitTapHighlightColor: 'transparent' }}
             data-testid="chat-bubble-btn-minimized"
             aria-label="Abrir mensajes"

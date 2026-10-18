@@ -25,7 +25,7 @@ import ReelsStoriesStrip from "@/components/reels/ReelsStoriesStrip";
 import ContinueWatchingRow from "@/components/reels/ContinueWatchingRow";
 import ReelsQuickRail from "@/components/reels/ReelsQuickRail";
 import { ChaptersSheet, getChapters } from "@/components/reels/LongVideoExtras";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, useMotionValue, animate } from "framer-motion";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -114,8 +114,22 @@ export default function ReelsPage() {
     if (activeIndex >= reels.length - 3) loadMore();
   }, [activeIndex, reels.length]);
 
+  /* Historias + rail: aparecen progresivamente con el gesto de subir (en cualquier reel) y se ocultan al bajar */
+  const reveal = useMotionValue(1);
+  const [chromeOn, setChromeOn] = useState(true);
+  const scrollMeta = useRef({ top: 0, timer: null });
+  const syncChrome = useCallback(() => { const on = reveal.get() > 0.02; setChromeOn((v) => (v === on ? v : on)); }, [reveal]);
+  const onReelsScroll = (e) => {
+    const top = e.currentTarget.scrollTop;
+    const m = scrollMeta.current; const delta = m.top - top; m.top = top;
+    reveal.set(top <= 2 ? 1 : Math.min(1, Math.max(0, reveal.get() + delta / 180)));
+    syncChrome();
+    clearTimeout(m.timer);
+    m.timer = setTimeout(() => { const v = reveal.get(); if (v > 0 && v < 1) animate(reveal, v >= 0.5 ? 1 : 0, { duration: 0.18, onComplete: syncChrome }); }, 140);
+  };
+
   const prevTab = useRef(tab);
-  useEffect(() => { if (prevTab.current === tab) return; prevTab.current = tab; setActiveIndex(0); if (containerRef.current) containerRef.current.scrollTop = 0; }, [tab]);
+  useEffect(() => { if (prevTab.current === tab) return; prevTab.current = tab; setActiveIndex(0); if (containerRef.current) containerRef.current.scrollTop = 0; scrollMeta.current.top = 0; reveal.set(1); setChromeOn(true); }, [tab]);
 
   /* Deep-link from notifications: /reels?id=X&comments=1 opens the comments sheet */
   const openedCommentsRef = useRef(false);
@@ -208,9 +222,9 @@ export default function ReelsPage() {
         </button>
       </div>
 
-      {!profileMode && !longMode && tab !== "lives" && tab !== "series" && <ReelsStoriesStrip token={token} user={user} visible={activeIndex === 0 && !loading && reels.length > 0} />}
-      {!profileMode && !longMode && tab !== "lives" && tab !== "series" && <ContinueWatchingRow token={token} variant="reels" visible={activeIndex === 0 && !loading && reels.length > 0} />}
-      <ReelsQuickRail token={token} user={user} visible={!profileMode && !longMode && tab !== "lives" && tab !== "series" && !loading && activeIndex === 0} />
+      {!profileMode && !longMode && tab !== "lives" && tab !== "series" && <ReelsStoriesStrip token={token} user={user} visible={chromeOn && !loading && reels.length > 0} reveal={reveal} />}
+      {!profileMode && !longMode && tab !== "lives" && tab !== "series" && <ContinueWatchingRow token={token} variant="reels" visible={chromeOn && !loading && reels.length > 0} reveal={reveal} />}
+      <ReelsQuickRail token={token} user={user} visible={!profileMode && !longMode && tab !== "lives" && tab !== "series" && !loading && chromeOn} reveal={reveal} />
 
       {tab === "series" ? (
         <SeriesGrid token={token} />
@@ -220,7 +234,7 @@ export default function ReelsPage() {
         ) : reels.length === 0 ? (
           <EmptyReels profileMode={profileMode} following={tab === "following"} onCreate={() => navigate("/camera")} onForYou={() => setTab("for_you")} />
         ) : (
-          <div ref={containerRef} className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-none" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }} data-testid="reels-scroller">
+          <div ref={containerRef} onScroll={onReelsScroll} className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-none" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }} data-testid="reels-scroller">
             {reels.map((reel, index) => (
               <div key={reel.id} ref={(el) => (itemRefs.current[index] = el)} data-index={index} className="h-full w-full snap-start snap-always">
                 {Math.abs(index - activeIndex) <= 2 ? (

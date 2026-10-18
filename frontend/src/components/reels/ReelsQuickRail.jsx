@@ -5,7 +5,7 @@
  * el Feed cronológico de publicaciones (ReelsFeedSheet) y Explorar tarjetas (CardsExplorer, antes en el Mapa).
  */
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import { Film, Compass, X } from "lucide-react";
 import CardsExplorer from "@/components/CardsExplorer";
 import ReelsFeedSheet from "@/components/reels/ReelsFeedSheet";
@@ -35,16 +35,17 @@ function Sheet({ title, onClose, children, testid }) {
   );
 }
 
-export default function ReelsQuickRail({ token, user, visible }) {
+export default function ReelsQuickRail({ token, user, visible, reveal }) {
   const [open, setOpen] = useState(null);
+  const full = useMotionValue(1);
+  const mv = reveal || full;
+  const x = useTransform(mv, [0, 1], [-12, 0]);
   return (
     <>
-      <AnimatePresence>
-        {visible && (
+      {visible && (
           <motion.nav
-            initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.2 }}
             className="absolute left-2 z-20 flex flex-col items-center gap-3 reel-chrome"
-            style={{ top: "calc(var(--safe-top) + 140px)" }}
+            style={{ top: "calc(var(--safe-top) + 140px)", opacity: mv, x }}
             aria-label="Menú de Reels"
             data-testid="reels-quick-rail"
           >
@@ -64,7 +65,6 @@ export default function ReelsQuickRail({ token, user, visible }) {
             ))}
           </motion.nav>
         )}
-      </AnimatePresence>
       <AnimatePresence>
         {open === "feed" && (
           <Sheet key="feed" title="Feed" onClose={() => setOpen(null)} testid="reels-feed-sheet">

@@ -1753,3 +1753,10 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - **Series** en Reels: pestaña `reels-tab-series` → `SeriesGrid` (Mis series con borradores privados + Series publicadas). Backend `GET /api/series/public` (solo públicas con capítulos públicos); `candidates` acepta cualquier video propio (antes solo 3+ min). Crear/ordenar/publicar/reproducir ya existían en `SeriesPage` (`/series/new`, `/series/:id`).
 - **Historias cerca de mí**: filtro `near` en `MapProfilesBar` (solo historias con lugar, pide GPS al usarlo, ordena por distancia con etiqueta; estado denegado).
 - **Lugar en publicaciones**: `PostCreate.place` → `post.place {lat,lng,name,address,place_id}`; cámara: "Añadir lugar" también para publicaciones normales; badges `reel-place-badge` (ReelItem) y `post-place-badge` (PostCard) → `/map?lat=&lng=` (MapPage centra ahí y no salta al GPS).
+
+
+## 2026-06 — Ajustes visuales (edición dirigida)
+- Feed de Reels: separación clara entre publicaciones (gap 24px + divisor) en `ReelsFeedSheet`.
+- Reels: historias, "Continuar viendo" y rail (Tu historia → Feed → Explorar) aparecen progresivamente con el gesto de subir en cualquier reel (motion value `reveal`, `onScroll` en `ReelsPage`), se ocultan al bajar; siempre visibles en el primer reel.
+- Marketplace: "Suscripciones BRUNO" minimizada como la sección PIUP (fila compacta `plans-section-toggle` que despliega planes + toggle mensual/anual).
+- Barra minimizada: BRUNO IA · barra · Chat alineados al mismo centro vertical y simétricos (12px de separación), `MobileBottomNav` bottom safe+8px.

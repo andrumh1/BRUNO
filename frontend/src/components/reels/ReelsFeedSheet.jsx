@@ -127,8 +127,12 @@ export default function ReelsFeedSheet({ token, user, onClose }) {
         </div>
       )}
 
-      <div className="space-y-4">
-        {items.map((post) => <PostCard key={post.id} post={post} onDelete={(id) => setItems((prev) => prev.filter((p) => p.id !== id))} />)}
+      <div className="flex flex-col gap-6" data-testid="reels-feed-posts">
+        {items.map((post) => (
+          <div key={post.id} className="pb-6 border-b border-border/40 last:border-0 last:pb-0" data-testid={`reels-feed-post-${post.id}`}>
+            <PostCard post={post} onDelete={(id) => setItems((prev) => prev.filter((p) => p.id !== id))} />
+          </div>
+        ))}
       </div>
 
       <div ref={sentinel} className="h-8" />

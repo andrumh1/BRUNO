@@ -100,12 +100,13 @@ const MobileBottomNav = () => {
         <div
           className={`kb-hide fixed left-0 right-0 ${cameraOpen ? "z-[125]" : "z-[9999]"}`}
           style={{
-            bottom: 'calc(var(--safe-bottom) + 4px)',
+            bottom: 'calc(var(--safe-bottom) + 8px)',
             pointerEvents: 'none',
             isolation: 'isolate', // prevents Google Maps stacking-context bleed
           }}
           data-testid="mobile-bottom-nav"
         >
+          {/* Misma base (safe-bottom + 8px) y mismo centro vertical (22px) que las burbujas BRUNO IA (izq.) y Chat (der.): 12px + 4px + 12px = 28px = alto de las burbujas */}
           <button
             onClick={(e) => { e.stopPropagation(); bumpIdle(); setMinimized(false); }}
             onTouchStart={(e) => { touchHandlers.onTouchStart(e); bumpIdle(); }}
@@ -115,14 +116,14 @@ const MobileBottomNav = () => {
             }`}
             style={{
               pointerEvents: 'auto',
-              padding: '10px 20px',
+              padding: '12px 20px',
               WebkitTapHighlightColor: 'transparent',
               willChange: 'opacity, transform',
             }}
             aria-label="Mostrar barra de navegación"
             data-testid="nav-expand-btn"
           >
-            <div className={`flex items-center justify-center gap-1.5 w-32 max-w-[40vw] transition-all duration-500 ${
+            <div className={`flex items-center justify-center gap-1.5 w-32 h-1 transition-all duration-500 ${
               idle ? 'blur-[1px]' : ''
             }`}>
               <span className={`h-1 w-1 rounded-full transition-colors ${idle ? 'bg-foreground/30' : 'bg-foreground/60 animate-pulse'}`} />
