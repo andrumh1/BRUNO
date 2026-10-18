@@ -1,0 +1,56 @@
+{
+  "summary": "Iteration 115 — full verification of (A) performance hardening + (B) Reels quick rail + Map NearbyPlacesPanel reorg. 13/13 backend pytest cases pass (places categories/nearby/geocode, Server-Timing header, public cache on /piup/catalog, private no-cache on /auth/me, selective gzip on large JSON, recommended-videos regression with full user+media fields, telemetry POST 202 + admin summary with by_country/by_device/by_network/server_routes, non-admin 403). Frontend: Reels quick rail present with exact order Historias→Feed→Explorar, Stories/Explorer sheets open+close correctly, Feed routes to Para ti, rail is hidden on En Vivo tab. Map: map-tab-explore REMOVED, map-nearby-btn opens nearby-panel with 25 Chapinero results from OSM, distance and attribution shown, pharmacy chip + radius change reload the list, close works, OSM marker count (2) equals the bar card/piup count (header '2 elementos en el mapa'). All lazy routes (/marketplace, /my-profile, /notifications, /settings, /admin/rendimiento) render content without chunk errors. Admin perf page shows all expected test IDs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "NearbyPlacesPanel",
+        "issue": "nearby-panel bounding box (y=64..498) overlaps with map-recenter-btn (y=476..524) by ~22px on mobile 390×844. Spec explicitly asks that the panel does NOT cover map-recenter-btn. map-profiles-bar and map-claim-pin-btn are fine (no overlap).",
+        "selector": "[data-testid=nearby-panel] vs [data-testid=map-recenter-btn]",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "/settings and /admin/rendimiento",
+        "issues": [
+          "React hydration warnings: '<span> cannot be a child of <select>/<option>' on /settings (language select) and '<span> cannot be a child of <tr>/<tbody>' on /admin/rendimiento tables. Non-blocking (pages render) but worth cleaning up: wrap icons/badges in a <td> instead of placing them directly inside the <tr>, and use a native option without nested spans in the settings language selector."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration115_perf_places.py",
+    "/app/test_reports/pytest/iter115.xml"
+  ],
+  "action_items": [
+    "(Low) Avoid the nearby-panel vs map-recenter-btn overlap: either shrink panel max-height to leave the recenter FAB uncovered, or hide the recenter FAB while nearby-panel is open.",
+    "(Low) Fix React 'span inside tr/tbody/select/option' hydration warnings in /settings and /admin/rendimiento table/select markup."
+  ],
+  "critical_code_review_comments": [
+    "utils/perf.py PerfMiddleware correctly adds Server-Timing on every response and injects Cache-Control from PUBLIC_CACHE for unauth GET 200 (verified via localhost — external ingress rewrites Cache-Control to 'no-store,no-cache,must-revalidate', expected infra behavior).",
+    "SelectiveGZipMiddleware skips /stream suffixes (SSE) — recommended-videos response is gzip-compressed as expected (>1KB).",
+    "routers/places.py: Nominatim client enforces 1 req/s global lock + 10 min cache; 16 categories; nearby returns provider=openstreetmap and items sorted ascending by distance_m; empty q+category → 400; geocode returns lat/lng. Works end-to-end against real OSM.",
+    "routers/telemetry.py: perf beacon ingestion stateless with TTL 30d via expires_at (TTL index declared in utils/perf.INDEXES/TTL_INDEXES). Admin-only summary groups by country/device/network/route and includes server_routes snapshot. Non-admin properly 403.",
+    "AdminPerformancePage renders tables with proper data-testid admin-performance-page/admin-perf-sessions/admin-perf-country.",
+    "ReelsQuickRail: order Historias→Feed→Explorar is exact (verified via data-testid traversal). Stories sheet uses reels-stories-sheet-close, Explorer sheet uses reels-explore-sheet-close. Rail correctly hides on 'En vivo' tab.",
+    "MapPage removed map-tab-explore; map-nearby-btn + NearbyPlacesPanel provide list-based nearby UX with location pickers, category chips, radius, search, states, and attribution — all testids present and functional."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration115_perf_places.py (new, 13 tests, all pass)"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13)",
+    "frontend": "95% (minor nearby-panel vs recenter-btn overlap; hydration warnings on 2 pages)"
+  },
+  "test_credentials": "newtest@bruno.com / Test1234! (regular) and testc@brunoqa.com / Prueba1234! (admin). Both verified working at end of run.",
+  "seed_data_creation": "Inserted 3 perf telemetry beacons via POST /api/telemetry/perf for route=/reels, timezone=America/Bogota (auto-expire in 30 days via TTL index).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend test: /app/backend/tests/test_iteration115_perf_places.py. Cache-Control headers must be verified via http://localhost:8001 (BACKEND_INTERNAL) because the Kubernetes ingress overrides Cache-Control to 'no-store,no-cache,must-revalidate' on the external preview URL — this is expected and not an app bug. Nominatim rate-limited to 1 req/s with 10-min cache; backend tests sleep 1.5s between calls. Verified testids: reels-quick-rail, reels-rail-stories|feed|explore, reels-stories-sheet(+_close), reels-explore-sheet(+_close), map-nearby-btn, nearby-panel, nearby-use-gps|use-map-center|manual-input, nearby-geocode-suggestions (3 buttons rendered for 'Chapinero, Bogota'), nearby-cat-pharmacy, nearby-radius-{m}, nearby-place-<osm-id>, nearby-distance-<id>, nearby-attribution, nearby-close, nearby-need-location, admin-performance-page, admin-perf-sessions, admin-perf-country. Markers class .bruno-osm-pin. OSM fallback is active (Google billing disabled — expected). Admin perf page requires role=admin (testc).",
+  "rca of the issue": "Minor UI overlap in NearbyPlacesPanel: the panel is positioned top:64 with max-height computed from viewport height but doesn't subtract the recenter FAB zone, so on mobile 390×844 the panel bottom (y≈498) extends past map-recenter-btn top (y=476). Mitigation: either reduce panel max-height by ~56px or hide the recenter FAB while nearby-panel is visible. Not a functional issue — the FAB is behind the panel but still reachable after closing it."
+}

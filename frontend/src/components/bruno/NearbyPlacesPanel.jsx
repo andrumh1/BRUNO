@@ -123,8 +123,8 @@ export default function NearbyPlacesPanel({ onClose, onPick, mapCenter }) {
   return (
     <motion.aside
       initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }} transition={{ type: "spring", damping: 28, stiffness: 300 }}
-      className="absolute z-[55] left-2 right-2 md:left-3 md:right-auto md:w-[380px] lg:w-[420px] bg-background/95 backdrop-blur-2xl rounded-[24px] border border-border/50 shadow-2xl flex flex-col overflow-hidden"
-      style={{ top: "calc(var(--safe-top) + 64px)", bottom: "calc(var(--nav-reserve, 96px) + 290px)", minHeight: "260px" }}
+      className="absolute z-[55] left-2 right-[72px] md:left-3 md:right-auto md:w-[380px] lg:w-[420px] bg-background/95 backdrop-blur-2xl rounded-[24px] border border-border/50 shadow-2xl flex flex-col overflow-hidden"
+      style={{ top: "calc(var(--safe-top) + 64px)", bottom: "calc(var(--nav-reserve, 96px) + 270px)", minHeight: "240px" }}
       data-testid="nearby-panel"
     >
       <div className="flex items-center gap-2 px-4 pt-3 pb-2">
