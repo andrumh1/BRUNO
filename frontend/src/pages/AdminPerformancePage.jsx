@@ -56,7 +56,13 @@ export default function AdminPerformancePage() {
       </div>
       <div className="max-w-5xl mx-auto px-4 py-5 space-y-4">
         {data === null ? <div className="grid place-items-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div> : (<>
-          <p className="text-sm text-muted-foreground" data-testid="admin-perf-sessions">{data.sessions.toLocaleString("es")} sesiones medidas en los últimos {data.days} días.</p>
+          <p className="text-sm text-muted-foreground" data-testid="admin-perf-sessions">{data.sessions.toLocaleString("es")} sesiones medidas en los últimos {data.days} días. Alerta automática a administradores (centro de notificaciones + push) cuando un país supera {Math.round((data.threshold_ms || 4000) / 1000)} s de carga (p75, mín. 5 sesiones/24 h).</p>
+          {(data.alerts || []).length > 0 && (
+            <section className="rounded-2xl border border-red-500/40 bg-red-500/5 p-3 space-y-1" data-testid="admin-perf-alerts">
+              <p className="text-sm font-semibold text-red-600 dark:text-red-400">Alertas de lentitud recientes</p>
+              {data.alerts.map((a) => <p key={a.country} className="text-xs text-muted-foreground" data-testid={`admin-perf-alert-${a.country}`}>{COUNTRY[a.country] || a.country}: {fmt(a.lcp_p75_ms)} (p75, {a.sessions} sesiones) · {new Date(a.at).toLocaleString("es")}</p>)}
+            </section>
+          )}
           <Table icon={Globe2} title="Por país" rows={data.by_country} keyField="country" label="País" testid="admin-perf-country" />
           <Table icon={Smartphone} title="Por dispositivo" rows={data.by_device} keyField="device" label="Dispositivo" testid="admin-perf-device" />
           <Table icon={Wifi} title="Por tipo de red" rows={data.by_network} keyField="net_type" label="Red" testid="admin-perf-network" />

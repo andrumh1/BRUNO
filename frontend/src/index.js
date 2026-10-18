@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "@/index.css";
+import "@/accents.css";
 import App from "@/App";
 import { setupHttp } from "@/lib/httpSetup";
 import { setupPerfTelemetry } from "@/lib/perfTelemetry";

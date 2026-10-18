@@ -110,7 +110,7 @@ export default function ReelsQuickRail({ token, user, visible }) {
         {open === "stories" && <StoriesSheet key="stories" token={token} user={user} onClose={() => setOpen(null)} />}
         {open === "feed" && (
           <Sheet key="feed" title="Feed" onClose={() => setOpen(null)} testid="reels-feed-sheet">
-            <ReelsFeedSheet token={token} onClose={() => setOpen(null)} />
+            <ReelsFeedSheet token={token} user={user} onClose={() => setOpen(null)} />
           </Sheet>
         )}
         {open === "explore" && (

@@ -71,12 +71,48 @@ def _country_from(request: Request, beacon: PerfBeacon) -> str:
     return "ZZ"
 
 
+SLOW_LCP_MS = 4000
+ALERT_MIN_SESSIONS = 5
+ALERT_COOLDOWN_H = 6
+
+
+async def _check_slow_country(country: str):
+    """Si la carga (LCP p75, 24 h) de un país supera 4 s, avisa a los administradores (centro + push), máx. 1 vez cada 6 h."""
+    if country == "ZZ":
+        return
+    last = await db.perf_alerts.find_one({"country": country}, {"_id": 0, "at": 1})
+    now = datetime.now(timezone.utc)
+    if last and last.get("at") and datetime.fromisoformat(last["at"]) > now - timedelta(hours=ALERT_COOLDOWN_H):
+        return
+    since = (now - timedelta(hours=24)).isoformat()
+    rows = await db.perf_telemetry.find({"country": country, "created_at": {"$gte": since}, "lcp_ms": {"$ne": None}}, {"_id": 0, "lcp_ms": 1}).to_list(2000)
+    if len(rows) < ALERT_MIN_SESSIONS:
+        return
+    p75 = _p([r["lcp_ms"] for r in rows], 0.75)
+    if not p75 or p75 <= SLOW_LCP_MS:
+        return
+    await db.perf_alerts.update_one({"country": country}, {"$set": {"country": country, "at": now.isoformat(), "lcp_p75_ms": p75, "sessions": len(rows)}}, upsert=True)
+    from routers.posts_feed import _push_notification
+    from routers.push_notifications import send_push_notification, NotificationPayload
+    msg = f"BRUNO carga lento en {country}: {int(p75 / 1000)} s (p75, {len(rows)} sesiones en 24 h). Revisa /admin/rendimiento."
+    async for admin in db.users.find({"role": "admin"}, {"_id": 0, "id": 1}):
+        await _push_notification(admin["id"], None, "perf_alert", country, "perf", msg)
+        try:
+            await send_push_notification(admin["id"], NotificationPayload(title="Alerta de lentitud", body=msg, url="/admin/rendimiento", tag=f"perf-{country}", data={"type": "perf_alert", "country": country}))
+        except Exception:
+            pass
+
+
 @router.post("/perf", status_code=202)
 async def ingest_perf(beacon: PerfBeacon, request: Request):
     now = datetime.now(timezone.utc)
     doc = beacon.model_dump()
     doc.update({"id": str(uuid.uuid4()), "country": _country_from(request, beacon), "created_at": now.isoformat(), "expires_at": now + timedelta(days=30)})
     await db.perf_telemetry.insert_one(doc)
+    try:
+        await _check_slow_country(doc["country"])
+    except Exception as e:  # la alerta nunca debe romper la ingesta
+        import logging; logging.getLogger("bruno.perf").warning("perf alert: %s", e)
     return {"ok": True}
 
 
@@ -107,4 +143,5 @@ async def perf_summary(days: int = 7, user: User = Depends(get_current_user)):
     by_country = _group(rows, "country")
     for r in by_country:
         r["region"] = "américa" if r["country"] in AMERICAS else ("europa" if r["country"] in ("ES", "PT", "FR", "IT", "GB", "DE") else "otro")
-    return {"days": days, "sessions": len(rows), "by_country": by_country, "by_device": _group(rows, "device"), "by_network": _group(rows, "net_type"), "by_route": _group(rows, "route")[:25], "server_routes": stats_snapshot()}
+    alerts = await db.perf_alerts.find({}, {"_id": 0}).sort("at", -1).to_list(20)
+    return {"days": days, "sessions": len(rows), "alerts": alerts, "threshold_ms": SLOW_LCP_MS, "by_country": by_country, "by_device": _group(rows, "device"), "by_network": _group(rows, "net_type"), "by_route": _group(rows, "route")[:25], "server_routes": stats_snapshot()}

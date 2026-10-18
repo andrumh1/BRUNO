@@ -1587,7 +1587,7 @@ async def _enrich_timeline(posts: list, current_user: Optional[User]):
 
 
 @router.get("/feed/timeline")
-async def get_timeline(before: Optional[str] = None, limit: int = 20, fill_public: int = 1, current_user: User = Depends(get_current_user)):
+async def get_timeline(before: Optional[str] = None, limit: int = 20, fill_public: int = 1, kind: Optional[str] = None, current_user: User = Depends(get_current_user)):
     """Publicaciones propias + de cuentas seguidas, de la más reciente a la más antigua (cursor `before`).
     Excluye borradores/programadas, eliminadas, ocultas y autores bloqueados. Si no hay nada, rellena con públicas."""
     limit = max(1, min(limit, 40))
@@ -1601,6 +1601,12 @@ async def get_timeline(before: Optional[str] = None, limit: int = 20, fill_publi
         base["id"] = {"$nin": hidden}
     if before:
         base["created_at"] = {"$lt": before}
+    if kind == "photo":
+        base["media.type"] = {"$in": ["image", "photo"]}
+    elif kind == "video":
+        base["media.type"] = "video"
+    elif kind == "text":
+        base["$and"] = [{"$or": [{"media": {"$exists": False}}, {"media": {"$size": 0}}, {"media": None}]}]
     followed = [f for f in followed if f not in blocked]
     source = "following"
     scopes = [{"user_id": current_user.id}, {"user_id": {"$in": followed}, "visibility": {"$in": ["public", "followers", None]}}]
@@ -1829,7 +1835,7 @@ async def get_preferences(current_user: User = Depends(get_current_user)):
 @router.put("/settings/preferences")
 async def update_preferences(prefs_data: dict, current_user: User = Depends(get_current_user)):
     """Update user preferences"""
-    allowed_keys = {"feed_mode", "language", "theme", "notifications", "privacy", "content", "auto_translate", "custom_seal_url"}
+    allowed_keys = {"feed_mode", "language", "theme", "accent_color", "notifications", "privacy", "content", "auto_translate", "custom_seal_url"}
     update = {k: v for k, v in prefs_data.items() if k in allowed_keys}
     if "custom_seal_url" in update:
         u = await db.users.find_one({"id": current_user.id}, {"_id": 0, "subscription_tier": 1})

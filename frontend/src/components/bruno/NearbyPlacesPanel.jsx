@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Navigation, LocateFixed, X, Loader2, RefreshCw, Phone, Globe, Clock, ChevronRight, AlertCircle, Bookmark, BookmarkCheck, CreditCard, Trash2 } from "lucide-react";
+import { Search, MapPin, Navigation, LocateFixed, X, Loader2, RefreshCw, Phone, Globe, Clock, ChevronRight, AlertCircle, Bookmark, BookmarkCheck, CreditCard, Trash2, Send, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 
@@ -57,7 +57,46 @@ function LocationPicker({ origin, onOrigin, locating, onUseGps, gpsDenied, mapCe
   );
 }
 
-function PlaceRow({ p, onPick, saved, onToggleSave, onCreateCard, onRemove }) {
+// Selector compacto de chats para enviar un lugar (nombre, dirección y "Cómo llegar") como mensaje real.
+function ShareChatPicker({ place, token, onClose }) {
+  const [chats, setChats] = useState(null);
+  const [sent, setSent] = useState({});
+  useEffect(() => {
+    axios.get(`${API}/chats`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setChats((Array.isArray(r.data) ? r.data : []).slice(0, 30))).catch(() => setChats([]));
+  }, [token]);
+  const send = async (chat) => {
+    if (sent[chat.id]) return;
+    setSent((x) => ({ ...x, [chat.id]: "sending" }));
+    try {
+      const dir = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`;
+      await axios.post(`${API}/chats/${chat.id}/messages`, {
+        content: `📍 ${place.name}${place.address ? ` · ${place.address}` : ""}\nCómo llegar: ${dir}`,
+        message_type: "location_share",
+        attachments: [{ type: "location", share_type: "place", label: "Lugar recomendado", name: place.name, address: place.address || null, category_label: place.category_label || null, lat: place.lat, lng: place.lng, place_id: place.place_id || place.id, directions_url: dir }],
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      setSent((x) => ({ ...x, [chat.id]: "sent" })); brunoToast.success(`Lugar enviado a ${chat.name || chat.other_participants?.[0]?.name || "chat"}`);
+    } catch (e) { setSent((x) => ({ ...x, [chat.id]: null })); brunoToast.error(e?.response?.data?.detail || "No se pudo enviar"); }
+  };
+  const nameOf = (c) => c.name || c.other_participants?.map((u) => u.name).join(", ") || "Chat";
+  const avatarOf = (c) => c.avatar_url || c.other_participants?.[0]?.avatar_url;
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/90 p-3" data-testid="nearby-share-picker">
+      <div className="flex items-center justify-between mb-2"><p className="text-xs font-semibold truncate">Enviar "{place.name}" a…</p><button onClick={onClose} className="w-6 h-6 rounded-full bg-muted grid place-items-center" aria-label="Cerrar" data-testid="nearby-share-close"><X className="w-3 h-3" /></button></div>
+      {chats === null ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : chats.length === 0 ? <p className="text-[11px] text-muted-foreground">Aún no tienes chats.</p> : (
+        <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+          {chats.map((c) => (
+            <button key={c.id} onClick={() => send(c)} disabled={!!sent[c.id]} className="flex flex-col items-center gap-1 shrink-0 w-14" data-testid={`nearby-share-chat-${c.id}`}>
+              <span className="relative w-11 h-11 rounded-full bg-muted overflow-hidden grid place-items-center">{avatarOf(c) ? <img src={avatarOf(c)} alt="" className="w-full h-full object-cover" /> : <span className="text-sm font-bold">{nameOf(c).charAt(0)}</span>}{sent[c.id] === "sent" && <span className="absolute inset-0 bg-primary/80 grid place-items-center text-white"><Check className="w-5 h-5" /></span>}{sent[c.id] === "sending" && <span className="absolute inset-0 bg-black/40 grid place-items-center text-white"><Loader2 className="w-4 h-4 animate-spin" /></span>}</span>
+              <span className="text-[10px] truncate max-w-full">{nameOf(c)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlaceRow({ p, onPick, saved, onToggleSave, onCreateCard, onRemove, onShare }) {
   const dir = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
   return (
     <li className="rounded-2xl border border-border/60 bg-card/80 p-3" data-testid={`nearby-place-${p.id}`}>
@@ -73,6 +112,7 @@ function PlaceRow({ p, onPick, saved, onToggleSave, onCreateCard, onRemove }) {
           {p.distance_m != null && <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary tabular-nums" data-testid={`nearby-distance-${p.id}`}><Navigation className="w-3 h-3" />{fmtDist(p.distance_m)}</span>}
           <div className="flex items-center gap-1 mt-1.5 justify-end">
             {onToggleSave && <button onClick={() => onToggleSave(p)} className={`w-7 h-7 rounded-full grid place-items-center ${saved ? "bg-primary/15 text-primary" : "bg-muted"}`} aria-label={saved ? "Quitar de mis lugares" : "Guardar lugar"} data-testid={`nearby-save-${p.id}`}>{saved ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}</button>}
+            {onShare && <button onClick={() => onShare(p)} className="w-7 h-7 rounded-full bg-muted grid place-items-center" aria-label="Compartir en un chat" title="Enviar a un chat" data-testid={`nearby-share-${p.id}`}><Send className="w-3.5 h-3.5" /></button>}
             {onCreateCard && <button onClick={() => onCreateCard(p)} className="w-7 h-7 rounded-full bg-muted grid place-items-center" aria-label="Crear tarjeta BRUNO con este lugar" title="Crear tarjeta" data-testid={`nearby-card-${p.id}`}><CreditCard className="w-3.5 h-3.5" /></button>}
             {onRemove && <button onClick={() => onRemove(p)} className="w-7 h-7 rounded-full bg-muted grid place-items-center text-destructive" aria-label="Quitar" data-testid={`nearby-remove-${p.id}`}><Trash2 className="w-3.5 h-3.5" /></button>}
             {p.phone && <a href={`tel:${p.phone}`} className="w-7 h-7 rounded-full bg-muted grid place-items-center" aria-label="Llamar" data-testid={`nearby-call-${p.id}`}><Phone className="w-3.5 h-3.5" /></a>}
@@ -89,6 +129,7 @@ export default function NearbyPlacesPanel({ onClose, onPick, mapCenter }) {
   const { token } = useAuth();
   const navigate = useNavigate();
   const [view, setView] = useState("search"); // search | saved
+  const [sharing, setSharing] = useState(null);
   const [saved, setSaved] = useState([]);
   const savedByPlace = useMemo(() => Object.fromEntries(saved.map((s) => [s.place_id, s])), [saved]);
   const [categories, setCategories] = useState([]);
@@ -166,8 +207,9 @@ export default function NearbyPlacesPanel({ onClose, onPick, mapCenter }) {
 
       {view === "saved" ? (
         <div className="flex-1 overflow-y-auto px-4 pt-1 pb-3" data-testid="nearby-saved-list">
+          {sharing && <div className="mb-2"><ShareChatPicker place={sharing} token={token} onClose={() => setSharing(null)} /></div>}
           {saved.length === 0 ? <p className="text-xs text-muted-foreground text-center py-8" data-testid="nearby-saved-empty">Aún no guardas lugares. Toca el marcador <Bookmark className="w-3 h-3 inline" /> en una recomendación para volver a ella desde aquí.</p>
-            : <ul className="space-y-2">{saved.map((s) => <PlaceRow key={s.id} p={{ ...s, id: s.place_id, distance_m: null }} onPick={onPick} saved onToggleSave={() => toggleSave({ ...s, id: s.place_id })} onCreateCard={createCard} />)}</ul>}
+            : <ul className="space-y-2">{saved.map((s) => <PlaceRow key={s.id} p={{ ...s, id: s.place_id, distance_m: null }} onPick={onPick} saved onToggleSave={() => toggleSave({ ...s, id: s.place_id })} onCreateCard={createCard} onShare={setSharing} />)}</ul>}
         </div>
       ) : (<>
       <div className="px-4 space-y-2">
@@ -199,7 +241,10 @@ export default function NearbyPlacesPanel({ onClose, onPick, mapCenter }) {
         ) : state.status === "done" && state.items.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-8" data-testid="nearby-empty">No encontramos resultados en {fmtDist(radius)}. Prueba otra categoría, otro nombre o amplía el radio.</p>
         ) : (
-          <ul className="space-y-2">{state.items.map((p) => <PlaceRow key={p.id} p={p} onPick={onPick} saved={!!savedByPlace[p.id]} onToggleSave={toggleSave} onCreateCard={token ? createCard : null} />)}</ul>
+          <>
+            {sharing && <div className="mb-2"><ShareChatPicker place={sharing} token={token} onClose={() => setSharing(null)} /></div>}
+            <ul className="space-y-2">{state.items.map((p) => <PlaceRow key={p.id} p={p} onPick={onPick} saved={!!savedByPlace[p.id]} onToggleSave={toggleSave} onCreateCard={token ? createCard : null} onShare={token ? setSharing : null} />)}</ul>
+          </>
         )}
       </div>
       {state.attribution && <p className="px-4 pb-2 text-[9px] text-muted-foreground" data-testid="nearby-attribution">{state.attribution}</p>}

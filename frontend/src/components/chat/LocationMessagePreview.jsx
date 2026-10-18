@@ -36,7 +36,9 @@ export default function LocationMessagePreview({ attachment, isOwn }) {
     ? `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=300x150&scale=2&markers=color:red%7C${lat},${lng}${apiKey ? `&key=${apiKey}` : ""}`
     : null;
 
+  const isPlace = attachment?.share_type === "place";
   const handleOpen = () => {
+    if (isPlace) { navigate("/map?nearby=1"); return; }
     if (lat != null && lng != null) navigate(`/map?focus=${attachment.share_id}&lat=${lat}&lng=${lng}`);
     else navigate("/map");
   };
@@ -61,6 +63,14 @@ export default function LocationMessagePreview({ attachment, isOwn }) {
           </span>
         )}
       </div>
+      {isPlace && (
+        <div className="px-3 py-2 space-y-1" data-testid="place-message-info">
+          <p className="text-sm font-semibold truncate">📍 {attachment.name}</p>
+          {attachment.category_label && <p className="text-[11px] opacity-70 truncate">{attachment.category_label}</p>}
+          {attachment.address && <p className="text-[11px] opacity-80 truncate">{attachment.address}</p>}
+          <a href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="mt-1 inline-flex items-center justify-center h-8 px-3 rounded-full bg-primary text-primary-foreground text-xs font-semibold" data-testid="place-message-directions">Cómo llegar</a>
+        </div>
+      )}
       <div className={`px-3 py-2 ${isOwn ? "bg-primary/15" : "bg-card"}`}>
         <p className="text-xs font-semibold flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5" />

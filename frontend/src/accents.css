@@ -1,0 +1,219 @@
+/* ===== Acentos de apariencia (generado) — data-accent en <html> ===== */
+
+:root {
+  --ac-h: 25; --ac-s: 100%; --ac-l: 50%;
+  --ac-50: 254 243 236;
+  --ac-100: 253 232 216;
+  --ac-200: 251 208 177;
+  --ac-300: 248 173 119;
+  --ac-400: 255 139 56;
+  --ac-500: 255 106 0;
+  --ac-600: 224 94 0;
+  --ac-700: 189 79 0;
+  --ac-800: 153 64 0;
+  --ac-900: 122 51 0;
+  --ac-950: 71 30 0;
+}
+
+:root[data-accent="blue"] {
+  --ac-h: 217; --ac-s: 91%; --ac-l: 55%;
+  --ac-50: 237 243 253;
+  --ac-100: 218 231 251;
+  --ac-200: 181 206 247;
+  --ac-300: 126 170 241;
+  --ac-400: 65 134 246;
+  --ac-500: 36 116 245;
+  --ac-600: 10 88 214;
+  --ac-700: 8 74 180;
+  --ac-800: 7 60 146;
+  --ac-900: 6 48 117;
+  --ac-950: 3 28 68;
+}
+
+:root[data-accent="purple"] {
+  --ac-h: 268; --ac-s: 80%; --ac-l: 58%;
+  --ac-50: 244 238 252;
+  --ac-100: 234 220 249;
+  --ac-200: 212 186 243;
+  --ac-300: 180 134 234;
+  --ac-400: 150 76 235;
+  --ac-500: 142 62 234;
+  --ac-600: 106 22 202;
+  --ac-700: 89 19 170;
+  --ac-800: 72 15 138;
+  --ac-900: 58 12 110;
+  --ac-950: 34 7 64;
+}
+
+:root[data-accent="green"] {
+  --ac-h: 152; --ac-s: 65%; --ac-l: 42%;
+  --ac-50: 239 250 245;
+  --ac-100: 223 246 235;
+  --ac-200: 192 237 216;
+  --ac-300: 144 223 186;
+  --ac-400: 91 220 160;
+  --ac-500: 37 177 112;
+  --ac-600: 39 185 117;
+  --ac-700: 33 156 98;
+  --ac-800: 27 126 80;
+  --ac-900: 21 101 64;
+  --ac-950: 12 59 37;
+}
+
+:root[data-accent="red"] {
+  --ac-h: 0; --ac-s: 78%; --ac-l: 55%;
+  --ac-50: 252 238 238;
+  --ac-100: 248 221 221;
+  --ac-200: 242 186 186;
+  --ac-300: 232 135 135;
+  --ac-400: 233 78 78;
+  --ac-500: 230 51 51;
+  --ac-600: 200 25 25;
+  --ac-700: 168 21 21;
+  --ac-800: 136 17 17;
+  --ac-900: 109 13 13;
+  --ac-950: 64 8 8;
+}
+
+:root[data-accent="pink"] {
+  --ac-h: 330; --ac-s: 80%; --ac-l: 58%;
+  --ac-50: 252 238 245;
+  --ac-100: 249 220 235;
+  --ac-200: 243 186 214;
+  --ac-300: 234 134 184;
+  --ac-400: 235 76 156;
+  --ac-500: 234 62 148;
+  --ac-600: 202 22 112;
+  --ac-700: 170 19 94;
+  --ac-800: 138 15 77;
+  --ac-900: 110 12 61;
+  --ac-950: 64 7 36;
+}
+
+:root[data-accent="teal"] {
+  --ac-h: 178; --ac-s: 70%; --ac-l: 42%;
+  --ac-50: 239 251 251;
+  --ac-100: 222 247 246;
+  --ac-200: 190 239 237;
+  --ac-300: 141 226 224;
+  --ac-400: 86 225 221;
+  --ac-500: 32 182 177;
+  --ac-600: 34 191 186;
+  --ac-700: 28 160 156;
+  --ac-800: 23 130 126;
+  --ac-900: 18 104 101;
+  --ac-950: 11 61 59;
+}
+
+:root[data-accent="yellow"] {
+  --ac-h: 42; --ac-s: 96%; --ac-l: 50%;
+  --ac-50: 254 248 236;
+  --ac-100: 252 242 217;
+  --ac-200: 249 228 179;
+  --ac-300: 245 208 122;
+  --ac-400: 251 194 60;
+  --ac-500: 250 176 5;
+  --ac-600: 220 155 4;
+  --ac-700: 185 131 4;
+  --ac-800: 150 106 3;
+  --ac-900: 120 85 2;
+  --ac-950: 70 49 1;
+}
+
+:root[data-accent="coral"] {
+  --ac-h: 12; --ac-s: 90%; --ac-l: 62%;
+  --ac-50: 253 240 237;
+  --ac-100: 251 225 218;
+  --ac-200: 247 195 182;
+  --ac-300: 241 149 126;
+  --ac-400: 245 102 66;
+  --ac-500: 245 106 71;
+  --ac-600: 213 52 11;
+  --ac-700: 179 43 9;
+  --ac-800: 145 35 8;
+  --ac-900: 116 28 6;
+  --ac-950: 68 16 4;
+}
+
+:root[data-accent="wine"] {
+  --ac-h: 345; --ac-s: 65%; --ac-l: 38%;
+  --ac-50: 250 239 242;
+  --ac-100: 246 223 229;
+  --ac-200: 237 192 203;
+  --ac-300: 223 144 164;
+  --ac-400: 220 91 123;
+  --ac-500: 160 34 65;
+  --ac-600: 185 39 76;
+  --ac-700: 156 33 64;
+  --ac-800: 126 27 52;
+  --ac-900: 101 21 41;
+  --ac-950: 59 12 24;
+}
+
+:root[data-accent="indigo"] {
+  --ac-h: 240; --ac-s: 65%; --ac-l: 55%;
+  --ac-50: 239 239 250;
+  --ac-100: 223 223 246;
+  --ac-200: 192 192 237;
+  --ac-300: 144 144 223;
+  --ac-400: 91 91 220;
+  --ac-500: 66 66 215;
+  --ac-600: 39 39 185;
+  --ac-700: 33 33 156;
+  --ac-800: 27 27 126;
+  --ac-900: 21 21 101;
+  --ac-950: 12 12 59;
+}
+
+:root[data-accent="neutral"] {
+  --ac-h: 0; --ac-s: 0%; --ac-l: 28%;
+  --ac-50: 250 250 250;
+  --ac-100: 244 244 245;
+  --ac-200: 228 228 231;
+  --ac-300: 212 212 216;
+  --ac-400: 161 161 170;
+  --ac-500: 113 113 122;
+  --ac-600: 82 82 91;
+  --ac-700: 63 63 70;
+  --ac-800: 39 39 42;
+  --ac-900: 24 24 27;
+  --ac-950: 9 9 11;
+}
+
+/* Variables shadcn derivadas del acento (claro) */
+:root[data-accent] {
+  --primary: var(--ac-h) var(--ac-s) var(--ac-l);
+  --ring: var(--ac-h) var(--ac-s) var(--ac-l);
+  --accent: var(--ac-h) calc(var(--ac-s) * 0.9) 94%;
+  --accent-foreground: var(--ac-h) var(--ac-s) 30%;
+  --chart-1: var(--ac-h) var(--ac-s) var(--ac-l);
+  --chart-3: var(--ac-h) var(--ac-s) 70%;
+  --card: var(--ac-h) 45% 96%;
+  --secondary: var(--ac-h) 35% 91%;
+  --muted: var(--ac-h) 30% 93%;
+  --border: var(--ac-h) 25% 87%;
+  --input: var(--ac-h) 25% 87%;
+}
+:root[data-accent="orange"] { --card: 28 56% 95%; --secondary: 28 45% 90%; --muted: 28 40% 93%; --border: 28 30% 86%; --input: 28 30% 86%; }
+:root[data-accent="yellow"] { --primary-foreground: 30 40% 12%; }
+.dark[data-accent] {
+  --accent: var(--ac-h) calc(var(--ac-s) * 0.7) 30%;
+  --accent-foreground: 0 0% 96%;
+  --card: 0 0% 28%; --secondary: 0 0% 34%; --muted: 0 0% 33%; --border: 0 0% 38%; --input: 0 0% 38%;
+}
+.dark[data-accent="yellow"], .dark[data-accent="orange"] { --primary-foreground: 0 0% 100%; }
+/* Neutro: monocromo, sin acento (claro: blancos/grises; oscuro: negros/grises) */
+:root[data-accent="neutral"] {
+  --primary: 0 0% 28%; --primary-foreground: 0 0% 100%; --ring: 0 0% 45%;
+  --accent: 0 0% 94%; --accent-foreground: 0 0% 20%;
+  --card: 0 0% 98%; --secondary: 0 0% 93%; --muted: 0 0% 95%; --muted-foreground: 0 0% 42%; --border: 0 0% 88%; --input: 0 0% 88%;
+  --chart-1: 0 0% 28%; --chart-3: 0 0% 60%;
+}
+.dark[data-accent="neutral"] {
+  --background: 0 0% 7%; --foreground: 0 0% 94%;
+  --primary: 0 0% 88%; --primary-foreground: 0 0% 8%; --ring: 0 0% 70%;
+  --accent: 0 0% 22%; --accent-foreground: 0 0% 94%;
+  --card: 0 0% 12%; --card-foreground: 0 0% 94%; --popover: 0 0% 11%; --popover-foreground: 0 0% 94%;
+  --secondary: 0 0% 18%; --secondary-foreground: 0 0% 94%; --muted: 0 0% 16%; --muted-foreground: 0 0% 65%; --border: 0 0% 24%; --input: 0 0% 24%;
+}
+/* Los medios no se tiñen: el acento solo vive en variables de UI; no se añaden filtros ni capas sobre img/video. */

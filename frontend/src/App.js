@@ -1,8 +1,9 @@
 import React, { Suspense } from "react";
+import axios from "axios";
 import { lazyPage } from "@/lib/lazyPage";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
-import { ThemeProvider } from "@/contexts/ThemeProvider";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
@@ -29,6 +30,7 @@ const AccountScoped = () => {
     <React.Fragment key={user?.id || "anon"}>
       <FloatingChatBubble />
       <CallOrchestrator />
+      <AccentSync />
     </React.Fragment>
   );
 };
@@ -121,6 +123,18 @@ const ChangePasswordPage = lazyPage(() => import("@/pages/ChangePasswordPage"));
 const BlockedUsersPage = lazyPage(() => import("@/pages/BlockedUsersPage"));
 const DevicesPage = lazyPage(() => import("@/pages/DevicesPage"));
 const NotificationsPage = lazyPage(() => import("@/pages/NotificationsPage"));
+
+// Sincroniza el color de acento guardado en la cuenta (entre dispositivos) al iniciar sesión.
+function AccentSync() {
+  const { token } = useAuth();
+  const { setAccent } = useTheme();
+  React.useEffect(() => {
+    if (!token) return;
+    axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/settings/preferences`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => { if (r.data?.accent_color) setAccent(r.data.accent_color); }).catch(() => {});
+  }, [token, setAccent]);
+  return null;
+}
 
 function AppRouter() {
   const location = useLocation();

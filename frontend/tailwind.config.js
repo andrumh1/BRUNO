@@ -4,6 +4,8 @@ const brandOrange = {
   50: '#fff5ec', 100: '#ffe8d4', 200: '#ffcea8', 300: '#ffad70', 400: '#ff8a38',
   500: '#ff6a00', 600: '#e65f00', 700: '#bf4f00', 800: '#993f00', 900: '#7a3300', 950: '#421b00',
 };
+// Acento dinámico: las utilidades orange-* siguen la apariencia elegida (data-accent en <html>)
+const accent = Object.fromEntries([50,100,200,300,400,500,600,700,800,900,950].map((k) => [k, `rgb(var(--ac-${k}) / <alpha-value>)`]));
 const brandOrangeSoft = {
   50: '#fff8f2', 100: '#ffeee0', 200: '#ffd9bd', 300: '#ffbe8f', 400: '#ffa261',
   500: '#ff8a3d', 600: '#f07220', 700: '#c95a12', 800: '#a3480e', 900: '#7d3709', 950: '#441c03',
@@ -32,8 +34,8 @@ module.exports = {
   				orange: '#ff6a00',
   				gray: '#474747'
   			},
-  			orange: brandOrange,
-  			pink: brandOrangeSoft,
+  			orange: accent,
+  			pink: accent,
   			zinc: brandGray,
   			gray: brandGray,
   			stone: brandGray,

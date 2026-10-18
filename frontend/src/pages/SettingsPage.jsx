@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import CurrencySelector from "@/components/i18n/CurrencySelector";
-import { useTheme } from "@/contexts/ThemeProvider";
+import { useTheme, ACCENTS } from "@/contexts/ThemeProvider";
 import { POSE_OPTIONS, POSE_PREF_KEY } from "@/components/bruno/BrunoLoader";
 import { getCustomSeal, setCustomSeal } from "@/lib/shareHistory";
 import { brunoToast as toast } from "@/components/bruno/BrunoToast";
@@ -88,7 +88,7 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, accent, setAccent } = useTheme();
   const [posePref, setPosePref] = useState(() => { try { return localStorage.getItem(POSE_PREF_KEY) || "auto"; } catch { return "auto"; } });
   const savePose = (id) => { setPosePref(id); try { localStorage.setItem(POSE_PREF_KEY, id); } catch { /* ignore */ } };
   const [seal, setSeal] = useState(getCustomSeal());
@@ -119,6 +119,7 @@ const SettingsPage = () => {
           headers: { Authorization: `Bearer ${token}` }
         });
         setPrefs(res.data);
+        if (res.data?.accent_color) setAccent(res.data.accent_color);
       } catch (e) {
         // defaults
         setPrefs({
@@ -134,6 +135,7 @@ const SettingsPage = () => {
       }
     };
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const savePrefs = async (update) => {
@@ -331,6 +333,30 @@ const SettingsPage = () => {
                     ))}
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-2">Oscuro usa el gris corporativo BRUNO; Sistema sigue el ajuste de tu dispositivo.</p>
+                </div>
+                <div className="py-3" data-testid="accent-selector">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm block">Color de acento</span>
+                    <span className="text-[11px] text-muted-foreground" data-testid="accent-current">{ACCENTS.find((a) => a.id === accent)?.label}{accent === "orange" ? " (predeterminado)" : ""}</span>
+                  </div>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {ACCENTS.map((a) => (
+                      <button key={a.id} onClick={() => { setAccent(a.id); savePrefs({ accent_color: a.id }); }} aria-pressed={accent === a.id} data-testid={`accent-${a.id}`} title={a.desc || a.label}
+                        className={`flex flex-col items-center gap-1.5 rounded-2xl p-2 text-[11px] font-medium transition-all ${accent === a.id ? "bg-primary/10 ring-2 ring-primary text-foreground" : "bg-muted/60 text-muted-foreground hover:bg-muted"}`}>
+                        <span className="relative w-9 h-9 rounded-full border-2 border-white/70 dark:border-white/20 shadow-md grid place-items-center" style={a.id === "neutral" ? { background: "linear-gradient(135deg,#fff 0%,#9a9a9a 50%,#222 100%)" } : { backgroundColor: a.swatch }}>
+                          {accent === a.id && <Check className="w-4 h-4 text-white drop-shadow" />}
+                        </span>
+                        <span className="truncate max-w-full">{a.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 rounded-2xl border border-border/60 bg-background/60 backdrop-blur-xl p-3 flex items-center gap-3" data-testid="accent-preview">
+                    <span className="h-9 px-4 rounded-full bg-primary text-primary-foreground text-xs font-semibold grid place-items-center shadow-md shadow-primary/25">Botón</span>
+                    <span className="h-9 px-3 rounded-full bg-primary/10 text-primary text-xs font-semibold grid place-items-center">Chip</span>
+                    <span className="flex-1 h-2 rounded-full bg-muted overflow-hidden"><span className="block h-full w-2/3 rounded-full bg-primary" /></span>
+                    <span className="w-9 h-9 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300 grid place-items-center"><Palette className="w-4 h-4" /></span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-2">Se aplica al instante en toda la app y se guarda en tu cuenta. Las fotos y los videos no se tiñen; los avisos de error, éxito y advertencia conservan sus colores.</p>
                 </div>
                 <div className="py-3" data-testid="pose-selector">
                   <span className="text-sm block mb-2">Personaje en pantallas de carga</span>
