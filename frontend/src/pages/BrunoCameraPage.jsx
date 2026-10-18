@@ -732,6 +732,7 @@ const BrunoCameraPage = () => {
           post_type: capturedMedia.type === "photo" ? "image" : "video",
           visibility: "public",
           audio: sound && capturedMedia.type !== "photo" ? { source_post_id: sound.source_post_id, name: sound.name, url: sound.url } : null,
+          place: storyPlace,
         }, { headers: { Authorization: `Bearer ${token}` } });
         const { brunoToast } = await import("@/components/bruno/BrunoToast");
         if (capturedMedia.draftId) axios.delete(`${API}/post-drafts/${capturedMedia.draftId}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
@@ -1164,13 +1165,13 @@ const BrunoCameraPage = () => {
               <button onClick={() => setAsStory((v) => !v)} aria-pressed={asStory} className={`h-8 px-3 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${asStory ? "bg-white text-black" : "bg-white/15 text-white"}`} data-testid="camera-as-story-toggle">
                 <Sparkles className="w-3.5 h-3.5" />{asStory ? "Historia (24 h)" : "Publicar como historia"}
               </button>
-              {asStory && (
+              {(
                 <button onClick={() => setPlaceOpen((v) => !v)} className={`h-8 px-3 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${storyPlace ? "bg-primary text-white" : "bg-white/15 text-white"}`} data-testid="camera-story-place-toggle">
                   <MapPin className="w-3.5 h-3.5" />{storyPlace ? storyPlace.name : "Añadir lugar"}
                 </button>
               )}
             </div>
-            {asStory && placeOpen && (
+            {placeOpen && (
               <div className="rounded-2xl bg-background text-foreground p-3" data-testid="camera-story-place">
                 <StoryPlacePicker token={token} value={storyPlace} onChange={(v) => { setStoryPlace(v); if (v) setPlaceOpen(false); }} onClose={() => setPlaceOpen(false)} />
               </div>

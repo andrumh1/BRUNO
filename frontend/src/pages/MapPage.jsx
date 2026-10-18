@@ -68,8 +68,17 @@ export default function MapPage() {
     return () => { console.error = origErr; clearTimeout(t); delete window.gm_authFailure; };
   }, [googleFailed]);
 
+  // ?lat=&lng= (desde un lugar en una publicación/historia/chat): centrar ahí y no saltar al GPS
+  const focusLat = parseFloat(searchParams.get("lat")), focusLng = parseFloat(searchParams.get("lng"));
+  const hasFocus = Number.isFinite(focusLat) && Number.isFinite(focusLng);
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!hasFocus) return;
+    const c = { lat: focusLat, lng: focusLng };
+    if (mapRef.current) mapRef.current.panTo(c); else pendingUserCenterRef.current = c;
+  }, [hasFocus, focusLat, focusLng]);
+
+  useEffect(() => {
+    if (!navigator.geolocation || hasFocus) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         // Pan to user location ONCE — without controlling `center` (which would

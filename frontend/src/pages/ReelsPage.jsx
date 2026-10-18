@@ -10,13 +10,14 @@ import { useShareHit } from "@/lib/shareStats";
 import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
-import { Loader2, Radio, Film, Plus, Eye, ArrowLeft, Clock, Camera, Lock, KeyRound } from "lucide-react";
+import { Loader2, Radio, Film, Plus, Eye, ArrowLeft, Clock, Camera, Lock, KeyRound , ListVideo } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavScroll } from "@/contexts/NavScrollContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import ReelItem from "@/components/reels/ReelItem";
 import { useReelsFeed, rememberFeedPosition } from "@/components/reels/useReelsFeed";
 import UpcomingLives from "@/components/live/UpcomingLives";
+import SeriesGrid from "@/components/series/SeriesGrid";
 import BrunoLogo from "@/components/bruno/BrunoLogo";
 import { ReelCommentsSheet, ReelShareSheet, ReelHistorySheet, ReelRemixSheet, ReelRemixesSheet, ReelSoundSheet, ReelLikersSheet, ReelOptionsSheet, ReelEditSheet } from "@/components/reels/ReelSheets";
 import RemixStudio from "@/components/reels/RemixStudio";
@@ -192,26 +193,28 @@ export default function ReelsPage() {
         ) : profileMode ? (
           <span className="text-white font-bold text-sm">Reels del perfil</span>
         ) : (
-          <div className="flex items-center gap-5" data-testid="reels-tabs">
-            {[["following", "Siguiendo"], ["for_you", "Para ti"], ["lives", "En vivo"]].map(([id, label]) => (
+          <div className="flex items-center gap-3 sm:gap-5 max-w-[calc(100vw-110px)] overflow-x-auto scrollbar-none" data-testid="reels-tabs">
+            {[["following", "Siguiendo"], ["for_you", "Para ti"], ["lives", "En vivo"], ["series", "Series"]].map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} data-testid={`reels-tab-${id}`}
-                className={`relative text-[15px] font-bold transition-colors flex items-center gap-1 ${tab === id ? "text-white" : "text-white/55"}`}>
-                {id === "lives" && <Radio className="w-3.5 h-3.5" />}{label}
+                className={`relative text-[14px] sm:text-[15px] font-bold transition-colors flex items-center gap-1 shrink-0 ${tab === id ? "text-white" : "text-white/55"}`}>
+                {id === "lives" && <Radio className="w-3.5 h-3.5" />}{id === "series" && <ListVideo className="w-3.5 h-3.5" />}{label}
                 {tab === id && <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-6 h-[2.5px] rounded-full bg-white" />}
               </button>
             ))}
           </div>
         )}
-        <button onClick={() => navigate(tab === "lives" ? "/lives/start" : "/camera")} className="w-9 h-9 grid place-items-center rounded-full bg-black/35 text-white" data-testid="reels-create-btn" aria-label="Crear">
-          {tab === "lives" ? <Radio className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
+        <button onClick={() => navigate(tab === "lives" ? "/lives/start" : tab === "series" ? "/series/new" : "/camera")} className="w-9 h-9 grid place-items-center rounded-full bg-black/35 text-white" data-testid="reels-create-btn" aria-label="Crear">
+          {tab === "lives" ? <Radio className="w-5 h-5" /> : tab === "series" ? <ListVideo className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
         </button>
       </div>
 
-      {!profileMode && !longMode && tab !== "lives" && <ReelsStoriesStrip token={token} user={user} visible={activeIndex === 0 && !loading && reels.length > 0} />}
-      {!profileMode && !longMode && tab !== "lives" && <ContinueWatchingRow token={token} variant="reels" visible={activeIndex === 0 && !loading && reels.length > 0} />}
-      <ReelsQuickRail token={token} user={user} visible={!profileMode && !longMode && tab !== "lives" && !loading} />
+      {!profileMode && !longMode && tab !== "lives" && tab !== "series" && <ReelsStoriesStrip token={token} user={user} visible={activeIndex === 0 && !loading && reels.length > 0} />}
+      {!profileMode && !longMode && tab !== "lives" && tab !== "series" && <ContinueWatchingRow token={token} variant="reels" visible={activeIndex === 0 && !loading && reels.length > 0} />}
+      <ReelsQuickRail token={token} user={user} visible={!profileMode && !longMode && tab !== "lives" && tab !== "series" && !loading && activeIndex === 0} />
 
-      {tab !== "lives" ? (
+      {tab === "series" ? (
+        <SeriesGrid token={token} />
+      ) : tab !== "lives" ? (
         loading ? (
           <BrunoLoader fullScreen={false} className="h-full" />
         ) : reels.length === 0 ? (

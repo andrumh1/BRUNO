@@ -86,12 +86,21 @@ async def create_series(body: SeriesBody, current_user: User = Depends(get_curre
 async def _own_long_ids(user_id: str, ids: List[str]) -> List[str]:
     if not ids:
         return []
-    ok = {p["id"] async for p in db.posts.find({"id": {"$in": ids}, "user_id": user_id, "is_deleted": {"$ne": True}}, {"_id": 0, "id": 1, "media": 1}) if _is_long(p)}
+    ok = {p["id"] async for p in db.posts.find({"id": {"$in": ids}, "user_id": user_id, "is_deleted": {"$ne": True}}, {"_id": 0, "id": 1, "media": 1}) if (p.get("media") or [{}])[0].get("type") == "video" or _is_long(p)}
     seen, out = set(), []
     for i in ids:
         if i in ok and i not in seen:
             seen.add(i); out.append(i)
     return out
+
+
+@router.get("/series/public")
+async def public_series(skip: int = 0, limit: int = 30, current_user: Optional[User] = Depends(get_current_user_optional)):
+    """Series publicadas (visibilidad pública) con al menos un capítulo público, más recientes primero."""
+    viewer = current_user.id if current_user else None
+    rows = await db.series.find({"visibility": "public", "video_ids.0": {"$exists": True}}, {"_id": 0}).sort("updated_at", -1).skip(max(0, skip)).limit(max(1, min(limit, 60))).to_list(60)
+    out = [await _series_out(s, viewer) for s in rows]
+    return [s for s in out if s["count"]]
 
 
 @router.get("/series/mine")
@@ -103,7 +112,7 @@ async def my_series(current_user: User = Depends(get_current_user)):
 @router.get("/series/candidates")
 async def series_candidates(current_user: User = Depends(get_current_user)):
     """Videos largos del creador disponibles para añadir a una serie."""
-    ids = [p["id"] async for p in db.posts.find({"user_id": current_user.id, "is_deleted": {"$ne": True}, "media.duration": {"$gte": LONG_MIN}}, {"_id": 0, "id": 1}).sort("created_at", -1).limit(200)]
+    ids = [p["id"] async for p in db.posts.find({"user_id": current_user.id, "is_deleted": {"$ne": True}, "is_draft": {"$ne": True}, "media.type": "video"}, {"_id": 0, "id": 1}).sort("created_at", -1).limit(200)]
     return await _video_cards(ids)
 
 

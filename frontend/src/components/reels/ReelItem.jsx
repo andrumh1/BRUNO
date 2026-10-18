@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ChaptersStrip, useResume, getChapters, isLongVideo, fmtClock } from "@/components/reels/LongVideoExtras";
-import { Clapperboard } from "lucide-react";
+import { Clapperboard , MapPin } from "lucide-react";
 import { Heart, MessageCircle, Music2, Play, User, Plus, Minimize2, Maximize2, RotateCcw, Scissors, Columns2, MoreHorizontal } from "lucide-react";
 import ReelTextCard from "@/components/reels/ReelTextCard";
 import ReelCarousel from "@/components/reels/ReelCarousel";
@@ -393,6 +393,11 @@ export default function ReelItem({
                 </button>
               )}
             </div>
+            {reel.place?.name && (
+              <Link to={`/map?lat=${reel.place.lat}&lng=${reel.place.lng}`} onClick={(e) => e.stopPropagation()} className="pointer-events-auto inline-flex items-center gap-1 max-w-[70vw] text-white/90 text-xs font-semibold drop-shadow mt-0.5" data-testid="reel-place-badge">
+                <MapPin className="w-3.5 h-3.5 text-primary" /><span className="truncate">{reel.place.name}</span>
+              </Link>
+            )}
             {reel.remix?.source_post_id && (
               <button onClick={(e) => { e.stopPropagation(); onOpenRemixes?.({ id: reel.remix.source_post_id }); }} className="pointer-events-auto mt-1 inline-flex items-center gap-1 rounded-full bg-white/15 backdrop-blur-sm px-2 py-0.5 text-white text-[11px]" data-testid="reel-remix-label">
                 {reel.remix.type === "duet" ? <Columns2 className="w-3 h-3" /> : <Scissors className="w-3 h-3" />}

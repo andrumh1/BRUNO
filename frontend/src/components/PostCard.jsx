@@ -23,7 +23,7 @@ import {
   Play,
   Repeat2,
   Minimize2
-} from "lucide-react";
+, MapPin } from "lucide-react";
 import { useNavScroll } from "@/contexts/NavScrollContext";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
@@ -316,6 +316,11 @@ const PostCard = ({ post, onLike, onLikeUpdate, onComment, onDelete, onAvatarCli
               </div>
               <span className="text-xs text-muted-foreground">{formatDate(post.created_at)}</span>
             </Link>
+            {post.place?.name && (
+              <Link to={`/map?lat=${post.place.lat}&lng=${post.place.lng}`} className="inline-flex items-center gap-1 text-xs text-primary font-medium max-w-[220px]" data-testid="post-place-badge">
+                <MapPin className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{post.place.name}</span>
+              </Link>
+            )}
           </div>
           
           <div className="relative">

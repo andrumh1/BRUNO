@@ -82,6 +82,7 @@ class PostCreate(BaseModel):
     scheduled_at: Optional[str] = None  # ISO datetime → post stays hidden until then
     source: Optional[str] = None  # "bruno_ai" cuando se publica una respuesta de BRUNO IA
     ai_question: Optional[str] = None
+    place: Optional[dict] = None  # lugar guardado etiquetado {lat, lng, name, address, place_id}
 
 class Like(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -291,6 +292,9 @@ async def create_post(
     post_doc = post.model_dump()
     post_doc['created_at'] = post_doc['created_at'].isoformat()
     post_doc['updated_at'] = post_doc['updated_at'].isoformat()
+    if post_data.place and isinstance(post_data.place, dict) and post_data.place.get("name") and post_data.place.get("lat") is not None:
+        pl = post_data.place
+        post_doc["place"] = {"lat": float(pl["lat"]), "lng": float(pl["lng"]), "name": str(pl["name"])[:160], "address": (str(pl.get("address"))[:240] if pl.get("address") else None), "place_id": (str(pl.get("place_id"))[:80] if pl.get("place_id") else None)}
     if post_data.source == "bruno_ai":
         post_doc["source"] = "bruno_ai"
         post_doc["ai_question"] = (post_data.ai_question or "")[:300]

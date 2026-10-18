@@ -30,6 +30,7 @@ import {
   Sparkles,
   Play,
   Loader2,
+  Navigation,
 } from "lucide-react";
 import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,7 +42,16 @@ const FILTERS = [
   { id: "piup",     label: "PIUP",     Icon: MapPin },
   { id: "stories",  label: "Stories",  Icon: Sparkles },
   { id: "live",     label: "En vivo",  Icon: Radio },
+  { id: "near",     label: "Historias cerca de mí", Icon: Navigation },
 ];
+
+const distM = (a, b) => {
+  const R = 6371000, toR = (d) => (d * Math.PI) / 180;
+  const dLat = toR(b.lat - a.lat), dLng = toR(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+};
+const fmtDist = (m) => (m == null ? "" : m < 1000 ? `${m} m` : `${(m / 1000).toFixed(m < 10000 ? 1 : 0)} km`);
 
 function typeBadge(item) {
   if (item.kind === "story") return { Icon: Play, color: "bg-fuchsia-500" };
@@ -106,6 +116,9 @@ function ProfileBubble({ item, onClick, testId }) {
           {item.place_name}
         </span>
       )}
+      {item.distance_m != null && (
+        <span className="text-[9px] font-bold text-orange-600 dark:text-orange-300" data-testid={`${testId}-distance`}>{fmtDist(item.distance_m)}</span>
+      )}
     </motion.button>
   );
 }
@@ -121,6 +134,17 @@ export default function MapProfilesBar({
   const { token } = useAuth();
   const [expanded, setExpanded] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [me, setMe] = useState(null);       // ubicación del usuario (solo al pedir "cerca de mí")
+  const [meState, setMeState] = useState("idle"); // idle | asking | denied
+  const askMyLocation = () => {
+    if (!navigator.geolocation) { setMeState("denied"); return; }
+    setMeState("asking");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { setMe({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setMeState("ok"); },
+      () => setMeState("denied"),
+      { timeout: 8000, maximumAge: 120000, enableHighAccuracy: false },
+    );
+  };
   const [piupPins, setPiupPins] = useState([]);
   const [locatedCards, setLocatedCards] = useState([]);
   const [locatedStories, setLocatedStories] = useState([]);
@@ -218,8 +242,13 @@ export default function MapProfilesBar({
       return items.filter((i) => i.kind === "piup" || i.kind === "card");
     if (filter === "stories") return items.filter((i) => i.kind === "story");
     if (filter === "live") return items.filter((i) => i.kind === "user");
+    if (filter === "near") {
+      const stories = items.filter((i) => i.kind === "story" && i.lat != null && i.lng != null);
+      if (!me) return stories;
+      return stories.map((i) => ({ ...i, distance_m: distM(me, i) })).sort((a, b) => a.distance_m - b.distance_m);
+    }
     return items;
-  }, [items, filter]);
+  }, [items, filter, me]);
 
   const counts = useMemo(() => ({
     piup: piupPins.length + locatedCards.length,
@@ -334,7 +363,7 @@ export default function MapProfilesBar({
                     return (
                       <button
                         key={id}
-                        onClick={() => setFilter(id)}
+                        onClick={() => { setFilter(id); if (id === "near" && !me) askMyLocation(); }}
                         data-testid={`${testId}-filter-${id}`}
                         className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2.5 py-1 border transition-colors ${
                           active
@@ -351,9 +380,11 @@ export default function MapProfilesBar({
 
                 {/* Bubble strip */}
                 <div className="pb-3 px-3">
+                  {filter === "near" && meState === "denied" && <p className="px-3 pb-1 text-[10px] text-amber-600 dark:text-amber-400" data-testid={`${testId}-near-denied`}>Sin permiso de ubicación: se muestran las historias con lugar sin ordenar. <button onClick={askMyLocation} className="underline font-semibold">Reintentar</button></p>}
+                  {filter === "near" && meState === "asking" && <p className="px-3 pb-1 text-[10px] text-zinc-500" data-testid={`${testId}-near-asking`}>Obteniendo tu ubicación…</p>}
                   {filtered.length === 0 ? (
                     <div className="text-center py-3 text-xs text-zinc-500 dark:text-zinc-400">
-                      Nada por aqui todavia. {filter === "piup" ? "Reclama tu primera PIUP en el mapa." : filter === "stories" ? "Publica una historia con ubicacion." : "Activa la ubicacion para aparecer aqui."}
+                      Nada por aqui todavia. {filter === "piup" ? "Reclama tu primera PIUP en el mapa." : filter === "stories" ? "Publica una historia con ubicacion." : filter === "near" ? "No hay historias con lugar cerca por ahora." : "Activa la ubicacion para aparecer aqui."}
                     </div>
                   ) : (
                     <div className="overflow-x-auto scrollbar-none -mx-1">

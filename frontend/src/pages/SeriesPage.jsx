@@ -29,9 +29,9 @@ const AddVideosSheet = ({ token, exclude, onAdd, onClose }) => {
   const [list, setList] = useState(null);
   useEffect(() => { axios.get(`${API}/series/candidates`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setList(r.data.filter((v) => !exclude.includes(v.id)))).catch(() => setList([])); }, [token, exclude]);
   return (
-    <BottomSheet open onClose={onClose} title="Añadir videos largos" testid="series-add-sheet" height="70vh">
+    <BottomSheet open onClose={onClose} title="Añadir videos como capítulos" testid="series-add-sheet" height="70vh">
       <div className="px-4 pb-8 space-y-1.5 overflow-y-auto">
-        {list === null ? <Loader2 className="w-5 h-5 animate-spin mx-auto my-8" /> : list.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No tienes más videos de 3+ minutos. Sube uno desde Crear.</p>
+        {list === null ? <Loader2 className="w-5 h-5 animate-spin mx-auto my-8" /> : list.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No tienes más videos para añadir. Sube uno desde Crear.</p>
           : list.map((v) => <button key={v.id} onClick={() => onAdd(v)} className="w-full flex items-center gap-3 rounded-xl p-2 hover:bg-foreground/[0.04] text-left" data-testid={`series-candidate-${v.id}`}><div className="w-20 h-12 rounded-lg overflow-hidden bg-black/70 shrink-0">{v.thumb && <img src={v.thumb} alt="" className="w-full h-full object-cover" />}</div><div className="min-w-0 flex-1"><p className="text-sm line-clamp-2">{v.title}</p><p className="text-[11px] text-muted-foreground">{fmtClock(v.duration)}</p></div><Plus className="w-4 h-4 text-primary" /></button>)}
       </div>
     </BottomSheet>
@@ -113,7 +113,7 @@ export default function SeriesPage() {
           </>
         )}
         <div className="space-y-1.5" data-testid="series-videos">
-          {s.videos.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">{editing ? "Añade tus videos largos (3+ min) a esta serie." : "Esta serie aún no tiene videos."}</p>}
+          {s.videos.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">{editing ? "Añade tus videos como capítulos y ordénalos con las flechas." : "Esta serie aún no tiene capítulos."}</p>}
           {s.videos.map((v, i) => <VideoRow key={v.id} v={v} i={i} seriesId={s.id} editing={editing} onUp={() => move(i, -1)} onDown={() => move(i, 1)} onRemove={() => setS({ ...s, videos: s.videos.filter((x) => x.id !== v.id) })} />)}
         </div>
       </div>
