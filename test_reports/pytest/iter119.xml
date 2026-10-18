@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="2" time="3.038" timestamp="2026-10-18T23:03:24.173715+00:00" hostname="agent-env-fbec3dde-5c57-40bf-9a8a-afc0f3c51e3f"><testcase classname="backend.tests.test_iteration119" name="test_series_full_flow" time="2.237" /><testcase classname="backend.tests.test_iteration119" name="test_post_place_create_and_read" time="0.729"><failure message="TypeError: string indices must be integers, not 'str'">backend/tests/test_iteration119.py:110: in test_post_place_create_and_read
+    first = next((p for p in items if p["id"] == pid), None)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iteration119.py:110: in &lt;genexpr&gt;
+    first = next((p for p in items if p["id"] == pid), None)
+                                      ^^^^^^^
+E   TypeError: string indices must be integers, not 'str'</failure></testcase></testsuite></testsuites>
