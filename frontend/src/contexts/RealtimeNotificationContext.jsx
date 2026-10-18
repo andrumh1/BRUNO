@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { makeBackoff, onBackOnline } from "@/lib/wsBackoff";
 
 const NotifCtx = createContext({
   lastEvent: null,
@@ -179,12 +180,15 @@ export const RealtimeNotificationProvider = ({ children }) => {
 
     const url = process.env.REACT_APP_BACKEND_URL.replace(/^http/, "ws") + `/api/ws/chat/${token}`;
     let cancelled = false;
+    const backoff = makeBackoff();
 
     const connect = () => {
+      if (cancelled) return;
       try {
         const ws = new WebSocket(url);
         wsRef.current = ws;
         ws.onopen = () => {
+          backoff.reset();
           setConnected(true);
           if (reconnectRef.current) {
             clearTimeout(reconnectRef.current);
@@ -207,17 +211,19 @@ export const RealtimeNotificationProvider = ({ children }) => {
           setConnected(false);
           if (cancelled) return;
           // Reconnect with backoff
-          reconnectRef.current = setTimeout(connect, 3000);
+          reconnectRef.current = setTimeout(connect, backoff.next());
         };
         ws.onerror = () => { try { ws.close(); } catch (_) { /* ignore */ } };
       } catch (_) {
-        if (!cancelled) reconnectRef.current = setTimeout(connect, 5000);
+        if (!cancelled) reconnectRef.current = setTimeout(connect, backoff.next());
       }
     };
 
     connect();
+    const offOnline = onBackOnline(() => { if (!cancelled && wsRef.current?.readyState !== WebSocket.OPEN) { clearTimeout(reconnectRef.current); backoff.reset(); connect(); } });
     return () => {
       cancelled = true;
+      offOnline();
       if (reconnectRef.current) clearTimeout(reconnectRef.current);
       if (wsRef.current && wsRef.current.readyState <= 1) wsRef.current.close();
     };

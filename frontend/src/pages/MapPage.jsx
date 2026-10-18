@@ -1,5 +1,6 @@
 /**
- * MapPage — Hybrid Google Maps + PIUP pins.
+ * MapPage — Mapa social BRUNO: marcadores = tarjetas guardadas (pines PIUP + tarjetas con dirección),
+ * exactamente las mismas que muestra la barra de tarjetas. Recomendaciones cercanas en panel aparte.
  *
  *  Bottom layer: Google Maps JS (calles, barrios, POIs publicos como hospitales,
  *  policia, alcaldias — la base "completa de Google").
@@ -11,21 +12,22 @@
  *  card so the user knows what to configure.
  */
 /* eslint-disable */
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { APIProvider, Map, AdvancedMarker, useMap, InfoWindow } from "@vis.gl/react-google-maps";
 import axios from "axios";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import MapProfilesBar from "@/components/bruno/MapProfilesBar";
 import MapPinClaimModal from "@/components/bruno/MapPinClaimModal";
 import MapStyleSocial from "@/components/bruno/MapStyleSocial";
 import SharedLocationsLayer from "@/components/bruno/SharedLocationsLayer";
 import OsmFallbackMap from "@/components/bruno/OsmFallbackMap";
-import CardsExplorer from "@/components/CardsExplorer";
+import NearbyPlacesPanel from "@/components/bruno/NearbyPlacesPanel";
+import { useMapCardItems } from "@/hooks/useMapCardItems";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
-import { ArrowLeft, MapPin as MapPinIcon, Plus, Layers, Crosshair, ExternalLink, KeyRound, Compass, X } from "lucide-react";
+import { ArrowLeft, MapPin as MapPinIcon, Plus, Layers, Crosshair, ExternalLink, KeyRound, Search, User as UserIcon } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const GOOGLE_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
@@ -37,8 +39,10 @@ export default function MapPage() {
   const navigate = useNavigate();
   const { token } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const exploreOpen = searchParams.get("explore") === "1";
-  const setExplore = (open) => setSearchParams(open ? { explore: "1" } : {}, { replace: true });
+  const nearbyOpen = searchParams.get("nearby") === "1";
+  const setNearby = (open) => setSearchParams(open ? { nearby: "1" } : {}, { replace: true });
+  // Marcadores del mapa == tarjetas de la barra (misma fuente de datos)
+  const mapCards = useMapCardItems();
 
   const [initialCenter] = useState(BOGOTA);   // used only as the map's default center
   const [showClaim, setShowClaim] = useState(false);
@@ -98,14 +102,10 @@ export default function MapPage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="flex-1 h-10 rounded-full bg-background/90 backdrop-blur-md shadow flex items-center p-1 gap-1" data-testid="map-mode-tabs">
-              <button onClick={() => setExplore(false)} className={`flex-1 h-8 rounded-full text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors ${!exploreOpen ? "bg-primary text-white shadow" : "text-muted-foreground"}`} data-testid="map-tab-map">
-                <MapPinIcon className="w-3.5 h-3.5" /> Mapa
-              </button>
-              <button onClick={() => setExplore(true)} className={`flex-1 h-8 rounded-full text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors ${exploreOpen ? "bg-primary text-white shadow" : "text-muted-foreground"}`} data-testid="map-tab-explore">
-                <Compass className="w-3.5 h-3.5" /> Explorar
-              </button>
-            </div>
+            <button onClick={() => setNearby(!nearbyOpen)} className={`flex-1 h-10 rounded-full backdrop-blur-md shadow flex items-center px-4 gap-2 text-xs font-semibold transition-colors ${nearbyOpen ? "bg-primary text-white" : "bg-background/90 text-muted-foreground"}`} data-testid="map-nearby-btn">
+              <Search className="w-4 h-4 shrink-0" />
+              <span className="truncate">{nearbyOpen ? "Recomendaciones cerca de ti" : "Buscar restaurantes, negocios y servicios cerca"}</span>
+            </button>
             <button
               onClick={() => setShowPiupLayer((v) => !v)}
               className={`w-10 h-10 rounded-full backdrop-blur-md shadow flex items-center justify-center ${
@@ -121,7 +121,7 @@ export default function MapPage() {
         </div>
 
         {useOsm ? (
-          <OsmFallbackMap center={initialCenter} mapRef={mapRef} pendingRef={pendingUserCenterRef} showPins={showPiupLayer} navigate={navigate} />
+          <OsmFallbackMap center={initialCenter} mapRef={mapRef} pendingRef={pendingUserCenterRef} showPins={showPiupLayer} navigate={navigate} items={mapCards.items} />
         ) : (
         <Map
           mapId={MAP_ID}
@@ -138,7 +138,7 @@ export default function MapPage() {
           onTilesLoaded={() => { tilesOkRef.current = true; }}
         >
           <MapInstanceCapture mapRef={mapRef} pendingUserCenterRef={pendingUserCenterRef} />
-          {showPiupLayer && <PiupPinsLayer onSelect={(p) => setSelectedPin(p)} />}
+          {showPiupLayer && <CardMarkersLayer items={mapCards.items} onSelect={(p) => setSelectedPin(p)} />}
           <SharedLocationsLayer onSelect={(s) => mapRef.current?.panTo({ lat: s.last_lat, lng: s.last_lng })} />
 
           {selectedPin && (
@@ -184,25 +184,15 @@ export default function MapPage() {
           )}
         </div>
 
-        <MapProfilesBar />
+        <MapProfilesBar cardItems={mapCards.items} onSelect={(it) => { if (it?.lat != null && it?.lng != null) mapRef.current?.panTo({ lat: it.lat, lng: it.lng }); }} />
 
         <AnimatePresence>
-          {exploreOpen && (
-            <motion.div
-              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 260 }}
-              className="absolute inset-x-0 bottom-0 z-[70] bg-background/95 backdrop-blur-2xl rounded-t-[28px] border-t border-border/50 shadow-2xl flex flex-col"
-              style={{ top: "calc(var(--safe-top) + 64px)" }}
-              data-testid="map-explore-panel"
-            >
-              <div className="flex items-center justify-between px-4 pt-3 pb-2">
-                <div className="mx-auto absolute left-1/2 -translate-x-1/2 top-2 w-10 h-1 rounded-full bg-foreground/20" />
-                <h2 className="font-bold text-base mt-2">Explorar tarjetas</h2>
-                <button onClick={() => setExplore(false)} className="mt-2 w-8 h-8 rounded-full bg-muted grid place-items-center" data-testid="map-explore-close" aria-label="Cerrar"><X className="w-4 h-4" /></button>
-              </div>
-              <div className="flex-1 overflow-y-auto px-4" style={{ paddingBottom: "calc(var(--nav-reserve, 88px) + 16px)" }}>
-                <CardsExplorer />
-              </div>
-            </motion.div>
+          {nearbyOpen && (
+            <NearbyPlacesPanel
+              onClose={() => setNearby(false)}
+              onPick={(p) => { if (p?.lat != null && p?.lng != null) mapRef.current?.panTo({ lat: p.lat, lng: p.lng }); }}
+              mapCenter={() => { const c = mapRef.current?.getCenter?.(); return c ? { lat: c.lat(), lng: c.lng() } : initialCenter; }}
+            />
           )}
         </AnimatePresence>
 
@@ -238,52 +228,27 @@ function MapInstanceCapture({ mapRef, pendingUserCenterRef }) {
   return null;
 }
 
-function PiupPinsLayer({ onSelect }) {
-  const map = useMap();
-  const [pins, setPins] = useState([]);
-  const lastFetchRef = useRef(0);
-
-  const fetchPins = useCallback(async () => {
-    if (!map) return;
-    const bounds = map.getBounds();
-    if (!bounds) return;
-    const ne = bounds.getNorthEast();
-    const sw = bounds.getSouthWest();
-    const now = Date.now();
-    if (now - lastFetchRef.current < 500) return;
-    lastFetchRef.current = now;
-    try {
-      const res = await axios.get(`${API}/map-pins`, {
-        params: {
-          min_lat: sw.lat(), max_lat: ne.lat(),
-          min_lng: sw.lng(), max_lng: ne.lng(),
-          limit: 200,
-        },
-      });
-      setPins(res.data?.pins || []);
-    } catch (_) { /* swallow */ }
-  }, [map]);
-
-  useEffect(() => {
-    if (!map) return;
-    const listener = map.addListener("idle", fetchPins);
-    fetchPins();
-    return () => window.google?.maps?.event?.removeListener(listener);
-  }, [map, fetchPins]);
-
+function CardMarkersLayer({ items, onSelect }) {
   return (
     <>
-      {pins.map((p) => (
-        <AdvancedMarker
-          key={p.id}
-          position={{ lat: p.lat, lng: p.lng }}
-          onClick={() => onSelect(p)}
-          title={p.title}
-        >
-          <BrunoPin pin={p} />
+      {items.map((p) => (
+        <AdvancedMarker key={`${p.kind}-${p.id}`} position={{ lat: p.lat, lng: p.lng }} onClick={() => onSelect(p)} title={p.title || p.name}>
+          {p.kind === "piup" ? <BrunoPin pin={p} /> : <CardBubble card={p} />}
         </AdvancedMarker>
       ))}
     </>
+  );
+}
+
+function CardBubble({ card }) {
+  const avatar = card.avatar_url || card.banner_url;
+  return (
+    <div data-testid={`map-card-marker-${card.id}`} className="relative flex flex-col items-center cursor-pointer group">
+      <div className="w-11 h-11 rounded-full border-[3px] border-white shadow-xl overflow-hidden grid place-items-center group-hover:scale-110 transition-transform" style={{ backgroundColor: card.background_color || "#FF5A00" }}>
+        {avatar ? <img src={avatar} alt="" className="w-full h-full object-cover" /> : <UserIcon className="w-5 h-5 text-white" />}
+      </div>
+      <div className="w-0 h-0 -mt-1" style={{ borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderTop: `8px solid ${card.background_color || "#FF5A00"}`, filter: "drop-shadow(0 1px 1px rgba(0,0,0,.25))" }} />
+    </div>
   );
 }
 
@@ -325,15 +290,15 @@ function PinDetailCard({ pin, navigate, onClose }) {
       )}
       <div className="flex items-center gap-2">
         <span
-          className="w-8 h-8 rounded-full grid place-items-center text-sm shrink-0"
-          style={{ backgroundColor: pin.category_color }}
+          className="w-8 h-8 rounded-full grid place-items-center text-sm shrink-0 overflow-hidden"
+          style={{ backgroundColor: pin.category_color || pin.background_color || "#FF5A00" }}
         >
-          {pin.category_icon}
+          {pin.kind === "card" && pin.avatar_url ? <img src={pin.avatar_url} alt="" className="w-full h-full object-cover" /> : (pin.category_icon || "📍")}
         </span>
         <div className="min-w-0">
-          <h3 className="font-semibold text-sm truncate">{pin.title}</h3>
+          <h3 className="font-semibold text-sm truncate">{pin.title || pin.name}</h3>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {pin.category_label}
+            {pin.category_label || (pin.kind === "card" ? "Tarjeta BRUNO" : "")}
           </p>
         </div>
       </div>
@@ -351,7 +316,7 @@ function PinDetailCard({ pin, navigate, onClose }) {
           className="h-8 text-xs bg-primary"
           onClick={() => {
             onClose();
-            navigate(`/c/${pin.card_id}`);
+            navigate(`/c/${pin.card_id || pin.id}`);
           }}
           data-testid={`map-piup-view-card-${pin.id}`}
         >

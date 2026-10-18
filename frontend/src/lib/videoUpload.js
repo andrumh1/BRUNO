@@ -1,4 +1,5 @@
 import axios from "axios";
+import { adaptiveChunkBytes } from "@/lib/uploadOptim";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const STATE_PREFIX = "bruno_vup_";
@@ -45,7 +46,7 @@ export async function uploadVideoDirect(file, { token, folder = "bruno", trim, c
     st = { ...r.data, offset: 0, at: Date.now(), size: file.size };
     saveState(key, st);
   }
-  const chunk = st.chunk_bytes || 20 * 1024 * 1024;
+  const chunk = adaptiveChunkBytes(st.chunk_bytes || 20 * 1024 * 1024);
   let result = null;
   const report = (loaded, phase = "upload") => onProgress?.({ loaded, total: file.size, pct: Math.min(99, Math.round((loaded * 100) / file.size)), phase, resumed: !fresh });
   report(st.offset);

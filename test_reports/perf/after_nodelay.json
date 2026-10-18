@@ -1,0 +1,114 @@
+{
+  "label": "after_nodelay",
+  "base": "http://localhost:8001",
+  "results": [
+    {
+      "path": "/api/auth/me",
+      "status": 200,
+      "bytes": 193,
+      "p50_ms": 3.3,
+      "max_ms": 3.7,
+      "encoding": "none",
+      "cache": "none"
+    },
+    {
+      "path": "/api/posts/feed?limit=10",
+      "status": 404,
+      "bytes": 27,
+      "p50_ms": 3.5,
+      "max_ms": 3.6,
+      "encoding": "none",
+      "cache": "none"
+    },
+    {
+      "path": "/api/posts/reels?limit=10",
+      "status": 404,
+      "bytes": 27,
+      "p50_ms": 3.1,
+      "max_ms": 3.2,
+      "encoding": "none",
+      "cache": "none"
+    },
+    {
+      "path": "/api/users/me/profile",
+      "status": 404,
+      "bytes": 27,
+      "p50_ms": 3.2,
+      "max_ms": 3.3,
+      "encoding": "none",
+      "cache": "none"
+    },
+    {
+      "path": "/api/cards",
+      "status": 200,
+      "bytes": 14057,
+      "p50_ms": 5.7,
+      "max_ms": 5.9,
+      "encoding": "none",
+      "cache": "none"
+    },
+    {
+      "path": "/api/notifications?limit=20",
+      "status": 200,
+      "bytes": 10830,
+      "p50_ms": 10.7,
+      "max_ms": 11.5,
+      "encoding": "none",
+      "cache": "none"
+    },
+    {
+      "path": "/api/chats",
+      "status": 200,
+      "bytes": 12500,
+      "p50_ms": 10.2,
+      "max_ms": 11.0,
+      "encoding": "none",
+      "cache": "none"
+    },
+    {
+      "path": "/api/search?q=bruno",
+      "status": 200,
+      "bytes": 9817,
+      "p50_ms": 9.5,
+      "max_ms": 19.1,
+      "encoding": "none",
+      "cache": "none"
+    },
+    {
+      "path": "/api/marketplace/products?limit=12",
+      "status": 200,
+      "bytes": 6628,
+      "p50_ms": 6.9,
+      "max_ms": 7.4,
+      "encoding": "none",
+      "cache": "none"
+    },
+    {
+      "path": "/api/piup/catalog",
+      "status": 200,
+      "bytes": 27423,
+      "p50_ms": 5.1,
+      "max_ms": 5.5,
+      "encoding": "none",
+      "cache": "none"
+    },
+    {
+      "path": "/api/stories/feed",
+      "status": 200,
+      "bytes": 2,
+      "p50_ms": 3.3,
+      "max_ms": 3.6,
+      "encoding": "none",
+      "cache": "none"
+    },
+    {
+      "path": "/api/series",
+      "status": 405,
+      "bytes": 31,
+      "p50_ms": 1.5,
+      "max_ms": 1.7,
+      "encoding": "none",
+      "cache": "none"
+    }
+  ]
+}

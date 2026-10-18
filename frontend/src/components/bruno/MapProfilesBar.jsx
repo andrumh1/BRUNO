@@ -113,6 +113,7 @@ function ProfileBubble({ item, onClick, testId }) {
 export default function MapProfilesBar({
   nearbyUsers = [],
   cards: cardsProp = [],
+  cardItems = null, // si el padre la provee, es la lista exacta de tarjetas del mapa (sin re-fetch)
   onSelect,
   currentUserId,
   testId = "map-profiles-bar",
@@ -131,10 +132,10 @@ export default function MapProfilesBar({
     try {
       // Run all three in parallel; never block the bar on a single failure.
       const [pinsRes, cardsRes, storiesRes] = await Promise.allSettled([
-        axios.get(`${API}/map-pins`, {
+        cardItems ? Promise.reject(new Error("provided")) : axios.get(`${API}/map-pins`, {
           params: { min_lat: -90, max_lat: 90, min_lng: -180, max_lng: 180, limit: 200 },
         }),
-        axios.get(`${API}/map-pins/cards-located`, { params: { limit: 200 } }),
+        cardItems ? Promise.reject(new Error("provided")) : axios.get(`${API}/map-pins/cards-located`, { params: { limit: 200 } }),
         axios.get(`${API}/stories/located`, { params: { limit: 100 } }),
       ]);
       if (pinsRes.status === "fulfilled") {
@@ -149,7 +150,13 @@ export default function MapProfilesBar({
     } catch (_) { /* swallow */ } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cardItems !== null]);
+
+  useEffect(() => {
+    if (!cardItems) return;
+    setPiupPins(cardItems.filter((i) => i.kind === "piup"));
+    setLocatedCards(cardItems.filter((i) => i.kind === "card"));
+  }, [cardItems]);
 
   useEffect(() => {
     refresh();

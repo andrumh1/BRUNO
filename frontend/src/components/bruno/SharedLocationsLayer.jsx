@@ -10,6 +10,7 @@
  */
 /* eslint-disable */
 import React, { useEffect, useRef, useState } from "react";
+import { makeBackoff } from "@/lib/wsBackoff";
 import axios from "axios";
 import { AdvancedMarker } from "@vis.gl/react-google-maps";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,6 +52,7 @@ export default function SharedLocationsLayer({ onSelect }) {
   useEffect(() => {
     if (!token) return;
     let alive = true;
+    const backoff = makeBackoff();
     const connect = () => {
       const sock = new WebSocket(`${WS_URL}/api/ws/chat/${token}`);
       wsRef.current = sock;
@@ -67,7 +69,7 @@ export default function SharedLocationsLayer({ onSelect }) {
           }
         } catch (_e) { /* ignore */ }
       };
-      sock.onclose = () => { if (alive) setTimeout(connect, 3000); };
+      sock.onclose = () => { if (alive) setTimeout(connect, backoff.next()); };
       return sock;
     };
     const s = connect();

@@ -70,6 +70,7 @@ import TranslateButton from "@/components/TranslateButton";
 import GroupSummaryCard from "@/components/chat/GroupSummaryCard";
 import { PollMessage, CreatePollSheet } from "@/components/chat/Poll";
 import { useChatOutbox } from "@/hooks/useChatOutbox";
+import { makeBackoff, onBackOnline } from "@/lib/wsBackoff";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -1183,6 +1184,7 @@ const ChatPage = () => {
     let alive = true;
     let current = null;
 
+    const backoff = makeBackoff();
     const connectWebSocket = () => {
       if (!alive) return null;
       try {
@@ -1190,6 +1192,7 @@ const ChatPage = () => {
         current = socket;
         
         socket.onopen = () => {
+          backoff.reset();
           if (alive) setWs(socket);
         };
         
@@ -1226,7 +1229,7 @@ const ChatPage = () => {
         
         socket.onclose = () => {
           setWs(null);
-          if (alive) wsReconnectRef.current = setTimeout(connectWebSocket, 3000);
+          if (alive) wsReconnectRef.current = setTimeout(connectWebSocket, backoff.next());
         };
         
         socket.onerror = (error) => {
@@ -1241,9 +1244,11 @@ const ChatPage = () => {
     };
 
     connectWebSocket();
+    const offOnline = onBackOnline(() => { if (alive && current?.readyState !== WebSocket.OPEN) { clearTimeout(wsReconnectRef.current); backoff.reset(); connectWebSocket(); } });
 
     return () => {
       alive = false;
+      offOnline();
       if (wsReconnectRef.current) {
         clearTimeout(wsReconnectRef.current);
       }

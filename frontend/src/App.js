@@ -1,4 +1,6 @@
-import React from "react";
+import React, { Suspense } from "react";
+import { lazyPage } from "@/lib/lazyPage";
+import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -38,85 +40,87 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import FloatingBackButton from "@/components/FloatingBackButton";
 
 // Pages
-import LandingPage from "@/pages/LandingPage";
+const LandingPage = lazyPage(() => import("@/pages/LandingPage"));
 import LoginPage from "@/pages/LoginPage";
-import RegisterPage from "@/pages/RegisterPage";
+const RegisterPage = lazyPage(() => import("@/pages/RegisterPage"));
 import AuthCallback from "@/pages/AuthCallback";
-import Dashboard from "@/pages/Dashboard";
-import CardBuilderPage from "@/pages/CardBuilderPage";
-import ViewCardPage from "@/pages/ViewCardPage";
-import QRCodePage from "@/pages/QRCodePage";
-import CardTransferPage from "@/pages/CardTransferPage";
-import TransferReceivePage from "@/pages/TransferReceivePage";
-import ReceivedCardsPage from "@/pages/ReceivedCardsPage";
-import ActivateNFCPage from "@/pages/ActivateNFCPage";
-import NFCWritePage from "@/pages/NFCWritePage";
-import NFCRedirectPage from "@/pages/NFCRedirectPage";
-import NFCManagerPage from "@/pages/NFCManagerPage";
-import PiupManagerPage from "@/pages/PiupManagerPage";
-import ContactPage from "@/pages/ContactPage";
-import HelpPage from "@/pages/HelpPage";
-import PricingPage from "@/pages/PricingPage";
-import ComposePage from "@/pages/ComposePage";
-import PostDetailPage from "@/pages/PostDetailPage";
-import SoundPage from "@/pages/SoundPage";
-import MapPage from "@/pages/MapPage";
-import StorePage from "@/pages/StorePage";
-import ChatPage from "@/pages/ChatPage";
-import UserProfilePage from "@/pages/UserProfilePage";
-import MyProfilePage from "@/pages/MyProfilePage";
-import PointsPage from "@/pages/PointsPage";
-import BrunoWebsite from "@/pages/BrunoWebsite";
-import MarketplacePage from "@/pages/MarketplacePage";
-import ProductDetailPage from "@/pages/ProductDetailPage";
-import CartPage from "@/pages/CartPage";
-import MyProductsPage from "@/pages/MyProductsPage";
-import NewProductPage from "@/pages/NewProductPage";
-import NotificationSettingsPage from "@/pages/NotificationSettingsPage";
-import AnalyticsPage from "@/pages/AnalyticsPage";
-import BrunoCameraPage from "@/pages/BrunoCameraPage";
-import LiveSummaryPage from "@/pages/LiveSummaryPage";
-import PrivacyPolicyPage from "@/pages/PrivacyPolicyPage";
-import TermsOfServicePage from "@/pages/TermsOfServicePage";
-import DeleteAccountPage from "@/pages/DeleteAccountPage";
-import CookiePolicyPage from "@/pages/CookiePolicyPage";
-import LegalHubPage from "@/pages/LegalHubPage";
-import MarketplacePiupPage from "@/pages/MarketplacePiupPage";
-import { ForgotPasswordPage, ResetPasswordPage } from "@/pages/PasswordRecoveryPages";
-import AdminPiupPage from "@/pages/AdminPiupPage";
-import CommunityGuidelinesPage from "@/pages/CommunityGuidelinesPage";
-import DataRightsPage from "@/pages/DataRightsPage";
-import LivesListPage from "@/pages/LivesListPage";
-import LiveViewerPage from "@/pages/LiveViewerPage";
-import StartLivePage from "@/pages/StartLivePage";
+const Dashboard = lazyPage(() => import("@/pages/Dashboard"));
+const CardBuilderPage = lazyPage(() => import("@/pages/CardBuilderPage"));
+const ViewCardPage = lazyPage(() => import("@/pages/ViewCardPage"));
+const QRCodePage = lazyPage(() => import("@/pages/QRCodePage"));
+const CardTransferPage = lazyPage(() => import("@/pages/CardTransferPage"));
+const TransferReceivePage = lazyPage(() => import("@/pages/TransferReceivePage"));
+const ReceivedCardsPage = lazyPage(() => import("@/pages/ReceivedCardsPage"));
+const ActivateNFCPage = lazyPage(() => import("@/pages/ActivateNFCPage"));
+const NFCWritePage = lazyPage(() => import("@/pages/NFCWritePage"));
+const NFCRedirectPage = lazyPage(() => import("@/pages/NFCRedirectPage"));
+const NFCManagerPage = lazyPage(() => import("@/pages/NFCManagerPage"));
+const PiupManagerPage = lazyPage(() => import("@/pages/PiupManagerPage"));
+const ContactPage = lazyPage(() => import("@/pages/ContactPage"));
+const HelpPage = lazyPage(() => import("@/pages/HelpPage"));
+const PricingPage = lazyPage(() => import("@/pages/PricingPage"));
+const ComposePage = lazyPage(() => import("@/pages/ComposePage"));
+const PostDetailPage = lazyPage(() => import("@/pages/PostDetailPage"));
+const SoundPage = lazyPage(() => import("@/pages/SoundPage"));
+const MapPage = lazyPage(() => import("@/pages/MapPage"));
+const StorePage = lazyPage(() => import("@/pages/StorePage"));
+const ChatPage = lazyPage(() => import("@/pages/ChatPage"));
+const UserProfilePage = lazyPage(() => import("@/pages/UserProfilePage"));
+const MyProfilePage = lazyPage(() => import("@/pages/MyProfilePage"));
+const PointsPage = lazyPage(() => import("@/pages/PointsPage"));
+const BrunoWebsite = lazyPage(() => import("@/pages/BrunoWebsite"));
+const MarketplacePage = lazyPage(() => import("@/pages/MarketplacePage"));
+const ProductDetailPage = lazyPage(() => import("@/pages/ProductDetailPage"));
+const CartPage = lazyPage(() => import("@/pages/CartPage"));
+const MyProductsPage = lazyPage(() => import("@/pages/MyProductsPage"));
+const NewProductPage = lazyPage(() => import("@/pages/NewProductPage"));
+const NotificationSettingsPage = lazyPage(() => import("@/pages/NotificationSettingsPage"));
+const AnalyticsPage = lazyPage(() => import("@/pages/AnalyticsPage"));
+const BrunoCameraPage = lazyPage(() => import("@/pages/BrunoCameraPage"));
+const LiveSummaryPage = lazyPage(() => import("@/pages/LiveSummaryPage"));
+const PrivacyPolicyPage = lazyPage(() => import("@/pages/PrivacyPolicyPage"));
+const TermsOfServicePage = lazyPage(() => import("@/pages/TermsOfServicePage"));
+const DeleteAccountPage = lazyPage(() => import("@/pages/DeleteAccountPage"));
+const CookiePolicyPage = lazyPage(() => import("@/pages/CookiePolicyPage"));
+const LegalHubPage = lazyPage(() => import("@/pages/LegalHubPage"));
+const MarketplacePiupPage = lazyPage(() => import("@/pages/MarketplacePiupPage"));
+const ForgotPasswordPage = lazyPage(() => import("@/pages/PasswordRecoveryPages").then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazyPage(() => import("@/pages/PasswordRecoveryPages").then((m) => ({ default: m.ResetPasswordPage })));
+const AdminPiupPage = lazyPage(() => import("@/pages/AdminPiupPage"));
+const AdminPerformancePage = lazyPage(() => import("@/pages/AdminPerformancePage"));
+const CommunityGuidelinesPage = lazyPage(() => import("@/pages/CommunityGuidelinesPage"));
+const DataRightsPage = lazyPage(() => import("@/pages/DataRightsPage"));
+const LivesListPage = lazyPage(() => import("@/pages/LivesListPage"));
+const LiveViewerPage = lazyPage(() => import("@/pages/LiveViewerPage"));
+const StartLivePage = lazyPage(() => import("@/pages/StartLivePage"));
 import ReelsPage from "@/pages/ReelsPage";
-import MonetizationPage from "@/pages/MonetizationPage";
-import AlbumsPage from "@/pages/AlbumsPage";
-import CardAnalyticsPage from "@/pages/CardAnalyticsPage";
-import PremiumPage from "@/pages/PremiumPage";
-import PaymentResultPage from "@/pages/PaymentResultPage";
-import MyEarningsPage from "@/pages/MyEarningsPage";
-import MyPurchasesPage from "@/pages/MyPurchasesPage";
-import AdminReportsPage from "@/pages/AdminReportsPage";
-import AdminUserModerationPage from "@/pages/AdminUserModerationPage";
-import SearchPage from "@/pages/SearchPage";
-import SeriesPage from "@/pages/SeriesPage";
-import CardExamplesPage from "@/pages/CardExamplesPage";
-import CardExampleViewerPage from "@/pages/CardExampleViewerPage";
-import CouponLandingPage from "@/pages/CouponLandingPage";
-import AdminMoneyPage from "@/pages/AdminMoneyPage";
-import HashtagPage from "@/pages/HashtagPage";
-import UsernameRedirect from "@/pages/UsernameRedirect";
-import SavedPostsPage from "@/pages/SavedPostsPage";
-import SettingsPage from "@/pages/SettingsPage";
-import PartnerDashboardPage from "@/pages/PartnerDashboardPage";
-import BrunoUIKitPage from "@/pages/BrunoUIKitPage";
-import WelcomePage from "@/pages/WelcomePage";
-import EditProfilePage from "@/pages/EditProfilePage";
-import ChangePasswordPage from "@/pages/ChangePasswordPage";
-import BlockedUsersPage from "@/pages/BlockedUsersPage";
-import DevicesPage from "@/pages/DevicesPage";
-import NotificationsPage from "@/pages/NotificationsPage";
+const MonetizationPage = lazyPage(() => import("@/pages/MonetizationPage"));
+const AlbumsPage = lazyPage(() => import("@/pages/AlbumsPage"));
+const CardAnalyticsPage = lazyPage(() => import("@/pages/CardAnalyticsPage"));
+const PremiumPage = lazyPage(() => import("@/pages/PremiumPage"));
+const PaymentResultPage = lazyPage(() => import("@/pages/PaymentResultPage"));
+const MyEarningsPage = lazyPage(() => import("@/pages/MyEarningsPage"));
+const MyPurchasesPage = lazyPage(() => import("@/pages/MyPurchasesPage"));
+const AdminReportsPage = lazyPage(() => import("@/pages/AdminReportsPage"));
+const AdminUserModerationPage = lazyPage(() => import("@/pages/AdminUserModerationPage"));
+const SearchPage = lazyPage(() => import("@/pages/SearchPage"));
+const SeriesPage = lazyPage(() => import("@/pages/SeriesPage"));
+const CardExamplesPage = lazyPage(() => import("@/pages/CardExamplesPage"));
+const CardExampleViewerPage = lazyPage(() => import("@/pages/CardExampleViewerPage"));
+const CouponLandingPage = lazyPage(() => import("@/pages/CouponLandingPage"));
+const AdminMoneyPage = lazyPage(() => import("@/pages/AdminMoneyPage"));
+const HashtagPage = lazyPage(() => import("@/pages/HashtagPage"));
+const UsernameRedirect = lazyPage(() => import("@/pages/UsernameRedirect"));
+const SavedPostsPage = lazyPage(() => import("@/pages/SavedPostsPage"));
+const SettingsPage = lazyPage(() => import("@/pages/SettingsPage"));
+const PartnerDashboardPage = lazyPage(() => import("@/pages/PartnerDashboardPage"));
+const BrunoUIKitPage = lazyPage(() => import("@/pages/BrunoUIKitPage"));
+const WelcomePage = lazyPage(() => import("@/pages/WelcomePage"));
+const EditProfilePage = lazyPage(() => import("@/pages/EditProfilePage"));
+const ChangePasswordPage = lazyPage(() => import("@/pages/ChangePasswordPage"));
+const BlockedUsersPage = lazyPage(() => import("@/pages/BlockedUsersPage"));
+const DevicesPage = lazyPage(() => import("@/pages/DevicesPage"));
+const NotificationsPage = lazyPage(() => import("@/pages/NotificationsPage"));
 
 function AppRouter() {
   const location = useLocation();
@@ -128,6 +132,7 @@ function AppRouter() {
   }
   
   return (
+    <Suspense fallback={<BrunoLoader />}>
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Navigate to="/reels" replace />} />
@@ -213,6 +218,7 @@ function AppRouter() {
       <Route path="/earnings" element={<ProtectedRoute><MyEarningsPage /></ProtectedRoute>} />
       <Route path="/admin/money" element={<ProtectedRoute><AdminMoneyPage /></ProtectedRoute>} />
       <Route path="/admin/piup" element={<ProtectedRoute><AdminPiupPage /></ProtectedRoute>} />
+      <Route path="/admin/rendimiento" element={<ProtectedRoute><AdminPerformancePage /></ProtectedRoute>} />
       <Route path="/admin/reports" element={<ProtectedRoute><AdminReportsPage /></ProtectedRoute>} />
       <Route path="/admin/users/:userId/moderation" element={<ProtectedRoute><AdminUserModerationPage /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute><AdminUserModerationPage /></ProtectedRoute>} />
@@ -229,6 +235,7 @@ function AppRouter() {
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/reels" replace />} />
     </Routes>
+    </Suspense>
   );
 }
 

@@ -6,11 +6,12 @@
  *    app (e.g. FloatingChatBubble, ChatHeader) and starts the call.
  *  • Renders the <VideoCallModal> in the right state at the right time.
  */
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, Suspense } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
-import VideoCallModal from "@/components/VideoCallModal";
+const VideoCallModal = React.lazy(() => import("@/components/VideoCallModal"));
 import { brunoToast } from "@/components/bruno/BrunoToast";
+import { makeBackoff, onBackOnline } from "@/lib/wsBackoff";
 
 const OUTGOING_TIMEOUT_MS = 45000;
 
@@ -66,12 +67,16 @@ export default function CallOrchestrator() {
   useEffect(() => {
     if (!token) return undefined;
     let alive = true;
+    let timer = null;
+    const backoff = makeBackoff();
     const connect = () => {
+      if (!alive) return null;
       try {
         const socket = new WebSocket(`${WS_URL}/api/ws/chat/${token}`);
         wsRef.current = socket;
         // Recover a ring we may have missed while this socket was (re)connecting
         socket.onopen = async () => {
+          backoff.reset();
           try {
             const r = await axios.get(`${API}/calls/pending`, { headers: { Authorization: `Bearer ${token}` } });
             const d = r.data?.call;
@@ -110,17 +115,20 @@ export default function CallOrchestrator() {
         };
         socket.onclose = () => {
           if (!alive) return;
-          setTimeout(connect, 3000);
+          timer = setTimeout(connect, backoff.next());
         };
         return socket;
       } catch {
         return null;
       }
     };
-    const s = connect();
+    connect();
+    const offOnline = onBackOnline(() => { if (alive && wsRef.current?.readyState !== WebSocket.OPEN) { clearTimeout(timer); backoff.reset(); connect(); } });
     return () => {
       alive = false;
-      try { s?.close?.(); } catch (_e) { /* ignore */ }
+      clearTimeout(timer);
+      offOnline();
+      try { wsRef.current?.close?.(); } catch (_e) { /* ignore */ }
     };
   }, [token]);
 
@@ -166,6 +174,7 @@ export default function CallOrchestrator() {
   if (!call) return null;
 
   return (
+    <Suspense fallback={null}>
     <VideoCallModal
       isOpen
       onClose={handleHangup}
@@ -179,5 +188,6 @@ export default function CallOrchestrator() {
       onPeerLeft={handlePeerLeft}
       callType={call.type}
     />
+    </Suspense>
   );
 }

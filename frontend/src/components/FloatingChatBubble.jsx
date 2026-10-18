@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import useDragToMinimize from "@/hooks/useDragToMinimize";
 import LocationShareSheet from "@/components/bruno/LocationShareSheet";
+import { makeBackoff, onBackOnline } from "@/lib/wsBackoff";
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 const WS_URL = process.env.REACT_APP_BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
@@ -466,11 +467,12 @@ const FloatingChatBubble = () => {
     let alive = true;
     let socket = null;
     let timer = null;
+    const backoff = makeBackoff();
     const connect = () => {
       if (!alive) return null;
       try {
         socket = new WebSocket(`${WS_URL}/api/ws/chat/${token}`);
-        socket.onopen = () => { if (alive) setWs(socket); };
+        socket.onopen = () => { backoff.reset(); if (alive) setWs(socket); };
         socket.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
@@ -484,12 +486,13 @@ const FloatingChatBubble = () => {
             }
           } catch (_e) { /* ignore */ }
         };
-        socket.onclose = () => { setWs(null); if (alive) timer = setTimeout(connect, 3000); };
+        socket.onclose = () => { setWs(null); if (alive) timer = setTimeout(connect, backoff.next()); };
         return socket;
       } catch { return null; }
     };
     connect();
-    return () => { alive = false; clearTimeout(timer); try { socket?.close(); } catch { /* ignore */ } };
+    const offOnline = onBackOnline(() => { if (alive && socket?.readyState !== WebSocket.OPEN) { clearTimeout(timer); backoff.reset(); connect(); } });
+    return () => { alive = false; clearTimeout(timer); offOnline(); try { socket?.close(); } catch { /* ignore */ } };
   }, [token]);
 
   useEffect(() => { setUnreadTotal(chats.reduce((s, c) => s + (c.unread_count || 0), 0)); }, [chats]);

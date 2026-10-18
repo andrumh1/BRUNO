@@ -127,6 +127,7 @@ export default function AdminPiupPage() {
           <Button variant="ghost" size="icon" className="rounded-full" onClick={() => navigate(-1)} data-testid="admin-piup-back"><ArrowLeft className="w-5 h-5" /></Button>
           <OvcMark size={32} />
           <div className="flex-1 min-w-0"><h1 className="text-lg font-bold">PIUP · Administración OVC</h1><p className="text-[11px] text-muted-foreground">Catálogo, inventario y pedidos de Octopus Vision Company. {user?.name}</p></div>
+          <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate("/admin/rendimiento")} data-testid="admin-piup-perf">Rendimiento</Button>
           <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate("/admin/money")} data-testid="admin-piup-money">Finanzas</Button>
         </div>
         <div className="max-w-5xl mx-auto px-4 pb-2 flex gap-1">

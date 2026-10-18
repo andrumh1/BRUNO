@@ -2524,7 +2524,16 @@ app.include_router(money_router)
 from routers.credits import router as credits_router  # noqa: E402
 app.include_router(credits_router)
 app.include_router(stripe_webhook_router)
+from routers.telemetry import router as telemetry_router  # noqa: E402
+api_router.include_router(telemetry_router)
+from routers.places import router as places_router  # noqa: E402
+api_router.include_router(places_router)
 app.include_router(api_router)
+
+# Rendimiento: timing por ruta + Cache-Control, y gzip (el último add_middleware queda más externo)
+from utils.perf import PerfMiddleware, SelectiveGZipMiddleware, ensure_indexes  # noqa: E402
+app.add_middleware(PerfMiddleware)
+app.add_middleware(SelectiveGZipMiddleware, minimum_size=1000)
 
 # CORS
 app.add_middleware(
@@ -2533,6 +2542,7 @@ app.add_middleware(
     allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Server-Timing"],
 )
 
 # Logging
@@ -2541,6 +2551,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+logging.getLogger("passlib").setLevel(logging.ERROR)  # aviso benigno bcrypt 4.x / passlib 1.7
 
 @app.on_event("startup")
 async def auth_hardening_startup():
@@ -2558,6 +2569,7 @@ async def auth_hardening_startup():
         await db.login_attempts.create_index("last_failure_at", expireAfterSeconds=60 * 60 * 24)
         await db.chats.create_index("participants")
         await db.messages.create_index([("chat_id", 1), ("created_at", -1)])
+        await ensure_indexes()
     except Exception as e:
         logger.error(f"auth startup hardening failed: {e}")
     try:

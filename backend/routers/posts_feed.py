@@ -439,12 +439,13 @@ async def get_recommended_videos(
         base_q["user_id"] = {**(base_q.get("user_id") or {}), "$nin": list(hidden_authors)}
 
     pool: list = []
-    async for p in db.posts.find(base_q, {"_id": 0}).sort("created_at", -1).limit(600):
+    light = {"_id": 0, "id": 1, "user_id": 1, "created_at": 1, "likes_count": 1, "comments_count": 1, "views_count": 1, "post_type": 1, "media.type": 1}
+    async for p in db.posts.find(base_q, light).sort("created_at", -1).limit(600):
         if p.get("id") not in exclude_ids:
             pool.append(p)
 
     if not pool and mode != "following" and not long:
-        async for p in db.posts.find({"visibility": "public", "media": {"$ne": []}, **({"user_id": {"$nin": list(hidden_authors)}} if hidden_authors else {})}, {"_id": 0}).sort("created_at", -1).limit(100):
+        async for p in db.posts.find({"visibility": "public", "media": {"$ne": []}, **({"user_id": {"$nin": list(hidden_authors)}} if hidden_authors else {})}, light).sort("created_at", -1).limit(100):
             if p.get("id") not in exclude_ids: pool.append(p)
 
     # Follower counts for small-creator boost
@@ -498,7 +499,9 @@ async def get_recommended_videos(
             last_author = d.get("user_id")
     ordered.extend(deferred)
 
-    sliced = ordered[skip: skip + limit]
+    sliced_ids = [p["id"] for p in ordered[skip: skip + limit]]
+    full = {p["id"]: p async for p in db.posts.find({"id": {"$in": sliced_ids}}, {"_id": 0})}
+    sliced = [full[i] for i in sliced_ids if i in full]
     return await _hydrate_video_posts(sliced, user_id)
 
 
