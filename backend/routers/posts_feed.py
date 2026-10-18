@@ -178,6 +178,18 @@ class MessageAttachment(BaseModel):
     caption: Optional[str] = None
     author_name: Optional[str] = None
     kind: Optional[str] = None
+    # lugar compartido (location_share / share_type=place) y ubicación
+    share_type: Optional[str] = None
+    share_id: Optional[str] = None
+    label: Optional[str] = None
+    name: Optional[str] = None
+    address: Optional[str] = None
+    category_label: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    place_id: Optional[str] = None
+    directions_url: Optional[str] = None
+    expires_at: Optional[str] = None
 
 class Message(BaseModel):
     model_config = ConfigDict(extra="ignore")

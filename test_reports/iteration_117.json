@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 117 — tested accent_color (12 options), feed kind/fill_public/following filters, share place-to-chat flow, slow-country perf alerts, and admin /admin/rendimiento. Backend: 7/7 pytest passing (PUT/GET /api/settings/preferences accent_color blue→orange; /feed/timeline kind=photo/video/text each returns only matching posts, fill_public=0 → source 'following'; /telemetry/perf 6 CL beacons → alert created, admin notification with 'perf_alert' type targeting CL, cooldown prevents 7th beacon from creating a second alert; /telemetry/perf/summary alerts[0].country=='CL', threshold_ms==4000). Frontend (mobile 390x844, newtest@bruno.com): Settings → Apariencia shows accent-selector with all 12 swatches; selecting each sets html[data-accent] and --primary and localStorage.bruno_accent correctly and updates accent-current label; reload persists the chosen accent (blue persisted). On /reels /map /my-profile /marketplace, backdrop-blur surfaces keep rgba alpha < 1 and backdrop-filter blur; <img>/<video> have computed filter 'none'. ReelsFeedSheet: feed-stories-strip + feed-story-create present, feed-filter-video → 15/15 cards had <video>, feed-filter-following toggles reels-feed-source text ('Solo cuentas que sigues: aún no sigues a nadie'); 30 unique post-card ids after scroll (0 duplicates). Share place: /map?nearby=1 → Chapinero → 25 OSM results → clicking nearby-share-<id> opens nearby-share-picker with 10 chats → selecting a chat emits toast 'Lugar enviado' and persists a message. Admin /admin/rendimiento (testc@brunoqa.com) renders admin-perf-alerts with 'Chile: 7000 ms (p75, 5 sesiones)' while CL alert exists. CRITICAL BUG: the location_share chat message loses its place payload — MessageAttachment Pydantic model in /app/backend/routers/posts_feed.py (lines 160-180) does NOT declare share_type/name/address/lat/lng/directions_url, so the frontend POST /api/chats/{id}/messages serializes attachment to {type:'location', ...all other place fields dropped}. As a result, in ChatPage the LocationMessagePreview sees share_type==undefined (not 'place') and renders nothing — place-message-info and place-message-directions testids never appear. Verified via GET /api/chats/.../messages which returns the stored attachment with every place field null.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/chats/{chat_id}/messages (nearby-share → location_share)", "issue": "MessageAttachment Pydantic model in routers/posts_feed.py lacks share_type/name/address/lat/lng/directions_url fields; place data is silently dropped on message creation (and on GET). Frontend LocationMessagePreview can't detect isPlace, so place-message-info/directions never render. Add those optional fields to MessageAttachment (and keep model_config=ConfigDict(extra='allow') or add explicit fields).", "priority": "CRITICAL"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Share saved/nearby place to chat", "issue": "Message is sent (toast 'Lugar enviado' shows), DB has message_type='location_share', but attachment is persisted without share_type/name/address/lat/lng/directions_url. ChatPage therefore does not render LocationMessagePreview as a place card — place-message-info and place-message-directions are missing from the bubble. Root cause is backend MessageAttachment schema (see critical backend issue above).", "affected_selectors": ["place-message-info", "place-message-directions"]}
+    ],
+    "design_issues": [
+      {"screen": "/settings SettingsPage", "issues": ["Pre-existing React hydration warnings: '<span> cannot be a child of <option>' and '<span> cannot be a child of <select>' logged every render on Apariencia & language rows. Does not break UI but spams console."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration117.py",
+    "/app/test_reports/pytest/iter117.xml"
+  ],
+  "action_items": [
+    "Fix MessageAttachment schema in /app/backend/routers/posts_feed.py so chat messages preserve place payload (share_type, name, address, lat, lng, directions_url). After fix, nearby-share-chat flow will render place-message-info/directions in ChatPage with no additional frontend changes.",
+    "(Low priority) Clean up <option>/<select> hydration warnings in SettingsPage caused by wrapper <span data-ve-dynamic>."
+  ],
+  "critical_code_review_comments": [
+    "routers/telemetry.py _check_slow_country correctly enforces 24h window, min 5 sessions, p75 > 4s, 6h cooldown via perf_alerts.at and upserts single doc per country. Admin notifications dispatched with type 'perf_alert' + push attempt wrapped in try/except so alert never breaks ingest.",
+    "routers/posts_feed.get_timeline kind filtering: photo uses media.type in ['image','photo'], video uses media.type=='video', text uses $or of media missing/empty/null — all behave correctly against real data.",
+    "routers/posts_feed.update_preferences whitelists 'accent_color' and persists; get_preferences returns it. No validation on allowed values — any string accepted (acceptable, FE enumerates).",
+    "CRITICAL: routers/posts_feed.MessageAttachment missing place/share_type fields — breaks place-share chat rendering (see backend_issues)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration117.py (new, 7 tests passing)"
+  ],
+  "success_rate": {"backend": "100% (7/7 pytest)", "frontend": "90% — accents, feed filters, perf admin verified; share-place rendering fails due to backend schema bug"},
+  "test_credentials": "newtest@bruno.com / Test1234!; testc@brunoqa.com / Prueba1234! (admin). Both verified.",
+  "seed_data_creation": "Perf fixture auto-cleans CL docs (perf_telemetry timezone=America/Santiago lcp_ms=7000; perf_alerts country=CL; notifications type=perf_alert target_id=CL). Deleted the test location_share message from chat 655d23d2 after verification. Accent restored to orange + theme=system via UI.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Pytest file /app/backend/tests/test_iteration117.py — set REACT_APP_BACKEND_URL env before running. The share-place chat rendering can be verified end-to-end by GET /api/chats/{chat_id}/messages after share: attachment should contain share_type:'place' + name/address/lat/lng/directions_url. The chat Equipo BRUNO id is 655d23d2-b133-4188-a95c-bd8a777c04f4. Nominatim rate limit ~1 req/s. Admin perf alert check: trigger with 6 CL beacons (lcp_ms:7000), verify /telemetry/perf/summary alerts and /admin/rendimiento → admin-perf-alerts data-testid shows Chile; cooldown 6h.",
+  "rca of the issue": "The frontend nearby-share-chat flow calls POST /api/chats/{chat_id}/messages with attachment payload {type:'location_share', share_type:'place', name, address, lat, lng, directions_url, ...}. The backend endpoint (routers/posts_feed.py create_message) coerces each attachment via `MessageAttachment(**a)`. MessageAttachment is a strict Pydantic model (default extra='ignore' from BaseModel) and only declares type/url/filename/size/duration/sticker_id/emoji/is_emoji/card_*/post_id/poster_url/caption/author_name/kind. All place-specific fields (share_type, name, address, lat, lng, directions_url) are silently dropped. On the GET side the stored attachment has nulls, and the FE LocationMessagePreview requires attachment.share_type==='place' to render — hence nothing renders. Mitigation: either add the fields to MessageAttachment or set model_config = ConfigDict(extra='allow') on it."
+}

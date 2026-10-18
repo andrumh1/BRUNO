@@ -16,6 +16,7 @@ export default function LocationMessagePreview({ attachment, isOwn }) {
   const isLive = attachment?.share_type === "live";
   const expiresAt = attachment?.expires_at;
   const [remain, setRemain] = useState("");
+  const [imgFailed, setImgFailed] = useState(false);
 
   useEffect(() => {
     if (!isLive || !expiresAt) return undefined;
@@ -50,8 +51,8 @@ export default function LocationMessagePreview({ attachment, isOwn }) {
       data-testid="location-message-preview"
     >
       <div className="relative h-[120px] bg-muted">
-        {mapSrc ? (
-          <img src={mapSrc} alt="Ubicación en el mapa" className="w-full h-full object-cover" />
+        {mapSrc && !imgFailed ? (
+          <img src={mapSrc} alt="Ubicación en el mapa" className="w-full h-full object-cover" onError={() => setImgFailed(true)} />
         ) : (
           <div className="w-full h-full grid place-items-center text-muted-foreground">
             <MapPin className="w-7 h-7" />
