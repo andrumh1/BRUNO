@@ -1742,3 +1742,8 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - **Feed**: franja de historias arriba (`FeedStoriesStrip`), filtros Fotos/Videos/Texto (`kind`) y "Solo cuentas que sigo" (`fill_public=0`).
 - **Lugares en chat**: `ShareChatPicker` en `NearbyPlacesPanel` → mensaje `location_share` con `share_type: place`; `LocationMessagePreview` muestra nombre, dirección y "Cómo llegar"; `MessageAttachment` ampliado (share_type, name, address, lat, lng, directions_url…).
 - **Alertas de lentitud** (`telemetry._check_slow_country`): LCP p75 > 4 s con ≥5 sesiones/24 h → notificación interna `perf_alert` + push a admins, cooldown 6 h (`perf_alerts`); listado en `/admin/rendimiento`.
+
+## 2026-06 — Acento por tarjeta + Historias con lugar · iteration_118 ✅ (bug 307 de /stories corregido y verificado)
+- **Acento por tarjeta**: `lib/accentScope.js` (`accentStyleFromHex`) → `ViewCardPage` aplica en su div raíz variables `--primary/--ring/--accent/--ac-*` derivadas de `card_design.colors.accent`; el acento global (`<html data-accent>`) no cambia. Hint en `DesignPanel` (accent-hint).
+- **Historias con lugar**: `StoryPlacePicker` (lugares de `/api/places/saved`) en `BrunoCameraPage` (toggle "Publicar como historia" + "Añadir lugar") y en `StoryEditor`; la historia se crea con `location {lat,lng,name,address,place_id}` → aparece en `/stories/located` → barra del Mapa; `BrunoStoryViewer` muestra `story-location-pill`.
+- **Bug preexistente corregido**: `POST /api/stories` sin barra final devolvía 307 → el navegador lo degradaba a http (mixed content) y NINGUNA historia se publicaba desde la web; ahora `@router.post("")` responde directo.

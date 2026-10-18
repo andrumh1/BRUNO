@@ -45,6 +45,7 @@ class CardStoryCreate(BaseModel):
 
 # ==================== USER STORIES (24h) ====================
 
+@router.post("", include_in_schema=False)  # sin barra final: evita el 307 (que degradaba a http en el navegador)
 @router.post("/")
 async def create_story(
     story: StoryCreate,

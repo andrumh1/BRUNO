@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 118 — Verified (1) per-card accent scoping on /c/:cardId and (2) stories-with-location backend + camera story place picker UI. Backend 2/2 pytest passing: POST /api/stories/ with location {lat:4.6486,lng:-74.0628,name:'Café QA',address:'Calle 63',place_id:'osm-qa'} returns id; GET /api/stories/located returns the story with place_name='Café QA', lat/lng present; DELETE /api/stories/{id} works (owner only). Saved place POST /api/places/saved + GET works. Frontend (mobile 390x844, newtest@bruno.com): ViewCardPage /c/de078d9e… has data-card-accent='#1e40af' and computed --primary='226 71% 40%' on [data-testid=view-card-page], while html[data-accent]='orange' and document.documentElement --primary='25 100% 50%' (global orange UNCHANGED). After navigating to /reels, global stays orange. Second card /c/d16c2745… applies data-card-accent='#FF6B35' → --primary='16 100% 60%' scoped. Builder /cards/new?type=personal → preset-custom → use-style-btn → tab-design: data-testid=accent-hint renders next to color-accent with the expected copy ('El acento también colorea los botones y controles de la página al ver tu tarjeta, sin cambiar el color de la app de quien la mira.'). StoryPlacePicker: /camera → gallery picker-confirm → camera-as-story-toggle → camera-story-place-toggle opens story-place-picker (visible, lists saved place button story-place-osm-qa-cafe); clicking it updates the toggle label to 'Café QA Chapinero'. CRITICAL BUG: The actual story publish from camera FAILS in-browser due to a mixed-content 307: axios POSTs to '${API}/stories' (no trailing slash) at BrunoCameraPage.jsx:715 and StoryEditor.jsx:320; the backend prefix mounts @router.post('/') so FastAPI 307-redirects to '/api/stories/' — the ingress Location header downgrades the scheme to http://, which Chromium blocks as mixed-content, so the toast 'Historia publicada' never fires and the story is not created. Verified directly: `curl -s -o /dev/null -w '%{http_code} %{redirect_url}' -X POST https://premium-launch-13.preview.emergentagent.com/api/stories` → '307 http://premium-launch-13.preview.emergentagent.com/api/stories/'. The backend route itself is correct and the pytest flow passes (requests lib follows 307 same-method). Fix is a one-char change at each call site: append the trailing slash. Same bug affects any browser-based story creation (Camera + StoryEditor), not just the new place feature.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Camera → Publicar como historia (and StoryEditor publish)", "issue": "axios POST '${API}/stories' (no trailing slash) hits FastAPI 307 redirect to '/api/stories/'. Behind the Kubernetes ingress the Location header is written as http:// (not https://), so browsers block the redirected POST as mixed-content. Result: story is never created, no toast, UI shows 'Falló la subida. Puedes reintentar sin perder tu video.' Fix: use '${API}/stories/' at BrunoCameraPage.jsx:715 and StoryEditor.jsx:320. (Pytest with requests passes because it follows the redirect in-scheme.)", "affected_selectors": ["camera-publish-btn", "story-publish-confirm"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration118.py",
+    "/app/test_reports/pytest/iter118.xml"
+  ],
+  "action_items": [
+    "Fix trailing slash on story create POST: change `${API}/stories` to `${API}/stories/` in /app/frontend/src/pages/BrunoCameraPage.jsx (line 715) AND /app/frontend/src/components/StoryEditor.jsx (line 320). Without this, no story (with or without a place) can be published from the browser. After fix, re-run the camera flow (gallery → camera-as-story-toggle → camera-story-place-toggle → story-place-osm-qa-cafe → camera-publish-btn) and verify toast 'Historia publicada' and that GET /api/stories/located returns an item with place_name='Café QA Chapinero'. Then also verify /map (map-profiles-bar) shows the bubble and BrunoStoryViewer shows story-location-pill with the place name.",
+    "After the trailing-slash fix, the Map (map-profiles-bar) + BrunoStoryViewer story-location-pill flow can be verified by main agent in one pass; the backend side is already green."
+  ],
+  "critical_code_review_comments": [
+    "accentScope.js correctly scopes --primary/--ring/--accent/--ac-* on the ViewCardPage root; the global <html data-accent> + root --primary are unaffected. Dark/light contrast heuristic (fg = '30 40% 12%' vs '0 0% 100%') is reasonable.",
+    "stories.py create_story accepts location via **data from StoryCreate; stories_with_location filters expires_at + visibility=='public' + location exists, exposes lat/lng/place_name. Good.",
+    "BrunoCameraPage.handlePublish gate `isInteractive || asStory` correctly routes to /stories vs /posts — a plain photo without the toggle still goes to /posts (and would use /api/posts, not affected by trailing-slash bug).",
+    "CRITICAL: axios.post(`${API}/stories`, ...) without trailing slash in BrunoCameraPage.jsx:715 and StoryEditor.jsx:320 — breaks browser publish via 307→http:// mixed-content (see integration_issues)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration118.py (new, 2 tests passing)"
+  ],
+  "success_rate": {"backend": "100% (2/2 pytest, both features verified)", "frontend": "75% — accent scoping + DesignPanel hint + StoryPlacePicker UI all verified; story publish blocked by trailing-slash bug (see action_items)"},
+  "test_credentials": "newtest@bruno.com / Test1234! (verified).",
+  "seed_data_creation": "Created saved place osm-qa-cafe 'Café QA Chapinero' for the camera test, then deleted via DELETE /api/places/saved/osm-qa-cafe. Backend pytest create+delete its own story (no residue). No orphan stories/places remain for newtest.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After main agent appends trailing slash in both files, re-run the camera flow using the same recipe: login → /camera → camera-gallery-btn → set_input_files(input[type=file]) → gallery-picker-confirm (click via page.evaluate; button sits behind the bottom nav at y=783) → camera-as-story-toggle → camera-story-place-toggle → story-place-osm-qa-cafe → camera-publish-btn → wait up to 25s for toast 'Historia publicada'. Then verify GET /api/stories/located contains the new story and open /map to check map-profiles-bar + open the story to check story-location-pill. Seed the saved place first via POST /api/places/saved {place_id:'osm-qa-cafe', name:'Café QA Chapinero', category:'cafe', category_label:'Cafetería', address:'Calle 63, Chapinero', lat:4.6486, lng:-74.0628}. Pytest file /app/backend/tests/test_iteration118.py reusable.",
+  "rca of the issue": "FastAPI's APIRouter(prefix='/stories') + @router.post('/') exposes the route only at '/api/stories/'. Hitting '/api/stories' triggers Starlette's redirect_slashes 307 whose Location is built from request.url.replace(path='…/'); behind this Kubernetes ingress the inbound scheme header is interpreted as http://, so the 307 Location is written as 'http://…/api/stories/'. Browsers downgrade-blocking kicks in and the retried POST is cancelled as mixed-content; the python `requests` library follows the redirect anyway on the same host which is why the backend test is green. Fix is a one-char change on each FE call site (BrunoCameraPage.jsx:715, StoryEditor.jsx:320). Alternative permanent fix: set FastAPI(redirect_slashes=False) and declare @router.post('') or expose both path variants. Either way the FE change is the quickest unblock."
+}
