@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { ensureTextStyleFonts } from "@/lib/fonts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import axios from "axios";
@@ -24,6 +25,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const CreatePost = ({ onPostCreated, userCards = [] }) => {
+  ensureTextStyleFonts();
   const { user, token } = useAuth();
   const [content, setContent] = useState("");
   const [media, setMedia] = useState([]);

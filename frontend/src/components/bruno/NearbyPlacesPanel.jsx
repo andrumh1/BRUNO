@@ -6,7 +6,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { Search, MapPin, Navigation, LocateFixed, X, Loader2, RefreshCw, Phone, Globe, Clock, ChevronRight, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, MapPin, Navigation, LocateFixed, X, Loader2, RefreshCw, Phone, Globe, Clock, ChevronRight, AlertCircle, Bookmark, BookmarkCheck, CreditCard, Trash2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { brunoToast } from "@/components/bruno/BrunoToast";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 export const fmtDist = (m) => (m == null ? null : m < 1000 ? `${m} m` : `${(m / 1000).toFixed(m < 10000 ? 1 : 0)} km`);
@@ -54,7 +57,7 @@ function LocationPicker({ origin, onOrigin, locating, onUseGps, gpsDenied, mapCe
   );
 }
 
-function PlaceRow({ p, onPick }) {
+function PlaceRow({ p, onPick, saved, onToggleSave, onCreateCard, onRemove }) {
   const dir = `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}`;
   return (
     <li className="rounded-2xl border border-border/60 bg-card/80 p-3" data-testid={`nearby-place-${p.id}`}>
@@ -69,6 +72,9 @@ function PlaceRow({ p, onPick }) {
         <div className="text-right shrink-0">
           {p.distance_m != null && <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary tabular-nums" data-testid={`nearby-distance-${p.id}`}><Navigation className="w-3 h-3" />{fmtDist(p.distance_m)}</span>}
           <div className="flex items-center gap-1 mt-1.5 justify-end">
+            {onToggleSave && <button onClick={() => onToggleSave(p)} className={`w-7 h-7 rounded-full grid place-items-center ${saved ? "bg-primary/15 text-primary" : "bg-muted"}`} aria-label={saved ? "Quitar de mis lugares" : "Guardar lugar"} data-testid={`nearby-save-${p.id}`}>{saved ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}</button>}
+            {onCreateCard && <button onClick={() => onCreateCard(p)} className="w-7 h-7 rounded-full bg-muted grid place-items-center" aria-label="Crear tarjeta BRUNO con este lugar" title="Crear tarjeta" data-testid={`nearby-card-${p.id}`}><CreditCard className="w-3.5 h-3.5" /></button>}
+            {onRemove && <button onClick={() => onRemove(p)} className="w-7 h-7 rounded-full bg-muted grid place-items-center text-destructive" aria-label="Quitar" data-testid={`nearby-remove-${p.id}`}><Trash2 className="w-3.5 h-3.5" /></button>}
             {p.phone && <a href={`tel:${p.phone}`} className="w-7 h-7 rounded-full bg-muted grid place-items-center" aria-label="Llamar" data-testid={`nearby-call-${p.id}`}><Phone className="w-3.5 h-3.5" /></a>}
             {p.website && <a href={p.website} target="_blank" rel="noopener noreferrer" className="w-7 h-7 rounded-full bg-muted grid place-items-center" aria-label="Sitio web"><Globe className="w-3.5 h-3.5" /></a>}
             <a href={dir} target="_blank" rel="noopener noreferrer" className="h-7 px-2.5 rounded-full bg-primary text-white text-[11px] font-semibold inline-flex items-center gap-1" data-testid={`nearby-directions-${p.id}`}>Ir <ChevronRight className="w-3 h-3" /></a>
@@ -80,6 +86,11 @@ function PlaceRow({ p, onPick }) {
 }
 
 export default function NearbyPlacesPanel({ onClose, onPick, mapCenter }) {
+  const { token } = useAuth();
+  const navigate = useNavigate();
+  const [view, setView] = useState("search"); // search | saved
+  const [saved, setSaved] = useState([]);
+  const savedByPlace = useMemo(() => Object.fromEntries(saved.map((s) => [s.place_id, s])), [saved]);
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState("restaurant");
   const [query, setQuery] = useState("");
@@ -92,6 +103,24 @@ export default function NearbyPlacesPanel({ onClose, onPick, mapCenter }) {
   const reqRef = useRef(0);
 
   useEffect(() => { axios.get(`${API}/places/categories`).then((r) => setCategories(r.data?.categories || [])).catch(() => {}); }, []);
+  useEffect(() => { if (!token) return; axios.get(`${API}/places/saved`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setSaved(r.data?.items || [])).catch(() => {}); }, [token]);
+
+  const toggleSave = async (p) => {
+    if (!token) { brunoToast.error("Inicia sesión para guardar lugares"); return; }
+    const headers = { Authorization: `Bearer ${token}` };
+    const existing = savedByPlace[p.place_id || p.id];
+    try {
+      if (existing) { await axios.delete(`${API}/places/saved/${existing.id}`, { headers }); setSaved((s) => s.filter((x) => x.id !== existing.id)); brunoToast.success("Quitado de mis lugares"); }
+      else {
+        const r = await axios.post(`${API}/places/saved`, { place_id: p.id, name: p.name, category: p.category, category_label: p.category_label, address: p.address, lat: p.lat, lng: p.lng, phone: p.phone, website: p.website, opening_hours: p.opening_hours, provider: state.provider }, { headers });
+        setSaved((s) => [r.data, ...s.filter((x) => x.id !== r.data.id)]); brunoToast.success("Guardado en mis lugares");
+      }
+    } catch (e) { brunoToast.error(e?.response?.data?.detail || "No se pudo guardar"); }
+  };
+  const createCard = (p) => {
+    try { localStorage.setItem("bruno_pending_place", JSON.stringify({ name: p.name, category_label: p.category_label, address: p.address, lat: p.lat, lng: p.lng, phone: p.phone, website: p.website })); } catch { /* ignore */ }
+    navigate("/cards/new?type=lugares");
+  };
 
   const useGps = () => {
     if (!navigator.geolocation) { setGpsDenied(true); return; }
@@ -129,11 +158,18 @@ export default function NearbyPlacesPanel({ onClose, onPick, mapCenter }) {
     >
       <div className="flex items-center gap-2 px-4 pt-3 pb-2">
         <Search className="w-4 h-4 text-primary" />
-        <h2 className="font-bold text-sm flex-1">Recomendaciones cerca de ti</h2>
-        {origin && <button onClick={search} className="w-8 h-8 rounded-full bg-muted grid place-items-center" aria-label="Actualizar" data-testid="nearby-refresh"><RefreshCw className={`w-3.5 h-3.5 ${state.status === "loading" ? "animate-spin" : ""}`} /></button>}
+        <h2 className="font-bold text-sm flex-1">{view === "saved" ? "Mis lugares" : "Recomendaciones cerca de ti"}</h2>
+        {token && <button onClick={() => setView(view === "saved" ? "search" : "saved")} className={`h-8 px-2.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 ${view === "saved" ? "bg-primary text-white" : "bg-muted"}`} data-testid="nearby-saved-toggle"><BookmarkCheck className="w-3.5 h-3.5" />{saved.length}</button>}
+        {origin && view === "search" && <button onClick={search} className="w-8 h-8 rounded-full bg-muted grid place-items-center" aria-label="Actualizar" data-testid="nearby-refresh"><RefreshCw className={`w-3.5 h-3.5 ${state.status === "loading" ? "animate-spin" : ""}`} /></button>}
         <button onClick={onClose} className="w-8 h-8 rounded-full bg-muted grid place-items-center" aria-label="Cerrar" data-testid="nearby-close"><X className="w-4 h-4" /></button>
       </div>
 
+      {view === "saved" ? (
+        <div className="flex-1 overflow-y-auto px-4 pt-1 pb-3" data-testid="nearby-saved-list">
+          {saved.length === 0 ? <p className="text-xs text-muted-foreground text-center py-8" data-testid="nearby-saved-empty">Aún no guardas lugares. Toca el marcador <Bookmark className="w-3 h-3 inline" /> en una recomendación para volver a ella desde aquí.</p>
+            : <ul className="space-y-2">{saved.map((s) => <PlaceRow key={s.id} p={{ ...s, id: s.place_id, distance_m: null }} onPick={onPick} saved onToggleSave={() => toggleSave({ ...s, id: s.place_id })} onCreateCard={createCard} />)}</ul>}
+        </div>
+      ) : (<>
       <div className="px-4 space-y-2">
         <LocationPicker origin={origin} onOrigin={setOrigin} locating={locating} onUseGps={useGps} gpsDenied={gpsDenied} mapCenter={mapCenter} />
         {origin && (<>
@@ -163,10 +199,11 @@ export default function NearbyPlacesPanel({ onClose, onPick, mapCenter }) {
         ) : state.status === "done" && state.items.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-8" data-testid="nearby-empty">No encontramos resultados en {fmtDist(radius)}. Prueba otra categoría, otro nombre o amplía el radio.</p>
         ) : (
-          <ul className="space-y-2">{state.items.map((p) => <PlaceRow key={p.id} p={p} onPick={onPick} />)}</ul>
+          <ul className="space-y-2">{state.items.map((p) => <PlaceRow key={p.id} p={p} onPick={onPick} saved={!!savedByPlace[p.id]} onToggleSave={toggleSave} onCreateCard={token ? createCard : null} />)}</ul>
         )}
       </div>
       {state.attribution && <p className="px-4 pb-2 text-[9px] text-muted-foreground" data-testid="nearby-attribution">{state.attribution}</p>}
+      </>)}
     </motion.aside>
   );
 }

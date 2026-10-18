@@ -2,7 +2,7 @@
  * ReelsQuickRail — menú vertical de Reels (una sola columna, en este orden):
  *   Historias → Feed → Explorar
  * Reutiliza las secciones existentes: historias (stories/feed + BrunoStoryViewer),
- * el feed de reels "Para ti" y Explorar tarjetas (CardsExplorer, antes en el Mapa).
+ * el Feed cronológico de publicaciones (ReelsFeedSheet) y Explorar tarjetas (CardsExplorer, antes en el Mapa).
  */
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Film, Compass, Plus, X } from "lucide-react";
 import BrunoStoryViewer from "@/components/bruno/BrunoStoryViewer";
 import CardsExplorer from "@/components/CardsExplorer";
+import ReelsFeedSheet from "@/components/reels/ReelsFeedSheet";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
@@ -75,7 +76,7 @@ function StoriesSheet({ token, user, onClose }) {
   );
 }
 
-export default function ReelsQuickRail({ token, user, visible, onFeed }) {
+export default function ReelsQuickRail({ token, user, visible }) {
   const [open, setOpen] = useState(null);
   return (
     <>
@@ -91,7 +92,7 @@ export default function ReelsQuickRail({ token, user, visible, onFeed }) {
             {ITEMS.map(({ id, label, Icon }) => (
               <button
                 key={id}
-                onClick={() => { if (id === "feed") { setOpen(null); onFeed?.(); } else setOpen(id); }}
+                onClick={() => setOpen(open === id ? null : id)}
                 className="flex flex-col items-center gap-1 group"
                 data-testid={`reels-rail-${id}`}
                 aria-label={label}
@@ -107,6 +108,11 @@ export default function ReelsQuickRail({ token, user, visible, onFeed }) {
       </AnimatePresence>
       <AnimatePresence>
         {open === "stories" && <StoriesSheet key="stories" token={token} user={user} onClose={() => setOpen(null)} />}
+        {open === "feed" && (
+          <Sheet key="feed" title="Feed" onClose={() => setOpen(null)} testid="reels-feed-sheet">
+            <ReelsFeedSheet token={token} onClose={() => setOpen(null)} />
+          </Sheet>
+        )}
         {open === "explore" && (
           <Sheet key="explore" title="Explorar tarjetas" onClose={() => setOpen(null)} testid="reels-explore-sheet">
             <CardsExplorer />

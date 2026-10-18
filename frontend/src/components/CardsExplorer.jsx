@@ -3,6 +3,7 @@
  * Extracted from the old Inicio "Explorar" tab; used inside the Map section and Profile.
  */
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ensureCardFonts } from "@/lib/fonts";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ const DistanceBadge = ({ km, className = "" }) => (km == null ? null : (
 ));
 
 export default function CardsExplorer({ compact = false }) {
+  ensureCardFonts();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [cards, setCards] = useState([]);

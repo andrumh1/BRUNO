@@ -1561,6 +1561,58 @@ async def get_user_posts(
 
 
 
+# ==================== FEED CRONOLÓGICO (Reels → Feed) ====================
+
+async def _enrich_timeline(posts: list, current_user: Optional[User]):
+    user_ids = list({p["user_id"] for p in posts})
+    post_ids = [p["id"] for p in posts]
+    users_map, profiles_map = {}, {}
+    if user_ids:
+        async for u in db.users.find({"id": {"$in": user_ids}}, {"_id": 0, "id": 1, "name": 1, "email": 1, "is_verified": 1, "subscription_tier": 1}):
+            users_map[u["id"]] = u
+        async for pr in db.user_profiles.find({"user_id": {"$in": user_ids}}, {"_id": 0, "user_id": 1, "display_name": 1, "avatar_url": 1, "username": 1}):
+            profiles_map[pr["user_id"]] = pr
+    liked, saved = set(), set()
+    if current_user and post_ids:
+        async for lk in db.likes.find({"user_id": current_user.id, "target_type": "post", "target_id": {"$in": post_ids}}, {"_id": 0, "target_id": 1}):
+            liked.add(lk["target_id"])
+        async for bm in db.bookmarks.find({"user_id": current_user.id, "post_id": {"$in": post_ids}}, {"_id": 0, "post_id": 1}):
+            saved.add(bm["post_id"])
+    out = []
+    for p in posts:
+        u, pr = users_map.get(p["user_id"]) or {}, profiles_map.get(p["user_id"]) or {}
+        username = u.get("name") or (u.get("email") or "usuario").split("@")[0]
+        out.append({**p, "user": {"id": p["user_id"], "username": pr.get("username") or username, "display_name": pr.get("display_name") or username, "avatar_url": pr.get("avatar_url"), "is_verified": u.get("is_verified", False), "subscription_tier": u.get("subscription_tier", "free")}, "is_liked": p["id"] in liked, "is_bookmarked": p["id"] in saved})
+    return out
+
+
+@router.get("/feed/timeline")
+async def get_timeline(before: Optional[str] = None, limit: int = 20, fill_public: int = 1, current_user: User = Depends(get_current_user)):
+    """Publicaciones propias + de cuentas seguidas, de la más reciente a la más antigua (cursor `before`).
+    Excluye borradores/programadas, eliminadas, ocultas y autores bloqueados. Si no hay nada, rellena con públicas."""
+    limit = max(1, min(limit, 40))
+    followed = [f["following_id"] async for f in db.follows.find({"follower_id": current_user.id}, {"_id": 0, "following_id": 1})]
+    blocked = set()
+    async for b in db.blocks.find({"$or": [{"blocker_id": current_user.id}, {"blocked_id": current_user.id}]}, {"_id": 0, "blocker_id": 1, "blocked_id": 1}):
+        blocked.add(b["blocked_id"] if b["blocker_id"] == current_user.id else b["blocker_id"])
+    hidden = [h["post_id"] async for h in db.hidden_posts.find({"user_id": current_user.id}, {"_id": 0, "post_id": 1})]
+    base = {"is_deleted": {"$ne": True}, "is_draft": {"$ne": True}, "visibility": {"$nin": ["scheduled", "draft"]}}
+    if hidden:
+        base["id"] = {"$nin": hidden}
+    if before:
+        base["created_at"] = {"$lt": before}
+    followed = [f for f in followed if f not in blocked]
+    source = "following"
+    scopes = [{"user_id": current_user.id}, {"user_id": {"$in": followed}, "visibility": {"$in": ["public", "followers", None]}}]
+    if not followed and fill_public:
+        source = "public"
+        scopes.append({"visibility": "public", **({"user_id": {"$nin": list(blocked)}} if blocked else {})})
+    posts = await db.posts.find({**base, "$or": scopes}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    items = await _enrich_timeline(posts, current_user)
+    next_cursor = items[-1]["created_at"] if len(items) == limit else None
+    return {"items": items, "next_cursor": next_cursor, "source": source, "following_count": len(followed)}
+
+
 # ==================== FOR YOU PERSONALIZED FEED ====================
 
 @router.get("/feed/for-you")

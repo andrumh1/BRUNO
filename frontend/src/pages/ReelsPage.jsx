@@ -209,8 +209,7 @@ export default function ReelsPage() {
 
       {!profileMode && !longMode && tab !== "lives" && <ReelsStoriesStrip token={token} user={user} visible={activeIndex === 0 && !loading && reels.length > 0} />}
       {!profileMode && !longMode && tab !== "lives" && <ContinueWatchingRow token={token} variant="reels" visible={activeIndex === 0 && !loading && reels.length > 0} />}
-      <ReelsQuickRail token={token} user={user} visible={!profileMode && !longMode && tab !== "lives" && !loading}
-        onFeed={() => { setTab("for_you"); setActiveIndex(0); if (containerRef.current) containerRef.current.scrollTop = 0; }} />
+      <ReelsQuickRail token={token} user={user} visible={!profileMode && !longMode && tab !== "lives" && !loading} />
 
       {tab !== "lives" ? (
         loading ? (

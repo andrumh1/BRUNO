@@ -159,6 +159,7 @@ INDEXES = {
     "search_history": [[("user_id", 1), ("at", -1)]],
     "translations": [[("key", 1)]],
     "perf_telemetry": [[("created_at", -1)], [("country", 1), ("created_at", -1)]],
+    "saved_places": [[("user_id", 1), ("place_id", 1)], [("user_id", 1), ("created_at", -1)]],
 }
 TTL_INDEXES = {"perf_telemetry": ("expires_at", 0), "push_log": ("expires_at", 0)}
 

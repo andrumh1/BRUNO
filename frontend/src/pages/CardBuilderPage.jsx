@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ensureCardFonts } from "@/lib/fonts";
 import { ArrowLeft, Undo2, Redo2, Smartphone, Tablet, Monitor, Eye, Rocket, Check, Loader2, AlertCircle, Type, Image as ImageIcon, Share2, Palette, LayoutGrid, Sparkles, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -40,6 +41,7 @@ const Preview = ({ card, device, setDevice, isNew, showDevices = true }) => (
 );
 
 export default function CardBuilderPage() {
+  ensureCardFonts();
   const { cardId } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();

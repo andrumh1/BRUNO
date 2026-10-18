@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { ensureTextStyleFonts } from "@/lib/fonts";
 import { CreditCard, Quote } from "lucide-react";
 import { TEXT_BGS, bgById, fontById, bgGradient } from "@/lib/textStyles";
 
@@ -7,6 +8,7 @@ const hashOf = (s = "") => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>
 
 // Full-screen "text reel" for posts without media (TikTok text-post style).
 export default function ReelTextCard({ reel }) {
+  ensureTextStyleFonts();
   const bg = bgById(reel.text_style?.bg) || TEXT_BGS[hashOf(reel.id) % TEXT_BGS.length];
   const font = fontById(reel.text_style?.font);
   const text = reel.content || reel.description || "";

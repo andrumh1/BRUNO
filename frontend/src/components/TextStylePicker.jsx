@@ -1,9 +1,11 @@
 import React from "react";
 import { Palette, AlignCenter, AlignLeft } from "lucide-react";
+import { ensureTextStyleFonts } from "@/lib/fonts";
 import { TEXT_BGS, TEXT_FONTS, TEXT_EMOJIS, bgById, fontById, bgGradient } from "@/lib/textStyles";
 
 // Background + font + alignment + emoji sticker picker with live preview for text-only posts.
 export default function TextStylePicker({ value, onChange, text }) {
+  ensureTextStyleFonts();
   const bg = bgById(value?.bg) || TEXT_BGS[0];
   const font = fontById(value?.font);
   const align = value?.align === "left" ? "left" : "center";

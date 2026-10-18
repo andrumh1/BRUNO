@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { ensureCardFonts } from "@/lib/fonts";
 import { CardBackground } from "./modules/CardBackground";
 import { CardHeader } from "./modules/CardHeader";
 import { ContactBlock, SocialBlock, CtaBlock } from "./modules/ActionBlocks";
@@ -11,6 +12,7 @@ import { CardLangContext, detectCardLang, translateCardLabel } from "@/lib/cardL
 
 // ONE CARD ENGINE: every card (public, preview, builder, thumbnails) renders through this component.
 const CardRenderer = ({ data = {}, design, cardId, onChat, seal = true, className = "", style, lang }) => {
+  ensureCardFonts();
   const ref = useRef(null);
   const cardLang = lang || (data?.is_example && data.example_lang) || detectCardLang();
   const [narrow, setNarrow] = useState(true);

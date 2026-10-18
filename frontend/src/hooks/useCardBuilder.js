@@ -29,6 +29,17 @@ const fromSelection = () => {
   try { localStorage.removeItem("bruno_pending_template"); } catch { /* ignore */ }
   const c = newCard(type || "personal");
   if (template) c.card_design = applyPreset(c.card_design, template);
+  // Prefill desde un lugar recomendado del Mapa (Guardar lugares → "Crear tarjeta")
+  try {
+    const place = JSON.parse(localStorage.getItem("bruno_pending_place") || "null");
+    localStorage.removeItem("bruno_pending_place");
+    if (place && place.lat != null && place.lng != null) {
+      c.title = place.name || c.title;
+      c.subtitle = place.category_label || c.subtitle;
+      c.location = { lat: place.lat, lng: place.lng, address: place.address || place.name || "", place_name: place.name || "", is_public_address: true };
+      c.contact_info = { ...(c.contact_info || {}), ...(place.phone ? { phone: place.phone } : {}), ...(place.website ? { website: place.website } : {}) };
+    }
+  } catch { /* ignore */ }
   return c;
 };
 

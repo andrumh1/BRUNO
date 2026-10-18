@@ -169,3 +169,52 @@ async def geocode(q: str = Query(..., min_length=2, max_length=120), limit: int 
         addr = x.get("address") or {}
         out.append({"id": f"{x.get('osm_type', 'n')[0]}{x.get('osm_id')}", "name": x.get("name") or (x.get("display_name") or "").split(",")[0], "display_name": x.get("display_name"), "lat": float(x["lat"]), "lng": float(x["lon"]), "city": addr.get("city") or addr.get("town") or addr.get("village") or addr.get("state"), "country": addr.get("country")})
     return _store(key, {"results": out, "attribution": "Datos © OpenStreetMap contributors (ODbL)"})
+
+
+# ---------------- Lugares guardados (favoritos del Mapa) ----------------
+import uuid  # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
+from fastapi import Depends  # noqa: E402
+from pydantic import BaseModel, Field  # noqa: E402
+from utils.database import db  # noqa: E402
+from utils.security import get_current_user  # noqa: E402
+from models.user import User  # noqa: E402
+
+
+class SavePlace(BaseModel):
+    place_id: str = Field(max_length=80)
+    name: str = Field(max_length=160)
+    category: Optional[str] = Field(default=None, max_length=64)
+    category_label: Optional[str] = Field(default=None, max_length=80)
+    address: Optional[str] = Field(default=None, max_length=240)
+    lat: float
+    lng: float
+    phone: Optional[str] = Field(default=None, max_length=40)
+    website: Optional[str] = Field(default=None, max_length=240)
+    opening_hours: Optional[str] = Field(default=None, max_length=240)
+    provider: Optional[str] = Field(default=None, max_length=24)
+
+
+@router.get("/saved")
+async def saved_places(user: User = Depends(get_current_user)):
+    rows = await db.saved_places.find({"user_id": user.id}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return {"items": rows, "count": len(rows)}
+
+
+@router.post("/saved", status_code=201)
+async def save_place(body: SavePlace, user: User = Depends(get_current_user)):
+    existing = await db.saved_places.find_one({"user_id": user.id, "place_id": body.place_id}, {"_id": 0})
+    if existing:
+        return existing
+    doc = {"id": str(uuid.uuid4()), "user_id": user.id, **body.model_dump(), "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.saved_places.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@router.delete("/saved/{saved_id}")
+async def unsave_place(saved_id: str, user: User = Depends(get_current_user)):
+    r = await db.saved_places.delete_one({"user_id": user.id, "$or": [{"id": saved_id}, {"place_id": saved_id}]})
+    if not r.deleted_count:
+        raise HTTPException(status_code=404, detail="Lugar no encontrado")
+    return {"ok": True}
