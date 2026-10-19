@@ -123,6 +123,7 @@ INDEXES = {
     "feed_interactions": [[("user_id", 1), ("created_at", -1)]],
     "video_views": [[("user_id", 1), ("post_id", 1)], [("post_id", 1)]],
     "video_progress": [[("user_id", 1), ("post_id", 1)], [("user_id", 1), ("updated_at", -1)]],
+    "series_follows": [[("series_id", 1), ("user_id", 1)], [("user_id", 1), ("created_at", -1)]],
     "post_views": [[("post_id", 1), ("viewer_id", 1)]],
     "hidden_posts": [[("user_id", 1), ("post_id", 1)]],
     "cards": [[("user_id", 1)], [("id", 1)]],

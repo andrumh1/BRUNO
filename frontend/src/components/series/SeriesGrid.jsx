@@ -5,18 +5,22 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ListVideo, Plus, Loader2, Lock, Play } from "lucide-react";
+import { ListVideo, Plus, Loader2, Lock, Play, BellRing } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const fmt = (s) => (!s ? "" : s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min` : `${Math.max(1, Math.round(s / 60))} min`);
 
 function SeriesCard({ s, onOpen }) {
+  const pct = s.count ? Math.round(((s.watched_count || 0) / s.count) * 100) : 0;
   return (
     <button onClick={() => onOpen(s)} className="text-left rounded-2xl overflow-hidden bruno-glass border border-border/40 group" data-testid={`series-card-${s.id}`}>
       <div className="relative aspect-[16/10] bg-black/70">
         {s.cover_url ? <img src={s.cover_url} alt="" className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full grid place-items-center"><ListVideo className="w-8 h-8 text-white/60" /></div>}
-        <span className="absolute left-2 bottom-2 text-[10px] font-semibold bg-black/70 text-white rounded-full px-2 py-0.5">{s.count} cap.{s.total_duration ? ` · ${fmt(s.total_duration)}` : ""}</span>
+        <span className="absolute left-2 bottom-2.5 text-[10px] font-semibold bg-black/70 text-white rounded-full px-2 py-0.5">{s.count} cap.{s.total_duration ? ` · ${fmt(s.total_duration)}` : ""}</span>
         {s.visibility !== "public" && <span className="absolute right-2 top-2 inline-flex items-center gap-1 text-[10px] font-semibold bg-black/70 text-white rounded-full px-2 py-0.5" data-testid={`series-draft-${s.id}`}><Lock className="w-3 h-3" />Borrador</span>}
+        {s.is_following && <span className="absolute right-2 top-2 inline-flex items-center gap-1 text-[10px] font-semibold bg-primary text-white rounded-full px-2 py-0.5" data-testid={`series-following-${s.id}`}><BellRing className="w-3 h-3" />Siguiendo</span>}
+        {(s.watched_count > 0 || s.resume) && <span className="absolute right-2 bottom-2.5 text-[10px] font-semibold bg-black/70 text-white rounded-full px-2 py-0.5" data-testid={`series-watched-count-${s.id}`}>{s.watched_count >= s.count ? "Completa" : `${s.watched_count}/${s.count} vistos`}</span>}
+        {pct > 0 && <span className="absolute inset-x-0 bottom-0 h-1 bg-white/25" data-testid={`series-progress-${s.id}`}><span className="block h-full bg-primary" style={{ width: `${pct}%` }} /></span>}
         <span className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="w-11 h-11 rounded-full bg-white/90 grid place-items-center"><Play className="w-5 h-5 text-black ml-0.5" /></span></span>
       </div>
       <div className="p-2.5">
@@ -31,18 +35,28 @@ export default function SeriesGrid({ token }) {
   const navigate = useNavigate();
   const [pub, setPub] = useState(null);
   const [mine, setMine] = useState([]);
+  const [following, setFollowing] = useState([]);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
     axios.get(`${API}/series/public`, { headers }).then((r) => setPub(r.data || [])).catch(() => { setPub([]); setError(true); });
-    if (token) axios.get(`${API}/series/mine`, { headers }).then((r) => setMine(r.data || [])).catch(() => {});
+    if (token) {
+      axios.get(`${API}/series/mine`, { headers }).then((r) => setMine(r.data || [])).catch(() => {});
+      axios.get(`${API}/series/following`, { headers }).then((r) => setFollowing(r.data || [])).catch(() => {});
+    }
   }, [token]);
 
   const open = (s) => navigate(`/series/${s.id}`);
 
   return (
     <div className="h-full overflow-y-auto px-4 pb-32" style={{ paddingTop: "calc(var(--safe-top) + 64px)" }} data-testid="series-grid">
+      {token && following.length > 0 && (
+        <section className="mb-5" data-testid="series-following-section">
+          <h2 className="text-base font-bold mb-2 flex items-center gap-1.5"><BellRing className="w-4 h-4 text-primary" />Series que sigo</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">{following.map((s) => <SeriesCard key={s.id} s={s} onOpen={open} />)}</div>
+        </section>
+      )}
       {token && (
         <section className="mb-5" data-testid="series-mine">
           <div className="flex items-center justify-between mb-2">

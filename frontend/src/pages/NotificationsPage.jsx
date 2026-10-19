@@ -23,7 +23,7 @@ import {
   Package,
   Tag,
   Loader2,
-  Sparkles, QrCode } from "lucide-react";
+  Sparkles, QrCode, ListVideo } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealtimeNotifications } from "@/contexts/RealtimeNotificationContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -56,6 +56,7 @@ const NOTIFICATION_ICONS = {
   order_update: Package,
   promotion: Tag,
   deal_commission: Sparkles,
+  series_episode: ListVideo,
 };
 
 const NOTIFICATION_COLORS = {
@@ -82,6 +83,7 @@ const NOTIFICATION_COLORS = {
   order_update: "text-cyan-500 bg-cyan-500/10",
   promotion: "text-orange-500 bg-orange-500/10",
   deal_commission: "text-orange-500 bg-orange-500/10",
+  series_episode: "text-primary bg-primary/10",
 };
 
 function timeAgo(iso) {
@@ -98,7 +100,7 @@ const FILTERS = [
   { id: "all", label: "Todas" },
   { id: "unread", label: "No leídas" },
   { id: "mentions", label: "Menciones", types: ["mention"] },
-  { id: "social", label: "Social", types: ["like", "comment", "reply", "follow", "repost", "remix", "live_started", "live_replay", "post_like", "post_comment", "new_follower", "new_story"] },
+  { id: "social", label: "Social", types: ["like", "comment", "reply", "follow", "repost", "remix", "live_started", "live_replay", "post_like", "post_comment", "new_follower", "new_story", "series_episode"] },
   { id: "deal", label: "DEAL", types: ["deal_commission", "order_update", "product_favorited", "product_cart_added"] },
 ];
 

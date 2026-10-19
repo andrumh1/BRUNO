@@ -50,8 +50,26 @@ async def _series_out(s: dict, viewer_id: Optional[str]) -> dict:
     if viewer_id != s["user_id"]:
         videos = [v for v in videos if v["visibility"] == "public"]
     total = sum((v.get("duration") or 0) for v in videos)
+    # Progreso del espectador por capítulo (misma colección que "Continuar viendo")
+    watched, resume = 0, None
+    if viewer_id and videos:
+        prog = {p["post_id"]: p async for p in db.video_progress.find({"user_id": viewer_id, "post_id": {"$in": [v["id"] for v in videos]}}, {"_id": 0})}
+        for v in videos:
+            p = prog.get(v["id"])
+            dur = (p or {}).get("duration") or v.get("duration") or 0
+            pos = (p or {}).get("position") or 0
+            done = bool((p or {}).get("completed"))
+            v["progress"] = {"position": pos, "duration": dur, "pct": 100 if done else (round(min(100, pos / dur * 100)) if dur and pos else 0), "completed": done}
+            if done:
+                watched += 1
+            elif pos > 3 and (resume is None or (p.get("updated_at") or "") > (resume.get("updated_at") or "")):
+                resume = {"video_id": v["id"], "position": pos, "updated_at": p.get("updated_at")}
+    featured = next((v for v in videos if v["id"] == s.get("featured_video_id")), None) or (videos[0] if videos else None)
+    followers = await db.series_follows.count_documents({"series_id": s["id"]})
+    is_following = bool(viewer_id and await db.series_follows.find_one({"series_id": s["id"], "user_id": viewer_id}, {"_id": 1}))
     return {**{k: v for k, v in s.items() if k != "video_ids"}, "videos": videos, "count": len(videos), "total_duration": total, "owner": owner or {"id": s["user_id"], "name": "Creador"},
-            "cover_url": s.get("cover_url") or next((v["thumb"] for v in videos if v.get("thumb")), None), "is_owner": viewer_id == s["user_id"]}
+            "cover_url": s.get("cover_url") or next((v["thumb"] for v in videos if v.get("thumb")), None), "is_owner": viewer_id == s["user_id"],
+            "featured": featured, "watched_count": watched, "resume": resume, "followers_count": followers, "is_following": is_following}
 
 
 def _index_series(s: dict):
@@ -68,6 +86,7 @@ class SeriesBody(BaseModel):
     cover_url: Optional[str] = None
     visibility: Optional[str] = "public"
     video_ids: Optional[List[str]] = None
+    featured_video_id: Optional[str] = None
 
 
 @router.post("/series")
@@ -76,7 +95,8 @@ async def create_series(body: SeriesBody, current_user: User = Depends(get_curre
     if not 2 <= len(title) <= 80:
         raise HTTPException(status_code=400, detail="El título debe tener entre 2 y 80 caracteres")
     ids = await _own_long_ids(current_user.id, body.video_ids or [])
-    s = {"id": str(uuid.uuid4()), "user_id": current_user.id, "title": title, "description": (body.description or "")[:500], "cover_url": body.cover_url, "visibility": body.visibility if body.visibility in ("public", "private") else "public", "video_ids": ids, "created_at": _now(), "updated_at": _now()}
+    s = {"id": str(uuid.uuid4()), "user_id": current_user.id, "title": title, "description": (body.description or "")[:500], "cover_url": body.cover_url, "visibility": body.visibility if body.visibility in ("public", "private") else "public", "video_ids": ids,
+         "featured_video_id": body.featured_video_id if body.featured_video_id in ids else None, "created_at": _now(), "updated_at": _now()}
     await db.series.insert_one(s)
     s.pop("_id", None)
     await _index_series(s)
@@ -107,6 +127,65 @@ async def public_series(skip: int = 0, limit: int = 30, current_user: Optional[U
 async def my_series(current_user: User = Depends(get_current_user)):
     rows = await db.series.find({"user_id": current_user.id}, {"_id": 0}).sort("updated_at", -1).to_list(100)
     return [await _series_out(s, current_user.id) for s in rows]
+
+
+@router.get("/series/following")
+async def following_series(current_user: User = Depends(get_current_user)):
+    """Series que el usuario sigue (solo públicas), con su progreso."""
+    ids = [f["series_id"] async for f in db.series_follows.find({"user_id": current_user.id}, {"_id": 0, "series_id": 1}).sort("created_at", -1).limit(100)]
+    if not ids:
+        return []
+    rows = {s["id"]: s async for s in db.series.find({"id": {"$in": ids}, "visibility": "public"}, {"_id": 0})}
+    return [await _series_out(rows[i], current_user.id) for i in ids if i in rows]
+
+
+@router.post("/series/{series_id}/follow")
+async def toggle_follow_series(series_id: str, current_user: User = Depends(get_current_user)):
+    """Seguir / dejar de seguir una serie publicada: avisa cuando el creador añada un capítulo."""
+    s = await db.series.find_one({"id": series_id}, {"_id": 0, "id": 1, "user_id": 1, "visibility": 1})
+    if not s or (s.get("visibility") == "private" and s["user_id"] != current_user.id):
+        raise HTTPException(status_code=404, detail="Serie no encontrada")
+    if s["user_id"] == current_user.id:
+        raise HTTPException(status_code=400, detail="Es tu propia serie")
+    existing = await db.series_follows.find_one({"series_id": series_id, "user_id": current_user.id}, {"_id": 1})
+    if existing:
+        await db.series_follows.delete_one({"_id": existing["_id"]})
+    else:
+        await db.series_follows.insert_one({"id": str(uuid.uuid4()), "series_id": series_id, "user_id": current_user.id, "created_at": _now()})
+    count = await db.series_follows.count_documents({"series_id": series_id})
+    return {"following": not existing, "followers_count": count}
+
+
+async def _notify_new_chapters(s: dict, new_ids: List[str]):
+    """Aviso (centro de notificaciones + push) a los seguidores de la serie por cada publicación de capítulos."""
+    if s.get("visibility") != "public" or not new_ids:
+        return
+    pub = [p async for p in db.posts.find({"id": {"$in": new_ids}, "visibility": "public", "is_deleted": {"$ne": True}}, {"_id": 0, "id": 1, "content": 1})]
+    if not pub:
+        return
+    followers = [f["user_id"] async for f in db.series_follows.find({"series_id": s["id"]}, {"_id": 0, "user_id": 1})]
+    if not followers:
+        return
+    owner = await db.users.find_one({"id": s["user_id"]}, {"_id": 0, "name": 1})
+    first = pub[0]
+    n = len(pub)
+    idx = (s.get("video_ids") or []).index(first["id"]) + 1 if first["id"] in (s.get("video_ids") or []) else None
+    title = (first.get("content") or "").split("\n")[0][:60] or "Nuevo capítulo"
+    msg = f"{(owner or {}).get('name') or 'Un creador'} publicó {n} capítulos nuevos en «{s['title']}»" if n > 1 else f"{(owner or {}).get('name') or 'Un creador'} publicó el capítulo {idx or ''} de «{s['title']}»: {title}".replace("capítulo  de", "capítulo de")
+    url = f"/video/{first['id']}?series={s['id']}"
+    from utils.notification_realtime import emit_notification_ws
+    from routers.push_notifications import send_push_notification, NotificationPayload
+    for uid in followers:
+        if uid == s["user_id"]:
+            continue
+        doc = {"id": str(uuid.uuid4()), "user_id": uid, "actor_id": s["user_id"], "type": "series_episode", "message": msg, "target_id": s["id"], "target_type": "series", "url": url, "is_read": False, "created_at": _now()}
+        await db.notifications.insert_one(doc)
+        doc.pop("_id", None)
+        try:
+            await emit_notification_ws(doc)
+            await send_push_notification(uid, NotificationPayload(title=f"Nuevo capítulo · {s['title']}", body=msg, url=url, tag=f"series_{s['id']}", data={"series_id": s["id"], "url": url, "kind": "series_episode"}))
+        except Exception as e:  # noqa: BLE001
+            logger.warning("series notify failed for %s: %s", uid, e)
 
 
 @router.get("/series/candidates")
@@ -170,9 +249,19 @@ async def update_series(series_id: str, body: SeriesBody, current_user: User = D
         upd["visibility"] = body.visibility
     if body.video_ids is not None:
         upd["video_ids"] = await _own_long_ids(current_user.id, body.video_ids)
+    ids_after = upd.get("video_ids", s.get("video_ids") or [])
+    if body.featured_video_id is not None:
+        upd["featured_video_id"] = body.featured_video_id if body.featured_video_id in ids_after else None
+    elif s.get("featured_video_id") and s["featured_video_id"] not in ids_after:
+        upd["featured_video_id"] = None
     await db.series.update_one({"id": series_id}, {"$set": upd})
     fresh = await db.series.find_one({"id": series_id}, {"_id": 0})
     await _index_series(fresh)
+    # Capítulos nuevos en una serie pública → aviso a seguidores. Si pasa de privada a pública, todos sus capítulos cuentan como nuevos.
+    was_public = s.get("visibility") == "public"
+    new_ids = [i for i in ids_after if i not in (s.get("video_ids") or [])] if was_public else (ids_after if fresh.get("visibility") == "public" else [])
+    if new_ids:
+        asyncio.create_task(_notify_new_chapters(fresh, new_ids))
     return await _series_out(fresh, current_user.id)
 
 

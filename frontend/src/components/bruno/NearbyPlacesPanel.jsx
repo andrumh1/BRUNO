@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Navigation, LocateFixed, X, Loader2, RefreshCw, Phone, Globe, Clock, ChevronRight, AlertCircle, Bookmark, BookmarkCheck, CreditCard, Trash2, Send, Check } from "lucide-react";
+import { Search, MapPin, Navigation, LocateFixed, X, Loader2, RefreshCw, Phone, Globe, Clock, ChevronRight, AlertCircle, Bookmark, BookmarkCheck, CreditCard, Trash2, Send, Check, Flame } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 
@@ -125,10 +125,53 @@ function PlaceRow({ p, onPick, saved, onToggleSave, onCreateCard, onRemove, onSh
   );
 }
 
-export default function NearbyPlacesPanel({ onClose, onPick, mapCenter }) {
+// Lugares más etiquetados en publicaciones e historias (datos reales de BRUNO, últimos 7 días)
+function PopularPlaces({ onPick, token, savedByPlace, onToggleSave }) {
+  const [state, setState] = useState({ status: "loading", items: [], since: null });
+  const [days, setDays] = useState(7);
+  const load = (d) => {
+    setState((s) => ({ ...s, status: "loading" }));
+    const go = (coords) => axios.get(`${API}/places/popular`, { params: { days: d, limit: 25, ...(coords || {}) } }).then((r) => setState({ status: "done", items: r.data?.items || [], since: r.data?.since })).catch(() => setState({ status: "error", items: [], since: null }));
+    if (navigator.geolocation) navigator.geolocation.getCurrentPosition((p) => go({ lat: p.coords.latitude, lng: p.coords.longitude }), () => go(null), { timeout: 4000, maximumAge: 120000 });
+    else go(null);
+  };
+  useEffect(() => { load(days); }, [days]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="flex-1 overflow-y-auto px-4 pt-1 pb-3" data-testid="popular-places">
+      <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-2">Últimos:
+        {[7, 30].map((d) => <button key={d} onClick={() => setDays(d)} className={`h-6 px-2 rounded-full ${days === d ? "bg-foreground text-background" : "bg-muted"}`} data-testid={`popular-days-${d}`}>{d} días</button>)}
+        <span className="ml-auto">{state.status === "done" ? `${state.items.length} lugares` : ""}</span>
+      </div>
+      {state.status === "loading" ? <div className="grid place-items-center py-10" data-testid="popular-loading"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+        : state.status === "error" ? <div className="text-center py-8 space-y-2" data-testid="popular-error"><AlertCircle className="w-6 h-6 mx-auto text-red-500" /><p className="text-xs text-muted-foreground">No pudimos cargar los lugares populares.</p><button onClick={() => load(days)} className="h-8 px-3 rounded-full bg-primary text-white text-xs font-semibold">Reintentar</button></div>
+        : state.items.length === 0 ? <p className="text-xs text-muted-foreground text-center py-8" data-testid="popular-empty">Nadie ha etiquetado lugares en publicaciones o historias en los últimos {days} días. Etiqueta uno desde la cámara y aparecerá aquí.</p>
+        : (
+          <ol className="space-y-2">
+            {state.items.map((p, i) => (
+              <li key={p.id} className="rounded-2xl border border-border/60 bg-card/80 p-2.5 flex items-center gap-3" data-testid={`popular-place-${i}`}>
+                <span className={`w-7 h-7 rounded-full grid place-items-center text-xs font-black shrink-0 ${i < 3 ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
+                <button onClick={() => onPick?.(p)} className="flex items-center gap-3 flex-1 min-w-0 text-left" data-testid={`popular-place-pick-${i}`}>
+                  <span className="w-12 h-12 rounded-xl overflow-hidden bg-muted shrink-0 grid place-items-center">{p.thumb ? <img src={p.thumb} alt="" className="w-full h-full object-cover" loading="lazy" /> : <Flame className="w-5 h-5 text-primary" />}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold text-sm truncate">{p.name}</span>
+                    <span className="block text-[11px] text-muted-foreground truncate">{p.address || ""}</span>
+                    <span className="block text-[11px] text-primary font-semibold" data-testid={`popular-place-count-${i}`}>{p.total} etiqueta{p.total === 1 ? "" : "s"} · {p.posts} publicación{p.posts === 1 ? "" : "es"} · {p.stories} historia{p.stories === 1 ? "" : "s"} · {p.users_count} persona{p.users_count === 1 ? "" : "s"}{p.distance_m != null ? ` · ${fmtDist(p.distance_m)}` : ""}</span>
+                  </span>
+                </button>
+                {token && onToggleSave && <button onClick={() => onToggleSave({ ...p, id: (p.place_id || p.id).slice(0, 80), category_label: "Lugar popular" })} className={`w-7 h-7 rounded-full grid place-items-center shrink-0 ${savedByPlace[(p.place_id || p.id).slice(0, 80)] ? "bg-primary/15 text-primary" : "bg-muted"}`} aria-label="Guardar lugar" data-testid={`popular-save-${i}`}>{savedByPlace[(p.place_id || p.id).slice(0, 80)] ? <BookmarkCheck className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}</button>}
+              </li>
+            ))}
+          </ol>
+        )}
+    </div>
+  );
+}
+
+export default function NearbyPlacesPanel({ onClose, onPick, mapCenter, initialView = "search" }) {
   const { token } = useAuth();
   const navigate = useNavigate();
-  const [view, setView] = useState("search"); // search | saved
+  const [view, setView] = useState(initialView); // search | saved | popular
+  useEffect(() => { setView(initialView); }, [initialView]);
   const [sharing, setSharing] = useState(null);
   const [saved, setSaved] = useState([]);
   const savedByPlace = useMemo(() => Object.fromEntries(saved.map((s) => [s.place_id, s])), [saved]);
@@ -149,7 +192,7 @@ export default function NearbyPlacesPanel({ onClose, onPick, mapCenter }) {
   const toggleSave = async (p) => {
     if (!token) { brunoToast.error("Inicia sesión para guardar lugares"); return; }
     const headers = { Authorization: `Bearer ${token}` };
-    const existing = savedByPlace[p.place_id || p.id];
+    const existing = savedByPlace[(p.place_id || p.id).slice(0, 80)];
     try {
       if (existing) { await axios.delete(`${API}/places/saved/${existing.id}`, { headers }); setSaved((s) => s.filter((x) => x.id !== existing.id)); brunoToast.success("Quitado de mis lugares"); }
       else {
@@ -198,14 +241,17 @@ export default function NearbyPlacesPanel({ onClose, onPick, mapCenter }) {
       data-testid="nearby-panel"
     >
       <div className="flex items-center gap-2 px-4 pt-3 pb-2">
-        <Search className="w-4 h-4 text-primary" />
-        <h2 className="font-bold text-sm flex-1">{view === "saved" ? "Mis lugares" : "Recomendaciones cerca de ti"}</h2>
+        {view === "popular" ? <Flame className="w-4 h-4 text-primary" /> : <Search className="w-4 h-4 text-primary" />}
+        <h2 className="font-bold text-sm flex-1">{view === "saved" ? "Mis lugares" : view === "popular" ? "Lugares populares" : "Recomendaciones cerca de ti"}</h2>
+        <button onClick={() => setView(view === "popular" ? "search" : "popular")} className={`h-8 px-2.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 ${view === "popular" ? "bg-primary text-white" : "bg-muted"}`} aria-label="Lugares populares" data-testid="nearby-popular-toggle"><Flame className="w-3.5 h-3.5" /></button>
         {token && <button onClick={() => setView(view === "saved" ? "search" : "saved")} className={`h-8 px-2.5 rounded-full text-[11px] font-semibold inline-flex items-center gap-1 ${view === "saved" ? "bg-primary text-white" : "bg-muted"}`} data-testid="nearby-saved-toggle"><BookmarkCheck className="w-3.5 h-3.5" />{saved.length}</button>}
         {origin && view === "search" && <button onClick={search} className="w-8 h-8 rounded-full bg-muted grid place-items-center" aria-label="Actualizar" data-testid="nearby-refresh"><RefreshCw className={`w-3.5 h-3.5 ${state.status === "loading" ? "animate-spin" : ""}`} /></button>}
         <button onClick={onClose} className="w-8 h-8 rounded-full bg-muted grid place-items-center" aria-label="Cerrar" data-testid="nearby-close"><X className="w-4 h-4" /></button>
       </div>
 
-      {view === "saved" ? (
+      {view === "popular" ? (
+        <PopularPlaces onPick={onPick} token={token} savedByPlace={savedByPlace} onToggleSave={toggleSave} />
+      ) : view === "saved" ? (
         <div className="flex-1 overflow-y-auto px-4 pt-1 pb-3" data-testid="nearby-saved-list">
           {sharing && <div className="mb-2"><ShareChatPicker place={sharing} token={token} onClose={() => setSharing(null)} /></div>}
           {saved.length === 0 ? <p className="text-xs text-muted-foreground text-center py-8" data-testid="nearby-saved-empty">Aún no guardas lugares. Toca el marcador <Bookmark className="w-3 h-3 inline" /> en una recomendación para volver a ella desde aquí.</p>

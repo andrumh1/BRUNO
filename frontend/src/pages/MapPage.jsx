@@ -27,7 +27,7 @@ import NearbyPlacesPanel from "@/components/bruno/NearbyPlacesPanel";
 import { useMapCardItems } from "@/hooks/useMapCardItems";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
-import { ArrowLeft, MapPin as MapPinIcon, Plus, Layers, Crosshair, ExternalLink, KeyRound, Search, User as UserIcon } from "lucide-react";
+import { ArrowLeft, MapPin as MapPinIcon, Plus, Layers, Crosshair, ExternalLink, KeyRound, Search, User as UserIcon, Flame } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const GOOGLE_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
@@ -40,7 +40,8 @@ export default function MapPage() {
   const { token } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const nearbyOpen = searchParams.get("nearby") === "1";
-  const setNearby = (open) => setSearchParams(open ? { nearby: "1" } : {}, { replace: true });
+  const nearbyView = searchParams.get("view") === "popular" ? "popular" : "search";
+  const setNearby = (open, view) => setSearchParams(open ? (view === "popular" ? { nearby: "1", view: "popular" } : { nearby: "1" }) : {}, { replace: true });
   // Marcadores del mapa == tarjetas de la barra (misma fuente de datos)
   const mapCards = useMapCardItems();
 
@@ -113,7 +114,16 @@ export default function MapPage() {
             </button>
             <button onClick={() => setNearby(!nearbyOpen)} className={`flex-1 h-10 rounded-full backdrop-blur-md shadow flex items-center px-4 gap-2 text-xs font-semibold transition-colors ${nearbyOpen ? "bg-primary text-white" : "bg-background/90 text-muted-foreground"}`} data-testid="map-nearby-btn">
               <Search className="w-4 h-4 shrink-0" />
-              <span className="truncate">{nearbyOpen ? "Recomendaciones cerca de ti" : "Buscar restaurantes, negocios y servicios cerca"}</span>
+              <span className="truncate">{nearbyOpen ? (nearbyView === "popular" ? "Lugares populares" : "Recomendaciones cerca de ti") : "Buscar restaurantes, negocios y servicios cerca"}</span>
+            </button>
+            <button
+              onClick={() => setNearby(!(nearbyOpen && nearbyView === "popular"), "popular")}
+              className={`w-10 h-10 rounded-full backdrop-blur-md shadow flex items-center justify-center ${nearbyOpen && nearbyView === "popular" ? "bg-primary text-white" : "bg-background/90 text-foreground"}`}
+              data-testid="map-popular-btn"
+              aria-label="Lugares populares"
+              title="Lugares más etiquetados esta semana"
+            >
+              <Flame className="w-5 h-5" />
             </button>
             <button
               onClick={() => setShowPiupLayer((v) => !v)}
@@ -198,6 +208,8 @@ export default function MapPage() {
         <AnimatePresence>
           {nearbyOpen && (
             <NearbyPlacesPanel
+              key={nearbyView}
+              initialView={nearbyView}
               onClose={() => setNearby(false)}
               onPick={(p) => { if (p?.lat != null && p?.lng != null) mapRef.current?.panTo({ lat: p.lat, lng: p.lng }); }}
               mapCenter={() => { const c = mapRef.current?.getCenter?.(); return c ? { lat: c.lat(), lng: c.lng() } : initialCenter; }}

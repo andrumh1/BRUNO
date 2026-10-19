@@ -218,3 +218,50 @@ async def unsave_place(saved_id: str, user: User = Depends(get_current_user)):
     if not r.deleted_count:
         raise HTTPException(status_code=404, detail="Lugar no encontrado")
     return {"ok": True}
+
+
+# ---------------- Lugares populares: más etiquetados en publicaciones e historias (últimos N días) ----------------
+from datetime import timedelta  # noqa: E402
+
+
+@router.get("/popular")
+async def popular_places(days: int = Query(7, ge=1, le=30), limit: int = Query(20, ge=1, le=50), lat: Optional[float] = None, lng: Optional[float] = None):
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    groups: dict = {}
+
+    def bucket(pl: dict):
+        if not pl or pl.get("lat") is None or pl.get("lng") is None:
+            return None
+        key = pl.get("place_id") or f"{(pl.get('name') or '').strip().lower()}|{round(float(pl['lat']), 4)}|{round(float(pl['lng']), 4)}"
+        g = groups.get(key)
+        if not g:
+            g = groups[key] = {"id": key, "place_id": pl.get("place_id"), "name": pl.get("name") or "Lugar", "address": pl.get("address"), "lat": float(pl["lat"]), "lng": float(pl["lng"]), "posts": 0, "stories": 0, "users": set(), "thumb": None, "last_at": None, "sample_post_id": None}
+        return g
+
+    cur = db.posts.find({"place.lat": {"$exists": True}, "created_at": {"$gte": since}, "is_deleted": {"$ne": True}, "is_draft": {"$ne": True}, "visibility": "public"}, {"_id": 0, "id": 1, "place": 1, "user_id": 1, "media": 1, "created_at": 1})
+    async for p in cur:
+        g = bucket(p.get("place"))
+        if not g:
+            continue
+        g["posts"] += 1; g["users"].add(p.get("user_id"))
+        m = (p.get("media") or [{}])[0] or {}
+        if not g["thumb"] and (m.get("thumbnail_url") or m.get("poster_url") or (m.get("url") if m.get("type") == "image" else None)):
+            g["thumb"] = m.get("thumbnail_url") or m.get("poster_url") or m.get("url"); g["sample_post_id"] = p["id"]
+        if not g["last_at"] or p.get("created_at", "") > g["last_at"]:
+            g["last_at"] = p.get("created_at")
+    cur = db.stories.find({"location.lat": {"$exists": True}, "created_at": {"$gte": since}, "visibility": "public"}, {"_id": 0, "location": 1, "user_id": 1, "created_at": 1})
+    async for s in cur:
+        g = bucket(s.get("location"))
+        if not g:
+            continue
+        g["stories"] += 1; g["users"].add(s.get("user_id"))
+        if not g["last_at"] or s.get("created_at", "") > g["last_at"]:
+            g["last_at"] = s.get("created_at")
+    items = []
+    for g in groups.values():
+        g["users_count"] = len(g.pop("users")); g["total"] = g["posts"] + g["stories"]
+        if lat is not None and lng is not None:
+            g["distance_m"] = int(_haversine_m(lat, lng, g["lat"], g["lng"]))
+        items.append(g)
+    items.sort(key=lambda x: (-x["total"], -x["users_count"], x["last_at"] or ""), reverse=False)
+    return {"items": items[:limit], "days": days, "since": since, "count": len(items)}
