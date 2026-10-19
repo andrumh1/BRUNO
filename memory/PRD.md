@@ -1760,3 +1760,7 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - Reels: historias, "Continuar viendo" y rail (Tu historia → Feed → Explorar) aparecen progresivamente con el gesto de subir en cualquier reel (motion value `reveal`, `onScroll` en `ReelsPage`), se ocultan al bajar; siempre visibles en el primer reel.
 - Marketplace: "Suscripciones BRUNO" minimizada como la sección PIUP (fila compacta `plans-section-toggle` que despliega planes + toggle mensual/anual).
 - Barra minimizada: BRUNO IA · barra · Chat alineados al mismo centro vertical y simétricos (12px de separación), `MobileBottomNav` bottom safe+8px.
+
+- Series (2026-06, iteration_120 OK): portada propia (subida a /upload/image folder bruno/series, quitar/cambiar), capítulo destacado (`featured_video_id`, estrella en edición, tarjeta destacada y arranque de reproducción), progreso por capítulo desde `video_progress` (barra, "Visto", "Retomar cap. N en mm:ss", "Tu progreso x/N"), seguir serie (`series_follows`, POST /series/{id}/follow, GET /series/following, sección "Series que sigo") y aviso a seguidores al publicar capítulos (notificación `series_episode` + push, url /video/{id}?series=).
+- Mapa: "Lugares populares" (GET /places/popular?days=7|30): lugares más etiquetados en publicaciones públicas e historias; botón llama en la barra superior y vista dentro del panel de recomendaciones (lista, nunca marcadores); guardar como favorito.
+- Fix: evento `bruno:minimize-all` diferido fuera del updater de estado (warning React).

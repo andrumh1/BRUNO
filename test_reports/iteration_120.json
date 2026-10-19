@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 120 — Verified series follow/featured/notify + places popular + visual regressions. Backend 5/5 pytest green (test_iteration120.py). Shape of /api/series/public verified: each series carries featured, watched_count, resume, followers_count, is_following and each video has progress{position,duration,pct,completed}. POST /api/series/{id}/follow toggles correctly for viewer2 (returns {following, followers_count}); same endpoint by owner returns 400; GET /api/series/following lists the seed series. PUT /api/series/{id} with featured_video_id (video in list) sets featured; adding a new public chapter to the public series inserts a 'series_episode' notification with url /video/{post}?series={id} (polled viewer2 /api/notifications and found it within <10 s). After test the series_ids and featured are restored (series 'Curso BRUNO completo' back to 2 chapters, no featured). PUT with cover_url='<url>' then '' tested (restored). /api/places/popular?days=7|30 returns {items,count,since,days}; created a temp public post with place → listed with posts=1, then deleted. FRONTEND 390x844 (newtest + viewer2): Series detail /series/6ff8761f… renders series-progress-label='1/2 capítulos vistos', series-featured, Play (series-play) and watch rows with series-watched-* and series-watchbar-*. Owner edit opens with series-cover-upload + series-cover-input and 2 series-feature-* stars (featured toggles visually). As viewer2: series-follow-btn visible, label flips between 'Siguiendo · te avisamos con cada capítulo' and 'Seguir serie · avísame de capítulos nuevos' on click; left in Siguiendo state. /reels Series tab shows series-following-section. /notifications shows the series_episode row ('Test User publicó el capítulo 3 de «Curso BRUNO completo»…') with ListVideo icon; clicking it navigates to /video/{postId}?series=6ff8761f-215b-423d-a934-d0bd9a017824. /map: map-popular-btn opens the panel with testids popular-places, popular-days-7, popular-days-30, nearby-popular-toggle (0 items at the moment the panel was opened — expected: no public posts with place in the window after the test teardown). Reels regression: reels-quick-rail and reels-stories-strip both render on /reels; Marketplace plans-section-toggle expands plans-section-body (visible after click); minimized nav bottom center alignment OK — nav-expand-btn, floating-ai-btn and chat-bubble-btn-minimized all centered at y=822.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Map (Google provider)", "issues": ["Console: 'Google Maps JavaScript API error: BillingNotEnabledMapError' — OSM fallback used, not an iteration-120 regression but worth tracking."]},
+      {"screen": "Reels (minimized)", "issues": ["React warning in console: 'Cannot update a component while rendering a different component' triggered around the minimized nav/floating buttons area. Non-blocking but should be investigated by main agent."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iteration120.py", "/app/test_reports/pytest/iter120.xml"],
+  "action_items": [
+    "(optional) Trace the React setState-during-render warning triggered on /reels after minimizing nav (nav-expand-btn/floating-ai-btn/chat-bubble-btn-minimized area).",
+    "(ops) Enable billing on Google Maps API key or keep the OSM fallback path explicitly documented so /map always uses OSM.",
+    "(nit) backend/routers/series.py _series_out could memoize per-series progress keys to avoid an N+1 lookup for huge series lists; current limit of 60 is safe."
+  ],
+  "critical_code_review_comments": [
+    "series.py: _series_out correctly hides non-public chapters from non-owners, recomputes count/total_duration, and populates progress + resume + featured + followers_count + is_following in a single pass — matches spec.",
+    "series.py: toggle_follow_series blocks owners (400) and private series (404) correctly; follow doc id generated with uuid; count returned post-mutation.",
+    "series.py: update_series — adding new chapters triggers _notify_new_chapters only when series is public (and treats a public-after-flip as fully new); featured_video_id is reset to None when the referenced id is dropped. OK.",
+    "series.py: _notify_new_chapters sends url '/video/{post}?series={id}' which the FE handles and navigates correctly.",
+    "places.py: popular_places aggregates posts (public, non-deleted, non-draft) and public stories into bucket keyed by place_id or (name|lat|lng rounded), returns users_count/total/last_at. Note: items.sort(reverse=False) with negative keys is correct but confusing — would be clearer written as items.sort(key=lambda x: (x['total'], x['users_count']), reverse=True).",
+    "places.py popular: sort tie-breaker uses last_at as plain string (ISO8601) — fine, but mixed with negative numeric tuple it's clear only because reverse=False. Consider refactor for readability.",
+    "SeriesPage.jsx & NearbyPlacesPanel.jsx exposes all required data-testids; no overlay issues observed on 390x844."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration120.py"],
+  "success_rate": {"backend": "100% (5/5 pytest)", "frontend": "100% — all 10 feature groups + regressions verified"},
+  "test_credentials": "newtest@bruno.com / Test1234! (owner), viewer2@bruno.com / Test1234! (follower).",
+  "seed_data_creation": "During run: 1 series PUT added a 3rd chapter (reverted); 1 temp post with place TEST_QA Popular Place 120 (deleted). Followers of seed series left as viewer2 is Siguiendo (persistent as before).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest /app/backend/tests/test_iteration120.py -v` for a 5-test regression on series follow/notify/featured + places popular. Series id of 'Curso BRUNO completo' = 6ff8761f-215b-423d-a934-d0bd9a017824. For UI, the viewer2 follow button text is 'Siguiendo · te avisamos con cada capítulo' (currently following). Notification text to click: 'Test User publicó el capítulo … de «Curso BRUNO completo»'. Map popular panel is empty right now because the only post with place was cleaned up — create a temp public post with a `place` object (POST /api/posts) to repopulate.",
+  "rca of the issue": "n/a — no issues found."
+}

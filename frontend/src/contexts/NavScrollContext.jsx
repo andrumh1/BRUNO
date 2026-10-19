@@ -71,7 +71,8 @@ export const NavScrollProvider = ({ children }) => {
         // When the nav re-expands, we do NOT force others to expand — the user
         // may want to keep them small for visual breathing room.
         if (next) {
-          try { window.dispatchEvent(new CustomEvent("bruno:minimize-all")); } catch (_e) { /* ignore */ }
+          // Fuera del updater (React lo ejecuta durante el render): evita "Cannot update a component while rendering"
+          setTimeout(() => { try { window.dispatchEvent(new CustomEvent("bruno:minimize-all")); } catch (_e) { /* ignore */ } }, 0);
         }
       }
       return next;
