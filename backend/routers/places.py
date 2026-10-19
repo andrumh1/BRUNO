@@ -113,16 +113,19 @@ async def _google_nearby(lat, lng, q, category, radius_m, limit, key):
     if q:
         url = "https://places.googleapis.com/v1/places:searchText"
         body = {"textQuery": q, "maxResultCount": min(limit, 20), "languageCode": "es", "locationBias": {"circle": {"center": {"latitude": lat, "longitude": lng}, "radius": float(radius_m)}}}
-    headers = {"X-Goog-Api-Key": key, "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.primaryTypeDisplayName,places.primaryType,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.currentOpeningHours.openNow"}
+    headers = {"X-Goog-Api-Key": key, "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,places.primaryTypeDisplayName,places.primaryType,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.currentOpeningHours.openNow,places.regularOpeningHours.weekdayDescriptions"}
     async with httpx.AsyncClient(timeout=12) as client:
         r = await client.post(url, json=body, headers=headers)
     if r.status_code != 200:
         logger.warning("google places %s %s", r.status_code, r.text[:200])
         raise HTTPException(status_code=502, detail="Google Places no respondió")
     items = []
+    today = __import__("datetime").datetime.now().weekday()  # 0 = lunes, igual que weekdayDescriptions
     for p in r.json().get("places", []):
         loc = p.get("location") or {}
-        items.append({"id": f"g-{p.get('id')}", "name": (p.get("displayName") or {}).get("text"), "category": p.get("primaryType"), "category_label": (p.get("primaryTypeDisplayName") or {}).get("text") or "Lugar", "address": p.get("formattedAddress"), "lat": loc.get("latitude"), "lng": loc.get("longitude"), "distance_m": _haversine_m(lat, lng, loc.get("latitude", lat), loc.get("longitude", lng)), "phone": p.get("nationalPhoneNumber"), "website": p.get("websiteUri"), "rating": p.get("rating"), "rating_count": p.get("userRatingCount"), "open_now": (p.get("currentOpeningHours") or {}).get("openNow")})
+        wk = (p.get("regularOpeningHours") or {}).get("weekdayDescriptions") or []
+        hours = wk[today].split(": ", 1)[-1] if len(wk) == 7 else None
+        items.append({"id": f"g-{p.get('id')}", "name": (p.get("displayName") or {}).get("text"), "category": p.get("primaryType"), "category_label": (p.get("primaryTypeDisplayName") or {}).get("text") or "Lugar", "address": p.get("formattedAddress"), "lat": loc.get("latitude"), "lng": loc.get("longitude"), "distance_m": _haversine_m(lat, lng, loc.get("latitude", lat), loc.get("longitude", lng)), "phone": p.get("nationalPhoneNumber"), "website": p.get("websiteUri"), "rating": p.get("rating"), "rating_count": p.get("userRatingCount"), "open_now": (p.get("currentOpeningHours") or {}).get("openNow"), "opening_hours": f"Hoy: {hours}" if hours else None})
     return items
 
 
@@ -141,10 +144,15 @@ async def nearby(lat: float = Query(..., ge=-90, le=90), lng: float = Query(...,
     if hit:
         return hit
     gkey = os.environ.get("GOOGLE_PLACES_API_KEY")
+    items = None
     if gkey:
-        items = await _google_nearby(lat, lng, q, category, radius_m, limit, gkey)
-        provider, attribution = "google", "Datos de Google"
-    else:
+        try:
+            items = await _google_nearby(lat, lng, q, category, radius_m, limit, gkey)
+            provider, attribution = "google", "Datos de Google"
+        except (HTTPException, httpx.HTTPError) as e:  # clave sin facturación / API no habilitada → OSM sigue funcionando
+            logger.warning("google places fallback to OSM: %s", e)
+            items = None
+    if items is None:
         dlat = radius_m / 111_320
         dlng = radius_m / (111_320 * max(0.2, math.cos(math.radians(lat))))
         term = q or CAT_BY_ID.get(category, {}).get("osm", category)
