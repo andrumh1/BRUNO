@@ -1,82 +1,78 @@
 /**
- * Native push-notifications bootstrap.
+ * Native push-notifications bootstrap (FCM en Android e iOS; en iOS el AppDelegate convierte APNs → FCM).
  *
- * On iOS/Android:
- *   1. Requests permission
- *   2. Registers the device with FCM (Android) / APNs (iOS)
- *   3. On registration, POSTs the token to /api/mobile/devices/register
- *      so the backend can send push via Firebase / APNs.
- *   4. Wires listeners so incoming pushes route to the right screen.
+ *   1. Pide permiso y registra el dispositivo.
+ *   2. Guarda el token FCM en memoria y lo envía a /api/mobile/devices/register SOLO con sesión iniciada,
+ *      y lo reenvía cuando el usuario inicia sesión (así nunca queda un token sin dueño o con el dueño anterior).
+ *   3. Al cerrar sesión, da de baja el token en el backend para que el siguiente usuario del teléfono no reciba avisos ajenos.
+ *   4. Enruta los toques en notificaciones a la pantalla correcta.
  *
- * On the web, this hook is a no-op (Web Push VAPID flow lives elsewhere).
+ * En web este hook no hace nada (Web Push VAPID vive aparte).
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { PushNotifications } from '@capacitor/push-notifications';
-import { App } from '@capacitor/app';
 import axios from 'axios';
 import { isNative, platform } from './capacitor';
 
 const API = process.env.REACT_APP_BACKEND_URL;
+const APP_VERSION = '1.0.0';
 
-async function registerToken(token, authToken) {
+export async function registerDeviceToken(fcmToken, authToken) {
+  if (!fcmToken || !authToken) return;
   try {
-    await axios.post(
-      `${API}/api/mobile/devices/register`,
-      {
-        device_token: token,
-        platform: platform(), // 'ios' | 'android'
-        app_version: '1.0.0',
-        locale: navigator.language,
-      },
-      { headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} }
-    );
-  } catch (_) {
-    /* silent — token will retry on next boot */
-  }
+    await axios.post(`${API}/api/mobile/devices/register`, {
+      device_token: fcmToken,
+      platform: platform(),
+      app_version: APP_VERSION,
+      locale: navigator.language,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    }, { headers: { Authorization: `Bearer ${authToken}` } });
+  } catch (_) { /* se reintenta en el siguiente arranque o login */ }
 }
 
-export function useNativePush(getAuthToken, onNotification) {
+export async function unregisterDeviceToken(fcmToken, authToken) {
+  if (!fcmToken || !authToken) return;
+  try {
+    await axios.post(`${API}/api/mobile/devices/unregister`, { device_token: fcmToken }, { headers: { Authorization: `Bearer ${authToken}` } });
+  } catch (_) { /* el backend también desactiva el token cuando otro usuario lo registra */ }
+}
+
+export function useNativePush(authToken, onNotification) {
+  const fcmRef = useRef(null);
+  const lastAuthRef = useRef(null);
+  const cbRef = useRef(onNotification);
+  cbRef.current = onNotification;
+
   useEffect(() => {
     if (!isNative()) return undefined;
-
     let mounted = true;
-
     (async () => {
-      const perm = await PushNotifications.requestPermissions();
-      if (perm.receive !== 'granted') return;
-      await PushNotifications.register();
+      try {
+        const perm = await PushNotifications.requestPermissions();
+        if (perm.receive !== 'granted') return;
+        await PushNotifications.register();
+      } catch (_) { /* dispositivo sin Play Services / permiso denegado */ }
     })();
-
     const s1 = PushNotifications.addListener('registration', (t) => {
       if (!mounted) return;
-      const auth = getAuthToken?.();
-      registerToken(t.value, auth);
+      fcmRef.current = t.value;
+      if (lastAuthRef.current) registerDeviceToken(t.value, lastAuthRef.current);
     });
-
-    const s2 = PushNotifications.addListener('registrationError', () => {
-      /* user can retry manually from Settings */
-    });
-
-    const s3 = PushNotifications.addListener('pushNotificationReceived', (n) => {
-      onNotification?.({ kind: 'received', data: n });
-    });
-
-    const s4 = PushNotifications.addListener('pushNotificationActionPerformed', (n) => {
-      onNotification?.({ kind: 'tapped', data: n });
-    });
-
-    // Handle app resume — could re-check pending notifications here.
-    const s5 = App.addListener('appStateChange', () => {
-      /* place hook for future needs (badge clear, deep-link resolve, etc.) */
-    });
-
+    const s2 = PushNotifications.addListener('registrationError', () => { /* el usuario puede reintentar desde Ajustes */ });
+    const s3 = PushNotifications.addListener('pushNotificationReceived', (n) => cbRef.current?.({ kind: 'received', data: n }));
+    const s4 = PushNotifications.addListener('pushNotificationActionPerformed', (n) => cbRef.current?.({ kind: 'tapped', data: n }));
     return () => {
       mounted = false;
-      s1.then((h) => h.remove());
-      s2.then((h) => h.remove());
-      s3.then((h) => h.remove());
-      s4.then((h) => h.remove());
-      s5.then((h) => h.remove());
+      [s1, s2, s3, s4].forEach((s) => s.then((h) => h.remove()));
     };
-  }, [getAuthToken, onNotification]);
+  }, []);
+
+  // Login → registrar el token FCM a nombre de este usuario. Logout → darlo de baja.
+  useEffect(() => {
+    if (!isNative()) return;
+    const prev = lastAuthRef.current;
+    lastAuthRef.current = authToken || null;
+    if (authToken && fcmRef.current) registerDeviceToken(fcmRef.current, authToken);
+    else if (!authToken && prev && fcmRef.current) unregisterDeviceToken(fcmRef.current, prev);
+  }, [authToken]);
 }

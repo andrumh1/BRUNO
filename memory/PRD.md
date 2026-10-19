@@ -1772,3 +1772,5 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - Stripe en nativo: `lib/openCheckout.js` (`@capacitor/browser` + cierre al volver por Universal/App Link); web sigue con redirección.
 - iOS deployment target 14.3. Podfile con SecureStorage y Browser.
 - Pendientes externos: google-services.json, GoogleService-Info.plist, clave APNs, FIREBASE_SERVICE_ACCOUNT_JSON; compilación APK/AAB/IPA en Android Studio/Xcode (no posible en este entorno). Guía: frontend/NATIVE_BUILD_GUIDE.md.
+
+- FCM (2026-06): `android/app/google-services.json` y `ios/App/App/GoogleService-Info.plist` (Firebase brunocard-3012e, com.brunocard.app; git-ignored). iOS: AppDelegate con FirebaseCore/FirebaseMessaging (APNs→FCM), pod FirebaseMessaging ~>11, plist en Resources. Android: `ic_notification`, meta-data FCM, intent-filter FLUTTER_NOTIFICATION_CLICK. `useNativePush` registra el token solo con sesión y lo libera al cerrar sesión (`POST /mobile/devices/unregister`); `register` desactiva el mismo token en otros usuarios (verificado). Pendiente: clave APNs .p8 en Firebase, FIREBASE_SERVICE_ACCOUNT_JSON en backend, pruebas en dispositivos.

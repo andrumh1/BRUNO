@@ -38,6 +38,12 @@
                 <data android:scheme="https" android:host="www.brunocard.com" />
             </intent-filter>
 
+            <!-- Tap en una notificación FCM (click_action que envía el backend) abre BRUNO -->
+            <intent-filter>
+                <action android:name="FLUTTER_NOTIFICATION_CLICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
             <!-- Tags NFC con una URL de BRUNO abren la app directamente -->
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
@@ -60,6 +66,10 @@
                 android:resource="@xml/apdu_service"
             />
         </service>
+
+        <!-- FCM: icono y color por defecto cuando la notificación llega con la app cerrada -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_notification" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification_accent" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

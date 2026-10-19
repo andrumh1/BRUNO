@@ -33,7 +33,8 @@ end
 
 target 'App' do
   capacitor_pods
-  # Add your Pods here
+  # Firebase Cloud Messaging (token FCM en iOS; GoogleService-Info.plist en ios/App/App)
+  pod 'FirebaseMessaging', '~> 11.0'
 end
 
 post_install do |installer|

@@ -232,6 +232,12 @@ async def register_device(
         raise HTTPException(status_code=400, detail=f"platform must be one of {sorted(VALID_PLATFORMS)}")
 
     now = _iso(_now())
+    # Un token FCM identifica un teléfono: si otro usuario lo tenía registrado en este mismo dispositivo se le da de baja,
+    # para que nunca reciba los avisos del usuario que acaba de iniciar sesión.
+    await db.mobile_devices.update_many(
+        {"device_token": req.device_token, "user_id": {"$ne": current_user.id}, "is_active": True},
+        {"$set": {"is_active": False, "released_at": now}},
+    )
     # Upsert by (user_id, device_token) — re-registration just refreshes metadata.
     existing = await db.mobile_devices.find_one(
         {"user_id": current_user.id, "device_token": req.device_token},
@@ -291,6 +297,21 @@ async def register_device(
         last_used_at=now,
         created_at=created_at,
     )
+
+
+class DeviceUnregisterRequest(BaseModel):
+    device_token: str = Field(..., min_length=8)
+
+
+@router.post("/devices/unregister")
+async def release_device_token(req: DeviceUnregisterRequest, current_user: User = Depends(get_current_user)):
+    """Cierre de sesión en la app: el token FCM deja de pertenecer a este usuario (no se envían más push a ese teléfono)."""
+    r = await db.mobile_devices.update_many(
+        {"user_id": current_user.id, "device_token": req.device_token, "is_active": True},
+        {"$set": {"is_active": False, "released_at": _iso(_now())}},
+    )
+    return {"ok": True, "released": r.modified_count}
+
 
 
 @router.get("/devices", response_model=List[DeviceOut])

@@ -38,7 +38,7 @@ export default function NativeBootstrap() {
   const location = useLocation();
 
   useNativePush(
-    () => token,
+    token,
     ({ kind, data }) => {
       if (kind !== 'tapped') return;
       const payload = data?.notification?.data || data?.data || {};
