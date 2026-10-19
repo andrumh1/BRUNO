@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import BubbleSelect from "@/components/BubbleSelect";
 import axios from "axios";
+import { openCheckout } from "@/lib/openCheckout";
 import { 
   ArrowLeft, 
   ShoppingCart, 
@@ -179,7 +180,7 @@ const StorePage = () => {
       );
 
       // Redirect to Stripe
-      window.location.href = checkoutResponse.data.checkout_url;
+      openCheckout(checkoutResponse.data.checkout_url);
     } catch (error) {
       // error handled
       alert("Error al procesar el pago. Intenta de nuevo.");

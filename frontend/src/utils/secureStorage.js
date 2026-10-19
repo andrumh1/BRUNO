@@ -1,12 +1,30 @@
 /**
- * Secure Token Storage - Encrypts tokens before storing in localStorage.
- * Uses Web Crypto API for AES-GCM encryption.
+ * Secure Token Storage.
+ * Native (Capacitor): iOS Keychain / Android Keystore. Web: AES-GCM in localStorage.
  * Falls back to in-memory storage if crypto is unavailable.
  */
+import { Capacitor } from '@capacitor/core';
 
 const STORAGE_PREFIX = 'bruno_sec_';
 let memoryStore = {};
 let cryptoKey = null;
+
+/* App nativa: Keychain (iOS) / Keystore (Android) vía @aparajita/capacitor-secure-storage. Web: AES-GCM en localStorage. */
+let _native;
+const isNative = () => { try { return Capacitor.isNativePlatform(); } catch { return false; } };
+async function nativePlugin() {
+  if (!_native) {
+    const { SecureStorage, KeychainAccess } = await import('@aparajita/capacitor-secure-storage');
+    await SecureStorage.setKeyPrefix('bruno_').catch(() => {});
+    await SecureStorage.setSynchronize(false).catch(() => {}); // nunca iCloud Keychain: la sesión se queda en este dispositivo
+    _native = { SecureStorage, KeychainAccess };
+  }
+  return _native;
+}
+const nativeSet = async (k, v) => { const { SecureStorage, KeychainAccess } = await nativePlugin(); await SecureStorage.set(k, v, false, false, KeychainAccess.afterFirstUnlockThisDeviceOnly); };
+const nativeGet = async (k) => { const { SecureStorage } = await nativePlugin(); const v = await SecureStorage.get(k, false, false); return typeof v === 'string' ? v : (v == null ? null : JSON.stringify(v)); };
+const nativeRemove = async (k) => { const { SecureStorage } = await nativePlugin(); await SecureStorage.remove(k, false); };
+const nativeClear = async () => { const { SecureStorage } = await nativePlugin(); await SecureStorage.clear(false); };
 
 async function getOrCreateKey() {
   if (cryptoKey) return cryptoKey;
@@ -56,6 +74,7 @@ async function decrypt(data) {
 
 export const secureStorage = {
   async setItem(key, value) {
+    if (isNative()) { try { await nativeSet(key, value); return; } catch (err) { console.warn("[secureStorage] Keychain/Keystore set failed", err?.message); } }
     try {
       const encrypted = await encrypt(value);
       if (encrypted) {
@@ -73,6 +92,19 @@ export const secureStorage = {
   },
 
   async getItem(key) {
+    if (isNative()) {
+      try {
+        const v = await nativeGet(key);
+        if (v != null) return v;
+        // Migración única: valor cifrado en localStorage (versiones anteriores) → Keychain/Keystore
+        const legacy = localStorage.getItem(`${STORAGE_PREFIX}${key}`);
+        if (legacy) {
+          const plain = await decrypt(legacy).catch(() => null);
+          if (plain) { await nativeSet(key, plain); localStorage.removeItem(`${STORAGE_PREFIX}${key}`); return plain; }
+        }
+        return memoryStore[key] || null;
+      } catch (err) { console.warn("[secureStorage] Keychain/Keystore get failed", err?.message); }
+    }
     try {
       const stored = localStorage.getItem(`${STORAGE_PREFIX}${key}`);
       if (stored) {
@@ -88,11 +120,13 @@ export const secureStorage = {
   },
 
   removeItem(key) {
+    if (isNative()) nativeRemove(key).catch(() => {});
     localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
     delete memoryStore[key];
   },
 
   clear() {
+    if (isNative()) nativeClear().catch(() => {});
     Object.keys(localStorage).forEach(k => {
       if (k.startsWith(STORAGE_PREFIX) && k !== `${STORAGE_PREFIX}dk`) {
         localStorage.removeItem(k);

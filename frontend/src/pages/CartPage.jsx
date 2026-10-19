@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { fmtMoney, detailMsg } from "@/hooks/useBrunoCheckout";
+import { openCheckout } from "@/lib/openCheckout";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 const EMPTY_ADDR = { name: "", phone: "", line1: "", line2: "", city: "", state: "", postal_code: "", country: "CO", notes: "" };
@@ -83,7 +84,7 @@ const CartPage = () => {
     setProcessing(true);
     try {
       const r = await axios.post(`${API}/marketplace/checkout`, { origin_url: window.location.origin, delivery, address: needsAddress ? address : null }, { headers });
-      window.location.href = r.data.checkout_url;
+      openCheckout(r.data.checkout_url);
     } catch (e) {
       const d = e?.response?.data?.detail;
       if (d?.code === "cart_problems") { brunoToast.error(d.problems.map((p) => p.message).join(" · ")); load(); }

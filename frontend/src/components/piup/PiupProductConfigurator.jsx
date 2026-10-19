@@ -4,6 +4,7 @@ import { X, Check, Loader2, ShoppingBag } from "lucide-react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { brunoToast } from "@/components/bruno/BrunoToast";
+import { openCheckout } from "@/lib/openCheckout";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -55,7 +56,7 @@ export default function PiupProductConfigurator({ product, cards, colors, auth, 
         );
         if (res.data?.checkout_url) {
           brunoToast.success("Redirigiendo a pago seguro Stripe...");
-          window.location.href = res.data.checkout_url;
+          openCheckout(res.data.checkout_url);
           return;
         }
       } catch (stripeErr) {

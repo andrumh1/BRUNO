@@ -29,13 +29,13 @@
                 <data android:scheme="@string/custom_url_scheme" />
             </intent-filter>
 
-            <!-- App Links (https). Cambia deeplink_host en strings.xml por tu dominio de producción
-                 y publica /.well-known/assetlinks.json (ver NATIVE_BUILD_GUIDE.md §9). -->
+            <!-- App Links (https): brunocard.com publica /.well-known/assetlinks.json (frontend/public/.well-known) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="@string/deeplink_host" />
+                <data android:scheme="https" android:host="www.brunocard.com" />
             </intent-filter>
 
             <!-- Tags NFC con una URL de BRUNO abren la app directamente -->

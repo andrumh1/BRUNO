@@ -1764,3 +1764,11 @@ Los tres elementos (nav pill + chat normal + AI chat) ahora son **una sola unida
 - Series (2026-06, iteration_120 OK): portada propia (subida a /upload/image folder bruno/series, quitar/cambiar), capítulo destacado (`featured_video_id`, estrella en edición, tarjeta destacada y arranque de reproducción), progreso por capítulo desde `video_progress` (barra, "Visto", "Retomar cap. N en mm:ss", "Tu progreso x/N"), seguir serie (`series_follows`, POST /series/{id}/follow, GET /series/following, sección "Series que sigo") y aviso a seguidores al publicar capítulos (notificación `series_episode` + push, url /video/{id}?series=).
 - Mapa: "Lugares populares" (GET /places/popular?days=7|30): lugares más etiquetados en publicaciones públicas e historias; botón llama en la barra superior y vista dentro del panel de recomendaciones (lista, nunca marcadores); guardar como favorito.
 - Fix: evento `bruno:minimize-all` diferido fuera del updater de estado (warning React).
+
+## 2026-06 — Capacitor / producción nativa (brunocard.com)
+- `.env.native` (no versionado) apunta a https://brunocard.com; bundle nativo regenerado (`yarn native:build`, verify ✅) con todas las funciones actuales; android/ e ios/ sincronizados.
+- Deep links: `deeplink_host=brunocard.com` (+www) en Android; `applinks:brunocard.com`/www en iOS; `public/.well-known/assetlinks.json` y `apple-app-site-association` con PLACEHOLDERS (SHA-256 de firma y Team ID pendientes del usuario).
+- Token nativo en Keychain/Keystore (`@aparajita/capacitor-secure-storage`, migración desde localStorage cifrado); web sin cambios.
+- Stripe en nativo: `lib/openCheckout.js` (`@capacitor/browser` + cierre al volver por Universal/App Link); web sigue con redirección.
+- iOS deployment target 14.3. Podfile con SecureStorage y Browser.
+- Pendientes externos: google-services.json, GoogleService-Info.plist, clave APNs, FIREBASE_SERVICE_ACCOUNT_JSON; compilación APK/AAB/IPA en Android Studio/Xcode (no posible en este entorno). Guía: frontend/NATIVE_BUILD_GUIDE.md.

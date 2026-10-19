@@ -1,0 +1,18 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["REEMPLAZAR_TEAM_ID.com.brunocard.app"],
+        "components": [
+          { "/": "/api/*", "exclude": true },
+          { "/": "/static/*", "exclude": true },
+          { "/": "/.well-known/*", "exclude": true },
+          { "/": "*" }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["REEMPLAZAR_TEAM_ID.com.brunocard.app"]
+  }
+}

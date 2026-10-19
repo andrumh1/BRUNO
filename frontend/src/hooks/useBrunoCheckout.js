@@ -3,6 +3,7 @@ import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { getSharedCoupon } from "@/pages/CouponLandingPage";
+import { openCheckout } from "@/lib/openCheckout";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -51,7 +52,7 @@ export function useBrunoCheckout() {
     try {
       const r = await axios.post(`${API}/money/checkout`, { ...full, origin_url: window.location.origin }, { headers });
       sessionStorage.setItem("bruno_last_checkout", JSON.stringify({ session_id: r.data.session_id, kind: body.kind, ref_id: body.ref_id }));
-      window.location.href = r.data.checkout_url;
+      openCheckout(r.data.checkout_url);
     } catch (e) { const m = detailMsg(e) || "No se pudo iniciar el pago"; setError(m); brunoToast.error(m); setBusy(false); }
   };
   return { quote, busy, error, couponError, getQuote, applyCoupon, pay };
