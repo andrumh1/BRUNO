@@ -61,7 +61,25 @@ async def send_native_push(db, user_id: str, notification_dict: dict) -> int:
     """Send a push to every active FCM/APNs device registered by `user_id`.
 
     Returns the number of successful deliveries. Prunes dead tokens.
+    Orden de preferencia: relay Cloud Run firmado (sin claves de Google) → firebase-admin con clave JSON → nada (solo Web Push).
     """
+    from utils.fcm_relay import relay_enabled, relay_send
+
+    if relay_enabled():
+        devices = await db.mobile_devices.find({"user_id": user_id, "is_active": True}).to_list(50)
+        tokens = [d["device_token"] for d in devices if d.get("device_token")]
+        if not tokens:
+            return 0
+        try:
+            res = await relay_send(user_id, tokens, notification_dict.get("title", "BRUNO"), notification_dict.get("body", ""),
+                                   data=notification_dict.get("data"), url=notification_dict.get("url"), image=notification_dict.get("image"))
+        except Exception as e:  # noqa: BLE001 — el aviso in-app y Web Push ya se enviaron; no se propaga
+            logger.warning(f"FCM relay failed for user {user_id}: {e}")
+            return 0
+        if res.get("invalid_tokens"):
+            await db.mobile_devices.update_many({"user_id": user_id, "device_token": {"$in": res["invalid_tokens"]}}, {"$set": {"is_active": False}})
+        return int(res.get("sent", 0))
+
     if not _init_firebase():
         return 0
 
