@@ -2528,6 +2528,18 @@ from routers.telemetry import router as telemetry_router  # noqa: E402
 api_router.include_router(telemetry_router)
 from routers.places import router as places_router  # noqa: E402
 api_router.include_router(places_router)
+from routers.bruno_service import router as bruno_service_router  # noqa: E402
+api_router.include_router(bruno_service_router)
+from starlette.exceptions import HTTPException as StarletteHTTPException  # noqa: E402
+from fastapi.responses import JSONResponse as _JSONResponse  # noqa: E402
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _http_exc_handler(request, exc):
+    # El formulario «Creamos tu tarjeta» espera {error, errorEn} planos; el resto de la API conserva {"detail": ...}
+    if isinstance(exc.detail, dict) and "errorEn" in exc.detail:
+        return _JSONResponse(exc.detail, status_code=exc.status_code, headers=getattr(exc, "headers", None))
+    return _JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers=getattr(exc, "headers", None))
 app.include_router(api_router)
 
 # Rendimiento: timing por ruta + Cache-Control, y gzip (el último add_middleware queda más externo)

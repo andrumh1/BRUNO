@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ServicePromoBubble } from "@/components/bruno/ServicePromoBubble";
 import { 
   ChevronRight, 
   CreditCard, 
@@ -359,6 +360,19 @@ const BrunoWebsite = () => {
               ]}
               cta="Contactar Ventas"
             />
+          </div>
+        </div>
+      </section>
+
+      {/* Servicio «Creamos tu tarjeta» (BRUNO + OVC) — mismo destino que Perfil › Tarjetas */}
+      <section id="servicio-tarjeta" className="py-16 px-4 bg-white" data-testid="website-service-section">
+        <div className="max-w-5xl mx-auto rounded-[32px] p-8 sm:p-12 flex flex-col sm:flex-row items-center gap-8" style={{ background: "linear-gradient(120deg,#ffffff88,#ffb36c55)", border: "1px solid #ffffffb3", boxShadow: "inset 0 1px 0 #fff,0 15px 40px #343b3210", backdropFilter: "blur(20px)" }}>
+          <img src="/servicios/tarjeta-bruno/assets/bruno-mascota.webp" alt="" className="w-36 h-44 object-cover rounded-[70px_70px_24px_24px] border-4 border-white shadow-lg shrink-0" loading="lazy" />
+          <div className="text-center sm:text-left">
+            <p className="text-[11px] tracking-[2px] uppercase font-bold text-[#fa632e] mb-3">BRUNO × OVC</p>
+            <h2 className="text-3xl sm:text-4xl font-semibold text-gray-900 tracking-tight mb-3">Tu mundo, en una tarjeta. La creamos por ti.</h2>
+            <p className="text-gray-700 mb-6 max-w-xl">Diseñamos y configuramos tu tarjeta BRUNO, su enlace y su QR digital, con una ronda de ajustes. Un solo pago: COP $30.000 en Colombia o US$30 en Estados Unidos.</p>
+            <ServicePromoBubble variant="banner" from="/website#servicio-tarjeta" />
           </div>
         </div>
       </section>

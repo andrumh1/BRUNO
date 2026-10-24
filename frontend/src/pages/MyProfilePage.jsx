@@ -1,3 +1,4 @@
+import { ServicePromoBubble } from "@/components/bruno/ServicePromoBubble";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import ShareImageSheet from "@/components/bruno/ShareImageSheet";
 import ScheduledStories from "@/components/bruno/ScheduledStories";
@@ -805,6 +806,7 @@ const MyProfilePage = () => {
                 <Plus className="w-3.5 h-3.5 mr-1" />
                 Nueva Tarjeta
               </Button>
+              <ServicePromoBubble variant="icon" from="/my-profile?tab=cards" />
               <Button size="sm" variant="outline" onClick={() => navigate("/nfc/manage")} className="rounded-full">
                 <Nfc className="w-3.5 h-3.5 mr-1" />
                 NFC

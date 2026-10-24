@@ -1,3 +1,4 @@
+import ServiceRedirect from "@/components/bruno/ServicePromoBubble";
 import React, { Suspense } from "react";
 import axios from "axios";
 import { lazyPage } from "@/lib/lazyPage";
@@ -156,6 +157,7 @@ function AppRouter() {
       <Route path="/sound/:postId" element={<SoundPage />} />
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/website" element={<BrunoWebsite />} />
+      <Route path="/servicios/tarjeta-bruno" element={<ServiceRedirect />} />
       <Route path="/bruno" element={<BrunoWebsite />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />

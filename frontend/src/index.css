@@ -1603,3 +1603,11 @@ button, a, [role="button"], input, select, textarea, label { touch-action: manip
   .glass-card, .reel-chrome, nav, [data-testid="mobile-bottom-nav"] { will-change: transform; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+/* Acceso promocional «Creamos tu tarjeta» (estilo del paquete BRUNO + OVC) */
+.bruno-service-promo{display:inline-flex;gap:10px;align-items:center;border:1px solid #ffffffb3;border-radius:999px;background:linear-gradient(135deg,#ffffff66,#ffb36c33);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);padding:12px 18px;color:inherit;text-decoration:none;box-shadow:inset 0 1px 0 #fff;font-weight:600;transition:transform .2s,box-shadow .2s}
+.bruno-service-promo:hover{transform:translateY(-2px);box-shadow:inset 0 1px 0 #fff,0 8px 20px #ec702429}
+.bruno-service-promo:focus-visible{outline:3px solid #fa632e;outline-offset:3px}
+.bruno-service-promo--icon{padding:6px 12px;font-size:12px;height:32px}
+.dark .bruno-service-promo{background:linear-gradient(135deg,#ffffff1f,#ffb36c2e);border-color:#ffffff40;box-shadow:inset 0 1px 0 #ffffff33}
+@media (max-width:420px){.bruno-service-promo--icon .bruno-service-promo__text{display:none}.bruno-service-promo--icon{width:32px;justify-content:center;padding:0}}
