@@ -5,7 +5,7 @@ import { useNavScroll } from "@/contexts/NavScrollContext";
 import { useBrunoCamera } from "@/contexts/BrunoCameraContext";
 import BrunoPublishMenu from "@/components/bruno/BrunoPublishMenu";
 import axios from "axios";
-import { isVideoFile, videoTooLarge, videoTooLargeMsg, setVideoLimit } from "@/lib/media";
+import { isVideoFile, videoTooLarge, videoTooLargeMsg, setVideoLimit, sniffMediaKind, UNSUPPORTED_MEDIA_MSG } from "@/lib/media";
 import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
 import { setPendingMedia } from "@/lib/pendingMedia";
 import { triggerHaptic } from "@/native/nativeApis";
@@ -295,9 +295,22 @@ const MobileBottomNav = () => {
 
           // Route by type
           // Elegir un archivo NUNCA publica: va al editor (video) o al compositor (imagen) y se publica con un botón explícito.
-          const toEditor = (f) => { setPendingMedia(f, { type }); navigate(isVideoFile(f) ? "/camera?import=1" : "/compose?import=1"); };
+          // Devuelve false para mantener el menú abierto y permitir reintentar (mismo archivo incluido).
+          const toEditor = async (f) => {
+            const { brunoToast } = await import("@/components/bruno/BrunoToast");
+            const kind = await sniffMediaKind(f);
+            if (!kind) { brunoToast.error("Archivo no compatible", { description: UNSUPPORTED_MEDIA_MSG }); return false; }
+            if (kind === "video") {
+              const lim = await getUploadLimits(token).catch(() => null); if (lim?.video_max_bytes) setVideoLimit(lim.video_max_bytes);
+              if (videoTooLarge(f)) { brunoToast.error("Video demasiado grande", { description: videoTooLargeMsg() }); return false; }
+            }
+            const file = kind === "video" && !isVideoFile(f) ? new File([f], `${f.name || "video"}.mp4`, { type: "video/mp4", lastModified: f.lastModified }) : f;
+            setPendingMedia(file, { type, kind });
+            navigate(kind === "video" ? `/camera?import=${Date.now()}` : `/compose?import=${Date.now()}`);
+            return true;
+          };
           if (type === "post") {
-            if (source === "gallery" && file) { toEditor(file); return; }
+            if (source === "gallery" && file) return toEditor(file);
             if (source === "camera") {
               openCamera({ mode: "both", onCapture: async (capturedFile, meta) => publishPost(capturedFile, meta) });
               return;
@@ -311,7 +324,7 @@ const MobileBottomNav = () => {
           }
           if (type === "reel") {
             // Reels are permanent video posts (not 24h stories)
-            if (source === "gallery" && file) { toEditor(file); return; }
+            if (source === "gallery" && file) return toEditor(file);
             openCamera({
               mode: "video",
               onCapture: async (capturedFile, meta) => publishPost(capturedFile, meta),

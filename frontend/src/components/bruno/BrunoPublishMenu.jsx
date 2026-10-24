@@ -54,6 +54,13 @@ export default function BrunoPublishMenu({ open, onClose, onPick }) {
     setStep(2);
   };
 
+  const waitToastRef = useRef(null);
+  const dismissWait = () => {
+    if (!waitToastRef.current) return;
+    const id = waitToastRef.current; waitToastRef.current = null;
+    import("@/components/bruno/BrunoToast").then(({ brunoToast }) => brunoToast.dismiss(id));
+  };
+
   const handleSourceSelect = (s) => {
     if (!type) return;
     if (s.id === "gallery") {
@@ -64,6 +71,10 @@ export default function BrunoPublishMenu({ open, onClose, onPick }) {
       if (fileInputRef.current) {
         fileInputRef.current.accept = accept;
         fileInputRef.current.click();
+        // Feedback mientras el sistema prepara el archivo (iPhone exporta los videos antes de entregarlos).
+        const id = `pick-${Date.now()}`; waitToastRef.current = id;
+        import("@/components/bruno/BrunoToast").then(({ brunoToast }) => { if (waitToastRef.current === id) brunoToast.loading("Esperando tu selección…", { id, description: "Los videos largos pueden tardar unos segundos en prepararse." }); });
+        setTimeout(() => { if (waitToastRef.current === id) dismissWait(); }, 90_000);
       }
       return;
     }
@@ -71,14 +82,24 @@ export default function BrunoPublishMenu({ open, onClose, onPick }) {
     onClose?.();
   };
 
-  const handleFileChosen = (e) => {
+  const handleFileChosen = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
+    dismissWait();
     if (!file) return;
     pickedFileRef.current = file;
-    onPick?.({ type: type.id, source: "gallery", file });
-    e.target.value = "";
-    onClose?.();
+    const keep = await onPick?.({ type: type.id, source: "gallery", file });
+    if (keep !== false) onClose?.();
   };
+
+  // El usuario cerró la galería sin elegir: quitar la espera y dejar el menú listo para reintentar (mismo archivo incluido).
+  React.useEffect(() => {
+    const el = fileInputRef.current;
+    if (!el || !open) return undefined;
+    const onCancel = () => dismissWait();
+    el.addEventListener("cancel", onCancel);
+    return () => { el.removeEventListener("cancel", onCancel); dismissWait(); };
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <AnimatePresence>

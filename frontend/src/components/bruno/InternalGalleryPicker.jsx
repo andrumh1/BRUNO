@@ -50,8 +50,10 @@ export default function InternalGalleryPicker({
     return () => clearTimeout(id);
   }, [open]);
 
-  // Release object URLs on close to avoid memory leaks
-  useEffect(() => () => items.forEach((it) => URL.revokeObjectURL(it.url)), [items]);
+  // Release object URLs only when the picker closes (revoking on every change broke thumbnails of files still selected)
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  useEffect(() => { if (!open) itemsRef.current.forEach((it) => URL.revokeObjectURL(it.url)); }, [open]);
 
   const handleFiles = (e) => {
     const list = Array.from(e.target.files || []);

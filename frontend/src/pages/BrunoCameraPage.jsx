@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { isVideoFile } from "@/lib/media";
+import { isVideoFile, fileExt, sniffMediaKind, PREVIEW_UNAVAILABLE_MSG, UNSUPPORTED_MEDIA_MSG } from "@/lib/media";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import InternalGalleryPicker from "@/components/bruno/InternalGalleryPicker";
@@ -11,7 +11,7 @@ import * as faceapi from "face-api.js";
 import StoryPlacePicker from "@/components/StoryPlacePicker";
 import { VideoTrimCover, UploadProgress, DraftsSheet } from "@/components/camera/VideoPublishTools";
 import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
-import { takePendingMedia } from "@/lib/pendingMedia";
+import { takePendingMedia, PENDING_MEDIA_EVENT } from "@/lib/pendingMedia";
 import { setVideoLimit, videoTooLarge, videoTooLargeMsg } from "@/lib/media";
 import {
   Camera,
@@ -193,19 +193,25 @@ const BrunoCameraPage = () => {
   useEffect(() => { if (token) axios.get(`${API}/post-drafts`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setDraftCount(r.data.length)).catch(() => {}); }, [token]);
   useEffect(() => { if (searchParams.get("drafts") === "1") setDraftsOpen(true); }, [searchParams]);
   // Archivo elegido desde el menú Publicar → abre el editor (recorte, portada, texto) sin publicar nada.
-  useEffect(() => {
-    if (searchParams.get("import") !== "1") return;
+  // Se consume al montar y también si el archivo llega con la página ya abierta (misma URL): nunca se pierde la selección.
+  const importPending = useCallback(() => {
     const p = takePendingMedia(); if (!p?.file) return;
-    const file = p.file; const isVideo = isVideoFile(file);
-    setCapturedMedia({ type: isVideo ? "video" : "photo", data: URL.createObjectURL(file), blob: file, fileKey: `${file.size}_${file.lastModified}`, lastModified: file.lastModified });
+    const file = p.file; const isVideo = p.meta?.kind === "video" || isVideoFile(file);
+    setCapturedMedia((prev) => {
+      if (prev?.data && !prev.remote) { try { URL.revokeObjectURL(prev.data); } catch { /* ignore */ } }
+      return { type: isVideo ? "video" : "photo", data: URL.createObjectURL(file), blob: file, fileKey: `${file.size}_${file.lastModified}`, lastModified: file.lastModified, ext: fileExt(file) || (isVideo ? "mp4" : "jpg") };
+    });
+    setPreviewError(null); setUpload({ pct: 0, phase: null, error: null });
     if (isVideo) setMode("video60");
-  }, [searchParams]);
+  }, []);
+  useEffect(() => { if (searchParams.get("import")) importPending(); }, [searchParams, importPending]);
+  useEffect(() => { window.addEventListener(PENDING_MEDIA_EVENT, importPending); return () => window.removeEventListener(PENDING_MEDIA_EVENT, importPending); }, [importPending]);
+  const [previewError, setPreviewError] = useState(null);
 
   /* Sube el video/foto con progreso real; aplica recorte y portada elegidos en la vista previa. Reutiliza el media de un borrador. */
   const uploadMedia = async () => {
     if (capturedMedia.remote && capturedMedia.up) return capturedMedia.up;
-    const resp = await fetch(capturedMedia.data);
-    const blob = await resp.blob();
+    const blob = capturedMedia.blob || await (await fetch(capturedMedia.data)).blob();
     const ext = capturedMedia.type === "photo" ? "jpg" : (capturedMedia.ext || (blob.type.includes("mp4") ? "mp4" : "webm"));
     const fileName = `bruno_${capturedMedia.fileKey || Date.now()}.${ext}`;
     setUpload({ pct: 0, phase: "upload", error: null });
@@ -814,7 +820,10 @@ const BrunoCameraPage = () => {
             {capturedMedia.type === "photo" ? (
               <img src={capturedMedia.data} alt="Captured" className="w-full h-full object-cover" style={getFilterStyle()} />
             ) : (
-              <video src={capturedMedia.data} controls loop autoPlay className="w-full h-full object-cover" style={getFilterStyle()} />
+              <video src={capturedMedia.data} controls loop autoPlay playsInline className="w-full h-full object-cover" style={getFilterStyle()} onError={() => setPreviewError(PREVIEW_UNAVAILABLE_MSG)} onLoadedData={() => setPreviewError(null)} data-testid="camera-preview-video" />
+            )}
+            {previewError && (
+              <div className="absolute left-3 right-14 top-20 rounded-2xl bg-black/70 backdrop-blur-sm border border-white/15 px-3 py-2 text-[11px] text-white/90" data-testid="camera-preview-notice">{previewError}</div>
             )}
           </div>
         )}
@@ -1235,12 +1244,16 @@ const BrunoCameraPage = () => {
           onClose={() => setGalleryOpen(false)}
           accept={mode !== "photo" ? "video/*" : "image/*,video/*"}
           multiple={false}
-          onConfirm={(files) => {
+          onConfirm={async (files) => {
             const file = files[0];
             if (!file) return;
+            const kind = await sniffMediaKind(file);
+            if (!kind) { const { brunoToast } = await import("@/components/bruno/BrunoToast"); brunoToast.error("Archivo no compatible", { description: UNSUPPORTED_MEDIA_MSG }); return; }
+            const isVideo = kind === "video";
+            if (isVideo) { const lim = await getUploadLimits(token).catch(() => null); if (lim?.video_max_bytes) setVideoLimit(lim.video_max_bytes); if (videoTooLarge(file)) { const { brunoToast } = await import("@/components/bruno/BrunoToast"); brunoToast.error("Video demasiado grande", { description: videoTooLargeMsg() }); return; } }
             const url = URL.createObjectURL(file);
-            const isVideo = isVideoFile(file);
-            setCapturedMedia({ type: isVideo ? "video" : "photo", data: url, blob: file, fileKey: `${file.size}_${file.lastModified}`, lastModified: file.lastModified });
+            setPreviewError(null); setUpload({ pct: 0, phase: null, error: null });
+            setCapturedMedia({ type: isVideo ? "video" : "photo", data: url, blob: file, fileKey: `${file.size}_${file.lastModified}`, lastModified: file.lastModified, ext: fileExt(file) || (isVideo ? "mp4" : "jpg") });
             if (isVideo && mode !== "video15" && mode !== "video60") setMode("video15");
           }}
         />
