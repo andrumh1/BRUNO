@@ -187,7 +187,7 @@ async def get_my_cards(
 ):
     """User's own cards for panel & management."""
     cards = await db.cards.find(
-        {"user_id": current_user.id}, {"_id": 0}
+        {"user_id": current_user.id, "production_hidden": {"$ne": True}}, {"_id": 0}
     ).sort([("sort_order", 1), ("created_at", -1)]).skip(skip).limit(limit).to_list(limit)
 
     return [Card(**_deserialize(c)) for c in cards]

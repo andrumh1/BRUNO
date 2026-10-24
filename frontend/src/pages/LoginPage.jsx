@@ -15,11 +15,13 @@ import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+const safeRedirect = () => { const q = new URLSearchParams(window.location.search); const r = q.get("next") || q.get("redirect"); return r && /^\/[^/\\]/.test(r) ? r : "/my-profile"; };
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, logout, user: sessionUser, isAuthenticated, isLoading: authLoading } = useAuth();
   const [switching, setSwitching] = useState(false);
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({ email: new URLSearchParams(window.location.search).get("email") || "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -53,7 +55,7 @@ const LoginPage = () => {
       const me = await axios.get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${stored}` } });
       if (isAuthenticated && sessionUser && sessionUser.id !== me.data.id) await logout();
       await login(me.data, me.data.refreshed_token || stored);
-      navigate("/my-profile");
+      navigate(safeRedirect());
     } catch (e) {
       const st = e?.response?.status;
       setError(st === 401 || e.message === "no-token" ? "La sesión guardada de esta cuenta caducó o fue revocada. Entra con tu contraseña." : e.message === "bio-cancel" ? "Biometría cancelada." : "No se pudo restaurar la sesión.");
@@ -104,7 +106,7 @@ const LoginPage = () => {
       } catch (_) { /* no-op */ }
       await login(response.data.user, response.data.access_token);
       const next = new URLSearchParams(window.location.search).get("next");
-      navigate(next && next.startsWith("/") ? next : "/my-profile");
+      navigate(safeRedirect());
     } catch (err) {
       const status = err.response?.status;
       setError(status === 429 ? (err.response?.data?.detail || "Demasiados intentos. Espera unos minutos.") : status === 401 ? "Correo o contraseña incorrectos" : (err.response?.data?.detail || "No se pudo iniciar sesión. Inténtalo de nuevo."));
@@ -283,7 +285,7 @@ const LoginPage = () => {
 
           <p className="text-center text-sm text-muted-foreground mt-6">
             ¿No tienes una cuenta?{" "}
-            <Link to="/register" className="text-primary font-medium hover:underline">
+            <Link to={`/register${window.location.search}`} className="text-primary font-medium hover:underline">
               Regístrate
             </Link>
           </p>

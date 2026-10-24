@@ -175,7 +175,7 @@ function render(){
  const valid=payment?.url&&/^https:\/\//.test(payment.url);
  const bank=payment?.bankDetails;
  document.getElementById('paymentInfo').textContent=valid?tr('Pago disponible para este país. Acordaremos la entrega antes del pago.','Payment available for this country. We will agree on delivery before payment.'):bank||tr('Los datos de pago de este país todavía no están habilitados. Envíanos tu solicitud para coordinar el pago con BRUNO.','Payment details for this country are not available yet. Submit your request to arrange payment with BRUNO.');
- const a=document.getElementById('paymentLink');a.href=valid?payment.url:'mailto:bruno@brunocard.com?subject='+encodeURIComponent(`BRUNO · ${market} · ${price()}`);a.textContent=valid?tr('Ver forma de pago ↗','View payment method ↗'):tr('Consultar forma de pago ↗','Ask about payment ↗');
+ const a=document.getElementById('paymentLink');a.href=valid?payment.url:bank?'#solicitud':'mailto:bruno@brunocard.com?subject='+encodeURIComponent(`BRUNO · ${market} · ${price()}`);a.textContent=valid?tr('Ver forma de pago ↗','View payment method ↗'):bank?tr('Enviar solicitud y pagar ↗','Submit request and pay ↗'):tr('Consultar forma de pago ↗','Ask about payment ↗');if(bank&&!valid)a.setAttribute('data-open-request','');
  document.getElementById('regionHint').textContent=tr('Oferta local: Colombia COP $30.000 · Estados Unidos US$30. Puedes cambiar país e idioma arriba.','Local offer: Colombia COP $30.000 · United States US$30. Change country and language above.')+' '+(geoKnown?'':tr('Confirma tu país antes de enviar.','Confirm your country before submitting.'));
  window.BRUNO_LOCALE={market,lang,price:price(),t:tr};window.dispatchEvent(new Event('bruno:locale'));
 }

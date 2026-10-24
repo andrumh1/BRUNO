@@ -30,7 +30,7 @@ import {
   Check,
   Loader2,
   Smartphone,
-  Languages, Sun, Monitor, Sparkles, Upload, Fingerprint } from "lucide-react";
+  Languages, Sun, Monitor, Sparkles, Upload, Fingerprint, Package } from "lucide-react";
 import { isNative } from "@/native/capacitor";
 import { biometricInfo, authenticateBiometric, getBiometricLock, setBiometricLock } from "@/native/biometric";
 
@@ -84,6 +84,8 @@ const BiometricRow = () => {
 const SettingsPage = () => {
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
+  const [staffAccess, setStaffAccess] = useState(false);
+  useEffect(() => { if (!token) return; axios.get(`${API}/bruno-service/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setStaffAccess(!!r.data?.staff)).catch(() => {}); }, [token]);
   const [prefs, setPrefs] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -464,6 +466,18 @@ const SettingsPage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Equipo BRUNO: pedidos del servicio «Creamos tu tarjeta» (solo admin / producción) */}
+            {staffAccess && (
+              <Card data-testid="settings-staff-card">
+                <CardContent className="p-4">
+                  <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Equipo BRUNO</h2>
+                  <div className="divide-y">
+                    <OptionRow icon={Package} label="Pedidos · Creamos tu tarjeta" onClick={() => navigate("/admin/pedidos")} />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Legal */}
             <Card>

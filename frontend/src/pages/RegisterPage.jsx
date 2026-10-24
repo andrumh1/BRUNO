@@ -14,7 +14,8 @@ const API = `${BACKEND_URL}/api`;
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
+  const [formData, setFormData] = useState({ name: "", email: new URLSearchParams(window.location.search).get("email") || "", password: "" });
+  const redirectTo = (() => { const q = new URLSearchParams(window.location.search); const r = q.get("next") || q.get("redirect"); return r && /^\/[^/\\]/.test(r) ? r : "/my-profile"; })();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -38,7 +39,7 @@ const RegisterPage = () => {
     try {
       const response = await axios.post(`${API}/auth/register`, formData, { withCredentials: true });
       login(response.data.user, response.data.access_token);
-      navigate("/my-profile");
+      navigate(redirectTo);
     } catch (err) {
       setError(err.response?.data?.detail || "Error al registrarse");
     } finally {

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ensureCardFonts } from "@/lib/fonts";
+import axios from "axios";
 import { ArrowLeft, Undo2, Redo2, Smartphone, Tablet, Monitor, Eye, Rocket, Check, Loader2, AlertCircle, Type, Image as ImageIcon, Share2, Palette, LayoutGrid, Sparkles, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -45,6 +46,7 @@ export default function CardBuilderPage() {
   const { cardId } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
+  const orderId = new URLSearchParams(window.location.search).get("order");
   const b = useCardBuilder({ cardId, token, onCreated: (id) => navigate(`/cards/${id}/edit`, { replace: true }) });
   const [tab, setTab] = useState("content");
   const [device, setDevice] = useState("mobile");
@@ -54,6 +56,17 @@ export default function CardBuilderPage() {
   if (b.status === "loading" || !b.card) return b.error ? <div className="min-h-screen flex items-center justify-center text-center p-6"><div><AlertCircle className="w-10 h-10 mx-auto text-destructive mb-3" /><p className="font-semibold">{b.error}</p><Button className="mt-4" onClick={() => navigate("/my-profile")}>Volver</Button></div></div> : <BrunoLoader />;
   const { card } = b;
   const canPublish = !!card.title?.trim();
+
+  const sendForApproval = async () => {
+    if (!canPublish) { brunoToast.error("Escribe un nombre o título antes de enviar"); setTab("content"); return; }
+    const id = await b.save();
+    if (!id) return;
+    try {
+      const r = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/bruno-service/orders/${orderId}/send-review`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      brunoToast.success(`Enviada para aprobación (versión ${r.data.version})`);
+      navigate(`/admin/pedidos/${orderId}`);
+    } catch (e) { brunoToast.error(e.response?.data?.detail || "No se pudo enviar para aprobación"); }
+  };
 
   const publish = async () => {
     if (!canPublish) { brunoToast.error("Escribe un nombre o título antes de publicar"); setTab("content"); return; }
@@ -72,16 +85,20 @@ export default function CardBuilderPage() {
     <div className="min-h-screen bg-background pb-28 lg:pb-0" data-testid="card-builder-page">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-xl">
         <div className="px-3 sm:px-5 h-14 flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} data-testid="builder-back-btn"><ArrowLeft className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => (orderId ? navigate(`/admin/pedidos/${orderId}`) : navigate(-1))} data-testid="builder-back-btn"><ArrowLeft className="w-5 h-5" /></Button>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold leading-tight tracking-tight">BRUNO Card Builder</div>
+            <div className="text-sm font-bold leading-tight tracking-tight">{orderId ? "Pedido · tarjeta en preparación" : "BRUNO Card Builder"}</div>
             <SaveStatus status={b.status} />
           </div>
           <div className="hidden sm:flex items-center gap-1 mr-1">
             <Button variant="ghost" size="icon" onClick={b.undo} disabled={!b.canUndo} title="Deshacer" data-testid="undo-btn"><Undo2 className="w-4 h-4" /></Button>
             <Button variant="ghost" size="icon" onClick={b.redo} disabled={!b.canRedo} title="Rehacer" data-testid="redo-btn"><Redo2 className="w-4 h-4" /></Button>
           </div>
-          <Button onClick={publish} className="rounded-full" disabled={b.status === "saving"} data-testid="publish-btn"><Rocket className="w-4 h-4 mr-1.5" />{card.is_draft ? "Publicar" : "Guardar y ver"}</Button>
+          {orderId ? (
+            <Button onClick={sendForApproval} className="rounded-full" disabled={b.status === "saving"} data-testid="send-approval-btn"><Rocket className="w-4 h-4 mr-1.5" />Enviar para aprobación</Button>
+          ) : (
+            <Button onClick={publish} className="rounded-full" disabled={b.status === "saving"} data-testid="publish-btn"><Rocket className="w-4 h-4 mr-1.5" />{card.is_draft ? "Publicar" : "Guardar y ver"}</Button>
+          )}
         </div>
       </header>
 

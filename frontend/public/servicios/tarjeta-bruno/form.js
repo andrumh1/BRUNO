@@ -16,6 +16,10 @@ form.addEventListener('submit',async event=>{
   if(response.status===401){const signIn=document.getElementById('signInLink');if(formConfig.authUrl!==null){if(formConfig.authUrl)signIn.href=formConfig.authUrl;signIn.hidden=false;}show('Inicia sesión antes de enviar. Guarda tus textos antes de salir; los archivos deberán seleccionarse de nuevo.','Sign in before submitting. Save your text before leaving; files will need to be selected again.');return;}
   if(!response.ok){show(result.error||'No se pudo enviar. Revisa los campos e inténtalo de nuevo.',result.errorEn||'Unable to submit. Check required fields, file formats and size limits, then try again.');return;}
   const ref=result.id;
+  const next=document.createElement('a');next.className='btn small';next.style.cssText='margin-top:10px;display:inline-block';next.setAttribute('data-testid','order-continue-link');
+  const nextText=()=>{next.textContent=result.payAvailable?t('Continuar al pago seguro ↗','Continue to secure payment ↗'):t('Ver mi pedido ↗','View my order ↗')};
+  next.href=(result.orderUrl||('/pedido/'+ref))+'?from='+encodeURIComponent(location.pathname+location.search);nextText();window.addEventListener('bruno:locale',nextText);
+  statusEl.insertAdjacentElement('afterend',next);
   if(result.emailStatus==='accepted')show(`Solicitud recibida: ${ref}. El servicio de correo aceptó el envío a bruno@brunocard.com. No se ha realizado ningún cobro.`,`Request received: ${ref}. The email service accepted the message to bruno@brunocard.com. You have not been charged.`);
   else show(`Solicitud guardada: ${ref}. El envío por correo está pendiente; aún no podemos confirmar su llegada a bruno@brunocard.com. Puedes escribirnos indicando tu referencia. No se ha realizado ningún cobro.`,`Request saved: ${ref}. Email sending is pending; arrival at bruno@brunocard.com is not confirmed. You can email us with your reference. You have not been charged.`);
   form.reset();document.querySelectorAll('.file-list').forEach(e=>e.textContent='');document.getElementById('galleryPreview').replaceChildren();previewUrls.forEach(URL.revokeObjectURL);requestId=crypto.randomUUID();

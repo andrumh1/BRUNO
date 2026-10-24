@@ -49,6 +49,11 @@ const RegisterPage = lazyPage(() => import("@/pages/RegisterPage"));
 import AuthCallback from "@/pages/AuthCallback";
 const Dashboard = lazyPage(() => import("@/pages/Dashboard"));
 const CardBuilderPage = lazyPage(() => import("@/pages/CardBuilderPage"));
+const ServiceOrderPage = lazyPage(() => import("@/pages/service/ServiceOrderPage"));
+const ServicePaymentReturnPage = lazyPage(() => import("@/pages/service/ServicePaymentReturnPage"));
+const ServiceReviewPage = lazyPage(() => import("@/pages/service/ServiceReviewPage"));
+const AdminOrdersPage = lazyPage(() => import("@/pages/service/AdminOrdersPage"));
+const AdminOrderDetailPage = lazyPage(() => import("@/pages/service/AdminOrderDetailPage"));
 const ViewCardPage = lazyPage(() => import("@/pages/ViewCardPage"));
 const QRCodePage = lazyPage(() => import("@/pages/QRCodePage"));
 const CardTransferPage = lazyPage(() => import("@/pages/CardTransferPage"));
@@ -158,6 +163,11 @@ function AppRouter() {
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/website" element={<BrunoWebsite />} />
       <Route path="/servicios/tarjeta-bruno" element={<ServiceRedirect />} />
+      <Route path="/pedido/revisar/:token" element={<ServiceReviewPage />} />
+      <Route path="/pedido/:orderId/pago" element={<ServicePaymentReturnPage />} />
+      <Route path="/pedido/:orderId" element={<ServiceOrderPage />} />
+      <Route path="/admin/pedidos" element={<ProtectedRoute><AdminOrdersPage /></ProtectedRoute>} />
+      <Route path="/admin/pedidos/:orderId" element={<ProtectedRoute><AdminOrderDetailPage /></ProtectedRoute>} />
       <Route path="/bruno" element={<BrunoWebsite />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />

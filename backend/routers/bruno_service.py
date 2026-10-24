@@ -200,7 +200,9 @@ async def create_request(request: Request, requestId: str = Form(...), type: str
     rec = {"id": req_id, "created_at": _now().isoformat(), "market": market, "language": "en" if language == "en" else "es", "currency": offer["currency"], "amount": offer["amount"],
            "type": type, "name": _clean(name, 120), "email": email_c, "phone": _clean(phone, 40), "card_name": _clean(cardName, 120), "template": _clean(template, 60), "description": _clean(description, 4000),
            "links": _clean(links, 2000), "notes": _clean(notes, 2000), "consent_at": _now().isoformat(), "files": stored, "user_id": user.id if user else None, "ip_hash": hashlib.sha256(ip.encode()).hexdigest()[:16],
-           "payment_status": "unpaid", "email_status": "pending", "email_attempts": 0, "recipient": RECIPIENT}
+           "payment_status": "unpaid", "email_status": "pending", "email_attempts": 0, "recipient": RECIPIENT,
+           "production_status": "received", "card_id": None, "review_version": 0, "delivered_at": None, "recipient_verified_at": _now().isoformat() if user else None,
+           "history": [{"at": _now().isoformat(), "action": "status:received", "by": user.id if user else None}]}
     await db.service_requests.insert_one(dict(rec))
     _rate_hit(f"ip:{ip}")
     if user:
@@ -209,13 +211,22 @@ async def create_request(request: Request, requestId: str = Form(...), type: str
     rec2 = await db.service_requests.find_one({"id": req_id}, {"_id": 0, "email_status": 1})
     if rec2["email_status"] == "failed":
         asyncio.create_task(_deliver(req_id, attempts=3))
-    return {"id": req_id, "emailStatus": rec2["email_status"]}
+    from routers.bruno_orders import send_client_confirmation, _provider_ready
+    asyncio.create_task(send_client_confirmation(rec))
+    return {"id": req_id, "emailStatus": rec2["email_status"], "payAvailable": _provider_ready(market), "orderUrl": f"/pedido/{req_id}"}
 
 
 # ---------- administración (acceso privado) ----------
+STAFF_ROLES = ("admin", "superadmin", "super_admin", "produccion")
+
+
+def is_staff(user) -> bool:
+    return bool(user) and (getattr(user, "role", None) in STAFF_ROLES or getattr(user, "is_admin", False))
+
+
 def _admin(user: User):
-    if getattr(user, "role", None) not in ("admin", "superadmin") and not getattr(user, "is_admin", False):
-        raise HTTPException(status_code=403, detail="Solo administradores")
+    if not is_staff(user):
+        raise HTTPException(status_code=403, detail="Solo equipo autorizado de BRUNO")
 
 
 @router.get("/requests")
@@ -244,14 +255,3 @@ async def resend_request(req_id: str, user: User = Depends(get_current_user)):
     return await db.service_requests.find_one({"id": req_id}, {"_id": 0, "id": 1, "email_status": 1, "email_attempts": 1, "email_error": 1})
 
 
-@router.post("/requests/{req_id}/payment")
-async def mark_payment(req_id: str, body: dict, user: User = Depends(get_current_user)):
-    """Conciliación administrativa: solo un administrador marca pagado, con referencia del proveedor. Nunca el cliente."""
-    _admin(user)
-    status = body.get("status")
-    if status not in ("unpaid", "paid", "refunded"):
-        raise HTTPException(status_code=400, detail="Estado inválido")
-    r = await db.service_requests.update_one({"id": req_id}, {"$set": {"payment_status": status, "payment_reference": _clean(body.get("reference"), 120), "payment_marked_by": user.id, "payment_marked_at": _now().isoformat()}})
-    if not r.matched_count:
-        raise HTTPException(status_code=404, detail="No encontrada")
-    return {"ok": True}

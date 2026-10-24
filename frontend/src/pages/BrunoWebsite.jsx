@@ -1,556 +1,186 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { ArrowLeft, ArrowRight, CreditCard, Languages, Mail, Map, Menu, Nfc, QrCode, Radio, Search, ShoppingBag, Sparkles, Video, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ServicePromoBubble, serviceLang } from "@/components/bruno/ServicePromoBubble";
-import { 
-  ChevronRight, 
-  CreditCard, 
-  MessageCircle, 
-  Map, 
-  ShoppingBag, 
-  Smartphone,
-  Zap,
-  Shield,
-  Globe,
-  Users,
-  Star,
-  Play,
-  Check,
-  ArrowRight,
-  Sparkles,
-  Mail,
-  Phone,
-  MapPin,
-  Instagram,
-  Twitter,
-  Linkedin,
-  Facebook,
-  Menu,
-  X
-} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { ServicePromoBubble } from "@/components/bruno/ServicePromoBubble";
+import { OvcAttribution } from "@/components/brand/OvcAttribution";
 
-// Animated counter component
-const AnimatedCounter = ({ end, duration = 2000, suffix = "" }) => {
-  const [count, setCount] = useState(0);
+const LANG_KEY = "bruno-service-language";
+const readLang = () => { try { const v = localStorage.getItem(LANG_KEY); if (v === "en" || v === "es") return v; } catch { /* ignore */ } return (navigator.language || "es").toLowerCase().startsWith("en") ? "en" : "es"; };
 
-  useEffect(() => {
-    let startTime;
-    const animate = (currentTime) => {
-      if (!startTime) startTime = currentTime;
-      const progress = Math.min((currentTime - startTime) / duration, 1);
-      setCount(Math.floor(progress * end));
-      if (progress < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-  }, [end, duration]);
-
-  return <span>{count.toLocaleString()}{suffix}</span>;
+const COPY = {
+  es: {
+    nav: ["Tarjetas", "Marketplace", "Reels", "En vivo", "Mapa"], service: "Creamos tu tarjeta", login: "Entrar", signup: "Crear cuenta gratis", profile: "Ir a mi perfil", back: "Volver a la app",
+    heroEyebrow: "Una nueva forma de conectar", heroTitle: "Tu mundo, en un solo enlace.", heroText: "BRUNO reúne tu tarjeta digital, lo que vendes, lo que creas y dónde estás. Base gratuita, con servicios opcionales si quieres que lo hagamos por ti.",
+    heroCta: "Empezar gratis", heroAlt: "Ver ejemplos de tarjetas", free: "Experiencia base gratuita · Servicios opcionales de pago",
+    focusTitle: "Cinco formas de presentarte", focusText: "Todo vive en la misma cuenta y se comparte con un enlace o un QR.",
+    f: [
+      { t: "Tarjetas digitales", d: "Presenta tu identidad, tu negocio y tus redes con un enlace y un QR. Compatible con NFC en productos compatibles.", cta: "Ver ejemplos", bullets: ["Enlace y QR propios", "Personal, negocio, currículum, guardián o mascota", "NFC con productos compatibles"] },
+      { t: "Marketplace", d: "Muestra productos y servicios y conecta con compradores desde tu propio espacio en BRUNO.", cta: "Explorar Marketplace", bullets: ["Publica productos y servicios", "Compradores te contactan en BRUNO", "Pedidos y compras en un solo lugar"] },
+      { t: "Reels y comunidad", d: "Comparte videos, talento y proyectos. Organiza tus series propias o autorizadas y deja que la comunidad te siga.", cta: "Ver Reels", bullets: ["Videos y publicaciones", "Series por capítulos", "Historias y comunidad"] },
+      { t: "En vivos", d: "Conecta con tu audiencia en tiempo real desde la app y conserva el resumen de cada transmisión.", cta: "Ver en vivos", bullets: ["Transmite desde tu celular", "Audiencia en tiempo real", "Resumen al terminar"] },
+      { t: "Mapa y búsqueda", d: "Descubre personas, negocios y contenido según tus intereses y la ubicación que decidas compartir.", cta: "Abrir el mapa", bullets: ["Ubicación solo si la autorizas", "Lugares populares y cercanos", "Búsqueda por intereses"] },
+    ],
+    serviceEyebrow: "BRUNO × OVC", serviceTitle: "Tu mundo, en una tarjeta. La creamos por ti.", serviceText: "Diseñamos y configuramos tu tarjeta BRUNO, su enlace y su QR digital, con una ronda de ajustes. Un solo pago: COP $30.000 en Colombia o US$30 en Estados Unidos.",
+    priceTitle: "Gratis en su base. Opcional cuando quieras más.", priceText: "Crear tu cuenta, tu tarjeta, publicar, vender y transmitir no tiene costo. Pagas solo por servicios opcionales:",
+    priceItems: [["Creamos tu tarjeta", "COP $30.000 (Colombia) · US$30 (Estados Unidos). Pago único, una ronda de ajustes."], ["Productos NFC compatibles", "Disponibles en la tienda BRUNO según existencias."]],
+    store: "Ver tienda", contactTitle: "¿Hablamos?", contactText: "Escríbenos para pedidos, alianzas o soporte.", legal: ["Términos", "Privacidad", "Cookies", "Centro legal", "Ayuda", "Contacto"], owner: "BRUNO pertenece a Octopus Vision Company.",
+  },
+  en: {
+    nav: ["Cards", "Marketplace", "Reels", "Live", "Map"], service: "We create your card", login: "Sign in", signup: "Create free account", profile: "Go to my profile", back: "Back to the app",
+    heroEyebrow: "A new way to connect", heroTitle: "Your world, in a single link.", heroText: "BRUNO brings together your digital card, what you sell, what you create and where you are. Free at its core, with optional services if you want us to do it for you.",
+    heroCta: "Start for free", heroAlt: "See card examples", free: "Free base experience · Optional paid services",
+    focusTitle: "Five ways to present yourself", focusText: "Everything lives in the same account and is shared with a link or a QR.",
+    f: [
+      { t: "Digital cards", d: "Present your identity, business and social links with a link and a QR. NFC-ready with compatible products.", cta: "See examples", bullets: ["Your own link and QR", "Personal, business, résumé, guardian or pet", "NFC with compatible products"] },
+      { t: "Marketplace", d: "Show products and services and connect with buyers from your own space in BRUNO.", cta: "Explore Marketplace", bullets: ["Publish products and services", "Buyers reach you inside BRUNO", "Orders and purchases in one place"] },
+      { t: "Reels & community", d: "Share videos, talent and projects. Organize your own or authorized series and let the community follow you.", cta: "Watch Reels", bullets: ["Videos and posts", "Series by chapters", "Stories and community"] },
+      { t: "Live", d: "Connect with your audience in real time from the app and keep a summary of every broadcast.", cta: "See live streams", bullets: ["Stream from your phone", "Real-time audience", "Summary when you finish"] },
+      { t: "Map & search", d: "Discover people, businesses and content by interests and the location you choose to share.", cta: "Open the map", bullets: ["Location only if you authorize it", "Popular and nearby places", "Search by interests"] },
+    ],
+    serviceEyebrow: "BRUNO × OVC", serviceTitle: "Your world, in one card. We create it for you.", serviceText: "We design and set up your BRUNO card, its link and its digital QR, with one round of adjustments. One payment: COP $30.000 in Colombia or US$30 in the United States.",
+    priceTitle: "Free at its core. Optional when you want more.", priceText: "Creating your account, your card, publishing, selling and streaming is free. You only pay for optional services:",
+    priceItems: [["We create your card", "COP $30.000 (Colombia) · US$30 (United States). One-time payment, one round of adjustments."], ["Compatible NFC products", "Available in the BRUNO store while stocks last."]],
+    store: "Visit store", contactTitle: "Let's talk", contactText: "Write to us for orders, partnerships or support.", legal: ["Terms", "Privacy", "Cookies", "Legal center", "Help", "Contact"], owner: "BRUNO belongs to Octopus Vision Company.",
+  },
 };
+const FOCUS = [
+  { id: "tarjetas", icon: CreditCard, to: "/cards/examples", img: "/servicios/tarjeta-bruno/assets/personas.jpeg", extra: [QrCode, Nfc] },
+  { id: "marketplace", icon: ShoppingBag, to: "/marketplace", img: "/brand/mascot-laptop.webp" },
+  { id: "reels", icon: Video, to: "/reels", img: "/servicios/tarjeta-bruno/assets/curriculum.jpeg" },
+  { id: "envivo", icon: Radio, to: "/lives", img: "/brand/mascot-wave.webp" },
+  { id: "mapa", icon: Map, to: "/map", img: "/servicios/tarjeta-bruno/assets/guardian.jpeg", extra: [Search] },
+];
+const LEGAL = ["/terms", "/privacy", "/cookies", "/legal", "/help", "/contact"];
+const glass = "rounded-[32px] border border-white/70 bg-white/55 backdrop-blur-2xl shadow-[inset_0_1px_0_#fff,0_18px_50px_rgba(52,59,50,0.10)]";
+const reveal = { initial: { opacity: 0, y: 28 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: "-80px" }, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } };
 
-// Feature Card
-const FeatureCard = ({ icon: Icon, title, description, color }) => (
-  <div className="group p-6 bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100">
-    <div className={`w-14 h-14 rounded-2xl ${color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-      <Icon className="w-7 h-7 text-white" />
-    </div>
-    <h3 className="text-xl font-bold mb-2 text-gray-900">{title}</h3>
-    <p className="text-gray-600 leading-relaxed">{description}</p>
-  </div>
-);
-
-// Pricing Card
-const PricingCard = ({ name, price, period, features, popular, cta }) => (
-  <div className={`relative p-8 rounded-3xl ${popular ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white scale-105 shadow-2xl' : 'bg-white shadow-lg border border-gray-100'}`}>
-    {popular && (
-      <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-yellow-400 text-yellow-900 text-sm font-bold rounded-full">
-        Más Popular
-      </div>
-    )}
-    <h3 className={`text-2xl font-bold mb-2 ${popular ? 'text-white' : 'text-gray-900'}`}>{name}</h3>
-    <div className="mb-6">
-      <span className="text-4xl font-bold">${price}</span>
-      <span className={popular ? 'text-white/70' : 'text-gray-500'}>/{period}</span>
-    </div>
-    <ul className="space-y-3 mb-8">
-      {features.map((feature, i) => (
-        <li key={`feature-${i}`} className="flex items-center gap-2">
-          <Check className={`w-5 h-5 ${popular ? 'text-yellow-300' : 'text-green-500'}`} />
-          <span className={popular ? 'text-white/90' : 'text-gray-600'}>{feature}</span>
-        </li>
-      ))}
-    </ul>
-    <Button 
-      className={`w-full ${popular ? 'bg-white text-orange-600 hover:bg-gray-100' : 'bg-orange-500 hover:bg-orange-600 text-white'}`}
-      size="lg"
-    >
-      {cta}
-    </Button>
-  </div>
-);
-
-// Testimonial Card
-const TestimonialCard = ({ name, role, image, quote }) => (
-  <div className="p-6 bg-white rounded-3xl shadow-lg border border-gray-100">
-    <div className="flex items-center gap-4 mb-4">
-      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-xl">
-        {name.charAt(0)}
-      </div>
-      <div>
-        <h4 className="font-bold text-gray-900">{name}</h4>
-        <p className="text-sm text-gray-500">{role}</p>
-      </div>
-    </div>
-    <p className="text-gray-600 italic">"{quote}"</p>
-    <div className="flex gap-1 mt-4">
-      {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)}
-    </div>
-  </div>
-);
-
-const BrunoWebsite = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+export default function BrunoWebsite() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [lang, setLang] = useState(readLang);
+  const [menu, setMenu] = useState(false);
+  const c = COPY[lang];
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+  const toggle = () => { const v = lang === "es" ? "en" : "es"; setLang(v); try { localStorage.setItem(LANG_KEY, v); } catch { /* ignore */ } };
+  const go = (to) => { setMenu(false); navigate(to); };
+  const primaryCta = () => go(isAuthenticated ? "/my-profile" : "/register");
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
-      {/* Navigation */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-lg shadow-lg' : 'bg-transparent'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-xl">B</span>
-              </div>
-              <span className="text-2xl font-bold text-gray-900">BRUNO</span>
-            </Link>
-
-            {/* Desktop Menu */}
-            <div className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-gray-600 hover:text-orange-500 transition-colors">Funciones</a>
-              <a href="#pricing" className="text-gray-600 hover:text-orange-500 transition-colors">Precios</a>
-              <a href="#store" className="text-gray-600 hover:text-orange-500 transition-colors">Tienda</a>
-              <a href="#contact" className="text-gray-600 hover:text-orange-500 transition-colors">Contacto</a>
-            </div>
-
-            {/* CTA Buttons */}
-            <div className="hidden md:flex items-center gap-3">
-              <Link to="/login">
-                <Button variant="ghost">Iniciar Sesión</Button>
-              </Link>
-              <Link to="/register">
-                <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700">
-                  Comenzar Gratis
-                </Button>
-              </Link>
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button 
-              className="md:hidden p-2"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+    <div className="min-h-screen text-[#1c1c1a] bg-[radial-gradient(1200px_600px_at_80%_-10%,#ffd9bf_0%,transparent_60%),radial-gradient(900px_500px_at_-10%_30%,#ffe9d9_0%,transparent_55%),linear-gradient(180deg,#fffaf6,#ffffff_40%,#fff6ee)]" data-testid="bruno-website">
+      {/* Nav */}
+      <header className="sticky top-0 z-40 px-3 sm:px-6 pt-3" data-testid="website-nav">
+        <div className={`${glass} rounded-full flex items-center gap-2 px-3 sm:px-5 h-14 max-w-6xl mx-auto`}>
+          {isAuthenticated && <button type="button" onClick={() => go("/settings")} className="hidden sm:inline-flex w-9 h-9 rounded-full items-center justify-center hover:bg-white/70" aria-label={c.back} data-testid="website-back-app"><ArrowLeft className="w-4 h-4" /></button>}
+          <Link to="/website" className="flex items-center gap-2 shrink-0" data-testid="website-logo"><img src="/brand/logo-h-orange.png" alt="BRUNO" className="h-7 sm:h-8 object-contain" /></Link>
+          <nav className="hidden lg:flex items-center gap-1 ml-4 text-sm font-medium">
+            {FOCUS.map((f, i) => <a key={f.id} href={`#${f.id}`} className="px-3 py-1.5 rounded-full hover:bg-white/80 transition-colors">{c.nav[i]}</a>)}
+            <a href="#servicio-tarjeta" className="px-3 py-1.5 rounded-full text-[#c84a17] font-semibold hover:bg-white/80 transition-colors inline-flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" />{c.service}</a>
+          </nav>
+          <div className="ml-auto flex items-center gap-1.5">
+            <button type="button" onClick={toggle} className="h-9 px-3 rounded-full border border-white/80 bg-white/70 text-xs font-bold inline-flex items-center gap-1.5 hover:bg-white transition-colors" aria-label={lang === "es" ? "Switch to English" : "Cambiar a español"} data-testid="website-lang-toggle"><Languages className="w-3.5 h-3.5" />{lang === "es" ? "EN" : "ES"}</button>
+            {isAuthenticated ? <Button size="sm" className="rounded-full hidden sm:inline-flex" onClick={() => go("/my-profile")} data-testid="website-profile-btn">{c.profile}</Button>
+              : <><Button size="sm" variant="ghost" className="rounded-full hidden sm:inline-flex" onClick={() => go("/login")} data-testid="website-login-btn">{c.login}</Button><Button size="sm" className="rounded-full hidden sm:inline-flex" onClick={() => go("/register")} data-testid="website-signup-btn">{c.signup}</Button></>}
+            <button type="button" className="lg:hidden w-9 h-9 rounded-full inline-flex items-center justify-center hover:bg-white/70" onClick={() => setMenu(!menu)} aria-label="Menu" data-testid="website-menu-btn">{menu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
           </div>
         </div>
+        {menu && <div className={`${glass} lg:hidden max-w-6xl mx-auto mt-2 p-4 flex flex-col gap-1 text-sm font-medium`} data-testid="website-mobile-menu">
+          {FOCUS.map((f, i) => <a key={f.id} href={`#${f.id}`} onClick={() => setMenu(false)} className="px-3 py-2.5 rounded-2xl hover:bg-white/80">{c.nav[i]}</a>)}
+          <a href="#servicio-tarjeta" onClick={() => setMenu(false)} className="px-3 py-2.5 rounded-2xl text-[#c84a17] font-semibold">✨ {c.service}</a>
+          <div className="flex gap-2 pt-2">{isAuthenticated ? <><Button className="rounded-full flex-1" onClick={() => go("/my-profile")}>{c.profile}</Button><Button variant="outline" className="rounded-full" onClick={() => go("/settings")}>{c.back}</Button></> : <><Button variant="outline" className="rounded-full flex-1" onClick={() => go("/login")}>{c.login}</Button><Button className="rounded-full flex-1" onClick={() => go("/register")}>{c.signup}</Button></>}</div>
+        </div>}
+      </header>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white border-t shadow-lg">
-            <div className="px-4 py-6 space-y-4">
-              <a href="#features" className="block py-2 text-gray-600">Funciones</a>
-              <a href="#pricing" className="block py-2 text-gray-600">Precios</a>
-              <a href="#store" className="block py-2 text-gray-600">Tienda</a>
-              <a href="#contact" className="block py-2 text-gray-600">Contacto</a>
-              <div className="pt-4 border-t space-y-2">
-                <Link to="/login" className="block">
-                  <Button variant="outline" className="w-full">Iniciar Sesión</Button>
-                </Link>
-                <Link to="/register" className="block">
-                  <Button className="w-full bg-gradient-to-r from-orange-500 to-orange-600">Comenzar Gratis</Button>
-                </Link>
-              </div>
+      {/* Hero */}
+      <section className="relative overflow-hidden px-4 pt-14 pb-20 sm:pt-20 sm:pb-28" data-testid="website-hero">
+        <div className="absolute -top-20 right-[8%] w-72 h-72 rounded-full bg-white/50 blur-3xl animate-pulse" aria-hidden="true" />
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
+            <p className="text-[11px] tracking-[2.5px] uppercase font-bold text-[#fa632e] mb-4">{c.heroEyebrow}</p>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.02] mb-5">{c.heroTitle}</h1>
+            <p className="text-base md:text-lg text-[#4a4b45] max-w-xl mb-8">{c.heroText}</p>
+            <div className="flex flex-wrap gap-3">
+              <Button size="lg" className="rounded-full h-12 px-6" onClick={primaryCta} data-testid="website-hero-cta">{isAuthenticated ? c.profile : c.heroCta}<ArrowRight className="w-4 h-4 ml-2" /></Button>
+              <Button size="lg" variant="outline" className="rounded-full h-12 px-6 bg-white/60" onClick={() => go("/cards/examples")} data-testid="website-hero-examples">{c.heroAlt}</Button>
             </div>
-          </div>
-        )}
-      </nav>
-
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-4 overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-orange-200 rounded-full blur-3xl opacity-30 animate-pulse" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-yellow-200 rounded-full blur-3xl opacity-30 animate-pulse" style={{ animationDelay: '1s' }} />
-        
-        <div className="max-w-7xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 rounded-full text-orange-600 text-sm font-medium mb-6">
-            <Sparkles className="w-4 h-4" />
-            La nueva forma de hacer networking
-          </div>
-          
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-            Tu tarjeta de presentación
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-yellow-500">
-              del futuro
-            </span>
-          </h1>
-          
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10">
-            Crea tarjetas digitales impresionantes, conecta con profesionales, 
-            y haz crecer tu red de contactos como nunca antes.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Link to="/register">
-              <Button size="lg" className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-lg px-8 py-6 rounded-full">
-                Crear mi tarjeta gratis
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
-            <Button size="lg" variant="outline" className="text-lg px-8 py-6 rounded-full">
-              <Play className="w-5 h-5 mr-2" />
-              Ver demo
-            </Button>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
-            <div>
-              <p className="text-4xl font-bold text-gray-900">
-                <AnimatedCounter end={10000} suffix="+" />
-              </p>
-              <p className="text-gray-500">Usuarios activos</p>
+            <p className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-[#c84a17] bg-white/70 border border-white rounded-full px-3 py-1.5" data-testid="website-free-note"><Sparkles className="w-3.5 h-3.5" />{c.free}</p>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.15 }} className="relative flex justify-center">
+            <div className={`${glass} p-6 w-full max-w-sm rounded-[48px_48px_32px_32px] relative`}>
+              <img src="/brand/mascot-wave.webp" alt="" className="w-56 h-56 mx-auto object-contain drop-shadow-xl" loading="eager" />
+              <motion.div animate={{ y: [0, -8, 0] }} transition={{ repeat: Infinity, duration: 4 }} className="absolute -left-4 top-10 rounded-full bg-white/80 backdrop-blur-xl border border-white px-4 py-2 text-xs font-semibold shadow-lg inline-flex items-center gap-2"><QrCode className="w-4 h-4 text-[#fa632e]" />{lang === "es" ? "Enlace + QR" : "Link + QR"}</motion.div>
+              <motion.div animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 5 }} className="absolute -right-3 bottom-16 rounded-full bg-white/80 backdrop-blur-xl border border-white px-4 py-2 text-xs font-semibold shadow-lg inline-flex items-center gap-2"><Nfc className="w-4 h-4 text-[#fa632e]" />NFC</motion.div>
             </div>
-            <div>
-              <p className="text-4xl font-bold text-gray-900">
-                <AnimatedCounter end={50000} suffix="+" />
-              </p>
-              <p className="text-gray-500">Tarjetas creadas</p>
-            </div>
-            <div>
-              <p className="text-4xl font-bold text-gray-900">
-                <AnimatedCounter end={1000000} suffix="+" />
-              </p>
-              <p className="text-gray-500">Conexiones hechas</p>
-            </div>
-          </div>
+          </motion.div>
         </div>
+      </section>
 
-        {/* Hero Image - Phone Mockup */}
-        <div className="max-w-5xl mx-auto mt-16 relative">
-          <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl shadow-2xl overflow-hidden border-8 border-gray-800">
-            <div className="w-full h-full bg-gradient-to-br from-orange-400 via-orange-500 to-yellow-500 flex items-center justify-center">
-              <div className="text-center text-white">
-                <CreditCard className="w-24 h-24 mx-auto mb-4 opacity-50" />
-                <p className="text-2xl font-bold">Vista previa de la app</p>
-              </div>
-            </div>
+      {/* Five focus areas */}
+      <section className="px-4 pb-10" data-testid="website-focus">
+        <div className="max-w-6xl mx-auto">
+          <motion.div {...reveal} className="mb-10 max-w-2xl"><h2 className="text-base md:text-lg font-bold text-[#fa632e] uppercase tracking-[2px]">{c.focusTitle}</h2><p className="text-2xl sm:text-3xl font-semibold tracking-tight mt-2">{c.focusText}</p></motion.div>
+          <div className="space-y-6">
+            {FOCUS.map((f, i) => {
+              const Icon = f.icon; const copy = c.f[i]; const flip = i % 2 === 1;
+              return (
+                <motion.article key={f.id} id={f.id} {...reveal} className={`${glass} p-6 sm:p-10 grid md:grid-cols-[1fr_280px] gap-8 items-center scroll-mt-24 ${flip ? "md:[&>*:first-child]:order-2" : ""}`} data-testid={`website-focus-${f.id}`}>
+                  <div>
+                    <div className="flex items-center gap-3 mb-4"><span className="w-12 h-12 rounded-2xl bg-[#fa632e] text-white grid place-items-center shadow-lg shadow-orange-500/30"><Icon className="w-6 h-6" /></span>{f.extra?.map((E, k) => <span key={k} className="w-9 h-9 rounded-xl bg-white/80 border border-white grid place-items-center"><E className="w-4 h-4 text-[#c84a17]" /></span>)}</div>
+                    <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight mb-3">{copy.t}</h3>
+                    <p className="text-[#4a4b45] mb-5 max-w-xl">{copy.d}</p>
+                    <ul className="flex flex-wrap gap-2 mb-6">{copy.bullets.map((b) => <li key={b} className="text-xs font-semibold bg-white/80 border border-white rounded-full px-3 py-1.5">{b}</li>)}</ul>
+                    <Button className="rounded-full" onClick={() => go(f.to)} data-testid={`website-focus-cta-${f.id}`}>{copy.cta}<ArrowRight className="w-4 h-4 ml-2" /></Button>
+                  </div>
+                  <div className="justify-self-center"><img src={f.img} alt="" loading="lazy" className="w-56 h-64 object-cover rounded-[90px_90px_28px_28px] border-4 border-white shadow-xl bg-white" /></div>
+                </motion.article>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 px-4 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Todo lo que necesitas en un solo lugar
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              BRUNO combina tarjetas digitales, red social profesional, y herramientas de networking.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <FeatureCard 
-              icon={CreditCard}
-              title="Tarjetas Digitales"
-              description="Crea tarjetas personales, profesionales o de empresa con diseños únicos y compártelas al instante."
-              color="bg-gradient-to-br from-blue-500 to-blue-600"
-            />
-            <FeatureCard 
-              icon={MessageCircle}
-              title="Chat en Tiempo Real"
-              description="Mensajes, notas de voz, stickers y videollamadas. Todo en un chat moderno y fácil de usar."
-              color="bg-gradient-to-br from-green-500 to-green-600"
-            />
-            <FeatureCard 
-              icon={Map}
-              title="Mapa de Contactos"
-              description="Descubre profesionales cerca de ti con nuestro mapa interactivo estilo Snapchat."
-              color="bg-gradient-to-br from-red-500 to-red-600"
-            />
-            <FeatureCard 
-              icon={Smartphone}
-              title="NFC & QR"
-              description="Comparte tu tarjeta con un toque NFC o escaneo QR. La forma más rápida de hacer networking."
-              color="bg-gradient-to-br from-purple-500 to-purple-600"
-            />
-            <FeatureCard 
-              icon={Users}
-              title="Red Social"
-              description="Publica contenido, sigue a otros profesionales y construye tu marca personal."
-              color="bg-gradient-to-br from-pink-500 to-pink-600"
-            />
-            <FeatureCard 
-              icon={Zap}
-              title="BRUNO IA"
-              description="Tu asistente inteligente te ayuda a crear tarjetas, responder mensajes y más."
-              color="bg-gradient-to-br from-yellow-500 to-orange-500"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 px-4 bg-gradient-to-b from-orange-50 to-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Planes para cada necesidad
-            </h2>
-            <p className="text-xl text-gray-600">
-              Comienza gratis y escala cuando lo necesites.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto items-center">
-            <PricingCard 
-              name="Gratis"
-              price="0"
-              period="siempre"
-              features={[
-                "1 tarjeta digital",
-                "Perfil básico",
-                "Chat ilimitado",
-                "Compartir QR"
-              ]}
-              cta="Comenzar Gratis"
-            />
-            <PricingCard 
-              name="Pro"
-              price="9.99"
-              period="mes"
-              popular={true}
-              features={[
-                "5 tarjetas digitales",
-                "Plantillas premium",
-                "Videollamadas",
-                "Analíticas avanzadas",
-                "Soporte prioritario"
-              ]}
-              cta="Empezar Prueba"
-            />
-            <PricingCard 
-              name="Empresa"
-              price="29.99"
-              period="mes"
-              features={[
-                "Tarjetas ilimitadas",
-                "Equipo completo",
-                "API personalizada",
-                "Branding propio",
-                "Soporte 24/7"
-              ]}
-              cta="Contactar Ventas"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Servicio «Creamos tu tarjeta» (BRUNO + OVC) — mismo destino que Perfil › Tarjetas */}
-      <section id="servicio-tarjeta" className="py-16 px-4 bg-white" data-testid="website-service-section">
-        <div className="max-w-5xl mx-auto rounded-[32px] p-8 sm:p-12 flex flex-col sm:flex-row items-center gap-8" style={{ background: "linear-gradient(120deg,#ffffff88,#ffb36c55)", border: "1px solid #ffffffb3", boxShadow: "inset 0 1px 0 #fff,0 15px 40px #343b3210", backdropFilter: "blur(20px)" }}>
+      {/* Creamos tu tarjeta (misma plantilla, mismo destino) */}
+      <section id="servicio-tarjeta" className="px-4 py-12 scroll-mt-24" data-testid="website-service-section">
+        <motion.div {...reveal} className="max-w-5xl mx-auto rounded-[32px] p-8 sm:p-12 flex flex-col sm:flex-row items-center gap-8" style={{ background: "linear-gradient(120deg,#ffffff88,#ffb36c55)", border: "1px solid #ffffffb3", boxShadow: "inset 0 1px 0 #fff,0 15px 40px #343b3210", backdropFilter: "blur(20px)" }}>
           <img src="/servicios/tarjeta-bruno/assets/bruno-mascota.webp" alt="" className="w-36 h-44 object-cover rounded-[70px_70px_24px_24px] border-4 border-white shadow-lg shrink-0" loading="lazy" />
           <div className="text-center sm:text-left">
-            <p className="text-[11px] tracking-[2px] uppercase font-bold text-[#fa632e] mb-3">BRUNO × OVC</p>
-            <h2 className="text-3xl sm:text-4xl font-semibold text-gray-900 tracking-tight mb-3">{serviceLang() === "en" ? "Your world, in one card. We create it for you." : "Tu mundo, en una tarjeta. La creamos por ti."}</h2>
-            <p className="text-gray-700 mb-6 max-w-xl">{serviceLang() === "en" ? "We design and set up your BRUNO card, its link and its digital QR, with one round of adjustments. One payment: COP $30.000 in Colombia or US$30 in the United States." : "Diseñamos y configuramos tu tarjeta BRUNO, su enlace y su QR digital, con una ronda de ajustes. Un solo pago: COP $30.000 en Colombia o US$30 en Estados Unidos."}</p>
+            <p className="text-[11px] tracking-[2px] uppercase font-bold text-[#fa632e] mb-3">{c.serviceEyebrow}</p>
+            <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-3">{c.serviceTitle}</h2>
+            <p className="text-[#4a4b45] mb-6 max-w-xl">{c.serviceText}</p>
             <ServicePromoBubble variant="banner" from="/website#servicio-tarjeta" />
           </div>
-        </div>
+        </motion.div>
       </section>
 
-      {/* Store Preview Section */}
-      <section id="store" className="py-20 px-4 bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Tienda BRUNO
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Tarjetas NFC físicas, productos para tu negocio y servicios de marketing digital.
-            </p>
+      {/* Free base + optional services */}
+      <section className="px-4 py-12" data-testid="website-pricing">
+        <motion.div {...reveal} className={`${glass} max-w-5xl mx-auto p-8 sm:p-12`}>
+          <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-3">{c.priceTitle}</h2>
+          <p className="text-[#4a4b45] mb-6 max-w-2xl">{c.priceText}</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {c.priceItems.map(([t1, d1], i) => <div key={t1} className="rounded-3xl bg-white/80 border border-white p-5" data-testid={`website-price-item-${i}`}><p className="font-semibold mb-1">{t1}</p><p className="text-sm text-[#4a4b45]">{d1}</p></div>)}
           </div>
-
-          <div className="grid md:grid-cols-4 gap-6">
-            {[
-              { name: "Tarjeta NFC Negra", price: "$24.99", category: "NFC" },
-              { name: "Tarjeta NFC Dorada", price: "$34.99", category: "Premium" },
-              { name: "Pack Empresa x10", price: "$199.99", category: "Empresas" },
-              { name: "Diseño Personalizado", price: "$49.99", category: "Servicios" }
-            ].map((product, i) => (
-              <div key={`product-${i}`} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 hover:shadow-lg transition-shadow">
-                <div className="aspect-square bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl mb-4 flex items-center justify-center">
-                  <CreditCard className="w-16 h-16 text-white/80" />
-                </div>
-                <span className="text-xs text-orange-500 font-medium">{product.category}</span>
-                <h3 className="font-bold text-gray-900 mt-1">{product.name}</h3>
-                <p className="text-lg font-bold text-orange-600 mt-2">{product.price}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center mt-12">
-            <Link to="/store">
-              <Button size="lg" variant="outline" className="rounded-full">
-                Ver toda la tienda
-                <ChevronRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-20 px-4 bg-gradient-to-b from-white to-orange-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Lo que dicen nuestros usuarios
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <TestimonialCard 
-              name="María García"
-              role="CEO, StartupX"
-              quote="BRUNO cambió completamente la forma en que hago networking. Mis contactos aumentaron un 300%."
-            />
-            <TestimonialCard 
-              name="Carlos López"
-              role="Freelancer"
-              quote="La mejor inversión que he hecho. Mi tarjeta NFC siempre impresiona a mis clientes."
-            />
-            <TestimonialCard 
-              name="Ana Martínez"
-              role="Consultora"
-              quote="El chat y las videollamadas integradas hacen todo más fácil. Una app increíble."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl p-12 text-center text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-          
-          <div className="relative z-10">
-            <h2 className="text-4xl font-bold mb-4">¿Listo para el futuro?</h2>
-            <p className="text-xl text-white/80 mb-8">
-              Únete a miles de profesionales que ya están usando BRUNO.
-            </p>
-            <Link to="/register">
-              <Button size="lg" className="bg-white text-orange-600 hover:bg-gray-100 text-lg px-8 py-6 rounded-full">
-                Crear mi cuenta gratis
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
-          </div>
-        </div>
+          <div className="flex flex-wrap gap-3 mt-6"><Button variant="outline" className="rounded-full bg-white/60" onClick={() => go("/store")} data-testid="website-store-btn"><ShoppingBag className="w-4 h-4 mr-2" />{c.store}</Button><Button className="rounded-full" onClick={primaryCta} data-testid="website-pricing-cta">{isAuthenticated ? c.profile : c.heroCta}</Button></div>
+        </motion.div>
       </section>
 
       {/* Footer */}
-      <footer id="contact" className="bg-gray-900 text-white py-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-12">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-xl">B</span>
-                </div>
-                <span className="text-2xl font-bold">BRUNO</span>
-              </div>
-              <p className="text-gray-400">
-                La plataforma de tarjetas digitales y networking profesional más avanzada.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-bold mb-4">Producto</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#features" className="hover:text-white transition-colors">Funciones</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Precios</a></li>
-                <li><Link to="/store" className="hover:text-white transition-colors">Tienda</Link></li>
-                <li><Link to="/help" className="hover:text-white transition-colors">Ayuda</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-bold mb-4">Empresa</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Sobre nosotros</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Carreras</a></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">Contacto</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-bold mb-4">Contacto</h4>
-              <ul className="space-y-3 text-gray-400">
-                <li className="flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  hola@bruno.com
-                </li>
-                <li className="flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  +1 (555) 123-4567
-                </li>
-                <li className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  Ciudad de México, MX
-                </li>
-              </ul>
-              <div className="flex gap-4 mt-6">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <Instagram className="w-5 h-5" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <Twitter className="w-5 h-5" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <Linkedin className="w-5 h-5" />
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <Facebook className="w-5 h-5" />
-                </a>
-              </div>
-            </div>
+      <footer className="px-4 pt-10 pb-28 lg:pb-14" data-testid="website-footer">
+        <div className={`${glass} max-w-6xl mx-auto p-8 sm:p-10 grid md:grid-cols-[1fr_auto] gap-8`}>
+          <div>
+            <img src="/brand/logo-h-orange.png" alt="BRUNO" className="h-8 object-contain mb-4" />
+            <h2 className="text-xl font-semibold mb-1">{c.contactTitle}</h2>
+            <p className="text-sm text-[#4a4b45] mb-3">{c.contactText}</p>
+            <a href="mailto:bruno@brunocard.com" className="inline-flex items-center gap-2 font-semibold text-[#c84a17] hover:underline" data-testid="website-contact-email"><Mail className="w-4 h-4" />bruno@brunocard.com</a>
           </div>
-
-          <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-gray-500 text-sm">
-              © 2025 BRUNO. Todos los derechos reservados.
-            </p>
-            <div className="flex gap-6 text-sm text-gray-500">
-              <a href="#" className="hover:text-white transition-colors">Privacidad</a>
-              <a href="#" className="hover:text-white transition-colors">Términos</a>
-              <a href="#" className="hover:text-white transition-colors">Cookies</a>
-            </div>
+          <nav className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm" aria-label="Legal">{LEGAL.map((to, i) => <Link key={to} to={to} className="hover:text-[#c84a17]" data-testid={`website-legal-${i}`}>{c.legal[i]}</Link>)}</nav>
+          <div className="md:col-span-2 border-t border-white/80 pt-4 flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-[#6c6d64]">
+            <span data-testid="website-owner">{c.owner}</span><span className="sm:ml-auto"><OvcAttribution /></span>
           </div>
         </div>
       </footer>
     </div>
   );
-};
-
-export default BrunoWebsite;
+}

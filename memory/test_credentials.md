@@ -60,3 +60,10 @@
 - Cupones: GET /api/money/coupons/stats (clics se cuentan al abrir GET /api/money/coupons/{id}/public).
 - Serie semilla (newtest): 6ff8761f-215b-423d-a934-d0bd9a017824 "Curso BRUNO completo" (2 videos). Rutas /series/:id, /series/new, /video/:id?series=:sid. Capítulos IA: POST /api/posts/{id}/chapters/ai (422 en videos sin voz).
 - Ejemplos de tarjetas: /cards/examples, /cards/examples/{type}?template=..., público /c/example-{type}?template&lang. API: /api/card-examples, /api/card-examples/coverage/report. Sin login.
+
+## Servicio «Creamos tu tarjeta» · pedidos (2026-06)
+- Admin (ve /admin/pedidos, concilia pagos, asigna rol): testc@brunoqa.com / Prueba1234!
+- Rol «produccion» (ve /admin/pedidos y crea/envía tarjetas, NO concilia pagos): viewer3@bruno.com / Test1234!
+- Cliente: newtest@bruno.com / Test1234! · Otra cuenta (switch_account): viewer2@bruno.com / Test1234!
+- Correo de prueba entregable para pedidos: delivered@resend.dev (Emergent email acepta; otros dominios ficticios dan 422 undeliverable)
+- Flujo QA por curl: bash /app/backend/tests/qa_order_flow.sh

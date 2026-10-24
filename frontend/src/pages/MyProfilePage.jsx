@@ -1,4 +1,5 @@
 import { ServicePromoBubble } from "@/components/bruno/ServicePromoBubble";
+import MyServiceOrders from "@/components/bruno/MyServiceOrders";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import ShareImageSheet from "@/components/bruno/ShareImageSheet";
 import ScheduledStories from "@/components/bruno/ScheduledStories";
@@ -801,6 +802,7 @@ const MyProfilePage = () => {
             </div>
 
             {/* Actions Bar */}
+            <MyServiceOrders />
             <div className="flex items-center gap-2">
               <Button size="sm" onClick={() => navigate("/cards/new")} className="rounded-full" data-testid="create-card-btn">
                 <Plus className="w-3.5 h-3.5 mr-1" />
