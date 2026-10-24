@@ -1,6 +1,7 @@
 """Servicio «Creamos tu tarjeta» (BRUNO + OVC): país del edge, solicitudes con adjuntos privados y correo a bruno@brunocard.com."""
 import asyncio
 import base64
+import hashlib
 import logging
 import os
 import re
@@ -69,12 +70,12 @@ def _client_ip(request: Request) -> str:
 def _rate_ok(key: str, limit: int, window: int) -> bool:
     now = time.time()
     hits = [t for t in _rate.get(key, []) if now - t < window]
-    if len(hits) >= limit:
-        _rate[key] = hits
-        return False
-    hits.append(now)
     _rate[key] = hits
-    return True
+    return len(hits) < limit
+
+
+def _rate_hit(key: str):
+    _rate.setdefault(key, []).append(time.time())
 
 
 def _clean(v: Optional[str], n: int) -> str:
@@ -174,15 +175,16 @@ async def create_request(request: Request, requestId: str = Form(...), type: str
     if website_extra:  # honeypot
         raise err("Solicitud rechazada.", "Request rejected.")
     ip = _client_ip(request)
-    if not _rate_ok(f"ip:{ip}", 5, 3600) or (user and not _rate_ok(f"u:{user.id}", 5, 3600)):
-        raise err("Has alcanzado el límite de solicitudes por ahora. Inténtalo más tarde o escribe a bruno@brunocard.com.", "You have reached the request limit for now. Try later or email bruno@brunocard.com.", 429)
     try:
         req_id = str(uuid.UUID(requestId))
     except ValueError:
         raise err("Referencia inválida.", "Invalid reference.")
-    if await db.service_requests.find_one({"id": req_id}, {"_id": 1}):  # idempotencia
-        return {"id": req_id, "emailStatus": (await db.service_requests.find_one({"id": req_id}, {"_id": 0, "email_status": 1}))["email_status"]}
-    if consent != "on":
+    existing = await db.service_requests.find_one({"id": req_id}, {"_id": 0, "email_status": 1})
+    if existing:  # idempotencia: el reintento devuelve la misma referencia sin consumir cuota
+        return {"id": req_id, "emailStatus": existing["email_status"]}
+    if not _rate_ok(f"ip:{ip}", 5, 3600) or (user and not _rate_ok(f"u:{user.id}", 5, 3600)):
+        raise err("Has alcanzado el límite de solicitudes por ahora. Inténtalo más tarde o escribe a bruno@brunocard.com.", "You have reached the request limit for now. Try later or email bruno@brunocard.com.", 429)
+    if consent not in ("on", "true"):
         raise err("Debes autorizar el uso de tus materiales para continuar.", "You must authorize the use of your materials to continue.")
     if type not in TYPES:
         raise err("Tipo de tarjeta inválido.", "Invalid card type.")
@@ -197,9 +199,12 @@ async def create_request(request: Request, requestId: str = Form(...), type: str
     offer = OFFERS[market]  # importe calculado en servidor: se ignora cualquier amount/currency del cliente
     rec = {"id": req_id, "created_at": _now().isoformat(), "market": market, "language": "en" if language == "en" else "es", "currency": offer["currency"], "amount": offer["amount"],
            "type": type, "name": _clean(name, 120), "email": email_c, "phone": _clean(phone, 40), "card_name": _clean(cardName, 120), "template": _clean(template, 60), "description": _clean(description, 4000),
-           "links": _clean(links, 2000), "notes": _clean(notes, 2000), "consent_at": _now().isoformat(), "files": stored, "user_id": user.id if user else None, "ip_hash": __import__("hashlib").sha256(ip.encode()).hexdigest()[:16],
+           "links": _clean(links, 2000), "notes": _clean(notes, 2000), "consent_at": _now().isoformat(), "files": stored, "user_id": user.id if user else None, "ip_hash": hashlib.sha256(ip.encode()).hexdigest()[:16],
            "payment_status": "unpaid", "email_status": "pending", "email_attempts": 0, "recipient": RECIPIENT}
     await db.service_requests.insert_one(dict(rec))
+    _rate_hit(f"ip:{ip}")
+    if user:
+        _rate_hit(f"u:{user.id}")
     await _deliver(req_id, attempts=1)
     rec2 = await db.service_requests.find_one({"id": req_id}, {"_id": 0, "email_status": 1})
     if rec2["email_status"] == "failed":

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ServicePromoBubble } from "@/components/bruno/ServicePromoBubble";
+import { ServicePromoBubble, serviceLang } from "@/components/bruno/ServicePromoBubble";
 import { 
   ChevronRight, 
   CreditCard, 
@@ -370,8 +370,8 @@ const BrunoWebsite = () => {
           <img src="/servicios/tarjeta-bruno/assets/bruno-mascota.webp" alt="" className="w-36 h-44 object-cover rounded-[70px_70px_24px_24px] border-4 border-white shadow-lg shrink-0" loading="lazy" />
           <div className="text-center sm:text-left">
             <p className="text-[11px] tracking-[2px] uppercase font-bold text-[#fa632e] mb-3">BRUNO × OVC</p>
-            <h2 className="text-3xl sm:text-4xl font-semibold text-gray-900 tracking-tight mb-3">Tu mundo, en una tarjeta. La creamos por ti.</h2>
-            <p className="text-gray-700 mb-6 max-w-xl">Diseñamos y configuramos tu tarjeta BRUNO, su enlace y su QR digital, con una ronda de ajustes. Un solo pago: COP $30.000 en Colombia o US$30 en Estados Unidos.</p>
+            <h2 className="text-3xl sm:text-4xl font-semibold text-gray-900 tracking-tight mb-3">{serviceLang() === "en" ? "Your world, in one card. We create it for you." : "Tu mundo, en una tarjeta. La creamos por ti."}</h2>
+            <p className="text-gray-700 mb-6 max-w-xl">{serviceLang() === "en" ? "We design and set up your BRUNO card, its link and its digital QR, with one round of adjustments. One payment: COP $30.000 in Colombia or US$30 in the United States." : "Diseñamos y configuramos tu tarjeta BRUNO, su enlace y su QR digital, con una ronda de ajustes. Un solo pago: COP $30.000 en Colombia o US$30 en Estados Unidos."}</p>
             <ServicePromoBubble variant="banner" from="/website#servicio-tarjeta" />
           </div>
         </div>

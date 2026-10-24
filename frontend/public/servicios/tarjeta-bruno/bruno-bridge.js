@@ -7,6 +7,12 @@
     location.assign('/');
   };
   var local = location.hostname !== 'brunocard.com' && location.hostname !== 'www.brunocard.com';
+  var navBrand = document.querySelector('nav a.brand');
+  if (navBrand) {
+    navBrand.addEventListener('click', function (e) { e.preventDefault(); back(); });
+    navBrand.setAttribute('aria-label', 'BRUNO · volver');
+    navBrand.setAttribute('data-testid', 'service-nav-back');
+  }
   document.querySelectorAll('a[href]').forEach(function (a) {
     var h = a.getAttribute('href') || '';
     if (h === 'https://brunocard.com' || h === 'https://brunocard.com/') {

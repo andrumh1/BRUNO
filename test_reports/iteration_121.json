@@ -1,0 +1,40 @@
+{
+  "summary": "Formal verification of 'Creamos tu tarjeta' (BRUNO + OVC) service. Backend 9/9 pytest pass (locale, header spoof ignored, 403 no-origin, 400 consent/FR/fake-PDF, one valid 201 with server-side COP 30000, idempotent replay, admin list 200 / non-admin 403). Frontend: profile Cards-tab bubble, /website banner, redirect, ES/EN toggle without reload + persistence, country/price independent of language, 6 example links, contact-only payment panel, no horizontal overflow at 390/1920 all verified. Only minor issues found.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/bruno-service/requests", "issue": "consent only accepted when value == 'on'; 'true' is rejected with 400 (review request says 'true'/'on'). The browser form sends 'on' so the UI works; native/API clients sending 'true' would fail."},
+      {"endpoint": "POST /api/bruno-service/requests", "issue": "Rate limit (5/IP/hour) is counted BEFORE validation and BEFORE the idempotency check: invalid attempts and idempotent retries consume quota, so a user who retries after a network error can get 429 instead of their existing reference. Limit is also in-memory (resets on restart, not shared across workers) and keyed on the first X-Forwarded-For entry (client-spoofable)."},
+      {"endpoint": "POST /api/bruno-service/requests", "issue": "_origin_ok accepts any *.emergentagent.com / *.emergent.host origin, so any other preview app can post cross-site. Consider restricting to the app's own host + brunocard.com in production."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Template nav logo", "issue": "The top-nav BRUNO logo (and footer brand logo) link to '#inicio' (scroll to top), so they do NOT return to the profile. Only the footer 'BRUNOCARD.COM ↗' link triggers the bridge back() to ?from (verified it returns to /my-profile?tab=cards). If 'logo returns to profile' is a requirement, bridge must also hook a.brand.", "selector": "nav a.brand", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/website service section", "issues": ["Mixed language: heading/description hard-coded in Spanish while the banner button label follows serviceLang() (shows English 'Your world, in one card...' on en browsers)."]},
+      {"screen": "/servicios/tarjeta-bruno mobile 390", "issues": ["documentElement.scrollWidth == clientWidth (pass), but body.scrollWidth=425 because .orbit decorations overflow; currently masked by html,body{overflow-x:hidden}. Acceptable, just noting it is clipped rather than sized."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iteration121_bruno_service.py", "/app/test_reports/pytest/pytest_iter121.xml"],
+  "action_items": [
+    "DELETE the QA service request id 3a995a32-b2b2-4bd5-85d3-cc48e40945d4 (name 'QA TestingAgent', qa-agent@example.com, market CO, emailStatus accepted via emergent provider) from db.service_requests",
+    "Optional: accept consent in ('on','true') server-side",
+    "Optional: move idempotency check before the rate-limit counter and count only valid submissions",
+    "Optional: make nav logo use bridge back() if required; localize /website section text"
+  ],
+  "critical_code_review_comments": [
+    "bruno_service.py: create_request awaits _deliver synchronously (email provider latency blocks the response) - fine for now, but a slow provider delays the 201.",
+    "bruno_service.py: uses __import__('hashlib') inline - import at top.",
+    "Idempotent replay returns 201 (status_code default) - acceptable, same id returned, no duplicate verified via admin list (exactly 1 row)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration121_bruno_service.py"],
+  "success_rate": {"backend": "100%", "frontend": "95%"},
+  "test_credentials": "newtest@bruno.com / Test1234! (non-admin -> 403 on GET /api/bruno-service/requests); testc@brunoqa.com / Prueba1234! (admin -> 200)",
+  "seed_data_creation": "ONE valid service request: 3a995a32-b2b2-4bd5-85d3-cc48e40945d4 (stored currency COP, amount 30000 despite client amount=999 currency=USD; payment_status unpaid). One real email accepted to bruno@brunocard.com.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Do NOT rerun test_post_valid_and_idempotent casually - it sends a real email. Rate limit is 5 POSTs/IP/hour in-memory (invalid ones count). Locale returns {country:null} in preview (no CF-IPCountry) - expected. Form field names: requestId,type,name,email,phone,cardName,template,description,links,notes,consent('on'),market(CO|US),language,website_extra(honeypot),documents,logo,gallery."
+}
