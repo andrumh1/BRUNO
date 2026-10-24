@@ -73,7 +73,7 @@ export default function BrunoWebsite() {
       {/* Nav */}
       <header className="sticky top-0 z-40 px-3 sm:px-6 pt-3" data-testid="website-nav">
         <div className={`${glass} rounded-full flex items-center gap-2 px-3 sm:px-5 h-14 max-w-6xl mx-auto`}>
-          {isAuthenticated && <button type="button" onClick={() => go("/settings")} className="hidden sm:inline-flex w-9 h-9 rounded-full items-center justify-center hover:bg-white/70" aria-label={c.back} data-testid="website-back-app"><ArrowLeft className="w-4 h-4" /></button>}
+          <button type="button" onClick={() => (isAuthenticated ? go("/settings") : window.history.length > 1 ? navigate(-1) : go("/"))} className="inline-flex w-9 h-9 rounded-full items-center justify-center hover:bg-white/70 shrink-0" aria-label={c.back} data-testid="website-back"><ArrowLeft className="w-4 h-4" /></button>
           <Link to="/website" className="flex items-center gap-2 shrink-0" data-testid="website-logo"><img src="/brand/logo-h-orange.png" alt="BRUNO" className="h-7 sm:h-8 object-contain" /></Link>
           <nav className="hidden lg:flex items-center gap-1 ml-4 text-sm font-medium">
             {FOCUS.map((f, i) => <a key={f.id} href={`#${f.id}`} className="px-3 py-1.5 rounded-full hover:bg-white/80 transition-colors">{c.nav[i]}</a>)}

@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
-import { API, PAYMENT_LABELS, StatusPill, auth, label } from "./serviceApi";
+import { API, PAYMENT_LABELS, StatusPill, auth } from "./serviceApi";
 
-const Row = ({ k, v }) => <div className="flex gap-3 text-sm py-1 border-b border-border/50 last:border-0"><span className="w-36 shrink-0 text-muted-foreground">{k}</span><span className="break-all whitespace-pre-wrap">{v || "—"}</span></div>;
+const Row = ({ k, v }) => <div className="flex gap-3 text-sm py-1 border-b border-border/50 last:border-0"><span className="w-36 shrink-0 text-muted-foreground">{k}</span><span className="min-w-0 break-words whitespace-pre-wrap">{v || "—"}</span></div>;
 const Section = ({ title, icon: Icon, children, testId }) => <div className="rounded-2xl border border-border bg-card p-4" data-testid={testId}><h2 className="text-sm font-bold mb-3 inline-flex items-center gap-2">{Icon && <Icon className="w-4 h-4 text-primary" />}{title}</h2>{children}</div>;
 
 export default function AdminOrderDetailPage() {
@@ -40,7 +40,7 @@ export default function AdminOrderDetailPage() {
         <div className="flex items-center gap-2 mb-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/admin/pedidos")} data-testid="admin-order-back"><ArrowLeft className="w-5 h-5" /></Button>
           <div className="flex-1 min-w-0"><h1 className="text-lg font-bold truncate">{o.card_name}</h1><p className="font-mono text-xs text-muted-foreground break-all" data-testid="admin-order-id">{o.id}</p></div>
-          <StatusPill kind="production" value={ps} testId="admin-order-production" /><StatusPill kind="payment" value={o.payment_status || "unpaid"} testId="admin-order-payment" />
+          <StatusPill kind="production" value={ps} testId="admin-order-production" lang="es" /><StatusPill kind="payment" value={o.payment_status || "unpaid"} testId="admin-order-payment" lang="es" />
         </div>
         <div className="grid md:grid-cols-2 gap-4">
           <Section title="Cliente y pedido" icon={FileText} testId="admin-order-info">
@@ -70,7 +70,7 @@ export default function AdminOrderDetailPage() {
             {o.change_requests?.length > 0 && <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 mb-3 text-sm" data-testid="admin-order-change-requests">{o.change_requests.map((c, i) => <p key={i}><b>v{c.version}</b> · {c.at.slice(0, 16)}: {c.message}</p>)}</div>}
             {canEdit && <div className="flex flex-wrap gap-2">
               <Button className="rounded-full" disabled={busy || !["paid", "in_preparation", "changes_requested", "pending_approval", "received", "pending_payment"].includes(ps)} onClick={openEditor} data-testid="admin-order-open-editor"><PencilRuler className="w-4 h-4 mr-1.5" />{o.card_id ? "Editar tarjeta" : "Crear tarjeta"}</Button>
-              {o.card_id && <Button variant="outline" className="rounded-full" disabled={busy} onClick={() => act(() => axios.post(`${API}/orders/${orderId}/send-review`, { note }, auth(token)), (d) => { try { navigator.clipboard?.writeText(d.review_url); } catch { /* ignore */ } return `Enviada para aprobación · v${d.version} · correo ${d.email_status} · enlace copiado`; })} data-testid="admin-order-send-review"><Send className="w-4 h-4 mr-1.5" />{ps === "pending_approval" ? "Reenviar invitación" : "Enviar para aprobación"}</Button>}
+              {o.card_id && ps !== "approved" && <Button variant="outline" className="rounded-full" disabled={busy} onClick={() => act(() => axios.post(`${API}/orders/${orderId}/send-review`, { note }, auth(token)), (d) => { try { navigator.clipboard?.writeText(d.review_url); } catch { /* ignore */ } return `Enviada para aprobación · v${d.version} · correo ${d.email_status} · enlace copiado`; })} data-testid="admin-order-send-review"><Send className="w-4 h-4 mr-1.5" />{ps === "pending_approval" ? "Reenviar invitación" : "Enviar para aprobación"}</Button>}
               <Button variant="ghost" className="rounded-full text-destructive" disabled={busy} onClick={() => window.confirm("¿Cancelar este pedido? La tarjeta en preparación se conserva como borrador privado.") && act(() => axios.post(`${API}/orders/${orderId}/status`, { production_status: "cancelled", note }, auth(token)), "Pedido cancelado")} data-testid="admin-order-cancel"><XCircle className="w-4 h-4 mr-1.5" />Cancelar pedido</Button>
             </div>}
             {canEdit && o.card_id && <Textarea className="mt-3" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nota para el cliente al enviar (opcional)" data-testid="admin-order-note" />}
@@ -81,14 +81,14 @@ export default function AdminOrderDetailPage() {
             {access.admin && o.payment_status !== "paid" && ps !== "cancelled" && <div className="mt-3 space-y-2" data-testid="admin-order-manual-payment">
               <p className="text-xs font-semibold">Conciliación manual (solo administradores, con referencia del proveedor)</p>
               <div className="flex flex-wrap gap-2">
-                <select value={pay.status} onChange={(e) => setPay({ ...pay, status: e.target.value })} className="h-9 rounded-lg bg-muted px-2 text-sm" data-testid="admin-pay-status">{Object.keys(PAYMENT_LABELS).map((k) => <option key={k} value={k}>{label(PAYMENT_LABELS, k)}</option>)}</select>
+                <select value={pay.status} onChange={(e) => setPay({ ...pay, status: e.target.value })} className="h-9 rounded-lg bg-muted px-2 text-sm" data-testid="admin-pay-status">{Object.keys(PAYMENT_LABELS).map((k) => <option key={k} value={k}>{PAYMENT_LABELS[k][0]}</option>)}</select>
                 <Input value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} placeholder="Referencia / ID de transacción" className="flex-1 min-w-[160px]" data-testid="admin-pay-reference" />
               </div>
               <Input value={pay.note} onChange={(e) => setPay({ ...pay, note: e.target.value })} placeholder="Nota (opcional)" data-testid="admin-pay-note" />
               <Button size="sm" className="rounded-full" disabled={busy || pay.reference.trim().length < 4} onClick={() => act(() => axios.post(`${API}/orders/${orderId}/payment`, pay, auth(token)), "Pago actualizado")} data-testid="admin-pay-submit">Registrar</Button>
             </div>}
             {access.admin && o.payment_status === "paid" && ps !== "cancelled" && <div className="mt-3 flex gap-2">
-              {["refunded", "disputed"].map((s) => <Button key={s} size="sm" variant="outline" className="rounded-full" disabled={busy} onClick={() => { const ref = window.prompt("Referencia del proveedor"); if (ref) act(() => axios.post(`${API}/orders/${orderId}/payment`, { status: s, reference: ref }, auth(token)), "Registrado"); }} data-testid={`admin-pay-${s}`}>{label(PAYMENT_LABELS, s)}</Button>)}
+              {["refunded", "disputed"].map((s) => <Button key={s} size="sm" variant="outline" className="rounded-full" disabled={busy} onClick={() => { const ref = window.prompt("Referencia del proveedor"); if (ref) act(() => axios.post(`${API}/orders/${orderId}/payment`, { status: s, reference: ref }, auth(token)), "Registrado"); }} data-testid={`admin-pay-${s}`}>{PAYMENT_LABELS[s][0]}</Button>)}
             </div>}
           </Section>
           {canEdit && <Section title="Destinatario" icon={UserCog} testId="admin-order-recipient">

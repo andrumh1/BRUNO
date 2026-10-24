@@ -85,7 +85,9 @@ def _public(o: dict) -> dict:
 
 def _provider_ready(market: str) -> bool:
     if market == "CO":
-        return all(os.environ.get(k) for k in ("WOMPI_PUBLIC_KEY", "WOMPI_PRIVATE_KEY", "WOMPI_INTEGRITY_SECRET", "WOMPI_EVENTS_SECRET"))
+        pub, prv = os.environ.get("WOMPI_PUBLIC_KEY", ""), os.environ.get("WOMPI_PRIVATE_KEY", "")
+        ok_keys = pub.startswith(("pub_test_", "pub_prod_")) and prv.startswith(("prv_test_", "prv_prod_"))
+        return ok_keys and all(os.environ.get(k) for k in ("WOMPI_INTEGRITY_SECRET", "WOMPI_EVENTS_SECRET"))
     return bool(os.environ.get("STRIPE_API_KEY"))
 
 
@@ -97,14 +99,33 @@ def _mail(title: str, intro: str, rows: list, cta: Optional[tuple], footer: str)
             f'<table>{rws}</table>{btn}<p style="font-size:12px;color:#6c6d64;margin-top:18px">{escape(footer)}</p><p style="font-size:12px;color:#6c6d64">BRUNO · Octopus Vision Company · bruno@brunocard.com</p></div>')
 
 
-async def _email_client(o: dict, subject: str, title: str, intro: str, rows: list, cta: Optional[tuple], footer: str, kind: str) -> str:
+async def _send_client_once(to: str, subject: str, html: str) -> tuple:
     from utils.email import send_email
     try:
-        pid = await send_email(to=o["email"], subject=subject, html=_mail(title, intro, rows, cta, footer))
-        status = "accepted"
+        return "accepted", await send_email(to=to, subject=subject, html=html), None
     except HTTPException as e:
-        pid, status = None, ("pending_configuration" if e.status_code == 503 else "failed")
-    await db.service_requests.update_one({"id": o["id"]}, {"$push": {"client_emails": {"kind": kind, "at": _now().isoformat(), "status": status, "provider_id": pid}}})
+        retry = e.status_code in (502, 503, 500) and "no configurado" not in str(e.detail)
+        return ("retrying" if retry else ("pending_configuration" if e.status_code == 503 else "failed")), None, str(e.detail)[:160]
+
+
+async def _retry_client_email(order_id: str, at: str, to: str, subject: str, html: str):
+    """Reintento en segundo plano (p. ej. 429/5xx del proveedor); nunca duplica un correo ya aceptado."""
+    for delay in (30, 120, 600):
+        await asyncio.sleep(delay)
+        status, pid, err = await _send_client_once(to, subject, html)
+        final = status if status != "retrying" else ("retrying" if delay < 600 else "failed")
+        await db.service_requests.update_one({"id": order_id, "client_emails.at": at}, {"$set": {"client_emails.$.status": final, "client_emails.$.provider_id": pid, "client_emails.$.error": err}, "$inc": {"client_emails.$.attempts": 1}})
+        if status != "retrying":
+            return
+
+
+async def _email_client(o: dict, subject: str, title: str, intro: str, rows: list, cta: Optional[tuple], footer: str, kind: str) -> str:
+    html = _mail(title, intro, rows, cta, footer)
+    status, pid, err = await _send_client_once(o["email"], subject, html)
+    at = _now().isoformat()
+    await db.service_requests.update_one({"id": o["id"]}, {"$push": {"client_emails": {"kind": kind, "at": at, "status": status, "provider_id": pid, "error": err, "attempts": 1}}})
+    if status == "retrying":
+        asyncio.create_task(_retry_client_email(o["id"], at, o["email"], subject, html))
     return status
 
 
@@ -282,6 +303,7 @@ async def my_orders(user: User = Depends(get_current_user)):
 
 @router.get("/orders/{order_id}/public")
 async def order_public(order_id: str):
+    await _refresh_pending(await _get_order(order_id))
     return _public(await _get_order(order_id))
 
 
@@ -309,9 +331,28 @@ async def checkout(order_id: str, request: Request):
     return {"url": url, "provider": provider, "amount": o["amount"], "currency": o["currency"], "label": OFFERS[o["market"]]["label"], "merchant": "Octopus Vision Company (OVC)"}
 
 
+async def _refresh_pending(o: dict, cancelled: bool = False) -> None:
+    """Un intento abandonado/cancelado no deja el pedido «verificando»: vuelve a sin pago si ningún intento está confirmado o pendiente en el proveedor."""
+    if o.get("payment_status") != "pending":
+        return
+    last = await db.service_payments.find_one({"order_id": o["id"]}, {"_id": 0}, sort=[("created_at", -1)])
+    if not last:
+        return
+    stale = last["created_at"] < (_now() - timedelta(hours=1)).isoformat()
+    if cancelled and last["status"] in ("initiated", "created"):
+        await db.service_payments.update_one({"id": last["id"]}, {"$set": {"status": "cancelled"}})
+        last["status"] = "cancelled"
+    provider_pending = last["status"] == "pending" and last.get("verified_at")
+    if (cancelled or stale) and not provider_pending and last["status"] in ("initiated", "created", "cancelled", "expired", "failed", "voided"):
+        await db.service_requests.update_one({"id": o["id"], "payment_status": "pending"}, {"$set": {"payment_status": "unpaid"}})
+        await _history(o["id"], "payment:abandoned" if not cancelled else "payment:cancelled", None, attempt=last.get("attempt"))
+
+
 @router.get("/orders/{order_id}/payment-status")
-async def payment_status(order_id: str, session_id: Optional[str] = None, id: Optional[str] = None):
+async def payment_status(order_id: str, session_id: Optional[str] = None, id: Optional[str] = None, cancel: Optional[int] = None):
     o = await _get_order(order_id)
+    if cancel and not session_id and not id:
+        await _refresh_pending(o, cancelled=True)
     if o.get("payment_status") != "paid":
         try:
             if session_id:
@@ -439,8 +480,8 @@ class ReviewSend(BaseModel):
 async def send_review(order_id: str, body: ReviewSend, user: User = Depends(get_current_user)):
     _staff(user)
     o = await _get_order(order_id)
-    if o.get("production_status") in ("cancelled", "delivered"):
-        raise HTTPException(status_code=409, detail="El pedido no admite revisión en su estado actual")
+    if o.get("production_status") in ("cancelled", "delivered", "approved"):
+        raise HTTPException(status_code=409, detail="El pedido no admite revisión en su estado actual (aprobado, entregado o cancelado). Para una nueva versión, vuelve a preparación primero.")
     card = await db.cards.find_one({"id": o.get("card_id")}, {"_id": 0}) if o.get("card_id") else None
     if not card:
         raise HTTPException(status_code=400, detail="Primero crea la tarjeta del pedido")
@@ -480,6 +521,9 @@ async def set_status(order_id: str, body: StatusBody, user: User = Depends(get_c
     o = await _get_order(order_id)
     if o.get("production_status") == "delivered":
         raise HTTPException(status_code=409, detail="Un pedido entregado no cambia de estado")
+    if body.production_status == "in_preparation" and o.get("approval"):
+        await db.service_requests.update_one({"id": order_id}, {"$set": {"approval": None, "publish_authorized": None}})
+        await _history(order_id, "approval:reset", user.id, previous=o["approval"])
     if body.production_status == "cancelled":
         await db.review_tokens.update_many({"order_id": order_id, "revoked_at": None}, {"$set": {"revoked_at": _now().isoformat(), "revoked_reason": "cancelled"}})
     await _set_production(order_id, body.production_status, user.id, note=_clean(body.note, 500))
@@ -525,6 +569,8 @@ async def manual_payment(order_id: str, body: PaymentBody, user: User = Depends(
     if len(body.reference.strip()) < 4:
         raise HTTPException(status_code=400, detail="Referencia del proveedor obligatoria")
     o = await _get_order(order_id)
+    if body.status == "paid" and o.get("production_status") == "cancelled":
+        raise HTTPException(status_code=409, detail="El pedido está cancelado; reactívalo (volver a preparación) antes de registrar un pago")
     if body.status == "paid":
         done = await _mark_paid(order_id, "manual", body.reference.strip(), o["amount"] * 100, o["currency"], user.id, {"payment_marked_by": user.id, "payment_note": _clean(body.note, 300)})
         return {"ok": True, "changed": done}
@@ -574,7 +620,7 @@ async def review_get(token: str, user: Optional[User] = Depends(get_current_user
 async def review_send_code(token: str, user: User = Depends(get_current_user)):
     t, o = await _resolve_token(token)
     if _identity(o, user) != "verify_email":
-        raise HTTPException(status_code=409, detail="Este paso no aplica a tu cuenta")
+        raise _err("Este paso no aplica a tu cuenta.", "This step does not apply to your account.", 409)
     code = f"{secrets.randbelow(10**6):06d}"
     await db.review_codes.update_one({"order_id": o["id"], "user_id": user.id}, {"$set": {"code_hash": hashlib.sha256(code.encode()).hexdigest(), "expires_at": (_now() + timedelta(minutes=CODE_TTL_MIN)).isoformat(), "attempts": 0}}, upsert=True)
     lang = o.get("language", "es")
@@ -592,13 +638,13 @@ class CodeBody(BaseModel):
 async def review_verify_code(token: str, body: CodeBody, user: User = Depends(get_current_user)):
     t, o = await _resolve_token(token)
     if _identity(o, user) != "verify_email":
-        raise HTTPException(status_code=409, detail="Este paso no aplica a tu cuenta")
+        raise _err("Este paso no aplica a tu cuenta.", "This step does not apply to your account.", 409)
     rc = await db.review_codes.find_one({"order_id": o["id"], "user_id": user.id}, {"_id": 0})
     if not rc or rc["expires_at"] <= _now().isoformat() or rc.get("attempts", 0) >= 5:
-        raise HTTPException(status_code=400, detail="Código vencido. Solicita uno nuevo.")
+        raise _err("Código vencido. Solicita uno nuevo.", "Code expired. Request a new one.")
     if not hmac.compare_digest(rc["code_hash"], hashlib.sha256(body.code.strip().encode()).hexdigest()):
         await db.review_codes.update_one({"order_id": o["id"], "user_id": user.id}, {"$inc": {"attempts": 1}})
-        raise HTTPException(status_code=400, detail="Código incorrecto")
+        raise _err("Código incorrecto.", "Incorrect code.")
     r = await db.service_requests.find_one_and_update({"id": o["id"], "user_id": None}, {"$set": {"user_id": user.id, "recipient_verified_at": _now().isoformat()}})
     await db.review_codes.delete_one({"order_id": o["id"], "user_id": user.id})
     if r:
@@ -614,12 +660,12 @@ class ChangesBody(BaseModel):
 async def review_changes(token: str, body: ChangesBody, user: User = Depends(get_current_user)):
     t, o = await _resolve_token(token)
     if _identity(o, user) != "ok":
-        raise HTTPException(status_code=403, detail="Inicia sesión con la cuenta vinculada al pedido")
+        raise _err("Inicia sesión con la cuenta vinculada al pedido.", "Sign in with the account linked to the order.", 403)
     if o.get("production_status") not in ("pending_approval", "changes_requested"):
-        raise HTTPException(status_code=409, detail="El pedido no está en revisión")
+        raise _err("El pedido no está en revisión.", "The order is not under review.", 409)
     msg = _clean(body.message, 2000)
     if len(msg) < 3:
-        raise HTTPException(status_code=400, detail="Describe los ajustes")
+        raise _err("Describe los ajustes.", "Describe the changes.")
     rounds = o.get("adjustment_rounds", 0) + 1
     await db.service_requests.update_one({"id": o["id"]}, {"$set": {"adjustment_rounds": rounds}, "$push": {"change_requests": {"at": _now().isoformat(), "version": t["version"], "message": msg, "by": user.id}}})
     await _set_production(o["id"], "changes_requested", user.id, version=t["version"], round=rounds)
@@ -636,18 +682,18 @@ class ApproveBody(BaseModel):
 async def review_approve(token: str, body: ApproveBody, user: User = Depends(get_current_user)):
     t, o = await _resolve_token(token)
     if _identity(o, user) != "ok":
-        raise HTTPException(status_code=403, detail="Inicia sesión con la cuenta vinculada al pedido")
+        raise _err("Inicia sesión con la cuenta vinculada al pedido.", "Sign in with the account linked to the order.", 403)
     if o.get("production_status") == "cancelled":
-        raise HTTPException(status_code=409, detail="Este pedido fue cancelado")
+        raise _err("Este pedido fue cancelado.", "This order was cancelled.", 409)
     if o.get("approval") and o["approval"].get("version") == o.get("review_version"):
         return {"ok": True, "already": True, **_public(await _get_order(o["id"]))}  # doble clic / recarga
     if body.version != o.get("review_version") or t["version"] != o.get("review_version"):
-        raise HTTPException(status_code=409, detail={"state": "stale", "error": "Hay una versión más reciente. Revisa la nueva versión antes de aprobar."})
+        raise HTTPException(status_code=409, detail={"state": "stale", "error": "Hay una versión más reciente. Revisa la nueva versión antes de aprobar.", "errorEn": "There is a newer version. Review the new version before approving."})
     if o.get("production_status") not in ("pending_approval", "changes_requested"):
-        raise HTTPException(status_code=409, detail="El pedido no está pendiente de aprobación")
+        raise _err("El pedido no está pendiente de aprobación.", "The order is not pending approval.", 409)
     card = await db.cards.find_one({"id": o["card_id"]}, {"_id": 0})
     if not card or card_hash(card) != o.get("review_hash"):
-        raise HTTPException(status_code=409, detail={"state": "stale", "error": "El equipo modificó la tarjeta después de enviarla. Espera la nueva versión."})
+        raise HTTPException(status_code=409, detail={"state": "stale", "error": "El equipo modificó la tarjeta después de enviarla. Espera la nueva versión.", "errorEn": "The team modified the card after sending it. Wait for the new version."})
     approval = {"version": body.version, "publish": bool(body.publish), "at": _now().isoformat(), "by": user.id, "hash": o["review_hash"]}
     r = await db.service_requests.find_one_and_update({"id": o["id"], "production_status": {"$in": ["pending_approval", "changes_requested"]}, "review_version": body.version},
                                                       {"$set": {"approval": approval, "publish_authorized": bool(body.publish)}})

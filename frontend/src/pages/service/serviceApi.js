@@ -21,10 +21,14 @@ export const startCheckout = (id) => axios.post(`${API}/orders/${id}/checkout`, 
 export const paymentStatus = (id, params) => axios.get(`${API}/orders/${id}/payment-status`, { params }).then((r) => r.data);
 export const getReview = (token, jwt) => axios.get(`${API}/review/${token}`, auth(jwt)).then((r) => r.data);
 
-export function StatusPill({ kind, value, testId }) {
+export function StatusPill({ kind, value, testId, lang: forced }) {
   const map = kind === "payment" ? PAYMENT_LABELS : PRODUCTION_LABELS;
+  const v = map[value];
+  const text = v ? (forced === "es" ? v[0] : forced === "en" ? v[1] : t(v[0], v[1])) : value || "—";
   const tone = value === "paid" || value === "delivered" || value === "approved" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : value === "cancelled" || value === "failed" || value === "disputed" ? "bg-red-50 text-red-700 border-red-200" : value === "pending" || value === "pending_approval" || value === "changes_requested" ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-orange-50 text-[#c84a17] border-orange-200";
-  return <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${tone}`} data-testid={testId}>{label(map, value)}</span>;
+  return <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${tone}`} data-testid={testId}>{text}</span>;
 }
+
+export const errText = (e, fallback) => { const d = e?.response?.data?.detail ?? e?.response?.data; if (!d) return fallback; if (typeof d === "string") return d; return (lang() === "en" ? d.errorEn || d.error : d.error || d.errorEn) || fallback; };
 
 export const glass = "rounded-[28px] border border-white/70 bg-white/70 backdrop-blur-xl shadow-[inset_0_1px_0_#fff,0_18px_50px_rgba(52,59,50,0.10)]";

@@ -21,7 +21,7 @@ export default function ServicePaymentReturnPage() {
       catch { if (n >= 8) return; }
       timer.current = setTimeout(() => { setTries(n + 1); tick(n + 1); }, 3000);
     };
-    if (!cancelled) tick(0); else paymentStatus(orderId, {}).then((o) => alive && setOrder(o)).catch(() => {});
+    if (!cancelled) tick(0); else paymentStatus(orderId, { cancel: 1 }).then((o) => alive && setOrder(o)).catch(() => {});
     return () => { alive = false; clearTimeout(timer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
@@ -41,7 +41,7 @@ export default function ServicePaymentReturnPage() {
             : failed ? t("El proveedor rechazó el pago. No se realizó ningún cobro. Puedes intentarlo de nuevo.", "The provider declined the payment. You were not charged. You can try again.")
             : t("Esperamos la confirmación del proveedor. Si tarda, revisa esta página más tarde: no se entrega nada hasta que el pago esté confirmado.", "Waiting for the provider's confirmation. If it takes a while, check back later: nothing is delivered until the payment is confirmed.")}
         </p>
-        {order && <div className="flex justify-center gap-2 mb-6"><StatusPill kind="payment" value={order.payment_status} testId="return-payment-status" /><StatusPill kind="production" value={order.production_status} testId="return-production-status" /></div>}
+        {order && <div className="flex justify-center gap-2 mb-6"><StatusPill kind="production" value={order.production_status} testId="return-production-status" /><StatusPill kind="payment" value={order.payment_status} testId="return-payment-status" /></div>}
         {!paid && !cancelled && !failed && tries >= 8 && <p className="text-xs text-amber-800 mb-4" data-testid="payment-return-slow">{t("Aún sin confirmación. Puedes volver más tarde a tu pedido.", "No confirmation yet. You can return to your order later.")}</p>}
         <Button className="rounded-full" onClick={() => navigate(`/pedido/${orderId}`)} data-testid="payment-return-order-btn">{t("Ver mi pedido", "View my order")}</Button>
       </div>

@@ -5,7 +5,7 @@ import { ArrowLeft, Package, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { API, PRODUCTION_LABELS, StatusPill, auth, label } from "./serviceApi";
+import { API, PRODUCTION_LABELS, StatusPill, auth } from "./serviceApi";
 
 export default function AdminOrdersPage() {
   const navigate = useNavigate();
@@ -31,7 +31,7 @@ export default function AdminOrdersPage() {
           <div className="relative flex-1 min-w-[200px]"><Search className="w-4 h-4 absolute left-3 top-2.5 text-muted-foreground" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por referencia, nombre o correo" className="pl-9" data-testid="admin-orders-search" /></div>
           <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 rounded-lg bg-muted px-3 text-sm" data-testid="admin-orders-filter">
             <option value="">Todos los estados</option>
-            {Object.keys(PRODUCTION_LABELS).map((k) => <option key={k} value={k}>{label(PRODUCTION_LABELS, k)}</option>)}
+            {Object.keys(PRODUCTION_LABELS).map((k) => <option key={k} value={k}>{PRODUCTION_LABELS[k][0]}</option>)}
           </select>
         </div>
         {error && <p className="text-sm text-destructive" data-testid="admin-orders-error">{error}</p>}
@@ -47,7 +47,7 @@ export default function AdminOrdersPage() {
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="text-muted-foreground">{o.name} · {o.email}</span>
-                <span className="ml-auto flex gap-2"><StatusPill kind="production" value={o.production_status || "received"} /><StatusPill kind="payment" value={o.payment_status || "unpaid"} /></span>
+                <span className="ml-auto flex gap-2"><StatusPill kind="production" value={o.production_status || "received"} lang="es" /><StatusPill kind="payment" value={o.payment_status || "unpaid"} lang="es" /></span>
               </div>
             </button>
           ))}

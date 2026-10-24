@@ -1,0 +1,62 @@
+{
+  "summary": "Tested the full 'Creamos tu tarjeta' order flow on backend and frontend. qa_order_flow.sh: every step gave the result its echo line expects (Stripe checkout URL, staff access, card idempotency, admin cannot see the card, login/switch_account/ok states, 403 when another account approves, 409 stale after a card edit, v1 revoked after v2, change request, approve v2 then a second approve returning ok/already, approved but not delivered while unpaid, client manual payment 403, admin manual payment delivers the card, second payment call returns changed:false, card private and owned by the client, admin PUT 404, full history). New pytest file test_iteration122_orders.py: 14/17 passed. The 3 failures all come from the Emergent email service returning 429 'rate limited' during the run, not from app logic. After the rate limit cleared, the confirmation and review emails to delivered@resend.dev were 'accepted'. Role checks, both webhooks (Wompi 401, Stripe 400) and the unpaid-session payment-status check all passed. Frontend: almost every requested flow passed, with a few minor UX/i18n issues listed below. One business-logic gap found: staff can wipe a client's approval by sending the review again.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/bruno-service/orders/{id}/send-review (and /resend-review)", "issue": "Works on orders already 'approved'. It sets approval=None and moves the order back to pending_approval, so the client's recorded approval is lost silently. Reproduced on order 731ef582: client approved v1, staff sent the review again, result was pending_approval with approval None. The admin UI keeps the 'Enviar para aprobación' button enabled on approved orders, so one accidental click does this. Suggest returning 409 when production_status == 'approved' (or asking for confirmation and logging it)."},
+      {"endpoint": "_email_client / utils.email", "issue": "A 429 rate limit from the Emergent email API is stored as status 'failed' and never retried. During testing the confirmation and review emails were lost this way. Consider a 'retry/pending' status or a background retry for 429."},
+      {"endpoint": "POST /api/bruno-service/orders/{id}/payment", "issue": "A manual 'paid' is accepted on cancelled orders: _mark_paid never checks production_status. Low risk, but the status matrix becomes inconsistent."},
+      {"endpoint": "review/* errors", "issue": "Many HTTPException details are Spanish-only strings (e.g. 'Código incorrecto', 'Inicia sesión con la cuenta vinculada al pedido'), so English-UI users see Spanish errors on the review page."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Global floating back button on /website (mobile 390px)", "issue": "A grey round back-arrow button fixed at the top-left covers the BRUNO logo or mascot icon in the website nav", "selector": "fixed top-left back button (not website-back-app)", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Payment cancel / order page", "issue": "Once checkout has been started, payment_status stays 'pending', so after cancelling (/pedido/{id}/pago?cancel=1) the page still shows a 'Verifying payment' pill, and the order page says 'We are verifying your payment…'. This is misleading when the user cancelled or abandoned the payment.", "affected_selectors": ["payment-return-title", "order-verifying"]},
+      {"flow": "Review verify_email", "issue": "When send-code fails (sent:false), the code input still appears next to the 'could not send' error. Minor.", "affected_selectors": ["review-send-code-btn", "review-code-input"]}
+    ],
+    "design_issues": [
+      {"screen": "/my-profile?tab=cards", "issues": ["The my-service-orders widget follows the service language (English when the browser is EN) while the rest of the profile is Spanish, so the screen mixes languages"]},
+      {"screen": "/admin/pedidos/:id", "issues": ["Labels are in Spanish but the status pills follow the service language (English), so the page mixes languages", "Long values break mid-word ('cuenta veri ficada', 'priva da'); use break-words / word-break: normal"]},
+      {"screen": "/website focus Mapa CTA", "issue_note": "", "issues": ["The 'Abrir el mapa' CTA goes to /map, which is a ProtectedRoute, so logged-out visitors land on /login. This may be intended, but the other four CTAs open public pages."]},
+      {"screen": "/pedido/:id/pago?cancel=1", "issues": ["The status pills are shown in the opposite order (payment, then production) from /pedido/:id"]}
+    ]
+  },
+  "passed_frontend_checks": [
+    "/website: logo, ES<->EN toggle without reload, choice persisted in localStorage bruno-service-language after reload, 5 focus sections, CTAs go to /cards/examples, /marketplace, /reels, /lives (/map redirects to /login when logged out), service bubble links to /servicios/tarjeta-bruno/index.html, footer mailto, 6 legal links, owner text, no overflow at 390px, mobile menu opens and closes on item click, logged-in user sees 'Go to my profile' and the back-app button (goes to /settings)",
+    "Settings staff card shown for testc and viewer3, not for newtest; staff card goes to /admin/pedidos",
+    "Admin list (5 rows), search filter, status select; detail shows client, recipient, statuses, files, payment, history; Editar tarjeta goes to /cards/{id}/edit?order=ID with send-approval-btn shown and no publish-btn; send for approval returns to the detail page showing Pending approval v2; the card is not in testc's /my-profile cards",
+    "viewer3 (produccion) detail page hides the manual payment section",
+    "Review page: logged out shows login-required, then login?next= returns to the same link; viewer2 sees switch-account and the switch button goes to /login?next=; newtest sees the private preview with the publish checkbox unchecked; changes request shows review-done; approve v2 without publishing shows 'Approval recorded… waiting for payment'; reloading shows review-approved-waiting with no error",
+    "Garbage token shows review-link-invalid; unknown order shows order-error",
+    "/pedido/{US id} shows reference, both pills, US$30 and a pay button that redirects to checkout.stripe.com; CO order shows order-payment-unavailable with no pay button",
+    "/pedido/{id}/pago?cancel=1 shows 'Payment cancelled' and the 'View my order' button goes to /pedido/{id}",
+    "my-service-orders widget for newtest goes to /pedido/{id}",
+    "Template submitted ONCE while logged in as newtest (US): 201, emailStatus accepted, order-continue-link 'Continue to secure payment ↗' opens /pedido/{id} with a pay button; order bound to newtest's user_id, client confirmation accepted",
+    "verify_email UI state: send code, then a wrong code shows the error"
+  ],
+  "test_report_links": ["/app/backend/tests/qa_order_flow.sh", "/app/backend/tests/test_iteration122_orders.py", "/app/test_reports/pytest/pytest_iter122.xml"],
+  "action_items": [
+    "Block (409) or require confirmation for send-review/resend-review when production_status is 'approved', and disable 'Enviar para aprobación' in AdminOrderDetailPage for approved orders",
+    "Handle Emergent email 429 with retry or a 'pending' status instead of a permanent 'failed'",
+    "Do not show the 'Verifying payment' pill or text after a user cancels or abandons the Stripe checkout (e.g. map pending to 'unpaid' in the UI when the last attempt is not verified, or look at the attempt status)",
+    "Make review-flow backend error messages bilingual (error/errorEn as done in _err)",
+    "Optional: refuse manual 'paid' on cancelled orders; fix the floating back button overlapping the /website logo on mobile; fix mid-word breaks in the admin detail rows"
+  ],
+  "critical_code_review_comments": [
+    "bruno_orders.py is 720 lines; consider splitting payments, production and review into separate modules",
+    "send_review does not restrict states: approved orders can be reset (see above). set_status also allows 'in_preparation' from 'approved', which clears the meaning of the client's approval without resetting it",
+    "stripe_webhook falls back to an unsigned JSON body when STRIPE_WEBHOOK_SECRET is missing. It re-verifies through the API, so the risk is limited, but in production it should reject requests when the secret is absent",
+    "checkout endpoint is unauthenticated (only an Origin check), so anyone with an order id can create unlimited Stripe sessions or payment attempts; consider rate limiting"
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration122_orders.py"],
+  "success_rate": {"backend": "~95% (qa_order_flow.sh 100% as expected; pytest 14/17, the 3 failures caused by the email provider's 429 rate limit, verified accepted afterwards)", "frontend": "~93%"},
+  "test_credentials": "From /app/memory/test_credentials.md: testc@brunoqa.com / Prueba1234! (admin), viewer3@bruno.com / Test1234! (produccion), newtest@bruno.com / Test1234!, viewer2@bruno.com / Test1234!",
+  "seed_data_creation": "Orders created (please delete): 88709bb0-6f4d-4296-a364-6f1579ecfb10 (qa_order_flow.sh, delivered to newtest, card a1d6138c-f617-495f-9d7a-614bff50434d); 6927e790-ca07-428b-8415-1c110f7bd406 (pytest, email delivered@resend.dev, user newtest, card 84aa1018-67fa-4b63-bb36-f9c198016356, approved v2, unpaid); 731ef582-7474-4cc2-ab5e-d2e699f27dd1 (single template form submission, card 7c2c1701-9c10-4aa0-a629-1c1bfc8cb966, recipient changed to newtest@bruno.com, now verify_email / pending_approval). An extra Stripe checkout session was also created on the existing order aa11a57c-5839-42a8-ad26-c84546b58318 when the pay button was clicked.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run bash /app/backend/tests/qa_order_flow.sh and pytest /app/backend/tests/test_iteration122_orders.py. The Emergent email API rate-limits (429) after the QA script, so wait a minute before asserting 'accepted'. Login page shows an account picker; click account-picker-other before filling login-email-input. The template form sits inside the #contactBubble <details>; click its summary first. Review URLs are only available from the staff send-review response (capture it in Playwright via page.on('response')).",
+  "rca of the issue": "Approval wipe: send_review() only rejects 'cancelled'/'delivered' and always sets approval=None plus production_status=pending_approval. Reproduce: client approves, then staff POSTs send-review; GET detail shows approval None and status pending_approval. Fix: add 'approved' to the rejected states in send_review (and hide the UI button). Email failures: utils.email raised an HTTPException for the 429 from integrations.emergentagent.com; _email_client maps it to 'failed' with no retry."
+}

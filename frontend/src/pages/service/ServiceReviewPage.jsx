@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import CardRenderer from "@/components/cards/CardRenderer";
 import { resolveDesign } from "@/lib/cardDesign";
-import { API, StatusPill, auth, getReview, t, glass } from "./serviceApi";
+import { API, StatusPill, auth, errText, getReview, t, glass } from "./serviceApi";
 
 const Box = ({ children, testId }) => <div className={`${glass} p-7 sm:p-9`} data-testid={testId}>{children}</div>;
 
@@ -33,7 +33,7 @@ export default function ServiceReviewPage() {
   const call = async (path, body) => {
     setBusy(true); setError("");
     try { const r = await axios.post(`${API}/review/${token}/${path}`, body || {}, auth(jwt)); return r.data; }
-    catch (e) { const d = e.response?.data?.detail; setError(typeof d === "string" ? d : d?.error || t("No se pudo completar la acción.", "The action could not be completed.")); if (d?.state === "stale") load(); return null; }
+    catch (e) { const d = e.response?.data?.detail; setError(errText(e, t("No se pudo completar la acción.", "The action could not be completed."))); if (d?.state === "stale") load(); return null; }
     finally { setBusy(false); }
   };
 
@@ -69,7 +69,7 @@ export default function ServiceReviewPage() {
     <MailCheck className="w-10 h-10 text-[#fa632e] mb-3" />
     <h1 className="text-2xl font-semibold mb-2">{t("Confirma tu correo", "Confirm your email")}</h1>
     <p className="text-sm text-gray-600 mb-5">{t(`Enviaremos un código a ${data.email_masked} para vincular este pedido a tu cuenta. Así nadie puede reclamar tu tarjeta solo con escribir tu correo.`, `We will send a code to ${data.email_masked} to link this order to your account. That way nobody can claim your card just by typing your email.`)}</p>
-    {!codeSent ? <Button className="rounded-full" disabled={busy} onClick={async () => { const r = await call("send-code"); if (r) setCodeSent(true); if (r && !r.sent) setError(t("No pudimos enviar el código ahora. Inténtalo más tarde.", "We could not send the code right now. Try again later.")); }} data-testid="review-send-code-btn">{t("Enviar código", "Send code")}</Button>
+    {!codeSent ? <Button className="rounded-full" disabled={busy} onClick={async () => { const r = await call("send-code"); if (r?.sent) setCodeSent(true); else if (r) setError(t("No pudimos enviar el código ahora. Inténtalo más tarde.", "We could not send the code right now. Try again later.")); }} data-testid="review-send-code-btn">{t("Enviar código", "Send code")}</Button>
       : <div className="flex flex-wrap gap-3 items-center">
         <Input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="000000" className="w-36 text-center tracking-[6px] font-bold" data-testid="review-code-input" />
         <Button className="rounded-full" disabled={busy || code.length !== 6} onClick={async () => { const r = await call("verify-code", { code }); if (r) load(); }} data-testid="review-verify-code-btn">{t("Confirmar", "Confirm")}</Button>

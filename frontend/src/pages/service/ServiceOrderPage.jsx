@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CreditCard, Mail, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { StatusPill, getPublicOrder, startCheckout, t, glass } from "./serviceApi";
+import { StatusPill, errText, getPublicOrder, startCheckout, t, glass } from "./serviceApi";
 
 export default function ServiceOrderPage() {
   const { orderId } = useParams();
@@ -19,7 +19,7 @@ export default function ServiceOrderPage() {
   const pay = async () => {
     setPaying(true); setError("");
     try { const r = await startCheckout(orderId); window.location.assign(r.url); }
-    catch (e) { setError(e.response?.data?.errorEn && window.navigator.language.startsWith("en") ? e.response.data.errorEn : e.response?.data?.error || e.response?.data?.detail || t("No se pudo iniciar el pago.", "Could not start the payment.")); setPaying(false); }
+    catch (e) { setError(errText(e, t("No se pudo iniciar el pago.", "Could not start the payment."))); setPaying(false); }
   };
 
   const canPay = order && order.payment_status !== "paid" && order.production_status !== "cancelled";
