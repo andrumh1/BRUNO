@@ -40,6 +40,7 @@ import PictureInPicture from "@/components/PictureInPicture";
 import CameraFloatingButton from "@/components/CameraFloatingButton";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import UploadChip from "@/components/bruno/UploadChip";
 import FloatingBackButton from "@/components/FloatingBackButton";
 
 // Pages
@@ -285,6 +286,7 @@ function App() {
                 <PictureInPicture />
                 <CameraFloatingButton />
                 <MobileBottomNav />
+                <UploadChip />
                 <FloatingBackButton />
                 <TourOverlay />
                 <KeyboardViewportManager />

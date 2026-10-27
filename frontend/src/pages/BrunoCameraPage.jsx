@@ -11,6 +11,7 @@ import * as faceapi from "face-api.js";
 import StoryPlacePicker from "@/components/StoryPlacePicker";
 import { VideoTrimCover, UploadProgress, DraftsSheet } from "@/components/camera/VideoPublishTools";
 import { uploadVideoDirect, getUploadLimits } from "@/lib/videoUpload";
+import { enqueueVideoPost } from "@/lib/uploadQueue";
 import { takePendingMedia, PENDING_MEDIA_EVENT } from "@/lib/pendingMedia";
 import { setVideoLimit, videoTooLarge, videoTooLargeMsg } from "@/lib/media";
 import {
@@ -691,6 +692,29 @@ const BrunoCameraPage = () => {
     lastAction.current = handlePublish;
     setPublishing(true);
     try {
+      const pollSticker0 = stickers.find((s) => s.kind === "poll");
+      const interactive0 = !!pollSticker0 || stickers.some((s) => s.kind === "question");
+      // Video para el feed/Reels: se publica en segundo plano (chip de progreso) y el usuario sigue navegando.
+      if (capturedMedia.type !== "photo" && !interactive0 && !asStory) {
+        const blob = capturedMedia.remote ? null : (capturedMedia.blob || await (await fetch(capturedMedia.data)).blob());
+        const ext = capturedMedia.ext || (blob?.type?.includes("mp4") ? "mp4" : "webm");
+        const file = blob ? new File([blob], `bruno_${capturedMedia.fileKey || Date.now()}.${ext}`, { type: blob.type || "video/mp4", lastModified: capturedMedia.lastModified || 0 }) : null;
+        if (file) {
+          const lim = await getUploadLimits(token).catch(() => null);
+          if (lim?.video_max_bytes) setVideoLimit(lim.video_max_bytes);
+          if (videoTooLarge(file)) throw Object.assign(new Error("too large"), { userMessage: videoTooLargeMsg() });
+        }
+        enqueueVideoPost({
+          token, file, trim, coverAt, overlays: texts.map((t) => ({ text: t.text, x: t.x, y: t.y, color: t.color })), preUploaded: capturedMedia.remote ? capturedMedia.up : null,
+          body: { content: caption, post_type: "video", visibility: "public", audio: sound ? { source_post_id: sound.source_post_id, name: sound.name, url: sound.url } : null, place: storyPlace },
+          draftId: capturedMedia.draftId || null, liveId: capturedMedia.liveId || null,
+        });
+        const { brunoToast } = await import("@/components/bruno/BrunoToast");
+        brunoToast.info("Subiendo tu video en segundo plano", { description: "Puedes seguir usando BRUNO; te avisamos cuando esté publicado." });
+        setUpload({ pct: 0, phase: null, error: null }); setCapturedMedia(null); setCaption(""); setTexts([]);
+        navigate(window.history.length > 1 ? -1 : "/feed");
+        return;
+      }
       // Step 1: Upload media to Cloudinary (con progreso, recorte y portada)
       const up = await uploadMedia();
       const mediaUrl = up.url;
