@@ -13,7 +13,9 @@ from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+import hashlib
 import os
+import secrets
 import time
 import uuid
 
@@ -22,7 +24,10 @@ from models.user import User
 
 SECRET_KEY = os.environ['SECRET_KEY']
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30  # 30 days
+ACCESS_TOKEN_EXPIRE_MINUTES = 60  # access token corto; la sesión vive en el refresh token rotatorio
+REFRESH_TOKEN_TTL_DAYS = 180  # rolling: cada renovación extiende la sesión
+REFRESH_REUSE_GRACE_SECONDS = 60  # reintentos de red con el token recién rotado no cierran la sesión
+REFRESH_COOKIE = "bruno_refresh"
 
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_LOCK_MINUTES = 15
@@ -99,6 +104,8 @@ async def resolve_user_from_token(token: str) -> Optional[User]:
             return None
         if payload.get("jti") and await db.revoked_tokens.find_one({"jti": payload["jti"]}, {"_id": 0, "jti": 1}):
             return None
+        if payload.get("fam") and await db.revoked_families.find_one({"family_id": payload["fam"]}, {"_id": 0, "family_id": 1}):
+            return None
         user_dict = await db.users.find_one({"email": email}, {"_id": 0})
         if not user_dict or user_dict.get("is_active") is False:
             return None
@@ -142,6 +149,87 @@ async def revoke_all_user_tokens(user_id: str) -> None:
     """Invalidate every session of a user (password change, 'cerrar sesión en todos los dispositivos')."""
     await db.users.update_one({"id": user_id}, {"$set": {"tokens_valid_after": datetime.now(timezone.utc).isoformat()}})
     await db.user_sessions.delete_many({"user_id": user_id})
+    await db.refresh_tokens.update_many({"user_id": user_id, "revoked": {"$ne": True}}, {"$set": {"revoked": True, "revoked_at": datetime.now(timezone.utc).isoformat(), "revoke_reason": "all_devices"}})
+
+
+# ---------- refresh tokens rotatorios (sesión persistente) ----------
+def _hash_refresh(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+async def issue_token_pair(user_doc: dict, platform: str = "web", family_id: Optional[str] = None, ip: str = "", ua: str = "") -> dict:
+    """Access JWT corto + refresh opaco (solo se guarda su hash). `family_id` agrupa todas las rotaciones de un mismo dispositivo."""
+    now = datetime.now(timezone.utc)
+    family_id = family_id or uuid.uuid4().hex
+    refresh = secrets.token_urlsafe(48)
+    doc = {"id": uuid.uuid4().hex, "user_id": user_doc["id"], "family_id": family_id, "token_hash": _hash_refresh(refresh), "platform": platform or "web",
+           "created_at": now.isoformat(), "expires_at": (now + timedelta(days=REFRESH_TOKEN_TTL_DAYS)).isoformat(), "expires_dt": now + timedelta(days=REFRESH_TOKEN_TTL_DAYS),
+           "revoked": False, "used_at": None, "replaced_by": None, "ip": ip[:64], "ua": ua[:200]}
+    await db.refresh_tokens.insert_one(doc)
+    access = create_access_token({"sub": user_doc["email"], "uid": user_doc["id"], "plt": platform or "web", "fam": family_id})
+    return {"access_token": access, "refresh_token": refresh, "family_id": family_id, "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60}
+
+
+async def revoke_refresh_family(family_id: Optional[str], reason: str = "logout") -> None:
+    if family_id:
+        now = datetime.now(timezone.utc)
+        await db.refresh_tokens.update_many({"family_id": family_id, "revoked": {"$ne": True}}, {"$set": {"revoked": True, "revoked_at": now.isoformat(), "revoke_reason": reason}})
+        # los access tokens vivos de esa familia dejan de valer de inmediato (TTL = vida máxima de un access token)
+        await db.revoked_families.update_one({"family_id": family_id}, {"$set": {"family_id": family_id, "revoked_at": now, "expires_at": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES + 5)}}, upsert=True)
+
+
+async def revoke_refresh_token_value(token: Optional[str], reason: str = "logout") -> None:
+    if token:
+        rec = await db.refresh_tokens.find_one({"token_hash": _hash_refresh(token)}, {"_id": 0, "family_id": 1})
+        if rec:
+            await revoke_refresh_family(rec.get("family_id"), reason)
+
+
+async def rotate_refresh_token(token: str, platform: str = "web", ip: str = "", ua: str = "") -> dict:
+    """Valida y rota el refresh token. Reuso tardío de un token ya rotado = robo → se revoca toda la familia.
+    Reuso dentro del periodo de gracia (reintento de red, dos pestañas) → se rota de nuevo sin cerrar la sesión."""
+    now = datetime.now(timezone.utc)
+    rec = await db.refresh_tokens.find_one({"token_hash": _hash_refresh(token)}, {"_id": 0})
+    if not rec:
+        raise HTTPException(status_code=401, detail={"code": "refresh_invalid", "message": "Sesión no válida"})
+    if rec.get("revoked"):
+        raise HTTPException(status_code=401, detail={"code": "refresh_revoked", "message": "Sesión cerrada"})
+    exp = _parse_dt(rec.get("expires_at"))
+    if not exp or exp < now:
+        await revoke_refresh_family(rec.get("family_id"), "expired")
+        raise HTTPException(status_code=401, detail={"code": "refresh_expired", "message": "Sesión caducada"})
+    if rec.get("used_at"):
+        used = _parse_dt(rec["used_at"])
+        if not used or (now - used).total_seconds() > REFRESH_REUSE_GRACE_SECONDS:
+            await revoke_refresh_family(rec.get("family_id"), "reuse_detected")
+            raise HTTPException(status_code=401, detail={"code": "refresh_reused", "message": "Sesión invalidada por seguridad"})
+        if rec.get("replaced_by"):
+            await db.refresh_tokens.update_one({"id": rec["replaced_by"]}, {"$set": {"revoked": True, "revoked_at": now.isoformat(), "revoke_reason": "superseded_grace"}})
+    user_doc = await db.users.find_one({"id": rec["user_id"]}, {"_id": 0})
+    if not user_doc or user_doc.get("is_active") is False:
+        await revoke_refresh_family(rec.get("family_id"), "user_inactive")
+        raise HTTPException(status_code=401, detail={"code": "user_inactive", "message": "Cuenta no disponible"})
+    valid_after = _parse_dt(user_doc.get("tokens_valid_after"))
+    created = _parse_dt(rec.get("created_at"))
+    if valid_after and created and created < valid_after:
+        await revoke_refresh_family(rec.get("family_id"), "password_changed")
+        raise HTTPException(status_code=401, detail={"code": "refresh_revoked", "message": "Sesión cerrada por seguridad"})
+    pair = await issue_token_pair(user_doc, platform or rec.get("platform") or "web", family_id=rec.get("family_id"), ip=ip, ua=ua)
+    new_rec = await db.refresh_tokens.find_one({"token_hash": _hash_refresh(pair["refresh_token"])}, {"_id": 0, "id": 1})
+    await db.refresh_tokens.update_one({"id": rec["id"]}, {"$set": {"used_at": rec.get("used_at") or now.isoformat(), "replaced_by": new_rec["id"]}})
+    pair["user"] = {k: v for k, v in user_doc.items() if k not in ("hashed_password", "password")}
+    return pair
+
+
+def set_refresh_cookie(response, token: str, persistent: bool = True) -> None:
+    kwargs = {"key": REFRESH_COOKIE, "value": token, "httponly": True, "secure": True, "samesite": "lax", "path": "/api/auth"}
+    if persistent:
+        kwargs["max_age"] = REFRESH_TOKEN_TTL_DAYS * 86400
+    response.set_cookie(**kwargs)
+
+
+def clear_refresh_cookie(response) -> None:
+    response.delete_cookie(REFRESH_COOKIE, path="/api/auth", httponly=True, secure=True, samesite="lax")
 
 
 def client_ip(request: Optional[Request]) -> str:
@@ -187,11 +275,11 @@ async def clear_login_failures(email: str, ip: str) -> None:
 SESSION_COOKIE = "bruno_session"
 
 
-def set_session_cookie(response, token: str, persistent: bool = True, max_age_days: int = 30) -> None:
-    """httpOnly session cookie for the web app (same-origin → SameSite=Lax blocks cross-site CSRF)."""
+def set_session_cookie(response, token: str, persistent: bool = True, max_age_seconds: int = ACCESS_TOKEN_EXPIRE_MINUTES * 60) -> None:
+    """httpOnly cookie del access token (misma vida que el JWT) para el navegador; el refresh va en otra cookie limitada a /api/auth."""
     kwargs = {"key": SESSION_COOKIE, "value": token, "httponly": True, "secure": True, "samesite": "lax", "path": "/api"}
     if persistent:
-        kwargs["max_age"] = max_age_days * 86400
+        kwargs["max_age"] = max_age_seconds
     response.set_cookie(**kwargs)
 
 

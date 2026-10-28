@@ -28,6 +28,12 @@ export async function forgetAccount(id) {
 /** Al cerrar sesión se elimina el token guardado de esa cuenta; la cuenta sigue en la lista hasta que el usuario la quite. */
 export function dropAccountToken(id) { if (id) secureStorage.removeItem(tokenKey(id)); }
 
+/** Tras cada rotación del refresh token, la copia guardada de la cuenta (si existe) se actualiza para que nunca quede obsoleta. */
+export async function syncAccountToken(id, token) {
+  if (!id || !token || !isNative()) return;
+  try { if (await secureStorage.getItem(tokenKey(id))) await secureStorage.setItem(tokenKey(id), token); } catch { /* ignore */ }
+}
+
 export async function storedAccountToken(id) {
   if (!isNative()) return null;
   try { return await secureStorage.getItem(tokenKey(id)); } catch { return null; }

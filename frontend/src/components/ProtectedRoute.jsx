@@ -8,18 +8,18 @@ import { useAuth } from "@/contexts/AuthContext";
  * Handles loading state and redirects to login if user is not authenticated
  */
 const ProtectedRoute = ({ children }) => {
-  const { token, isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated } = useAuth();
   const location = useLocation();
 
-  // Show loading spinner while checking authentication
+  // Pantalla de carga mientras se restaura/renueva la sesión: nunca al login por un arranque lento o sin red
   if (isLoading) {
     return (
       <BrunoLoader message="Iniciando BRUNO…" />
     );
   }
 
-  // Redirect to login if not authenticated
-  if (!token && !isAuthenticated) {
+  // Redirect to login only when there is really no session
+  if (!isAuthenticated) {
     // Save the attempted URL for redirect after login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

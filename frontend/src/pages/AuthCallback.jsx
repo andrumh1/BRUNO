@@ -3,6 +3,7 @@ import BrunoLoader from "@/components/bruno/BrunoLoader";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
+import { isNative } from "@/native/capacitor";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -31,11 +32,11 @@ const AuthCallback = () => {
         }
 
         // Exchange session_id for user data
-        const response = await axios.post(`${API}/auth/google`, { session_id: sessionId });
+        const response = await axios.post(`${API}/auth/google`, { session_id: sessionId, platform: isNative() ? "native" : "web" }, { withCredentials: true, __skipAuthRetry: true });
         
         // Login user - use access_token (JWT) for API calls
         const token = response.data.access_token || response.data.session_token;
-        login(response.data.user, token);
+        await login(response.data.user, token, true, response.data.refresh_token || null);
         
         // Redirect to dashboard
         navigate('/dashboard', { replace: true });

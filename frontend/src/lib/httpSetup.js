@@ -1,6 +1,9 @@
 import axios from "axios";
 import { recordApiCall } from "@/lib/perfTelemetry";
 import { compressFormDataImages } from "@/lib/uploadOptim";
+import { refreshSession, clearSession, hasSession } from "@/lib/session";
+
+const AUTH_ENDPOINT = /\/api\/auth\/(login|register|refresh|logout|session\/restore|google|forgot-password|reset-password)/;
 
 // Imágenes Cloudinary ya subidas → formato/calidad automáticos (WebP/AVIF) solo al LEER, sin tocar la base de datos.
 const CLD_IMG = /(res\.cloudinary\.com\/[^/"\\]+\/image\/upload\/)(v\d+\/)/g;
@@ -36,6 +39,20 @@ export function setupHttp() {
       if (kind !== "cancelled" && (status >= 500 || isNetwork)) recordApiCall(cfg.url, status, ms, kind);
 
       const method = String(cfg.method || "get").toLowerCase();
+
+      // Access token caducado → renovar una sola vez (en vuelo compartido) y reintentar con el token nuevo. Solo un rechazo real del refresh cierra la sesión.
+      if (status === 401 && !cfg.__authRetry && !cfg.__skipAuthRetry && !AUTH_ENDPOINT.test(cfg.url || "") && hasSession()) {
+        cfg.__authRetry = true;
+        const r = await refreshSession();
+        if (r.ok) {
+          const hadAuth = cfg.headers?.Authorization || cfg.headers?.get?.("Authorization");
+          if (hadAuth) { if (cfg.headers.set) cfg.headers.set("Authorization", `Bearer ${r.token}`); else cfg.headers.Authorization = `Bearer ${r.token}`; }
+          return axios(cfg);
+        }
+        if (r.fatal) clearSession();
+        return Promise.reject(error);
+      }
+
       cfg.__retries = cfg.__retries || 0;
       const retryable = method === "get" && kind !== "cancelled" && (isNetwork || RETRYABLE_STATUS.has(status)) && cfg.__retries < MAX_RETRIES && navigator.onLine !== false;
       if (retryable) {

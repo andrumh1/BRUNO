@@ -153,7 +153,9 @@ INDEXES = {
     "user_preferences": [[("user_id", 1)]],
     "user_points": [[("user_id", 1)]],
     "user_sessions": [[("session_token", 1)], [("user_id", 1)]],
-    "refresh_tokens": [[("token_hash", 1)], [("user_id", 1)]],
+    "refresh_tokens": [[("token_hash", 1)], [("user_id", 1)], [("family_id", 1)]],
+    "revoked_tokens": [[("jti", 1)]],
+    "revoked_families": [[("family_id", 1)]],
     "push_subscriptions": [[("user_id", 1)]],
     "mobile_devices": [[("user_id", 1)], [("device_token", 1)]],
     "push_log": [[("user_id", 1), ("tag", 1)]],
@@ -166,7 +168,7 @@ INDEXES = {
     "perf_telemetry": [[("created_at", -1)], [("country", 1), ("created_at", -1)]],
     "saved_places": [[("user_id", 1), ("place_id", 1)], [("user_id", 1), ("created_at", -1)]],
 }
-TTL_INDEXES = {"perf_telemetry": ("expires_at", 0), "push_log": ("expires_at", 0)}
+TTL_INDEXES = {"perf_telemetry": ("expires_at", 0), "push_log": ("expires_at", 0), "refresh_tokens": ("expires_dt", 0), "revoked_tokens": ("expires_at", 0), "revoked_families": ("expires_at", 0)}
 
 
 async def ensure_indexes():

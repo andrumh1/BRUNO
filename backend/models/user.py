@@ -28,6 +28,7 @@ class UserCreate(BaseModel):
     password: str
     name: str
     role: str = UserRole.PERSONAL
+    platform: Optional[str] = None
 
 
 class UserLogin(BaseModel):
@@ -41,3 +42,5 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: User
+    refresh_token: Optional[str] = None
+    expires_in: Optional[int] = None

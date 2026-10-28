@@ -52,9 +52,9 @@ const LoginPage = () => {
       if (!stored) throw new Error("no-token");
       const ok = await authenticateBiometric(`Entrar como ${picked.name || picked.email}`);
       if (!ok) throw new Error("bio-cancel");
-      const me = await axios.get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${stored}` } });
-      if (isAuthenticated && sessionUser && sessionUser.id !== me.data.id) await logout();
-      await login(me.data, me.data.refreshed_token || stored);
+      if (isAuthenticated && sessionUser && sessionUser.id !== picked.id) await logout(); // cerrar la cuenta activa ANTES de abrir la otra
+      const r = await axios.post(`${API}/auth/refresh`, { refresh_token: stored, platform: "native" }, { __skipAuthRetry: true });
+      await login(r.data.user, r.data.access_token, true, r.data.refresh_token);
       navigate(safeRedirect());
     } catch (e) {
       const st = e?.response?.status;
@@ -92,9 +92,10 @@ const LoginPage = () => {
         keep_session_active: keepActive,
         remember: keepActive,
       };
-      const response = await axios.post(`${API}/auth/login`, payload, { withCredentials: true });
+      // Si hay otra sesión activa se cierra ANTES de iniciar la nueva (sus cookies/tokens se revocan sin tocar los de la cuenta entrante)
+      if (isAuthenticated && sessionUser) await logout();
+      const response = await axios.post(`${API}/auth/login`, payload, { withCredentials: true, __skipAuthRetry: true });
       if (!response.data?.access_token || !response.data?.user) throw new Error("Respuesta de acceso inválida");
-      if (isAuthenticated && sessionUser && sessionUser.id !== response.data.user.id) await logout();
       // Persist preferences
       try {
         if (rememberMe) {
@@ -104,7 +105,7 @@ const LoginPage = () => {
         }
         localStorage.setItem("bruno_keep_session_active", keepActive ? "1" : "0");
       } catch (_) { /* no-op */ }
-      await login(response.data.user, response.data.access_token);
+      await login(response.data.user, response.data.access_token, keepActive, response.data.refresh_token || null);
       const next = new URLSearchParams(window.location.search).get("next");
       navigate(safeRedirect());
     } catch (err) {

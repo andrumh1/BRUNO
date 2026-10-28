@@ -37,7 +37,7 @@ const Field = ({ label, value, onChange, show, onToggleShow, testId, error }) =>
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user, login, sessionPersistent } = useAuth();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -62,11 +62,13 @@ export default function ChangePasswordPage() {
     if (!validate()) return;
     setSaving(true);
     try {
-      await axios.post(
+      const { data } = await axios.post(
         `${API}/auth/change-password`,
         { current_password: current, new_password: next },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
       );
+      // Las demás sesiones quedan revocadas; este dispositivo recibe un par nuevo y sigue conectado
+      if (data?.access_token) await login(user, data.access_token, sessionPersistent, data.refresh_token || null);
       brunoToast.success("Contraseña actualizada", {
         description: "Tu nueva contraseña ya está activa.",
       });

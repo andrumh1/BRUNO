@@ -96,6 +96,7 @@ class UserCreate(BaseModel):
     password: str
     name: str
     role: str = UserRole.PERSONAL
+    platform: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -107,6 +108,8 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: User
+    refresh_token: Optional[str] = None  # solo app nativa (web usa cookie httpOnly)
+    expires_in: Optional[int] = None
 
 # Social Link Models (needed for both UserProfile and Card)
 class SocialLink(BaseModel):
@@ -672,7 +675,24 @@ from utils.security import (  # noqa: E402 — single source of truth for auth
     verify_password, get_password_hash, create_access_token, resolve_user_from_token,
     get_current_user, get_current_user_optional, revoke_token, revoke_all_user_tokens,
     client_ip, check_login_allowed, record_login_failure, clear_login_failures,
+    issue_token_pair, rotate_refresh_token, revoke_refresh_family, revoke_refresh_token_value,
 )
+
+
+def _is_native(platform: Optional[str]) -> bool:
+    return (platform or "") == "native"
+
+
+async def _start_session(response: Response, request: Optional[Request], user_doc: dict, platform: Optional[str], persistent: bool = True, family_id: Optional[str] = None) -> dict:
+    """Emite access+refresh. Web: ambos en cookies httpOnly (el refresh nunca va al cuerpo). Nativo: ambos en el cuerpo para el Keychain/Keystore."""
+    pair = await issue_token_pair(user_doc, platform or "web", family_id=family_id, ip=client_ip(request) if request else "", ua=(request.headers.get("user-agent", "") if request else ""))
+    out = {"access_token": pair["access_token"], "token_type": "bearer", "expires_in": pair["expires_in"]}
+    if _is_native(platform):
+        out["refresh_token"] = pair["refresh_token"]
+    else:
+        _sec.set_session_cookie(response, pair["access_token"], persistent=persistent)
+        _sec.set_refresh_cookie(response, pair["refresh_token"], persistent=persistent)
+    return out
 
 
 async def get_current_user_from_token(token: str) -> Optional[User]:
@@ -684,7 +704,7 @@ async def get_current_user_from_token(token: str) -> Optional[User]:
 # ============================================================================
 
 @api_router.post("/auth/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def register(user_input: UserCreate, response: Response):
+async def register(user_input: UserCreate, request: Request, response: Response):
     # Check if user exists
     existing_user = await db.users.find_one({"email": user_input.email})
     if existing_user:
@@ -705,10 +725,8 @@ async def register(user_input: UserCreate, response: Response):
     
     await db.users.insert_one(user_doc)
     
-    # Create token
-    access_token = create_access_token(data={"sub": user_obj.email})
-    _sec.set_session_cookie(response, access_token)
-    return Token(access_token=access_token, token_type="bearer", user=user_obj)
+    sess = await _start_session(response, request, user_doc, user_input.platform)
+    return Token(user=user_obj, **sess)
 
 @api_router.post("/auth/login", response_model=Token)
 async def login(user_input: UserLogin, request: Request, response: Response):
@@ -730,13 +748,9 @@ async def login(user_input: UserLogin, request: Request, response: Response):
         user_dict['created_at'] = datetime.fromisoformat(user_dict['created_at'])
     user_obj = User(**user_dict)
 
-    # Create token — mobile gets 1-year expiry for persistent notifications
-    expire_delta = timedelta(days=365) if user_input.platform in ("mobile", "native") else None
-    access_token = create_access_token(data={"sub": user_obj.email, "plt": user_input.platform or "web"}, expires_delta=expire_delta)
+    sess = await _start_session(response, request, user_dict, user_input.platform or "web", persistent=user_input.remember is not False)
     await db.users.update_one({"id": user_obj.id}, {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}})
     await db.audit_logs.insert_one({"id": str(uuid.uuid4()), "user_id": user_obj.id, "action": "login", "ip": ip, "platform": user_input.platform or "web", "created_at": datetime.now(timezone.utc).isoformat()})
-    if user_input.platform != "native":
-        _sec.set_session_cookie(response, access_token, persistent=user_input.remember is not False)
     # Seguridad: aviso de nuevo inicio de sesión (in-app + push categoría account_security, 1 por dispositivo/día vía dedupe)
     try:
         sec_notif = {"id": str(uuid.uuid4()), "user_id": user_obj.id, "type": "security", "message": f"Nuevo inicio de sesión en BRUNO ({user_input.platform or 'web'}). Si no fuiste tú, cambia tu contraseña.",
@@ -746,7 +760,7 @@ async def login(user_input: UserLogin, request: Request, response: Response):
         asyncio.create_task(send_push_notification(user_obj.id, NotificationPayload(title="Nuevo inicio de sesión", body=sec_notif["message"], url="/settings", tag=f"security_login_{(user_input.platform or 'web')}_{datetime.now(timezone.utc).date()}", data={"category": "account_security"})))
     except Exception:
         pass
-    return Token(access_token=access_token, token_type="bearer", user=user_obj)
+    return Token(user=user_obj, **sess)
 
 @api_router.get("/auth/me/dnd")
 async def get_dnd(current_user: User = Depends(get_current_user)):
@@ -768,31 +782,44 @@ async def update_dnd(payload: dict, current_user: User = Depends(get_current_use
     return {**dnd, "active": is_dnd_active({"dnd": dnd})}
 
 @api_router.get("/auth/me")
-async def get_me(request: Request, response: Response, current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
-    user_dict = current_user.dict()
-    # Auto-refresh token if it will expire within 7 days
-    raw = _sec.token_from_request(request, credentials)
-    if raw:
-        try:
-            payload = jwt.decode(raw, SECRET_KEY, algorithms=[ALGORITHM])
-            exp = payload.get("exp")
-            if exp:
-                remaining = datetime.fromtimestamp(exp, tz=timezone.utc) - datetime.now(timezone.utc)
-                if remaining.days < 7:
-                    new_token = create_access_token(data={"sub": payload.get("sub"), "plt": payload.get("plt", "web")})
-                    user_dict["refreshed_token"] = new_token
-                    if request.cookies.get(_sec.SESSION_COOKIE) == raw:
-                        _sec.set_session_cookie(response, new_token)
-                    await revoke_token(raw, current_user.id)
-        except Exception:
-            pass
-    return user_dict
+async def get_me(current_user: User = Depends(get_current_user)):
+    return current_user.dict()
+
+
+class RefreshBody(BaseModel):
+    refresh_token: Optional[str] = None
+    platform: Optional[str] = None
+    remember: Optional[bool] = True
+
 
 @api_router.post("/auth/refresh")
-async def refresh_token(current_user: User = Depends(get_current_user)):
-    """Issue a fresh long-lived token for the authenticated user"""
-    new_token = create_access_token(data={"sub": current_user.email})
-    return {"access_token": new_token, "token_type": "bearer"}
+async def refresh_session(request: Request, response: Response, body: Optional[RefreshBody] = None, credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
+    """Renueva la sesión: rota el refresh token (cookie httpOnly en web, cuerpo en nativo) y devuelve un access token corto.
+    Migración: un access token antiguo de larga duración (sin familia) se canjea una sola vez por un par nuevo."""
+    body = body or RefreshBody()
+    platform = body.platform or "web"
+    raw_refresh = body.refresh_token or request.cookies.get(_sec.REFRESH_COOKIE)
+    ip, ua = client_ip(request), request.headers.get("user-agent", "")
+    if raw_refresh:
+        pair = await rotate_refresh_token(raw_refresh, platform, ip=ip, ua=ua)
+        user_doc = pair["user"]
+    else:
+        legacy = _sec.token_from_request(request, credentials)
+        payload = _sec.decode_token(legacy) if legacy else None
+        user = await resolve_user_from_token(legacy) if payload and not payload.get("fam") else None
+        if not user:
+            _sec.clear_session_cookie(response); _sec.clear_refresh_cookie(response)
+            raise HTTPException(status_code=401, detail={"code": "no_session", "message": "Sin sesión"})
+        user_doc = await db.users.find_one({"id": user.id}, {"_id": 0, "hashed_password": 0, "password": 0})
+        pair = await issue_token_pair(user_doc, platform, ip=ip, ua=ua)
+        await revoke_token(legacy, user.id)
+    out = {"access_token": pair["access_token"], "token_type": "bearer", "expires_in": pair["expires_in"], "user": User(**user_doc).model_dump()}
+    if _is_native(platform):
+        out["refresh_token"] = pair["refresh_token"]
+    else:
+        _sec.set_session_cookie(response, pair["access_token"], persistent=body.remember is not False)
+        _sec.set_refresh_cookie(response, pair["refresh_token"], persistent=body.remember is not False)
+    return out
 
 @api_router.put("/auth/me")
 async def update_me(
@@ -819,14 +846,22 @@ async def update_me(
     return User(**user_dict)
 
 @api_router.post("/auth/logout")
-async def logout(request: Request, response: Response, current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)), all_devices: bool = False):
-    """Invalidate this session (or every session of the user with ?all_devices=true)."""
+async def logout(request: Request, response: Response, current_user: Optional[User] = Depends(get_current_user_optional), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)), all_devices: bool = False, body: Optional[RefreshBody] = None):
+    """Invalidate this session (access + refresh family) or every session of the user with ?all_devices=true.
+    Funciona aunque el access token ya haya caducado: el refresh token (cookie/cuerpo) basta para revocar la familia."""
     raw = _sec.token_from_request(request, credentials)
-    if all_devices:
+    raw_refresh = (body.refresh_token if body else None) or request.cookies.get(_sec.REFRESH_COOKIE)
+    if all_devices and current_user:
         await revoke_all_user_tokens(current_user.id)
-    elif raw:
-        await revoke_token(raw, current_user.id)
-    _sec.clear_session_cookie(response)
+    else:
+        if raw:
+            await revoke_token(raw, current_user.id if current_user else None)
+            payload = _sec.decode_token(raw) or {}
+            await revoke_refresh_family(payload.get("fam"))
+        await revoke_refresh_token_value(raw_refresh)
+    _sec.clear_session_cookie(response); _sec.clear_refresh_cookie(response)
+    if not current_user:
+        return {"message": "Logged out successfully"}
     await db.audit_logs.insert_one({
         "id": str(uuid.uuid4()),
         "user_id": current_user.id,
@@ -837,14 +872,9 @@ async def logout(request: Request, response: Response, current_user: User = Depe
 
 
 @api_router.post("/auth/session/restore")
-async def auth_session_restore(request: Request, response: Response):
-    """Web only: the httpOnly cookie proves the session; the token is returned for in-memory use (never persisted by the browser app)."""
-    raw = request.cookies.get(_sec.SESSION_COOKIE)
-    user = await resolve_user_from_token(raw) if raw else None
-    if not user:
-        _sec.clear_session_cookie(response)
-        raise HTTPException(status_code=401, detail="Sin sesión")
-    return {"access_token": raw, "token_type": "bearer", "user": user.model_dump()}
+async def auth_session_restore(request: Request, response: Response, body: Optional[RefreshBody] = None, credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
+    """Compatibilidad: equivale a /auth/refresh (las cookies httpOnly prueban la sesión)."""
+    return await refresh_session(request, response, body, credentials)
 
 
 @api_router.get("/auth/session")
@@ -860,9 +890,10 @@ async def auth_session(request: Request, current_user: User = Depends(get_curren
 
 class GoogleAuthRequest(BaseModel):
     session_id: str
+    platform: Optional[str] = None
 
 @api_router.post("/auth/google")
-async def google_auth(request: GoogleAuthRequest):
+async def google_auth(request: GoogleAuthRequest, http_request: Request, response: Response):
     """Handle Google OAuth callback - exchange session_id for user data from Emergent Auth"""
     import httpx
     
@@ -925,13 +956,13 @@ async def google_auth(request: GoogleAuthRequest):
         # Get full user data
         user_doc = await db.users.find_one({"email": email}, {"_id": 0})
         
-        # Create JWT token for this user (for API calls)
-        jwt_token = create_access_token(data={"sub": email})
+        # Sesión: access corto + refresh rotatorio (cookies en web, cuerpo en nativo)
+        sess = await _start_session(response, http_request, user_doc, request.platform)
         
         return {
             "user": User(**user_doc),
-            "session_token": session_token or jwt_token,
-            "access_token": jwt_token
+            "session_token": session_token or sess["access_token"],
+            **sess,
         }
         
     except httpx.RequestError as e:
@@ -1147,7 +1178,7 @@ class ChangePasswordInput(BaseModel):
 
 
 @api_router.post("/auth/change-password")
-async def change_password(payload: ChangePasswordInput, current_user: User = Depends(get_current_user)):
+async def change_password(payload: ChangePasswordInput, request: Request, response: Response, current_user: User = Depends(get_current_user), credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))):
     user_doc = await db.users.find_one({"id": current_user.id})
     if not user_doc:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -1160,8 +1191,11 @@ async def change_password(payload: ChangePasswordInput, current_user: User = Dep
     )
     await revoke_all_user_tokens(current_user.id)
     await asyncio.sleep(1.1)  # tokens_valid_after has second precision: the new token must be issued after it
-    new_token = create_access_token(data={"sub": current_user.email})
-    return {"status": "ok", "message": "Contraseña actualizada", "access_token": new_token}
+    # Este dispositivo sigue conectado: nuevo par access+refresh emitido después de la revocación global
+    plt = (_sec.decode_token(_sec.token_from_request(request, credentials) or "") or {}).get("plt", "web")
+    fresh = await db.users.find_one({"id": current_user.id}, {"_id": 0, "hashed_password": 0})
+    sess = await _start_session(response, request, fresh, plt)
+    return {"status": "ok", "message": "Contraseña actualizada", **sess}
 
 # ============================================================================
 # ALBUM ROUTES
