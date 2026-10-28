@@ -70,7 +70,7 @@ async def _hist(pkg_id: str, action: str, by: Optional[str], **extra):
 
 
 def _view(p: dict) -> dict:
-    out = {k: v for k, v in p.items() if k not in ("claim_token_hash", "history")}
+    out = {k: v for k, v in p.items() if k not in ("claim_token_hash", "revoked_token_hashes", "history")}
     out["price_label"] = OFFERS[p["market"]]["label"] if p.get("market") in OFFERS else None
     return out
 
@@ -148,7 +148,7 @@ async def list_packages(advisor: Optional[str] = None, market: Optional[str] = N
             q[k] = v
     if since or until:
         q["created_at"] = {**({"$gte": since} if since else {}), **({"$lte": until + "T23:59:59" if len(until or "") == 10 else until} if until else {})}
-    rows = await db.packages.find(q, {"_id": 0, "claim_token_hash": 0, "history": 0}).sort("created_at", -1).to_list(500)
+    rows = await db.packages.find(q, {"_id": 0, "claim_token_hash": 0, "revoked_token_hashes": 0, "history": 0}).sort("created_at", -1).to_list(500)
     return [_view(r) for r in rows]
 
 
@@ -215,7 +215,10 @@ async def finalize(pkg_id: str, body: FinalizeBody, user: User = Depends(get_cur
     if not p.get("claim_token_hash") or p.get("claim_revoked_at") or (p.get("claim_expires_at") or "") <= _now().isoformat():
         token = secrets.token_urlsafe(32)
         upd.update({"claim_token_hash": hashlib.sha256(token.encode()).hexdigest(), "claim_expires_at": (_now() + timedelta(days=CLAIM_TTL_DAYS)).isoformat(), "claim_revoked_at": None, "claim_url": f"{_frontend()}/paquete/{token}"})
-    await db.packages.update_one({"id": pkg_id}, {"$set": upd})
+    ops = {"$set": upd}
+    if token and p.get("claim_token_hash"):
+        ops["$push"] = {"revoked_token_hashes": p["claim_token_hash"]}
+    await db.packages.update_one({"id": pkg_id}, ops)
     await _hist(pkg_id, "finalized", user.id, market=body.market, payment_method=body.payment_method, advisor_handle=mine)
     p2 = await _get(pkg_id)
     return {**_view(p2), "claim_url": p2.get("claim_url")}
@@ -232,7 +235,10 @@ async def regenerate_link(pkg_id: str, revoke_only: bool = False, user: User = D
         upd = {"claim_token_hash": hashlib.sha256(token.encode()).hexdigest(), "claim_expires_at": (_now() + timedelta(days=CLAIM_TTL_DAYS)).isoformat(), "claim_revoked_at": None, "claim_url": f"{_frontend()}/paquete/{token}"}
     else:
         upd["claim_url"] = None
-    await db.packages.update_one({"id": pkg_id}, {"$set": upd})
+    ops = {"$set": upd}
+    if p.get("claim_token_hash"):
+        ops["$push"] = {"revoked_token_hashes": p["claim_token_hash"]}
+    await db.packages.update_one({"id": pkg_id}, ops)
     await _hist(pkg_id, "link:revoked" if revoke_only else "link:regenerated", user.id)
     return {"claim_url": upd.get("claim_url"), "expires_at": upd.get("claim_expires_at")}
 
@@ -289,8 +295,11 @@ async def cash_confirm(pkg_id: str, body: CashBody, user: User = Depends(get_cur
 
 # ---------- cliente: enlace de activación ----------
 async def _resolve(token: str) -> dict:
-    p = await db.packages.find_one({"claim_token_hash": hashlib.sha256(token.encode()).hexdigest()}, {"_id": 0})
+    h = hashlib.sha256(token.encode()).hexdigest()
+    p = await db.packages.find_one({"claim_token_hash": h}, {"_id": 0})
     if not p:
+        if await db.packages.find_one({"revoked_token_hashes": h}, {"_id": 1}):
+            raise HTTPException(status_code=410, detail={"state": "revoked"})
         raise HTTPException(status_code=404, detail={"state": "invalid"})
     if p.get("claim_revoked_at"):
         raise HTTPException(status_code=410, detail={"state": "revoked"})

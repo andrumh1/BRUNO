@@ -4,8 +4,8 @@ Tipos de tarjetas|Card types
 Cómo funciona|How it works
 Contáctanos|Contact us
 Qué incluye|What's included
-Quiero mi tarjeta|Get my card
-Quiero mi tarjeta ↗|Get my card ↗
+Quiero mi paquete|Get my package
+Quiero mi paquete ↗|Get my package ↗
 Mejor presentación. Más formas de conectar.|A better introduction. More ways to connect.
 La nueva manera|A new way
 de presentar|to introduce
@@ -15,9 +15,9 @@ Todo en un solo lugar.|Everything in one place.
 Una presentación digital sofisticada, fácil de compartir y al alcance de todos.|A sophisticated digital introduction, easy to share and made for everyone.
 La quiero por US$30|Get mine for US$30
 Ver la experiencia|Explore the experience
-Pago único · Enlace + QR · Un ajuste incluido|One-time payment · Link + QR · One revision included
+Pago único · 3 tarjetas con enlace y QR · Un ajuste incluido|One-time payment · 3 cards with link and QR · One revision included
 Lista para compartir|Ready to share
-Tu tarjeta. Un solo pago.|Your card. One payment.
+Perfil completo + 3 tarjetas. Un solo pago.|Complete profile + 3 cards. One payment.
 EJEMPLO BRUNO · DATOS FICTICIOS|BRUNO SAMPLE · FICTIONAL DATA
 PENSADA PARA TU DÍA A DÍA|MADE FOR YOUR EVERYDAY LIFE
 Comparte por enlace|Share with a link
@@ -163,7 +163,7 @@ const price=()=>market==='CO'?'COP $30.000':'US$30';
 const tr=(es,en)=>lang==='es'?es:en;
 let geoKnown=false;
 function render(){
- document.documentElement.lang=lang;document.title=lang==='en'?dict['BRUNO × OVC — Tu mundo, en una tarjeta digital']:'BRUNO × OVC — Tu mundo, en una tarjeta digital';
+ document.documentElement.lang=lang;document.title=lang==='en'?(dict['BRUNO × OVC — Tu perfil completo + 3 tarjetas digitales']||'BRUNO × OVC — Your complete profile + 3 digital cards'):'BRUNO × OVC — Tu perfil completo + 3 tarjetas digitales';
  for(const item of nodes)item.node.textContent=item.prefix+(lang==='en'?(dict[item.key]||item.key):item.key).replaceAll('US$30',price())+item.suffix;
  for(const a of attrs)a.el.setAttribute(a.attr,lang==='en'?dict[a.key]:a.key);
  document.querySelectorAll('[data-price-number]').forEach(el=>el.textContent=market==='CO'?'$30.000':'$30');

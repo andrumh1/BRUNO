@@ -31,7 +31,7 @@ export default function AdvisorsPage() {
           <Button variant="outline" size="icon" className="rounded-full" onClick={() => load(access)} data-testid="advisors-refresh"><RefreshCw className="w-4 h-4" /></Button>
           <Button className="rounded-full" onClick={create} data-testid="advisors-new-package"><Plus className="w-4 h-4 mr-1" />Nuevo paquete</Button>
         </div>
-        <p className="text-xs text-muted-foreground mb-4 ml-12" data-testid="advisors-handle">Sesión: <b>@{access?.handle}</b>{access?.admin ? " · administrador" : access?.cash ? " · con permiso de cobro" : ""} · Oferta: perfil completo + 3 tarjetas · COP $30.000 (CO) / US$30 (US)</p>
+        <p className="text-xs text-muted-foreground mb-4 ml-12" data-testid="advisors-handle">Sesión: <b>{access?.handle ? `@${access.handle}` : "…"}</b>{access?.admin ? " · administrador" : access?.cash ? " · con permiso de cobro" : ""} · Oferta: perfil completo + 3 tarjetas · COP $30.000 (CO) / US$30 (US)</p>
         <div className="flex flex-wrap gap-2 mb-4">
           {access?.admin && <Input value={f.advisor} onChange={(e) => setF({ ...f, advisor: e.target.value })} placeholder="@asesor" className="h-9 w-36 text-xs" data-testid="advisors-filter-advisor" />}
           <Sel value={f.market} onChange={(v) => setF({ ...f, market: v })} options={[["", "País"], ["CO", "Colombia"], ["US", "Estados Unidos"]]} testId="advisors-filter-market" />

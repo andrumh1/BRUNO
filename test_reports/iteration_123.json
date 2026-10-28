@@ -1,0 +1,43 @@
+{
+  "summary": "Package offer 'perfil completo + 3 tarjetas' tested end-to-end. Backend: the qa_package_flow.sh regression matches every expected echo line. New pytest test_packages_flow.py: 5/6 pass (cash flow with card ownership checked by card ids, hidden draft cards, US Stripe checkout staying processing then pending on cancel, permissions/reassign). One failure: after a link is regenerated, the old token returns 404 'invalid' instead of 410. Frontend: advisor flow (settings link, /asesores, autosave, editor ?package= save-and-return, finalize CO cash, delivery card with QR/copy/download, cash section, no overflow at 390px), client claim flow (preview, login?next, review, diff, handle gating, cash pending, activated, 3 cards in Perfil > Tarjetas) and /website ES/EN copy all work. BUG: the static /servicios/tarjeta-bruno/ page was not updated. Its title and body still describe a single card, and the EN title renders 'undefined'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/packages/{id}/claim-link (regenerate)", "issue": "Regenerating replaces claim_token_hash, so GET /api/packages/claim/{oldToken} returns 404 {state:'invalid'} instead of the required 410 {state:'revoked'}. The revoke_only path correctly returns 410. Fix: keep a list of previous token hashes (e.g. revoked_token_hashes) and have _resolve return 410 revoked for them."},
+      {"endpoint": "qa_package_flow.sh steps 1/4/6", "issue": "The script counts cards with c.get('package_id') from GET /api/cards, but that response strips package_id, so it always prints 0 and the '(3)' check after activation is meaningless. It should compare card ids instead (pytest does this and passes)."},
+      {"endpoint": "packages.claim_url", "issue": "The plaintext claim_url (containing the token) is stored next to claim_token_hash, which defeats hashing the token. Low risk (only advisor/admin views return it), but worth noting."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Static /servicios/tarjeta-bruno/ (index.html + locale.js)", "issue": "index.html was not updated. <title> is still 'BRUNO × OVC — Tu mundo, en una tarjeta digital', the meta description is old, and the body still says 'Esta oferta incluye una tarjeta digital, su enlace y un QR digital'. locale.js has the new ES keys ('Tu perfil completo + 3 tarjetas digitales', etc.) but no matching text nodes exist in index.html, so they never render. In EN, render() sets document.title = dict['BRUNO × OVC — Tu mundo, en una tarjeta digital'], a key that no longer exists, so the browser title is 'undefined'.", "selector": "title / body text", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "PackageClaimPage after accept (cash pending)", "issues": ["The status pill still shows 'Pending acceptance' after the client accepted, because delivery_status stays pending_acceptance until activation. Consider showing 'Accepted · awaiting payment' when accepted is true."]},
+      {"screen": "PackageEditorPage", "issues": ["Market/method selects truncate their labels at desktop width ('Colombia · COP $', 'Virtual (Stripe / W').", "History shows raw user UUIDs ('by: 720cfd5d-...') instead of handles.", "At 390px the expiry text next to Regenerar/Revocar enlace wraps into a very narrow column."]},
+      {"screen": "AdvisorsPage", "issues": ["Briefly renders 'Sesión: @ ·' with an empty handle before access loads."]},
+      {"screen": "/website hero (EN)", "issues": ["The hero still reads 'Get mine for US$30', '$30 Your card. One payment.' and 'Link + QR · One revision included' (single-card wording), while the service/pricing section shows the new offer."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_packages_flow.py", "/app/backend/tests/qa_package_flow.sh", "/app/test_reports/pytest/pytest_packages.xml"],
+  "action_items": [
+    "Update /app/frontend/public/servicios/tarjeta-bruno/index.html: title, meta description and body copy to 'perfil completo + 3 tarjetas digitales'. Fix the document.title lookup in locale.js render(), which shows 'undefined' in EN.",
+    "Return 410 {state:'revoked'} for tokens replaced by regenerate (store previous hashes).",
+    "Fix qa_package_flow.sh card checks to compare card ids, since package_id is stripped from GET /api/cards.",
+    "Optional UX: claim status pill after accept, select label truncation, show handles instead of UUIDs in history, update the website hero copy to the new offer."
+  ],
+  "critical_code_review_comments": [
+    "regenerate_link overwrites claim_token_hash, so old links become 'invalid' (404) rather than 'revoked' (410).",
+    "_resolve compares ISO strings for expiry. This works only while every timestamp uses the same tz-aware isoformat.",
+    "The finalize handle check for admins compares against p.advisor_handle and then bypasses it anyway (dead branch). Harmless.",
+    "claim_url is persisted in plaintext alongside the token hash."
+  ],
+  "updated_files": ["/app/backend/tests/test_packages_flow.py"],
+  "success_rate": {"backend": "95% (script 100% match; pytest 5/6)", "frontend": "90% (advisor and client flows 100%; static service page copy/title broken)"},
+  "seed_data_creation": "Packages created (clean up): 418a0826-e753-498f-9776-0d679aae902f (script, activated to newtest), 4923f58c-a7a2-41c2-8450-8f29c6282b1a (pytest cash, activated to newtest), 833db13e-9647-4086-99c6-9bc8a602aca1 (draft), 865d5963-6619-4f14-94bb-0ac34a6d1779 (revoke/regenerate), d98e724a-7481-477b-9eb7-19704a15205e (US virtual, accepted by newtest, pending), 5e6338e5-e097-4d5b-99d4-95d729103f2c (draft, reassigned), a60e4585-01d9-4f1f-a599-42442b2debbb (UI BP-0EC53C, activated to newtest with cards 'TEST UI Tarjeta 1-3'). newtest now has extra cards and profile fields (bio 'TEST bio', website qa.example.com).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run pytest /app/backend/tests/test_packages_flow.py plus bash qa_package_flow.sh. Editor title input is data-testid=input-title. newtest handle = Test_User, viewer3 handle = Viewer_3. Static page check: /servicios/tarjeta-bruno/ title and body text in ES and EN.",
+  "test_credentials": "From /app/memory/test_credentials.md 'Paquetes' section; all logins worked."
+}

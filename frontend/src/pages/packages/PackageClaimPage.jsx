@@ -57,7 +57,7 @@ export default function PackageClaimPage() {
     </div>
     <div className="space-y-4">
       <Box testId="claim-actions">
-        <div className="flex flex-wrap gap-2 mb-3"><Pill map={PAY} value={result?.payment_status || d.payment_status} testId="claim-pay" /><Pill map={DELIV} value={result?.delivery_status || d.delivery_status} testId="claim-deliv" /></div>
+        <div className="flex flex-wrap gap-2 mb-3"><Pill map={PAY} value={result?.payment_status || d.payment_status} testId="claim-pay" />{(accepted && (result?.delivery_status || d.delivery_status) === "pending_acceptance") ? <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-200" data-testid="claim-deliv">{t("Aceptado · pendiente de pago", "Accepted · awaiting payment")}</span> : <Pill map={DELIV} value={result?.delivery_status || d.delivery_status} testId="claim-deliv" />}</div>
         {activated ? <div data-testid="claim-activated"><CheckCircle2 className="w-9 h-9 text-emerald-500 mb-2" /><h2 className="text-xl font-semibold mb-1">{t("¡Paquete activado!", "Package activated!")}</h2><p className="text-sm text-gray-600 mb-4">{t("Tu perfil y tus 3 tarjetas ya están en tu cuenta.", "Your profile and 3 cards are now in your account.")}</p><Button className="rounded-full w-full" onClick={() => navigate("/my-profile?tab=cards")} data-testid="claim-open-profile">{t("Ir a mi perfil y tarjetas", "Go to my profile and cards")}</Button></div>
         : !accepted ? <>
           <h2 className="text-xl font-semibold mb-1">{t("Confirma la cuenta destinataria", "Confirm the receiving account")}</h2>
