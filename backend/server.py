@@ -2532,6 +2532,8 @@ from routers.bruno_service import router as bruno_service_router  # noqa: E402
 from routers.bruno_orders import router as bruno_orders_router  # noqa: E402
 api_router.include_router(bruno_service_router)
 api_router.include_router(bruno_orders_router)
+from routers.bruno_packages import router as bruno_packages_router  # noqa: E402
+api_router.include_router(bruno_packages_router)
 from starlette.exceptions import HTTPException as StarletteHTTPException  # noqa: E402
 from fastapi.responses import JSONResponse as _JSONResponse  # noqa: E402
 

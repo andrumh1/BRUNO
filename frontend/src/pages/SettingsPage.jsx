@@ -85,7 +85,8 @@ const SettingsPage = () => {
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
   const [staffAccess, setStaffAccess] = useState(false);
-  useEffect(() => { if (!token) return; axios.get(`${API}/bruno-service/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setStaffAccess(!!r.data?.staff)).catch(() => {}); }, [token]);
+  const [advisorAccess, setAdvisorAccess] = useState(false);
+  useEffect(() => { if (!token) return; axios.get(`${API}/bruno-service/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setStaffAccess(!!r.data?.staff)).catch(() => {}); axios.get(`${API}/packages/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setAdvisorAccess(!!r.data?.advisor)).catch(() => {}); }, [token]);
   const [prefs, setPrefs] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -468,12 +469,13 @@ const SettingsPage = () => {
             </Card>
 
             {/* Equipo BRUNO: pedidos del servicio «Creamos tu tarjeta» (solo admin / producción) */}
-            {staffAccess && (
+            {(staffAccess || advisorAccess) && (
               <Card data-testid="settings-staff-card">
                 <CardContent className="p-4">
                   <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Equipo BRUNO</h2>
                   <div className="divide-y">
-                    <OptionRow icon={Package} label="Pedidos · Creamos tu tarjeta" onClick={() => navigate("/admin/pedidos")} />
+                    {staffAccess && <OptionRow icon={Package} label="Pedidos · Creamos tu tarjeta" onClick={() => navigate("/admin/pedidos")} />}
+                    {advisorAccess && <OptionRow icon={Package} label="Área de asesores · Perfil + 3 tarjetas" onClick={() => navigate("/asesores")} />}
                   </div>
                 </CardContent>
               </Card>

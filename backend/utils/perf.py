@@ -127,6 +127,7 @@ INDEXES = {
     "service_requests": [[("id", 1)], [("email_status", 1), ("created_at", -1)], [("user_id", 1), ("created_at", -1)], [("production_status", 1), ("created_at", -1)]],
     "service_payments": [[("id", 1)], [("provider", 1), ("provider_ref", 1)], [("order_id", 1)]],
     "review_tokens": [[("token_hash", 1)], [("order_id", 1), ("revoked_at", 1)]],
+    "packages": [[("id", 1)], [("advisor_id", 1), ("created_at", -1)], [("claim_token_hash", 1)], [("claimed_by", 1)]],
     "post_views": [[("post_id", 1), ("viewer_id", 1)]],
     "hidden_posts": [[("user_id", 1), ("post_id", 1)]],
     "cards": [[("user_id", 1)], [("id", 1)]],

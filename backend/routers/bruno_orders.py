@@ -261,6 +261,9 @@ async def _mark_paid(order_id: str, provider: str, tx_id: str, amount: int, curr
 async def _apply_stripe_session(session_id: str, by: Optional[str] = None) -> dict:
     s = await _stripe_verify(session_id)
     att = await db.service_payments.find_one({"provider": "stripe", "provider_ref": session_id}, {"_id": 0})
+    if att and att.get("package_id"):
+        from routers.bruno_packages import apply_stripe_pkg
+        return await apply_stripe_pkg(att, s, by)
     if not att or not s["order_id"] or att["order_id"] != s["order_id"]:
         raise HTTPException(status_code=400, detail="La sesión de pago no corresponde a este pedido")
     expected = OFFERS["US"]["amount"] * 100
@@ -277,6 +280,9 @@ async def _apply_stripe_session(session_id: str, by: Optional[str] = None) -> di
 async def _apply_wompi_tx(tx_id: str, by: Optional[str] = None) -> dict:
     tx = await _wompi_transaction(tx_id)
     att = await db.service_payments.find_one({"provider": "wompi", "provider_ref": tx.get("reference")}, {"_id": 0})
+    if att and att.get("package_id"):
+        from routers.bruno_packages import apply_wompi_pkg
+        return await apply_wompi_pkg(att, tx, by)
     if not att:
         raise HTTPException(status_code=400, detail="La transacción no corresponde a ningún pedido")
     expected = OFFERS["CO"]["amount"] * 100
@@ -385,14 +391,16 @@ async def stripe_webhook(request: Request):
     etype = event.get("type") if isinstance(event, dict) else event.type
     obj = (event.get("data", {}).get("object", {}) if isinstance(event, dict) else event.data.object)
     meta = dict(obj.get("metadata") or {}) if isinstance(obj, dict) else dict(getattr(obj, "metadata", {}) or {})
-    if meta.get("kind") != "bruno_service":
+    if meta.get("kind") not in ("bruno_service", "bruno_package"):
         return {"received": True, "ignored": True}
     sid = obj.get("id") if isinstance(obj, dict) else obj.id
     if etype in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
         await _apply_stripe_session(sid, by="webhook:stripe")  # re-consulta autenticada, no confía en el payload
     elif etype in ("charge.refunded", "charge.dispute.created"):
         oid = meta.get("order_id")
-        if oid:
+        if oid and meta.get("kind") == "bruno_package":
+            await db.packages.update_one({"id": oid}, {"$set": {"payment_status": "refunded" if etype == "charge.refunded" else "disputed"}, "$push": {"history": {"at": _now().isoformat(), "action": f"payment:{'refunded' if etype == 'charge.refunded' else 'disputed'}", "by": "webhook:stripe", "event": eid}}})
+        elif oid:
             await db.service_requests.update_one({"id": oid}, {"$set": {"payment_status": "refunded" if etype == "charge.refunded" else "disputed"}})
             await _history(oid, f"payment:{'refunded' if etype == 'charge.refunded' else 'disputed'}", "webhook:stripe", event=eid)
     return {"received": True}

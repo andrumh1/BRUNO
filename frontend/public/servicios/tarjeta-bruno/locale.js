@@ -1,5 +1,5 @@
 (()=>{
-const entries=`BRUNO × OVC — Tu mundo, en una tarjeta digital|BRUNO × OVC — Your world, in one digital card
+const entries=`BRUNO × OVC — Tu perfil completo + 3 tarjetas digitales|BRUNO × OVC — Your complete profile + 3 digital cards
 Tipos de tarjetas|Card types
 Cómo funciona|How it works
 Contáctanos|Contact us
@@ -50,7 +50,7 @@ BRUNO, un lugar para reunirlo.|BRUNO brings it all together.
 Envíanos tu información.|Send us your information.
 Comparte tu logo, una breve descripción, tus fotos y los enlaces de contacto que quieras incluir.|Share your logo, a short description, photos and the contact links you want to include.
 02 / LE DAMOS FORMA|02 / WE BRING IT TO LIFE
-Diseñamos tu tarjeta.|We design your card.
+Preparamos tu perfil y tus 3 tarjetas.|We prepare your profile and your 3 cards.
 Organizamos el contenido y configuramos tu tarjeta en BRUNO. Revisas la propuesta y puedes pedir un ajuste.|We organize your content and set up your BRUNO card. Review the design and request one round of revisions.
 03 / EMPIEZAS A COMPARTIR|03 / START SHARING
 Tu enlace. Tu QR. Listos.|Your link. Your QR. Ready.
@@ -61,13 +61,13 @@ Una presentación|An introduction
 con mucho de ti.|that feels like you.
 Sin tener que elegir cada detalle o configurar todo desde cero. Trae tu información y nosotros nos encargamos de convertirla en tu tarjeta digital.|No need to choose every detail or set everything up from scratch. Bring your information and we will turn it into your digital card.
 BRUNO es gratis. Nuestro trabajo tiene valor.|BRUNO is free. Our work adds value.
-Los US$30 pagan el servicio de diseño y configuración de una tarjeta. No son una membresía de BRUNO.|US$30 covers the design and setup of one card. It is not a BRUNO membership.
+Los US$30 (o COP $30.000) pagan la preparación de un perfil completo + 3 tarjetas digitales. No son una membresía ni suscripción de BRUNO.|US$30 (or COP $30.000) covers the preparation of a complete profile + 3 digital cards. It is not a BRUNO membership or subscription.
 TU TARJETA, LISTA PARA USAR|YOUR CARD, READY TO USE
 Un solo pago por el servicio.|A one-time payment for the service.
-Configuración de una tarjeta BRUNO|Setup of one BRUNO card
+Perfil completo + 3 tarjetas digitales BRUNO|Complete profile + 3 BRUNO digital cards
 Tu logo, descripción y datos de contacto|Your logo, description and contact details
 Enlaces a WhatsApp y redes sociales|WhatsApp and social media links
-Enlace de tu tarjeta + QR digital|Your card link + digital QR
+Enlace y QR digital de cada tarjeta|Link and digital QR for each card
 Una ronda de ajustes|One round of revisions
 Materiales proporcionados por el cliente.|Materials provided by the customer.
 No incluye logo nuevo, tarjeta física ni gestión de redes.|New logo design, physical cards and social media management are not included.
@@ -85,12 +85,12 @@ Acordamos la fecha de entrega contigo antes del pago, según la disponibilidad y
 ¿Puedo pedir cambios?|Can I request changes?
 Sí. La oferta incluye una ronda de ajustes sobre la propuesta. Un rediseño adicional o nuevos servicios se acuerdan y cotizan por separado.|Yes. The offer includes one round of revisions. Additional redesigns or services are agreed and quoted separately.
 ¿La tarjeta incluye NFC o impresión?|Does the card include NFC or printing?
-No. Esta oferta incluye una tarjeta digital, su enlace y un QR digital. Los productos físicos, impresión y NFC no están incluidos.|No. This offer includes a digital card, its link and a digital QR. Physical products, printing and NFC are not included.
+No. Esta oferta incluye tu perfil completo y 3 tarjetas digitales con sus enlaces y QR digitales. Los productos físicos, impresión y NFC no están incluidos.|No. This offer includes your complete profile and 3 digital cards with their links and digital QRs. Physical products, printing and NFC are not included.
 Todos tenemos algo que compartir|We all have something to share
 Tu próxima conexión|Your next connection
 empieza aquí.|starts here.
 Cuéntanos qué quieres presentar. Nosotros lo convertimos en una tarjeta con tu esencia.|Tell us what you want to showcase. We will turn it into a card that feels like you.
-Abre tu solicitud · Tarjeta BRUNO por US$30|Start your request · BRUNO card for US$30
+Abre tu solicitud · Perfil + 3 tarjetas por US$30|Start your request · Profile + 3 cards for US$30
 Un solo lugar para empezar.|One place to get started.
 Elige tu tarjeta, cuéntanos tu idea y comparte tus materiales. El envío no genera ningún cobro.|Choose your card, tell us your idea and share your materials. Submitting the form does not charge you.
 Diseño + configuración · US$30|Design + setup · US$30

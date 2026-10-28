@@ -23,9 +23,9 @@ const COPY = {
       { t: "En vivos", d: "Conecta con tu audiencia en tiempo real desde la app y conserva el resumen de cada transmisión.", cta: "Ver en vivos", bullets: ["Transmite desde tu celular", "Audiencia en tiempo real", "Resumen al terminar"] },
       { t: "Mapa y búsqueda", d: "Descubre personas, negocios y contenido según tus intereses y la ubicación que decidas compartir.", cta: "Abrir el mapa", bullets: ["Ubicación solo si la autorizas", "Lugares populares y cercanos", "Búsqueda por intereses"] },
     ],
-    serviceEyebrow: "BRUNO × OVC", serviceTitle: "Tu mundo, en una tarjeta. La creamos por ti.", serviceText: "Diseñamos y configuramos tu tarjeta BRUNO, su enlace y su QR digital, con una ronda de ajustes. Un solo pago: COP $30.000 en Colombia o US$30 en Estados Unidos.",
+    serviceEyebrow: "BRUNO × OVC", serviceTitle: "Tu perfil completo + 3 tarjetas digitales. Lo creamos por ti.", serviceText: "Preparamos tu perfil BRUNO (presentación, foto y contacto) y 3 tarjetas digitales completas con sus enlaces y QR, con una ronda de ajustes. Un solo pago, sin suscripción: COP $30.000 en Colombia o US$30 en Estados Unidos.",
     priceTitle: "Gratis en su base. Opcional cuando quieras más.", priceText: "Crear tu cuenta, tu tarjeta, publicar, vender y transmitir no tiene costo. Pagas solo por servicios opcionales:",
-    priceItems: [["Creamos tu tarjeta", "COP $30.000 (Colombia) · US$30 (Estados Unidos). Pago único, una ronda de ajustes."], ["Productos NFC compatibles", "Disponibles en la tienda BRUNO según existencias."]],
+    priceItems: [["Perfil completo + 3 tarjetas digitales", "COP $30.000 (Colombia) · US$30 (Estados Unidos). Pago único, no es suscripción; una ronda de ajustes."], ["Productos NFC compatibles", "Disponibles en la tienda BRUNO según existencias."]],
     store: "Ver tienda", contactTitle: "¿Hablamos?", contactText: "Escríbenos para pedidos, alianzas o soporte.", legal: ["Términos", "Privacidad", "Cookies", "Centro legal", "Ayuda", "Contacto"], owner: "BRUNO pertenece a Octopus Vision Company.",
   },
   en: {
@@ -40,9 +40,9 @@ const COPY = {
       { t: "Live", d: "Connect with your audience in real time from the app and keep a summary of every broadcast.", cta: "See live streams", bullets: ["Stream from your phone", "Real-time audience", "Summary when you finish"] },
       { t: "Map & search", d: "Discover people, businesses and content by interests and the location you choose to share.", cta: "Open the map", bullets: ["Location only if you authorize it", "Popular and nearby places", "Search by interests"] },
     ],
-    serviceEyebrow: "BRUNO × OVC", serviceTitle: "Your world, in one card. We create it for you.", serviceText: "We design and set up your BRUNO card, its link and its digital QR, with one round of adjustments. One payment: COP $30.000 in Colombia or US$30 in the United States.",
+    serviceEyebrow: "BRUNO × OVC", serviceTitle: "Your complete profile + 3 digital cards. We create it for you.", serviceText: "We prepare your BRUNO profile (bio, photo and contact) and 3 complete digital cards with their links and QR, with one round of adjustments. One payment, no subscription: COP $30.000 in Colombia or US$30 in the United States.",
     priceTitle: "Free at its core. Optional when you want more.", priceText: "Creating your account, your card, publishing, selling and streaming is free. You only pay for optional services:",
-    priceItems: [["We create your card", "COP $30.000 (Colombia) · US$30 (United States). One-time payment, one round of adjustments."], ["Compatible NFC products", "Available in the BRUNO store while stocks last."]],
+    priceItems: [["Complete profile + 3 digital cards", "COP $30.000 (Colombia) · US$30 (United States). One-time payment, not a subscription; one round of adjustments."], ["Compatible NFC products", "Available in the BRUNO store while stocks last."]],
     store: "Visit store", contactTitle: "Let's talk", contactText: "Write to us for orders, partnerships or support.", legal: ["Terms", "Privacy", "Cookies", "Legal center", "Help", "Contact"], owner: "BRUNO belongs to Octopus Vision Company.",
   },
 };

@@ -67,3 +67,9 @@
 - Cliente: newtest@bruno.com / Test1234! · Otra cuenta (switch_account): viewer2@bruno.com / Test1234!
 - Correo de prueba entregable para pedidos: delivered@resend.dev (Emergent email acepta; otros dominios ficticios dan 422 undeliverable)
 - Flujo QA por curl: bash /app/backend/tests/qa_order_flow.sh
+
+## Paquetes «perfil completo + 3 tarjetas» · /asesores (2026-06)
+- Asesor con permiso de cobro: viewer3@bruno.com / Test1234! (rol asesor + cash_collector)
+- Admin (ve todos, reasigna, confirma efectivo): testc@brunoqa.com / Prueba1234!
+- Cliente: newtest@bruno.com / Test1234! · Otra cuenta: viewer2@bruno.com / Test1234!
+- Script QA: bash /app/backend/tests/qa_package_flow.sh · Asignar roles: POST /api/packages/staff {email, role: asesor|personal, cash_collector}

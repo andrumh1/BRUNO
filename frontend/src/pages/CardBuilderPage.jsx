@@ -47,6 +47,12 @@ export default function CardBuilderPage() {
   const navigate = useNavigate();
   const { token } = useAuth();
   const orderId = new URLSearchParams(window.location.search).get("order");
+  const packageId = new URLSearchParams(window.location.search).get("package");
+  const saveToPackage = async () => {
+    if (!canPublish) { brunoToast.error("Escribe un nombre o título"); setTab("content"); return; }
+    const id = await b.save(); if (!id) return;
+    brunoToast.success("Tarjeta del paquete guardada"); navigate(`/asesores/paquete/${packageId}`);
+  };
   const b = useCardBuilder({ cardId, token, onCreated: (id) => navigate(`/cards/${id}/edit`, { replace: true }) });
   const [tab, setTab] = useState("content");
   const [device, setDevice] = useState("mobile");
@@ -85,16 +91,18 @@ export default function CardBuilderPage() {
     <div className="min-h-screen bg-background pb-28 lg:pb-0" data-testid="card-builder-page">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-xl">
         <div className="px-3 sm:px-5 h-14 flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => (orderId ? navigate(`/admin/pedidos/${orderId}`) : navigate(-1))} data-testid="builder-back-btn"><ArrowLeft className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => (orderId ? navigate(`/admin/pedidos/${orderId}`) : packageId ? navigate(`/asesores/paquete/${packageId}`) : navigate(-1))} data-testid="builder-back-btn"><ArrowLeft className="w-5 h-5" /></Button>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold leading-tight tracking-tight">{orderId ? "Pedido · tarjeta en preparación" : "BRUNO Card Builder"}</div>
+            <div className="text-sm font-bold leading-tight tracking-tight">{orderId ? "Pedido · tarjeta en preparación" : packageId ? "Paquete · tarjeta del cliente" : "BRUNO Card Builder"}</div>
             <SaveStatus status={b.status} />
           </div>
           <div className="hidden sm:flex items-center gap-1 mr-1">
             <Button variant="ghost" size="icon" onClick={b.undo} disabled={!b.canUndo} title="Deshacer" data-testid="undo-btn"><Undo2 className="w-4 h-4" /></Button>
             <Button variant="ghost" size="icon" onClick={b.redo} disabled={!b.canRedo} title="Rehacer" data-testid="redo-btn"><Redo2 className="w-4 h-4" /></Button>
           </div>
-          {orderId ? (
+          {packageId ? (
+            <Button onClick={saveToPackage} className="rounded-full" disabled={b.status === "saving"} data-testid="save-package-btn"><Rocket className="w-4 h-4 mr-1.5" />Guardar y volver</Button>
+          ) : orderId ? (
             <Button onClick={sendForApproval} className="rounded-full" disabled={b.status === "saving"} data-testid="send-approval-btn"><Rocket className="w-4 h-4 mr-1.5" />Enviar para aprobación</Button>
           ) : (
             <Button onClick={publish} className="rounded-full" disabled={b.status === "saving"} data-testid="publish-btn"><Rocket className="w-4 h-4 mr-1.5" />{card.is_draft ? "Publicar" : "Guardar y ver"}</Button>

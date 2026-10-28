@@ -55,6 +55,10 @@ const ServicePaymentReturnPage = lazyPage(() => import("@/pages/service/ServiceP
 const ServiceReviewPage = lazyPage(() => import("@/pages/service/ServiceReviewPage"));
 const AdminOrdersPage = lazyPage(() => import("@/pages/service/AdminOrdersPage"));
 const AdminOrderDetailPage = lazyPage(() => import("@/pages/service/AdminOrderDetailPage"));
+const AdvisorsPage = lazyPage(() => import("@/pages/packages/AdvisorsPage"));
+const PackageEditorPage = lazyPage(() => import("@/pages/packages/PackageEditorPage"));
+const PackageClaimPage = lazyPage(() => import("@/pages/packages/PackageClaimPage"));
+const PackagePaymentReturnPage = lazyPage(() => import("@/pages/packages/PackagePaymentReturnPage"));
 const ViewCardPage = lazyPage(() => import("@/pages/ViewCardPage"));
 const QRCodePage = lazyPage(() => import("@/pages/QRCodePage"));
 const CardTransferPage = lazyPage(() => import("@/pages/CardTransferPage"));
@@ -169,6 +173,10 @@ function AppRouter() {
       <Route path="/pedido/:orderId" element={<ServiceOrderPage />} />
       <Route path="/admin/pedidos" element={<ProtectedRoute><AdminOrdersPage /></ProtectedRoute>} />
       <Route path="/admin/pedidos/:orderId" element={<ProtectedRoute><AdminOrderDetailPage /></ProtectedRoute>} />
+      <Route path="/asesores" element={<ProtectedRoute><AdvisorsPage /></ProtectedRoute>} />
+      <Route path="/asesores/paquete/:packageId" element={<ProtectedRoute><PackageEditorPage /></ProtectedRoute>} />
+      <Route path="/paquete/:packageId/pago" element={<PackagePaymentReturnPage />} />
+      <Route path="/paquete/:token" element={<PackageClaimPage />} />
       <Route path="/bruno" element={<BrunoWebsite />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
