@@ -69,6 +69,18 @@ async def _hist(pkg_id: str, action: str, by: Optional[str], **extra):
     await db.packages.update_one({"id": pkg_id}, {"$push": {"history": {"at": _now().isoformat(), "action": action, "by": by, **extra}}, "$set": {"updated_at": _now().isoformat()}})
 
 
+async def _notify_advisor(p: dict, event: str, actor: Optional[str]):
+    """Aviso in-app/push al asesor dueño del paquete cuando su cliente acepta, paga o activa. No se avisa a sí mismo."""
+    aid = p.get("advisor_id")
+    if not aid or aid == actor:
+        return
+    name = (p.get("client") or {}).get("name") or "Tu cliente"
+    msg = {"accepted": f"{name} aceptó el paquete {p['ref']} con su cuenta BRUNO.",
+           "paid": f"Pago confirmado del paquete {p['ref']} ({p.get('currency')} {p.get('amount')}).",
+           "activated": f"Paquete {p['ref']} activado: {name} ya tiene su perfil y 3 tarjetas."}[event]
+    await _notify_user(aid, f"package_{event}", msg, p["id"], f"/asesores/paquete/{p['id']}", "BRUNO · Asesores")
+
+
 def _view(p: dict) -> dict:
     out = {k: v for k, v in p.items() if k not in ("claim_token_hash", "revoked_token_hashes", "history")}
     out["price_label"] = OFFERS[p["market"]]["label"] if p.get("market") in OFFERS else None
@@ -289,6 +301,7 @@ async def cash_confirm(pkg_id: str, body: CashBody, user: User = Depends(get_cur
     if not r:
         return {"ok": True, "already": True}
     await _hist(pkg_id, "payment:confirmed", user.id, method="cash", receipt=receipt["id"], amount=body.amount_received, currency=body.currency)
+    await _notify_advisor(p, "paid", user.id)
     await transfer_package(pkg_id, by=user.id)
     return {"ok": True, "receipt": receipt, **_view(await _get(pkg_id))}
 
@@ -355,6 +368,7 @@ async def claim_accept(token: str, body: AcceptBody, user: User = Depends(get_cu
         raise _err("Este paquete ya fue reclamado por otra cuenta.", "This package was already claimed by another account.", 409)
     if not p.get("claimed_by"):
         await _hist(p["id"], "accepted", user.id, handle=_handle(u), fields=fields)
+        await _notify_advisor(p, "accepted", user.id)
     p2 = await _get(p["id"])
     if p2.get("payment_status") == "confirmed":
         await transfer_package(p["id"], by=user.id)
@@ -407,6 +421,7 @@ async def _mark_paid_pkg(pkg_id: str, provider: str, tx_id: str, amount: int, cu
     if not r:
         return False
     await _hist(pkg_id, "payment:confirmed", by, provider=provider, transaction_id=tx_id, amount=amount, currency=currency)
+    await _notify_advisor(r, "paid", by)
     await transfer_package(pkg_id, by=by or "system:payment")
     return True
 
@@ -501,6 +516,7 @@ async def transfer_package(pkg_id: str, by: Optional[str] = None) -> bool:
         except Exception:
             pass
         await _notify_user(uid, "package_activated", "Tu paquete BRUNO está activo: perfil y 3 tarjetas ya están en tu cuenta.", pkg_id, "/my-profile?tab=cards", "BRUNO")
+        await _notify_advisor(p, "activated", None)
         return True
     except Exception as e:
         logger.error(f"transfer failed {pkg_id}: {e}")
@@ -523,3 +539,85 @@ async def retry_transfer(pkg_id: str, user: User = Depends(get_current_user)):
 async def my_packages(user: User = Depends(get_current_user)):
     rows = await db.packages.find({"claimed_by": user.id}, {"_id": 0, "id": 1, "ref": 1, "payment_status": 1, "delivery_status": 1, "payment_method": 1, "market": 1, "claim_url": 1}).to_list(20)
     return rows
+
+
+# ---------- reporte mensual de ventas (solo admin) ----------
+def _month_range(month: Optional[str]):
+    import re
+    from datetime import datetime
+    if not month or not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
+        month = _now().strftime("%Y-%m")
+    y, m = int(month[:4]), int(month[5:])
+    start = f"{month}-01T00:00:00"
+    end = f"{y + (m == 12)}-{(m % 12) + 1:02d}-01T00:00:00"
+    return month, start, end
+
+
+async def _sales_rows(month: Optional[str]):
+    month, start, end = _month_range(month)
+    paid = await db.packages.find({"payment_status": "confirmed", "payment_confirmed_at": {"$gte": start, "$lt": end}}, {"_id": 0, "claim_token_hash": 0, "revoked_token_hashes": 0, "history": 0}).sort("payment_confirmed_at", 1).to_list(5000)
+    open_q = {"payment_status": {"$ne": "confirmed"}, "created_at": {"$gte": start, "$lt": end}}
+    pending = {}
+    async for p in db.packages.find(open_q, {"_id": 0, "advisor_id": 1}):
+        pending[p["advisor_id"]] = pending.get(p["advisor_id"], 0) + 1
+    adv = {}
+    for p in paid:
+        a = adv.setdefault(p["advisor_id"], {"advisor_id": p["advisor_id"], "advisor_handle": p.get("advisor_handle"), "sales": 0, "cash_count": 0, "virtual_count": 0, "cash": {"COP": 0, "USD": 0}, "virtual": {"COP": 0, "USD": 0}, "activated": 0, "pending": 0})
+        method = "cash" if p.get("payment_method") == "cash" else "virtual"
+        a["sales"] += 1
+        a[f"{method}_count"] += 1
+        a[method][p["currency"]] = a[method].get(p["currency"], 0) + float(p["amount"] or 0)
+        a["activated"] += p.get("delivery_status") == "activated"
+    for aid, n in pending.items():
+        a = adv.setdefault(aid, {"advisor_id": aid, "advisor_handle": await _advisor_handle(aid), "sales": 0, "cash_count": 0, "virtual_count": 0, "cash": {"COP": 0, "USD": 0}, "virtual": {"COP": 0, "USD": 0}, "activated": 0, "pending": 0})
+        a["pending"] = n
+    rows = sorted(adv.values(), key=lambda r: (-r["sales"], r["advisor_handle"] or ""))
+    totals = {"sales": len(paid), "cash_count": sum(r["cash_count"] for r in rows), "virtual_count": sum(r["virtual_count"] for r in rows),
+              "cash": {c: sum(r["cash"].get(c, 0) for r in rows) for c in ("COP", "USD")}, "virtual": {c: sum(r["virtual"].get(c, 0) for r in rows) for c in ("COP", "USD")},
+              "activated": sum(r["activated"] for r in rows), "pending": sum(r["pending"] for r in rows)}
+    detail = [{"ref": p["ref"], "paid_at": p.get("payment_confirmed_at"), "advisor_handle": p.get("advisor_handle"), "client": (p.get("client") or {}).get("name"), "market": p.get("market"), "method": "cash" if p.get("payment_method") == "cash" else "virtual",
+               "currency": p.get("currency"), "amount": p.get("amount"), "receipt": (p.get("receipt") or {}).get("receipt_ref") or (p.get("receipt") or {}).get("transaction_id") or (p.get("receipt") or {}).get("id"),
+               "confirmed_by": (p.get("receipt") or {}).get("confirmed_by_handle") or (p.get("receipt") or {}).get("method"), "delivery_status": p.get("delivery_status")} for p in paid]
+    return {"month": month, "rows": rows, "totals": totals, "detail": detail}
+
+
+@router.get("/report/sales")
+async def sales_report(month: Optional[str] = None, user: User = Depends(get_current_user)):
+    if not is_admin(user):
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    return await _sales_rows(month)
+
+
+@router.get("/report/sales.xlsx")
+async def sales_report_xlsx(month: Optional[str] = None, user: User = Depends(get_current_user)):
+    if not is_admin(user):
+        raise HTTPException(status_code=403, detail="Solo administradores")
+    from io import BytesIO
+    from fastapi.responses import StreamingResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+    rep = await _sales_rows(month)
+    wb = Workbook(); ws = wb.active; ws.title = "Resumen"
+    ws.append([f"BRUNO · Ventas de paquetes (perfil + 3 tarjetas) · {rep['month']}"]); ws["A1"].font = Font(bold=True, size=12)
+    head = ["Asesor", "Ventas pagadas", "Efectivo (n)", "Efectivo COP", "Efectivo USD", "Virtual (n)", "Virtual COP", "Virtual USD", "Activados", "Pendientes de pago"]
+    ws.append(head)
+    for c in ws[2]:
+        c.font = Font(bold=True)
+    for r in rep["rows"]:
+        ws.append([f"@{r['advisor_handle']}", r["sales"], r["cash_count"], r["cash"]["COP"], r["cash"]["USD"], r["virtual_count"], r["virtual"]["COP"], r["virtual"]["USD"], r["activated"], r["pending"]])
+    t = rep["totals"]
+    ws.append(["TOTAL", t["sales"], t["cash_count"], t["cash"]["COP"], t["cash"]["USD"], t["virtual_count"], t["virtual"]["COP"], t["virtual"]["USD"], t["activated"], t["pending"]])
+    for c in ws[ws.max_row]:
+        c.font = Font(bold=True)
+    for col, w in zip("ABCDEFGHIJ", (22, 15, 13, 15, 13, 12, 14, 12, 11, 18)):
+        ws.column_dimensions[col].width = w
+    d = wb.create_sheet("Detalle")
+    d.append(["Referencia", "Fecha de pago", "Asesor", "Cliente", "País", "Método", "Moneda", "Importe", "Recibo / transacción", "Confirmado por", "Entrega"])
+    for c in d[1]:
+        c.font = Font(bold=True)
+    for x in rep["detail"]:
+        d.append([x["ref"], (x["paid_at"] or "")[:19].replace("T", " "), f"@{x['advisor_handle']}", x["client"], x["market"], "Efectivo" if x["method"] == "cash" else "Virtual", x["currency"], x["amount"], x["receipt"], x["confirmed_by"], x["delivery_status"]])
+    for col, w in zip("ABCDEFGHIJK", (12, 20, 18, 24, 6, 10, 8, 10, 24, 18, 18)):
+        d.column_dimensions[col].width = w
+    buf = BytesIO(); wb.save(buf); buf.seek(0)
+    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": f'attachment; filename="bruno-ventas-{rep["month"]}.xlsx"'})

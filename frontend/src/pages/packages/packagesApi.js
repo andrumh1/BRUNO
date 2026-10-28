@@ -28,4 +28,6 @@ export const api = {
   accept: (tk, token, body) => axios.post(`${PKG_API}/claim/${token}/accept`, body, auth(tk)).then((r) => r.data),
   checkout: (tk, id) => axios.post(`${PKG_API}/${id}/checkout`, {}, auth(tk)).then((r) => r.data),
   paymentStatus: (tk, id, params) => axios.get(`${PKG_API}/${id}/payment-status`, { ...auth(tk), params }).then((r) => r.data),
+  salesReport: (tk, month) => axios.get(`${PKG_API}/report/sales`, { ...auth(tk), params: { month } }).then((r) => r.data),
+  salesXlsx: (tk, month) => axios.get(`${PKG_API}/report/sales.xlsx`, { ...auth(tk), params: { month }, responseType: "blob" }).then((r) => r.data),
 };

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { api, DELIV, PAY, PREP, Pill } from "./packagesApi";
+import { SalesReport } from "./SalesReport";
 
 const Sel = ({ value, onChange, options, testId }) => <select value={value} onChange={(e) => onChange(e.target.value)} className="h-9 rounded-lg bg-muted px-2 text-xs" data-testid={testId}>{options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>;
 
@@ -32,6 +33,7 @@ export default function AdvisorsPage() {
           <Button className="rounded-full" onClick={create} data-testid="advisors-new-package"><Plus className="w-4 h-4 mr-1" />Nuevo paquete</Button>
         </div>
         <p className="text-xs text-muted-foreground mb-4 ml-12" data-testid="advisors-handle">Sesión: <b>{access?.handle ? `@${access.handle}` : "…"}</b>{access?.admin ? " · administrador" : access?.cash ? " · con permiso de cobro" : ""} · Oferta: perfil completo + 3 tarjetas · COP $30.000 (CO) / US$30 (US)</p>
+        {access?.admin && <SalesReport />}
         <div className="flex flex-wrap gap-2 mb-4">
           {access?.admin && <Input value={f.advisor} onChange={(e) => setF({ ...f, advisor: e.target.value })} placeholder="@asesor" className="h-9 w-36 text-xs" data-testid="advisors-filter-advisor" />}
           <Sel value={f.market} onChange={(v) => setF({ ...f, market: v })} options={[["", "País"], ["CO", "Colombia"], ["US", "Estados Unidos"]]} testId="advisors-filter-market" />
