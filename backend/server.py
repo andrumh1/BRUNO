@@ -900,16 +900,16 @@ async def google_auth(request: GoogleAuthRequest, http_request: Request, respons
     try:
         # Exchange session_id with Emergent Auth service
         async with httpx.AsyncClient() as client:
-            response = await client.get(
+            oauth_resp = await client.get(
                 "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
                 headers={"X-Session-ID": request.session_id},
                 timeout=10.0
             )
             
-            if response.status_code != 200:
+            if oauth_resp.status_code != 200:
                 raise HTTPException(status_code=401, detail="Invalid session_id")
             
-            auth_data = response.json()
+            auth_data = oauth_resp.json()
             
         # Extract user data from Emergent Auth response
         email = auth_data.get("email")
@@ -960,11 +960,13 @@ async def google_auth(request: GoogleAuthRequest, http_request: Request, respons
         sess = await _start_session(response, http_request, user_doc, request.platform)
         
         return {
-            "user": User(**user_doc),
+            "user": User(**user_doc).model_dump(),
             "session_token": session_token or sess["access_token"],
             **sess,
         }
         
+    except HTTPException:
+        raise
     except httpx.RequestError as e:
         raise HTTPException(status_code=500, detail=f"Error connecting to auth service: {str(e)}")
     except Exception as e:
