@@ -129,3 +129,36 @@ export function ResetPasswordPage() {
 }
 
 export default ForgotPasswordPage;
+
+/** /verify-email?token=… — confirma el correo. Abrir el enlace no inicia sesión ni toca la sesión existente. */
+export const VerifyEmailPage = () => {
+  const [params] = useSearchParams();
+  const token = params.get("token") || "";
+  const [state, setState] = useState({ status: "loading", email: "", error: "" });
+  useEffect(() => {
+    if (!token) { setState({ status: "error", error: "Enlace incompleto. Pide uno nuevo desde tu perfil." }); return; }
+    axios.post(`${API}/auth/verify-email`, { token }, { __skipAuthRetry: true })
+      .then((r) => setState({ status: "ok", email: r.data.email, already: r.data.already }))
+      .catch((e) => setState({ status: "error", error: detail(e, "No pudimos confirmar el correo.") }));
+  }, [token]);
+  return (
+    <Shell title="Confirmación de correo" description="BRUNO · seguridad de tu cuenta" testid="verify-email-page">
+      {state.status === "loading" && <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}
+      {state.status === "ok" && (
+        <div className="space-y-4 text-center" data-testid="verify-email-success">
+          <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
+          <p className="font-semibold">{state.already ? "Este correo ya estaba confirmado." : "¡Correo confirmado!"}</p>
+          <p className="text-sm text-muted-foreground break-all">{state.email}</p>
+          <Button asChild className="w-full rounded-full" data-testid="verify-email-continue"><Link to="/my-profile">Ir a mi perfil</Link></Button>
+        </div>
+      )}
+      {state.status === "error" && (
+        <div className="space-y-4 text-center" data-testid="verify-email-error">
+          <AlertCircle className="w-12 h-12 text-destructive mx-auto" />
+          <p className="text-sm">{state.error}</p>
+          <Button asChild variant="outline" className="w-full rounded-full" data-testid="verify-email-back"><Link to="/my-profile">Volver a BRUNO</Link></Button>
+        </div>
+      )}
+    </Shell>
+  );
+};

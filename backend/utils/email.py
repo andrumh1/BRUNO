@@ -192,3 +192,41 @@ def reset_password_html(*, name: str, reset_url: str, minutes: int = 60) -> str:
         f'Enviado por {brand}, una aplicación de Octopus Vision Company (OVC). Nunca te pediremos tu contraseña por correo.</p>'
         '</td></tr></table></td></tr></table>'
     )
+
+
+def _shell(title: str, inner: str) -> str:
+    brand = escape(EMAIL_FROM_NAME)
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ec;padding:24px 0;font-family:Arial,Helvetica,sans-serif;color:#1c1c1c">'
+        '<tr><td align="center"><table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:20px;padding:28px">'
+        f'<tr><td><p style="margin:0 0 4px;font-size:12px;letter-spacing:.18em;color:#F26A1B;font-weight:700">{brand}</p>'
+        f'<h1 style="margin:0 0 16px;font-size:22px">{escape(title)}</h1>{inner}'
+        f'<p style="margin:22px 0 0;font-size:12px;color:#888">Enviado por {brand}, una aplicación de Octopus Vision Company (OVC). Nunca te pediremos tu contraseña por correo.</p>'
+        '</td></tr></table></td></tr></table>'
+    )
+
+
+def verify_email_html(*, name: str, verify_url: str, code: str, hours: int = 24) -> str:
+    inner = (
+        f'<p style="margin:0 0 10px;font-size:15px">Hola {escape(name)}, confirma que este correo es tuyo para proteger tu cuenta BRUNO.</p>'
+        f'<p style="margin:0 0 18px;font-size:14px;color:#6b6b6b">El enlace caduca en {hours} horas y solo puede usarse una vez.</p>'
+        f'<p style="margin:0 0 18px"><a href="{escape(verify_url)}" style="display:inline-block;background:#F26A1B;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;font-size:14px">Confirmar mi correo</a></p>'
+        f'<p style="margin:0 0 6px;font-size:14px">Si prefieres, escribe este código dentro de la app BRUNO:</p>'
+        f'<p style="margin:0 0 12px;font-size:28px;letter-spacing:.35em;font-weight:700;color:#1c1c1c">{escape(code)}</p>'
+        '<p style="margin:0;font-size:12px;color:#888">Si no creaste una cuenta en BRUNO, ignora este mensaje.</p>'
+    )
+    return _shell("Confirma tu correo", inner)
+
+
+def new_login_html(*, name: str, when: str, device: str, ip: str, settings_url: str) -> str:
+    inner = (
+        f'<p style="margin:0 0 10px;font-size:15px">Hola {escape(name)}, se inició sesión en tu cuenta BRUNO desde un dispositivo nuevo.</p>'
+        f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px;font-size:14px;color:#1c1c1c">'
+        f'<tr><td style="padding:4px 14px 4px 0;color:#6b6b6b">Fecha</td><td style="padding:4px 0">{escape(when)}</td></tr>'
+        f'<tr><td style="padding:4px 14px 4px 0;color:#6b6b6b">Dispositivo</td><td style="padding:4px 0">{escape(device)}</td></tr>'
+        f'<tr><td style="padding:4px 14px 4px 0;color:#6b6b6b">Dirección IP</td><td style="padding:4px 0">{escape(ip)}</td></tr></table>'
+        '<p style="margin:0 0 10px;font-size:14px">Si fuiste tú, no tienes que hacer nada.</p>'
+        '<p style="margin:0 0 18px;font-size:14px">Si no reconoces este acceso, cambia tu contraseña y cierra la sesión en todos los dispositivos desde Configuraciones.</p>'
+        f'<p style="margin:0"><a href="{escape(settings_url)}" style="display:inline-block;background:#1c1c1c;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:700;font-size:14px">Revisar mi seguridad</a></p>'
+    )
+    return _shell("Nuevo inicio de sesión", inner)

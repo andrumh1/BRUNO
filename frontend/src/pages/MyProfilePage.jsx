@@ -1,5 +1,6 @@
 import { ServicePromoBubble } from "@/components/bruno/ServicePromoBubble";
 import MyServiceOrders from "@/components/bruno/MyServiceOrders";
+import { EmailVerifyBanner } from "@/components/bruno/EmailVerifyBanner";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import ShareImageSheet from "@/components/bruno/ShareImageSheet";
 import ScheduledStories from "@/components/bruno/ScheduledStories";
@@ -625,6 +626,8 @@ const MyProfilePage = () => {
           <PointsWidget />
         </div>
       </div>
+
+      <div className="px-4 pt-3 empty:hidden"><EmailVerifyBanner /></div>
 
       {/* Saved Stories / Highlights */}
       <HighlightsSection

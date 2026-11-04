@@ -99,6 +99,7 @@ const LegalHubPage = lazyPage(() => import("@/pages/LegalHubPage"));
 const MarketplacePiupPage = lazyPage(() => import("@/pages/MarketplacePiupPage"));
 const ForgotPasswordPage = lazyPage(() => import("@/pages/PasswordRecoveryPages").then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazyPage(() => import("@/pages/PasswordRecoveryPages").then((m) => ({ default: m.ResetPasswordPage })));
+const VerifyEmailPage = lazyPage(() => import("@/pages/PasswordRecoveryPages").then((m) => ({ default: m.VerifyEmailPage })));
 const AdminPiupPage = lazyPage(() => import("@/pages/AdminPiupPage"));
 const AdminPerformancePage = lazyPage(() => import("@/pages/AdminPerformancePage"));
 const CommunityGuidelinesPage = lazyPage(() => import("@/pages/CommunityGuidelinesPage"));
@@ -202,6 +203,7 @@ function AppRouter() {
       <Route path="/marketplace/piup" element={<MarketplacePiupPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/marketplace/:productId" element={<ProductDetailPage />} />
       <Route path="/profile/:userId" element={<UserProfilePage />} />
       <Route path="/hashtag/:tag" element={<HashtagPage />} />

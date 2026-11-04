@@ -25,7 +25,7 @@ from models.user import User
 SECRET_KEY = os.environ['SECRET_KEY']
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60  # access token corto; la sesión vive en el refresh token rotatorio
-REFRESH_TOKEN_TTL_DAYS = 180  # rolling: cada renovación extiende la sesión
+REFRESH_TOKEN_TTL_DAYS = 365  # rolling: cada uso extiende la sesión; solo caduca tras un año sin abrir BRUNO
 REFRESH_REUSE_GRACE_SECONDS = 60  # reintentos de red con el token recién rotado no cierran la sesión
 REFRESH_COOKIE = "bruno_refresh"
 

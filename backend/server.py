@@ -88,6 +88,7 @@ class User(BaseModel):
     subscription_tier: str = SubscriptionTier.FREE
     subscription_expires_at: Optional[datetime] = None
     is_verified: bool = False
+    email_verified: Optional[bool] = None  # None = cuenta anterior a la verificación (no se bloquea)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = True
 
@@ -722,11 +723,14 @@ async def register(user_input: UserCreate, request: Request, response: Response)
     user_doc = user_obj.model_dump()
     user_doc['hashed_password'] = hashed_password
     user_doc['created_at'] = user_doc['created_at'].isoformat()
+    user_doc['email_verified'] = False
     
     await db.users.insert_one(user_doc)
     
     sess = await _start_session(response, request, user_doc, user_input.platform)
-    return Token(user=user_obj, **sess)
+    await _ev.send_verification(user_doc, client_ip(request))  # el registro no falla si el correo no sale: se puede reenviar
+    await _ev.note_login_device(user_doc, request, user_input.platform or "web")
+    return Token(user=User(**user_doc), **sess)
 
 @api_router.post("/auth/login", response_model=Token)
 async def login(user_input: UserLogin, request: Request, response: Response):
@@ -749,6 +753,7 @@ async def login(user_input: UserLogin, request: Request, response: Response):
     user_obj = User(**user_dict)
 
     sess = await _start_session(response, request, user_dict, user_input.platform or "web", persistent=user_input.remember is not False)
+    await _ev.note_login_device(user_dict, request, user_input.platform or "web")
     await db.users.update_one({"id": user_obj.id}, {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}})
     await db.audit_logs.insert_one({"id": str(uuid.uuid4()), "user_id": user_obj.id, "action": "login", "ip": ip, "platform": user_input.platform or "web", "created_at": datetime.now(timezone.utc).isoformat()})
     # Seguridad: aviso de nuevo inicio de sesión (in-app + push categoría account_security, 1 por dispositivo/día vía dedupe)
@@ -958,6 +963,10 @@ async def google_auth(request: GoogleAuthRequest, http_request: Request, respons
         
         # Sesión: access corto + refresh rotatorio (cookies en web, cuerpo en nativo)
         sess = await _start_session(response, http_request, user_doc, request.platform)
+        if not user_doc.get("email_verified"):
+            await db.users.update_one({"id": user_doc["id"]}, {"$set": {"email_verified": True, "email_verified_at": datetime.now(timezone.utc).isoformat()}})
+            user_doc["email_verified"] = True  # Google ya verificó el correo
+        await _ev.note_login_device(user_doc, http_request, request.platform or "web")
         
         return {
             "user": User(**user_doc).model_dump(),
@@ -2466,6 +2475,8 @@ from routers.piup import router as piup_router
 api_router.include_router(piup_router)
 from routers.password_reset import router as password_reset_router  # noqa: E402
 api_router.include_router(password_reset_router)
+from routers import email_verify as _ev  # noqa: E402
+api_router.include_router(_ev.router)
 from routers.piup_admin import router as piup_admin_router  # noqa: E402
 api_router.include_router(piup_admin_router)
 from routers.marketplace_orders import router as marketplace_orders_router  # noqa: E402

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
 import { isNative } from "@/native/capacitor";
+import { brunoToast } from "@/components/bruno/BrunoToast";
 import { OvcAttribution } from "@/components/brand/OvcAttribution";
 import { Mail, Lock, User, AlertCircle, Eye, EyeOff } from "lucide-react";
 
@@ -40,6 +41,7 @@ const RegisterPage = () => {
     try {
       const response = await axios.post(`${API}/auth/register`, { ...formData, platform: isNative() ? "native" : "web" }, { withCredentials: true, __skipAuthRetry: true });
       await login(response.data.user, response.data.access_token, true, response.data.refresh_token || null);
+      brunoToast.success(`Te enviamos un correo a ${response.data.user.email} para confirmar tu cuenta`);
       navigate(redirectTo);
     } catch (err) {
       setError(err.response?.data?.detail || "Error al registrarse");
