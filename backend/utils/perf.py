@@ -162,6 +162,8 @@ INDEXES = {
     "event_invitations": [[("event_id", 1), ("created_at", -1)], [("linked_card_id", 1)]],
     "event_photos": [[("event_id", 1), ("created_at", -1)]],
     "event_purchases": [[("event_id", 1), ("created_at", -1)]],
+    "event_photo_comments": [[("photo_id", 1), ("created_at", 1)]],
+    "event_photo_reactions": [[("photo_id", 1), ("user_id", 1)]],
     "push_subscriptions": [[("user_id", 1)]],
     "mobile_devices": [[("user_id", 1)], [("device_token", 1)]],
     "push_log": [[("user_id", 1), ("tag", 1)]],

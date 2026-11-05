@@ -18,15 +18,16 @@ const Field = ({ label, children }) => <label className="block text-xs font-semi
 const copy = async (t) => { try { await navigator.clipboard.writeText(t); brunoToast.success("Enlace copiado"); } catch { brunoToast.error("No se pudo copiar"); } };
 
 /* Compra (activación o ampliación): en web abre la pasarela; en la app nativa muestra el producto y envía a pagar en brunocard.com. */
-const BuyButton = ({ ev, kind, packId, label, price, settings, token, testId }) => {
+const fmtPrice = (v, m) => (v == null ? "" : m === "CO" ? `COP $${Math.round(v).toLocaleString("es-CO")}` : `US$${Number(v).toFixed(2)}`);
+const BuyButton = ({ ev, kind, packId, templateId, label, price, settings, token, testId, small }) => {
   const [busy, setBusy] = useState(false);
-  const webUrl = `${WEB}/events/${ev.id}/manage?buy=${kind}${packId ? `&pack=${packId}` : ""}`;
-  if (native()) return <Button variant="outline" className="rounded-full" onClick={() => window.open(webUrl, "_blank")} data-testid={testId}><Smartphone className="w-4 h-4 mr-1.5" /> {label} · {price} · pagar en brunocard.com</Button>;
+  const webUrl = `${WEB}/events/${ev.id}/manage?buy=${kind}${packId ? `&pack=${packId}` : ""}${templateId ? `&template=${templateId}` : ""}`;
+  if (native()) return <Button variant="outline" size={small ? "sm" : "default"} className="rounded-full" onClick={() => window.open(webUrl, "_blank")} data-testid={testId}><Smartphone className="w-4 h-4 mr-1.5" /> {label} · {price} · pagar en brunocard.com</Button>;
   const disabled = !settings?.activation?.payments_enabled || !settings?.providers?.[ev.market];
-  const go = async () => { setBusy(true); try { const r = await api.checkout(token, ev.id, { kind, pack_id: packId }); window.location.assign(r.url); } catch (e) { brunoToast.error(errText(e, "No se pudo iniciar el pago")); setBusy(false); } };
+  const go = async () => { setBusy(true); try { const r = await api.checkout(token, ev.id, { kind, pack_id: packId, template_id: templateId }); window.location.assign(r.url); } catch (e) { brunoToast.error(errText(e, "No se pudo iniciar el pago")); setBusy(false); } };
   return (
     <div className="space-y-1">
-      <Button className="rounded-full" onClick={go} disabled={busy || disabled} data-testid={testId}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 mr-1.5" />}{label} · {price}</Button>
+      <Button size={small ? "sm" : "default"} className={`rounded-full ${small ? "h-7" : ""}`} onClick={go} disabled={busy || disabled} data-testid={testId}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 mr-1.5" />}{label} · {price}</Button>
       {disabled && <p className="text-[11px] text-muted-foreground" data-testid={`${testId}-disabled`}>{!settings?.activation?.payments_enabled ? "Pagos aún no habilitados. Escríbenos a bruno@brunocard.com." : "Pago en línea no disponible para tu país por ahora."}</p>}
     </div>
   );
@@ -112,6 +113,21 @@ export default function EventManagePage() {
           <label className="flex items-center justify-between text-xs"><span>Los invitados pueden subir fotos</span><Switch checked={form.allow_guest_uploads} onCheckedChange={set("allow_guest_uploads")} data-testid="ev-allow-uploads" /></label>
           <label className="flex items-center justify-between text-xs"><span>Mostrar tarjetas de invitados que lo autoricen</span><Switch checked={form.show_guest_cards} onCheckedChange={set("show_guest_cards")} data-testid="ev-show-guests" /></label>
           <Button onClick={save} disabled={saving} className="rounded-full" data-testid="ev-save-btn">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />} Guardar</Button>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card p-4 space-y-3" data-testid="templates-section">
+          <h2 className="font-bold text-sm">Diseño de la tarjeta</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <button type="button" onClick={() => api.update(token, id, { template_id: "" }).then(load)} className={`rounded-xl border p-2 text-left text-xs ${!d.template_id ? "border-primary ring-2 ring-primary/30" : "border-border"}`} data-testid="tpl-pick-default"><div className="h-24 rounded-lg mb-1.5" style={{ background: "linear-gradient(135deg,#F26A1B,#1c1c1a)" }} /><p className="font-semibold">BRUNO clásico</p><p className="text-muted-foreground">Incluido</p></button>
+            {(d.settings?.templates?.items || []).map((t) => { const owned = (d.templates_owned || []).includes(t.id); return (
+              <div key={t.id} className={`rounded-xl border p-2 text-xs ${d.template_id === t.id ? "border-primary ring-2 ring-primary/30" : "border-border"}`} data-testid={`tpl-card-${t.id}`}>
+                {t.preview_url ? <img src={t.preview_url} alt={t.name} className="h-24 w-full object-cover rounded-lg mb-1.5" /> : <div className="h-24 rounded-lg mb-1.5" style={{ background: t.theme?.bg || "#222" }} />}
+                <p className="font-semibold">{t.name} <span className="text-[10px] uppercase text-primary">Premium</span></p>
+                {owned ? <Button size="sm" variant={d.template_id === t.id ? "default" : "outline"} className="rounded-full mt-1 h-7" onClick={() => api.update(token, id, { template_id: t.id }).then(load).catch((e) => brunoToast.error(errText(e, "No se pudo aplicar")))} data-testid={`tpl-use-${t.id}`}>{d.template_id === t.id ? "En uso" : "Usar"}</Button>
+                  : <div className="mt-1"><BuyButton ev={d} kind="template" templateId={t.id} label="Comprar" price={fmtPrice(t.prices?.[d.market] ?? d.settings?.templates?.default_price?.[d.market], d.market)} settings={d.settings} token={token} testId={`buy-tpl-${t.id}`} small /></div>}
+              </div>
+            ); })}
+          </div>
         </section>
 
         <section className="rounded-2xl border border-border bg-card p-4 space-y-3" data-testid="storage-section">

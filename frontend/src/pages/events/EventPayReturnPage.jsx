@@ -26,7 +26,7 @@ export default function EventPayReturnPage() {
       <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-6 text-center space-y-3">
         {!res ? <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" /> : done ? <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" /> : failed ? <XCircle className="w-12 h-12 text-destructive mx-auto" /> : <Clock className="w-12 h-12 text-amber-500 mx-auto" />}
         <h1 className="text-lg font-bold" data-testid="pay-status-title">{!res ? "Verificando pago…" : done ? "Pago confirmado" : failed ? "Pago no completado" : "Pago en proceso"}</h1>
-        <p className="text-sm text-muted-foreground">{done ? (res.purchase.kind === "activation" ? "Tu tarjeta de evento ya está activa. Publícala cuando quieras." : "La ampliación ya se aplicó al álbum; tus fotos siguen intactas.") : failed ? "No se realizó ningún cargo. Puedes intentarlo de nuevo." : "Esperando la confirmación del proveedor. Puedes cerrar esta pantalla; te avisaremos en BRUNO."}</p>
+        <p className="text-sm text-muted-foreground">{done ? (res.purchase.kind === "activation" ? "Tu tarjeta de evento ya está activa. Publícala cuando quieras." : res.purchase.kind === "template" ? "La plantilla premium ya está aplicada a tu tarjeta de evento." : "La ampliación ya se aplicó al álbum; tus fotos siguen intactas.") : failed ? "No se realizó ningún cargo. Puedes intentarlo de nuevo." : "Esperando la confirmación del proveedor. Puedes cerrar esta pantalla; te avisaremos en BRUNO."}</p>
         <Button asChild className="w-full rounded-full" data-testid="pay-back-btn"><Link to={`/events/${id}/manage`}>Volver al evento</Link></Button>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { brunoToast } from "@/components/bruno/BrunoToast";
 import { CardConnections } from "@/components/bruno/CardConnections";
 import { JoinBrunoNudge } from "@/components/bruno/JoinBrunoNudge";
 import { api, errText, fmtBytes, fmtDate } from "@/pages/events/eventsApi";
+import { PhotoDialog } from "@/pages/events/PhotoDialog";
 
 const Cover = ({ event }) => (
   <div className="relative h-56 sm:h-72 rounded-b-3xl overflow-hidden bg-foreground" data-testid="event-cover">
@@ -28,6 +29,7 @@ export const EventAlbum = ({ event, photos, setPhotos, viewer, benefits }) => {
   const { token, user } = useAuth();
   const [progress, setProgress] = useState(null);
   const [nudge, setNudge] = useState(false);
+  const [open, setOpen] = useState(null);
   const input = useRef(null);
   const st = event.storage || {};
   const full = st.full || photos.length >= st.total_photos;
@@ -64,13 +66,14 @@ export const EventAlbum = ({ event, photos, setPhotos, viewer, benefits }) => {
         <div className="grid grid-cols-3 gap-1.5" data-testid="album-grid">
           {photos.map((ph) => (
             <figure key={ph.id} className="relative aspect-square rounded-xl overflow-hidden bg-muted group" data-testid={`album-photo-${ph.id}`}>
-              <a href={ph.url} target="_blank" rel="noreferrer"><img src={ph.thumb_url || ph.url} alt={ph.caption || ""} loading="lazy" className="w-full h-full object-cover" /></a>
+              <button type="button" onClick={() => setOpen(ph)} className="w-full h-full" aria-label="Abrir foto" data-testid={`album-open-${ph.id}`}><img src={ph.thumb_url || ph.url} alt={ph.caption || ""} loading="lazy" className="w-full h-full object-cover" /></button>
               <figcaption className="absolute bottom-0 inset-x-0 text-[10px] text-white bg-black/50 px-1.5 py-0.5 truncate">{ph.uploader_name}</figcaption>
               {(viewer.is_owner || ph.uploader_id === user?.id) && <button type="button" onClick={() => remove(ph)} className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white" aria-label="Borrar" data-testid={`album-delete-${ph.id}`}><Trash2 className="w-3 h-3" /></button>}
             </figure>
           ))}
         </div>
       )}
+      {open && <PhotoDialog eventId={event.id} photo={open} onClose={() => setOpen(null)} benefits={benefits} />}
     </section>
   );
 };
@@ -87,8 +90,10 @@ export default function EventPublicPage() {
   if (error) return <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center" data-testid="event-error"><p className="text-sm text-muted-foreground">{error}</p><Button asChild variant="outline" className="rounded-full"><Link to="/">Ir a BRUNO</Link></Button></div>;
   if (!data) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   const { event, viewer } = data;
+  const th = event.theme;
+  const themeStyle = th ? { "--background": th.bg, "--foreground": th.fg, "--card": th.card, "--primary": th.accent, "--border": `${th.accent}55`, "--muted": th.card, "--muted-foreground": `${th.fg}aa`, background: th.bg, color: th.fg, fontFamily: th.font, backgroundImage: th.pattern } : {};
   return (
-    <div className="min-h-screen bg-background" style={{ paddingBottom: "calc(var(--content-bottom, 96px) + 24px)" }} data-testid="event-public-page">
+    <div className="min-h-screen bg-background" style={{ paddingBottom: "calc(var(--content-bottom, 96px) + 24px)", ...themeStyle }} data-testid="event-public-page" data-theme={event.template_id || "default"}>
       <div className="relative">
         <Cover event={event} />
         <div className="absolute top-3 left-3 right-3 flex justify-between" style={{ paddingTop: "var(--safe-top, 0px)" }}>

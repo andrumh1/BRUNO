@@ -35,7 +35,9 @@ DEFAULT_SETTINGS = {
     "storage": {"included_bytes": 1 * GB, "max_photos": 500, "max_file_bytes": 15 * MB, "retention_days": 730,
                 "packs": [{"id": "pack_1gb", "label": "+1 GB · +500 fotos", "bytes": 1 * GB, "photos": 500, "prices": {"US": 4.99, "CO": 19900}, "active": True},
                           {"id": "pack_5gb", "label": "+5 GB · +2.500 fotos", "bytes": 5 * GB, "photos": 2500, "prices": {"US": 14.99, "CO": 59900}, "active": True}]},
-    "templates": {"default_price": {"US": 1.99, "CO": 7900}, "items": []},  # plantillas premium dinámicas (se van agregando)
+    "templates": {"default_price": {"US": 1.99, "CO": 7900}, "items": [
+        {"id": "tpl_noche_dorada", "name": "Noche Dorada", "preview_url": "https://static.prod-images.emergentagent.com/jobs/d5c2203f-7366-4e40-a5aa-1a3322d709a0/images/836a6b3965af0ff37752bb973924bf3c3832371ace30242aab3fd6fdaad452c2.jpeg", "prices": {"US": 1.99, "CO": 7900}, "active": True, "exclusive": False,
+         "theme": {"bg": "#0f0e0c", "fg": "#f5efe0", "accent": "#d4a53a", "card": "#1a1813", "font": "Georgia, 'Times New Roman', serif", "pattern": "radial-gradient(circle at 20% 10%, rgba(212,165,58,.25), transparent 45%), radial-gradient(circle at 80% 90%, rgba(212,165,58,.18), transparent 50%)"}}]},
     "future_products": [  # preparados; ninguno cobra ni se activa sin configuración comercial aprobada
         {"id": "album_expanded", "label": "Álbumes con almacenamiento ampliado", "enabled": False, "prices": None},
         {"id": "exclusive_templates", "label": "Plantillas exclusivas", "enabled": False, "prices": None},
@@ -183,7 +185,7 @@ async def create_event(body: EventIn, user: User = Depends(get_current_user)):
          "activation": {"status": "pending", "required": True, "price": s["activation"]["prices"][market], "currency": CURRENCY[market]},
          "storage": {"included_bytes": s["storage"]["included_bytes"], "max_photos": s["storage"]["max_photos"], "max_file_bytes": s["storage"]["max_file_bytes"], "retention_days": s["storage"]["retention_days"],
                      "extra_bytes": 0, "extra_photos": 0, "used_bytes": 0, "photo_count": 0, "retain_until": (now + timedelta(days=s["storage"]["retention_days"])).isoformat()},
-         "status": "draft", "views": 0, "created_at": now.isoformat(), "updated_at": now.isoformat()}
+         "status": "draft", "views": 0, "templates_owned": [], "created_at": now.isoformat(), "updated_at": now.isoformat()}
     await db.events.insert_one(dict(e))
     return _owner_view(e, s)
 
@@ -217,6 +219,13 @@ async def update_event(eid: str, body: EventIn, user: User = Depends(get_current
         raise HTTPException(status_code=403, detail="Sin acceso")
     await _own_card(body.organizer_card_id, user.id); await _own_card(body.company_card_id, user.id)
     data = body.model_dump(exclude={"market"}, exclude_unset=True)
+    if data.get("template_id"):
+        s = await get_settings()
+        tpl = next((t for t in s["templates"]["items"] if t["id"] == data["template_id"] and t.get("active")), None)
+        if not tpl:
+            raise HTTPException(status_code=404, detail="Plantilla no disponible")
+        if data["template_id"] not in (e.get("templates_owned") or []) and not is_admin(user):
+            raise HTTPException(status_code=402, detail={"code": "template_required", "message": f"La plantilla «{tpl['name']}» es premium: cómprala para usarla"})
     await db.events.update_one({"id": eid}, {"$set": {**data, "updated_at": _now().isoformat()}})
     return _owner_view(await _get_event(eid), await get_settings())
 
@@ -305,7 +314,8 @@ async def respond_invitation(iid: str, body: RsvpIn, user: User = Depends(get_cu
 # ---------- vistas públicas (sin cuenta) ----------
 def _event_public(e: dict, s: dict) -> dict:
     keep = ("id", "ref", "title", "date", "end_date", "location", "description", "cover_url", "status", "template_id", "allow_guest_uploads", "show_guest_cards", "owner_id", "created_at")
-    return {**{k: e.get(k) for k in keep}, "storage": {k: v for k, v in _storage_view(e, s).items() if k in ("total_photos", "photo_count", "free_photos", "full", "max_file_bytes", "free_bytes")}}
+    tpl = next((t for t in s["templates"]["items"] if t["id"] == e.get("template_id")), None) if e.get("template_id") else None
+    return {**{k: e.get(k) for k in keep}, "theme": (tpl or {}).get("theme"), "storage": {k: v for k, v in _storage_view(e, s).items() if k in ("total_photos", "photo_count", "free_photos", "full", "max_file_bytes", "free_bytes")}}
 
 
 async def _connections_for_event(e: dict) -> List[dict]:
@@ -445,8 +455,9 @@ async def card_connections(card_id: str):
 
 # ---------- compras: activación y ampliaciones (Stripe EE. UU. / Wompi Colombia) ----------
 class PurchaseIn(BaseModel):
-    kind: str  # activation | storage_pack
+    kind: str  # activation | storage_pack | template
     pack_id: Optional[str] = None
+    template_id: Optional[str] = None
 
 
 @router.post("/events/{eid}/checkout")
@@ -469,11 +480,18 @@ async def event_checkout(eid: str, body: PurchaseIn, user: User = Depends(get_cu
         if not pack:
             raise HTTPException(status_code=404, detail="Paquete no disponible")
         amount, label = pack["prices"][market], f"Ampliación de álbum {pack['label']}"
+    elif body.kind == "template":
+        tpl = next((t for t in s["templates"]["items"] if t["id"] == body.template_id and t.get("active")), None)
+        if not tpl:
+            raise HTTPException(status_code=404, detail="Plantilla no disponible")
+        if body.template_id in (e.get("templates_owned") or []):
+            raise HTTPException(status_code=409, detail="Ya tienes esta plantilla")
+        amount, label = (tpl.get("prices") or s["templates"]["default_price"])[market], f"Plantilla premium «{tpl['name']}»"
     else:
         raise HTTPException(status_code=400, detail="Producto no válido")
     cents = int(round(amount * 100))
     provider = "wompi" if market == "CO" else "stripe"
-    purchase = {"id": str(uuid.uuid4()), "event_id": eid, "user_id": user.id, "kind": body.kind, "pack_id": body.pack_id, "amount": amount, "currency": CURRENCY[market], "provider": provider, "status": "initiated", "created_at": _now().isoformat()}
+    purchase = {"id": str(uuid.uuid4()), "event_id": eid, "user_id": user.id, "kind": body.kind, "pack_id": body.pack_id, "template_id": body.template_id, "amount": amount, "currency": CURRENCY[market], "provider": provider, "status": "initiated", "created_at": _now().isoformat()}
     await db.event_purchases.insert_one(dict(purchase))
     att = {"id": str(uuid.uuid4()), "event_purchase_id": purchase["id"], "order_id": None, "package_id": None, "provider": provider, "amount": amount, "currency": CURRENCY[market], "status": "initiated", "created_at": _now().isoformat()}
     await db.service_payments.insert_one(dict(att))
@@ -504,6 +522,9 @@ async def _fulfill(purchase: dict, provider: str, tx_id: str, by: Optional[str])
     if purchase["kind"] == "activation":
         await db.events.update_one({"id": e["id"]}, {"$set": {"activation.status": "paid", "activation.at": _now().isoformat(), "activation.provider": provider, "activation.transaction_id": tx_id, "activation.purchase_id": purchase["id"]}})
         await _notify_user(e["owner_id"], "event_activated", f"Pago confirmado: tu tarjeta de evento «{e['title']}» ya está activa.", e["id"], f"/events/{e['id']}/manage", "BRUNO · Eventos")
+    elif purchase["kind"] == "template":
+        await db.events.update_one({"id": e["id"]}, {"$addToSet": {"templates_owned": purchase["template_id"]}, "$set": {"template_id": purchase["template_id"]}})
+        await _notify_user(e["owner_id"], "event_template", f"Plantilla premium aplicada a «{e['title']}».", e["id"], f"/events/{e['id']}/manage", "BRUNO · Eventos")
     else:
         s = await get_settings()
         pack = next((p for p in s["storage"]["packs"] if p["id"] == purchase.get("pack_id")), None) or {"bytes": 0, "photos": 0}
@@ -564,3 +585,78 @@ async def event_payment_status(eid: str, purchase: str, session_id: Optional[str
     p = await db.event_purchases.find_one({"id": purchase}, {"_id": 0})
     e = await _get_event(eid)
     return {"purchase": p, "activation": e["activation"]["status"], "storage": _storage_view(e, await get_settings())}
+
+
+# ---------- reacciones y comentarios en fotos (con sesión; el organizador puede ocultar) ----------
+class CommentIn(BaseModel):
+    text: str
+
+
+async def _photo_ctx(eid: str, pid: str):
+    e = await _get_event(eid)
+    ph = await db.event_photos.find_one({"id": pid, "event_id": eid, "hidden": {"$ne": True}}, {"_id": 0})
+    if not ph:
+        raise HTTPException(status_code=404, detail="Foto no encontrada")
+    return e, ph
+
+
+@router.get("/events/{eid}/photos/{pid}/social")
+async def photo_social(eid: str, pid: str, user: Optional[User] = Depends(get_current_user_optional)):
+    e, ph = await _photo_ctx(eid, pid)
+    if e["status"] != "active" and not (user and (user.id == e["owner_id"] or is_admin(user))):
+        raise HTTPException(status_code=404, detail="Evento no publicado")
+    is_owner = bool(user and user.id == e["owner_id"])
+    q = {"photo_id": pid} if is_owner else {"photo_id": pid, "hidden": {"$ne": True}}
+    comments = await db.event_photo_comments.find(q, {"_id": 0}).sort("created_at", 1).limit(200).to_list(200)
+    likes = await db.event_photo_reactions.count_documents({"photo_id": pid})
+    liked = bool(user and await db.event_photo_reactions.find_one({"photo_id": pid, "user_id": user.id}, {"_id": 0, "id": 1}))
+    return {"likes": likes, "liked": liked, "comments": comments, "viewer": {"logged_in": bool(user), "is_owner": is_owner, "id": user.id if user else None}}
+
+
+@router.post("/events/{eid}/photos/{pid}/react")
+async def toggle_reaction(eid: str, pid: str, user: User = Depends(get_current_user)):
+    e, ph = await _photo_ctx(eid, pid)
+    key = {"photo_id": pid, "user_id": user.id}
+    if await db.event_photo_reactions.find_one(key, {"_id": 0, "id": 1}):
+        await db.event_photo_reactions.delete_one(key); liked = False
+    else:
+        await db.event_photo_reactions.insert_one({"id": str(uuid.uuid4()), **key, "event_id": eid, "emoji": "heart", "created_at": _now().isoformat()}); liked = True
+    return {"liked": liked, "likes": await db.event_photo_reactions.count_documents({"photo_id": pid})}
+
+
+@router.post("/events/{eid}/photos/{pid}/comments")
+async def add_comment(eid: str, pid: str, body: CommentIn, user: User = Depends(get_current_user)):
+    e, ph = await _photo_ctx(eid, pid)
+    text = (body.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Escribe un comentario")
+    if await db.event_photo_comments.count_documents({"photo_id": pid, "user_id": user.id, "created_at": {"$gte": (_now() - timedelta(minutes=1)).isoformat()}}) >= 5:
+        raise HTTPException(status_code=429, detail="Demasiados comentarios seguidos")
+    c = {"id": str(uuid.uuid4()), "photo_id": pid, "event_id": eid, "user_id": user.id, "name": user.name, "text": text[:300], "hidden": False, "created_at": _now().isoformat()}
+    await db.event_photo_comments.insert_one(dict(c))
+    if ph["uploader_id"] != user.id:
+        await _notify_user(ph["uploader_id"], "event_comment", f"{user.name} comentó tu foto en «{e['title']}».", eid, f"/e/{eid}", "BRUNO · Eventos")
+    return c
+
+
+@router.patch("/events/{eid}/photos/{pid}/comments/{cid}")
+async def moderate_comment(eid: str, pid: str, cid: str, hidden: bool = True, user: User = Depends(get_current_user)):
+    """Solo el organizador (o admin) oculta/restaura; quien escribió el comentario puede borrarlo con DELETE."""
+    e = await _get_event(eid)
+    if user.id != e["owner_id"] and not is_admin(user):
+        raise HTTPException(status_code=403, detail="Solo el organizador puede moderar")
+    r = await db.event_photo_comments.update_one({"id": cid, "photo_id": pid}, {"$set": {"hidden": hidden, "moderated_by": user.id, "moderated_at": _now().isoformat()}})
+    if not r.matched_count:
+        raise HTTPException(status_code=404, detail="Comentario no encontrado")
+    return {"id": cid, "hidden": hidden}
+
+
+@router.delete("/events/{eid}/photos/{pid}/comments/{cid}")
+async def delete_comment(eid: str, pid: str, cid: str, user: User = Depends(get_current_user)):
+    c = await db.event_photo_comments.find_one({"id": cid, "photo_id": pid}, {"_id": 0, "user_id": 1})
+    if not c:
+        raise HTTPException(status_code=404, detail="Comentario no encontrado")
+    if c["user_id"] != user.id and not is_admin(user):
+        raise HTTPException(status_code=403, detail="Solo puedes borrar tus comentarios")
+    await db.event_photo_comments.delete_one({"id": cid})
+    return {"deleted": True}

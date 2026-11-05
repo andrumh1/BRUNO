@@ -299,6 +299,8 @@ const FloatingBubbles = () => {
   const longPressTimer = useRef(null);
 
   const hiddenPaths = ['/camera', '/login', '/register', '/landing', '/website', '/bruno', '/chat/', '/video/'];
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  useEffect(() => { const sync = () => setOverlayOpen(document.body.hasAttribute("data-bruno-overlay")); sync(); const mo = new MutationObserver(sync); mo.observe(document.body, { attributes: true, attributeFilter: ["data-bruno-overlay"] }); return () => mo.disconnect(); }, []);
   const shouldHide = hiddenPaths.some(p => location.pathname.startsWith(p)) || /^\/lives\/[^/]+$/.test(location.pathname) || location.pathname === '/lives/start' || /^\/call\//.test(location.pathname);
 
   useEffect(() => {
@@ -534,7 +536,7 @@ const FloatingBubbles = () => {
     } catch {}
   };
 
-  if (!user || shouldHide) return null;
+  if (!user || shouldHide || overlayOpen) return null;
 
   return (
     <>
