@@ -61,7 +61,7 @@ export default function EventManagePage() {
   const [saving, setSaving] = useState(false);
   const [guest, setGuest] = useState({ guest_name: "", message: "", seats: 1 });
   const load = () => api.manage(token, id).then((r) => { setD(r); setForm((f) => f || { title: r.title, date: r.date || "", location: r.location || "", description: r.description || "", cover_url: r.cover_url || "", organizer_card_id: r.organizer_card_id || "", company_card_id: r.company_card_id || "", allow_guest_uploads: r.allow_guest_uploads !== false, show_guest_cards: r.show_guest_cards !== false }); }).catch((e) => brunoToast.error(errText(e, "No se pudo cargar")));
-  useEffect(() => { if (token) { load(); axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/cards`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setCards(r.data || [])).catch(() => {}); } }, [token, id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (token) { load(); axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/cards`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setCards((r.data || []).filter((c) => c.is_public && !c.is_draft && c.title))).catch(() => {}); } }, [token, id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!d || !form) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   const set = (k) => (e) => setForm({ ...form, [k]: e?.target ? e.target.value : e });
   const save = async () => { setSaving(true); try { await api.update(token, id, { ...form, market: d.market }); await load(); brunoToast.success("Evento guardado"); } catch (e) { brunoToast.error(errText(e, "No se pudo guardar")); } finally { setSaving(false); } };
@@ -85,7 +85,7 @@ export default function EventManagePage() {
             <>
               <p className="text-xs text-emerald-700 font-semibold" data-testid="activation-active">Activa · {d.activation.status === "granted" ? "habilitada por BRUNO" : `pagada (${d.activation.provider})`}</p>
               {d.status !== "active" ? <Button className="rounded-full" onClick={publish} data-testid="publish-btn">Publicar evento</Button> : (
-                <div className="flex flex-wrap gap-2"><Button asChild variant="outline" className="rounded-full" data-testid="open-public-btn"><Link to={`/e/${id}`}><ExternalLink className="w-4 h-4 mr-1.5" /> Ver tarjeta pública</Link></Button><Button variant="outline" className="rounded-full" onClick={() => copy(publicUrl)} data-testid="copy-public-btn"><Copy className="w-4 h-4 mr-1.5" /> Copiar enlace</Button></div>
+                <div className="flex flex-wrap gap-2"><Button asChild variant="outline" className="rounded-full" data-testid="open-public-btn"><Link to={`/e/${id}`} className="whitespace-nowrap"><ExternalLink className="w-4 h-4 mr-1.5 shrink-0" /> Ver tarjeta pública</Link></Button><Button variant="outline" className="rounded-full" onClick={() => copy(publicUrl)} data-testid="copy-public-btn"><Copy className="w-4 h-4 mr-1.5" /> Copiar enlace</Button></div>
               )}
             </>
           ) : (
@@ -106,7 +106,7 @@ export default function EventManagePage() {
           <Field label="Descripción"><Textarea rows={3} value={form.description} onChange={set("description")} data-testid="ev-description" /></Field>
           <Field label="Imagen de portada (URL)"><Input value={form.cover_url} onChange={set("cover_url")} placeholder="https://…" data-testid="ev-cover" /></Field>
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Tarjeta del organizador"><select className="w-full h-9 rounded-xl border border-border bg-background px-2 text-sm" value={form.organizer_card_id} onChange={set("organizer_card_id")} data-testid="ev-organizer-card"><option value="">—</option>{cards.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</select></Field>
+            <Field label="Tarjeta del organizador (solo públicas publicadas)"><select className="w-full h-9 rounded-xl border border-border bg-background px-2 text-sm" value={form.organizer_card_id} onChange={set("organizer_card_id")} data-testid="ev-organizer-card"><option value="">—</option>{cards.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</select></Field>
             <Field label="Tarjeta de empresa"><select className="w-full h-9 rounded-xl border border-border bg-background px-2 text-sm" value={form.company_card_id} onChange={set("company_card_id")} data-testid="ev-company-card"><option value="">—</option>{cards.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</select></Field>
           </div>
           <label className="flex items-center justify-between text-xs"><span>Los invitados pueden subir fotos</span><Switch checked={form.allow_guest_uploads} onCheckedChange={set("allow_guest_uploads")} data-testid="ev-allow-uploads" /></label>

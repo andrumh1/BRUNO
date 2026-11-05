@@ -99,7 +99,22 @@ async def update_settings(body: SettingsPatch, user: User = Depends(get_current_
     for f in patch.get("future_products", []):
         if f.get("enabled") and not (f.get("prices") and all(f["prices"].get(m) for m in PRICE_KEYS)):
             raise HTTPException(status_code=400, detail=f"«{f.get('label', f.get('id'))}» necesita precio en USD y COP antes de activarse")
+    def _prices_ok(pr):
+        return isinstance(pr, dict) and all(isinstance(pr.get(m), (int, float)) and pr[m] > 0 for m in PRICE_KEYS)
+    if "activation" in patch and "prices" in patch["activation"] and not _prices_ok(patch["activation"]["prices"]):
+        raise HTTPException(status_code=400, detail="La activación necesita precios mayores que 0 en USD y COP")
+    st = patch.get("storage") or {}
+    for k in ("included_bytes", "max_photos", "max_file_bytes", "retention_days"):
+        if k in st and not (isinstance(st[k], (int, float)) and st[k] > 0):
+            raise HTTPException(status_code=400, detail=f"«{k}» debe ser un número mayor que 0")
+    for pk in st.get("packs", []):
+        if not (pk.get("id") and isinstance(pk.get("bytes"), (int, float)) and pk["bytes"] > 0 and isinstance(pk.get("photos"), (int, float)) and pk["photos"] > 0 and _prices_ok(pk.get("prices"))):
+            raise HTTPException(status_code=400, detail=f"El paquete «{pk.get('label', pk.get('id'))}» necesita GB, fotos y precios USD/COP mayores que 0")
+    if "templates" in patch and "default_price" in patch["templates"] and not _prices_ok(patch["templates"]["default_price"]):
+        raise HTTPException(status_code=400, detail="El precio por defecto de plantillas debe ser mayor que 0 en USD y COP")
     for t in (patch.get("templates") or {}).get("items", []):
+        if t.get("prices") is not None and not _prices_ok(t["prices"]):
+            raise HTTPException(status_code=400, detail=f"La plantilla «{t.get('name') or t.get('id')}» necesita precios USD/COP mayores que 0")
         t.setdefault("id", f"tpl_{secrets.token_hex(3)}"); t.setdefault("prices", cur["templates"]["default_price"]); t.setdefault("active", False)
     merged = {**cur}
     for k, v in patch.items():
@@ -111,7 +126,7 @@ async def update_settings(body: SettingsPatch, user: User = Depends(get_current_
 
 # ---------- eventos ----------
 class EventIn(BaseModel):
-    title: str
+    title: Optional[str] = None
     date: Optional[str] = None
     end_date: Optional[str] = None
     location: Optional[str] = None
@@ -160,6 +175,8 @@ async def _own_card(card_id: Optional[str], uid: str):
 async def create_event(body: EventIn, user: User = Depends(get_current_user)):
     s = await get_settings()
     await _own_card(body.organizer_card_id, user.id); await _own_card(body.company_card_id, user.id)
+    if not (body.title or "").strip():
+        raise HTTPException(status_code=400, detail="El evento necesita un título")
     market = body.market if body.market in PRICE_KEYS else "US"
     now = _now()
     e = {"id": str(uuid.uuid4()), "ref": _ref(), "owner_id": user.id, **body.model_dump(exclude={"market"}), "market": market,
@@ -199,7 +216,7 @@ async def update_event(eid: str, body: EventIn, user: User = Depends(get_current
     if e["owner_id"] != user.id:
         raise HTTPException(status_code=403, detail="Sin acceso")
     await _own_card(body.organizer_card_id, user.id); await _own_card(body.company_card_id, user.id)
-    data = body.model_dump(exclude={"market"})
+    data = body.model_dump(exclude={"market"}, exclude_unset=True)
     await db.events.update_one({"id": eid}, {"$set": {**data, "updated_at": _now().isoformat()}})
     return _owner_view(await _get_event(eid), await get_settings())
 
@@ -267,6 +284,9 @@ async def respond_invitation(iid: str, body: RsvpIn, user: User = Depends(get_cu
         raise HTTPException(status_code=404, detail="Invitación no encontrada")
     if inv.get("linked_user_id") and inv["linked_user_id"] != user.id:
         raise HTTPException(status_code=409, detail="Esta invitación ya fue vinculada por otra cuenta")
+    e = await _get_event(inv["event_id"])
+    if e["owner_id"] == user.id:
+        raise HTTPException(status_code=403, detail="El organizador no puede responder sus propias invitaciones")
     upd = {"linked_user_id": user.id, "linked_at": _now().isoformat()}
     if body.rsvp in ("yes", "no", "maybe"):
         upd["rsvp"] = body.rsvp
@@ -277,7 +297,6 @@ async def respond_invitation(iid: str, body: RsvpIn, user: User = Depends(get_cu
     if body.show_card is not None:
         upd["show_card"] = bool(body.show_card)
     await db.event_invitations.update_one({"id": iid}, {"$set": upd})
-    e = await _get_event(inv["event_id"])
     if upd.get("rsvp"):
         await _notify_user(e["owner_id"], "event_rsvp", f"{inv['guest_name']} respondió «{ {'yes': 'asistiré', 'no': 'no asistiré', 'maybe': 'quizás'}[upd['rsvp']] }» a «{e['title']}».", e["id"], f"/events/{e['id']}/manage", "BRUNO · Eventos")
     return await db.event_invitations.find_one({"id": iid}, {"_id": 0})
@@ -342,13 +361,16 @@ async def public_invitation(iid: str, user: Optional[User] = Depends(get_current
     if not inv:
         raise HTTPException(status_code=404, detail="Invitación no encontrada")
     e = await _get_event(inv["event_id"])
+    is_owner = bool(user and user.id == e["owner_id"])
+    if e["status"] != "active" and not is_owner and not (user and is_admin(user)):
+        raise HTTPException(status_code=404, detail="Este evento aún no está publicado")
     s = await get_settings()
-    if not (user and user.id == e["owner_id"]):
+    if not is_owner:
         await db.event_invitations.update_one({"id": iid}, {"$inc": {"views": 1}})
     mine = bool(user and inv.get("linked_user_id") == user.id)
     pub = {k: inv.get(k) for k in ("id", "event_id", "guest_name", "message", "seats", "rsvp", "created_at")}
     pub["linked"] = bool(inv.get("linked_user_id")); pub["linked_card_id"] = inv.get("linked_card_id") if (mine or inv.get("show_card")) else None; pub["show_card"] = inv.get("show_card", False); pub["is_mine"] = mine
-    return {"invitation": pub, "event": _event_public(e, s), "connections": await _connections_for_event(e), "viewer": {"logged_in": bool(user), "can_respond": bool(user) and (not inv.get("linked_user_id") or mine)},
+    return {"invitation": pub, "event": _event_public(e, s), "connections": await _connections_for_event(e), "viewer": {"logged_in": bool(user), "is_owner": is_owner, "can_respond": bool(user) and not is_owner and (not inv.get("linked_user_id") or mine)},
             "join_benefits": ["Confirma tu asistencia en un toque", "Vincula tu tarjeta personal y deja que te descubran", "Sube fotos al álbum del evento", "Tu tarjeta digital BRUNO es gratis"]}
 
 

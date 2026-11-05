@@ -19,7 +19,9 @@ export default function CommerceAdminPage() {
   const navigate = useNavigate();
   const [s, setS] = useState(null);
   const [saving, setSaving] = useState(false);
-  useEffect(() => { if (token) api.adminSettings(token).then(setS).catch((e) => brunoToast.error(errText(e, "Sin acceso"))); }, [token]);
+  const [denied, setDenied] = useState(false);
+  useEffect(() => { if (token) api.adminSettings(token).then(setS).catch((e) => { if (e?.response?.status === 403) setDenied(true); else brunoToast.error(errText(e, "No se pudo cargar")); }); }, [token]);
+  if (denied) return <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center" data-testid="commerce-no-access"><p className="text-sm text-muted-foreground">Esta área es solo para administradores de BRUNO.</p><Button variant="outline" className="rounded-full" onClick={() => navigate("/settings")}>Volver a Configuraciones</Button></div>;
   if (!s) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   const save = async () => { setSaving(true); try { const r = await api.saveSettings(token, { activation: s.activation, storage: s.storage, templates: s.templates, future_products: s.future_products }); setS(r); brunoToast.success("Configuración guardada"); } catch (e) { brunoToast.error(errText(e, "No se pudo guardar")); } finally { setSaving(false); } };
   const upd = (path, v) => setS((prev) => { const n = structuredClone(prev); let o = n; const ks = path.split("."); ks.slice(0, -1).forEach((k) => { o = o[k]; }); o[ks[ks.length - 1]] = v; return n; });

@@ -1,0 +1,49 @@
+{
+  "summary": "Tested the Smart Cards module (event cards) end to end, backend and frontend. Backend: 14/14 pytest flows pass (/app/backend/tests/test_smart_cards.py). Covered: public settings defaults; admin access control on settings and grant (non-admins get 403); a future product without prices is rejected with 400; history is appended; event create, list, update and foreign-card 403; a draft is hidden (404) from anonymous users and from non-owners but visible to its owner; publish returns 402 until an admin grants activation, then the event becomes active; the anonymous public view returns event, photos, going, connections and join_benefits, and connections include the organizer card plus 2 service cards; invitations: the anonymous view has can_respond=false, responding without a session returns 401, yes/maybe/no all work, linking a foreign card returns 403, a second account gets 409 and the organizer gets a notification; album: 401 anonymous, 400 for non-images, 413 for files over 15 MB, a real Cloudinary upload, counters going up and down, 403 when another user deletes, and both the uploader and the owner can delete; card connections; checkout: 503 payments_disabled, then after enabling payments a US event gets a real checkout.stripe.com URL (not paid), an unknown pack returns 404, a non-owner gets 403, an already-granted event gets 409 and CO returns 503 provider_unavailable; payments were re-disabled afterwards. Frontend: all requested flows work. Anonymous /e/{id}: cover, connections, the 'Subir fotos (gratis con tu cuenta)' button that opens join-nudge, and login/register links that carry the redirect. Anonymous /e/{id}/i/{iid}: invitation card plus nudge. Organizer /events: create, then manage page in Borrador with the disabled buy button and its note; after an admin grant through the API, publish changes the pill to Publicado; event form save; invitation create, QR image and copy-link (clipboard verified). Guest: RSVP, linking a card, the show-card switch, and the guest card then appears in the event connections; UI photo upload and delete. /c/{card}: connection-event navigates to /e/{id}, and connections-back-btn reads 'Volver a Test NFC Card' and returns to the card. Admin /admin/comercio: loads values, the toggle saves and persists after reload, and the 400 toast appears for a future product without prices. Settings rows are correct for admin and non-admin.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/smart/invitations/{iid}/respond + GET /invitations/{iid}/public", "issue": "The event OWNER gets can_respond=true and can RSVP their own invitation. That links the invitation to the organizer, and the real guest then gets 409 'ya fue vinculada por otra cuenta'. Reproduced by API. An organizer previewing the link and tapping a button locks the invitation."},
+      {"endpoint": "GET /api/smart/invitations/{iid}/public", "issue": "There is no event status check. Anonymous users get 200 with full event data (title, location, description, connections) for a DRAFT event, while /events/{id}/public returns 404 for the same draft. This is inconsistent and leaks unpublished events."},
+      {"endpoint": "PUT /api/smart/events/{eid}", "issue": "This is a full replace, not a partial update. EventIn defaults are written for every missing field, so a PUT with only {title} wipes location, date, organizer_card_id and description and resets allow_guest_uploads/show_guest_cards to true. Verified. The frontend always sends the full form, so the UI is unaffected; use model_dump(exclude_unset=True)."},
+      {"endpoint": "PUT /api/smart/admin/settings", "issue": "There is no schema validation; the bodies are raw dicts and are merged one level deep. For example, {activation:{prices:{US:5}}} replaces the whole prices dict and drops CO. Then _public_settings raises a KeyError and GET /api/smart/settings plus all event endpoints return 500. Negative or zero prices, max_photos=0 and similar values are also accepted. Add Pydantic models and per-market price validation. Read from the code only; not executed, to avoid breaking shared settings."},
+      {"endpoint": "POST /api/smart/events/{eid}/checkout", "issue": "The event_purchases and service_payments records are inserted before the Stripe call, so a Stripe error leaves orphaned 'initiated' records and returns 500. The provider_unavailable check also runs before product validation, so CO plus an unknown pack returns 503 instead of 404."},
+      {"endpoint": "POST/DELETE /api/smart/events/{eid}/photos", "issue": "The capacity check and the counter increment are not atomic, so concurrent uploads can exceed the limit. DELETE decrements the counters even if delete_one removed nothing, so a concurrent double delete double-decrements. The whole file (up to 15 MB) is also read into memory before the size check, and the content type comes from the client."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "EventAlbum (EventPublicPage)", "issue": "After a successful upload the photo appears in the grid, but album-count still shows '0/500 fotos' because event.storage.photo_count is never updated locally (it is also not updated after a delete).", "selector": "[data-testid='album-count']", "priority": "LOW"},
+      {"component": "CommerceAdminPage", "issue": "A non-admin visiting /admin/comercio gets an endless spinner and the 'Solo administradores' toast twice; there is no access-denied state or redirect.", "selector": "[data-testid='commerce-admin-page']", "priority": "LOW"},
+      {"component": "InvitationPage", "issue": "The owner sees the RSVP buttons on their own invitation (see the backend issue), and clicking one locks the invitation.", "selector": "[data-testid='rsvp-yes']", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "EventManagePage activation section (published)", "issues": ["On desktop, the 'Ver tarjeta pública' button (open-public-btn) shows its ExternalLink icon on its own line above the text (Button asChild + Link wraps), while the 'Copiar enlace' button next to it is laid out correctly."]},
+      {"screen": "EventManagePage form", "issues": ["The organizer and company card selects list ALL the user's cards, including drafts and private cards and cards with an empty title (blank options). Choosing a draft or private card means no organizer connection is shown publicly, and the user gets no warning.", "ev-date uses the browser's native datetime-local picker instead of the shadcn calendar."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_smart_cards.py", "/app/test_reports/pytest/smart_cards.xml", "/app/backend/tests/smart_probe.py", "/app/backend/tests/smart_cleanup_probe.py"],
+  "action_items": [
+    "Block the event owner from responding to or linking their own invitations: set can_respond=false for the owner and reject the request in /respond.",
+    "Return 404 from GET /invitations/{iid}/public for anonymous users and non-owners when the event status is not 'active'.",
+    "Use exclude_unset=True in PUT /events/{eid} so partial updates do not wipe fields.",
+    "Add Pydantic validation to PUT /admin/settings (require prices US and CO > 0, positive storage limits) to prevent a 500 on GET /settings.",
+    "Update album-count after an upload or delete in EventAlbum.",
+    "Show a no-access state on /admin/comercio for non-admins.",
+    "Fix the icon wrapping in the open-public-btn layout; in the organizer card select, filter or flag draft and private cards."
+  ],
+  "critical_code_review_comments": [
+    "smart_cards.py: the checkout records the purchase before the provider call; wrap the Stripe call in try/except, mark the purchase failed and return 502.",
+    "smart_cards.py: photo capacity is not enforced atomically; use a conditional update_one with a $lt guard on storage.photo_count/used_bytes, or $inc under a filter.",
+    "smart_cards.py delete_photo: decrement only when delete_one(...).deleted_count == 1.",
+    "_own_card allows draft or private cards as organizer_card_id, and they are silently dropped from connections.",
+    "EventManagePage hardcodes WEB='https://brunocard.com' for the native redirect; acceptable, but consider an env var."
+  ],
+  "updated_files": ["/app/backend/tests/test_smart_cards.py", "/app/backend/tests/smart_probe.py", "/app/backend/tests/smart_cleanup_probe.py"],
+  "success_rate": {"backend": "100% (14/14 pytest), plus 6 minor issues from code review and probes", "frontend": "~95% (all requested flows pass; 3 minor UI bugs)"},
+  "seed_data_creation": "Created events, all owned by newtest and left in place, titled 'QA ...': 'QA UI Event Playwright' 446e6b94 (active, organizer card set), 'QA Smart Event pytest (edit)' 860d207b (active), 'QA US checkout' c336f1b5 (draft; has one unpaid Stripe purchase in 'processing' status), 'QA CO checkout' 38eac021 (draft), 'QA probe draft2' 8eb345fa (draft). All test invitations and photos were deleted. payments_enabled=false confirmed and both packs are active. The existing QA event 3cf05666 and invitation 888721a3 were not modified, apart from view counters.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: cd /app/backend && REACT_APP_BACKEND_URL=... python -m pytest tests/test_smart_cards.py -v (it re-disables payments in teardown). viewer3 owns the public card 6feabc31 (Panadería). Login response key is access_token. The trail-based back button stores to sessionStorage 'bruno_card_trail'. Once one run showed the event page's back button with the event's own title after the sequence E->C->E, but this could not be reproduced in 2 retries (possibly flaky)."
+}

@@ -23,7 +23,7 @@ export default function InvitationPage() {
   const [busy, setBusy] = useState(false);
   const load = () => api.publicInvitation(iid, token).then(setData).catch((e) => setError(errText(e, "Invitación no disponible")));
   useEffect(() => { if (!isLoading) load(); }, [iid, token, isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (token) axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/cards`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setCards(r.data || [])).catch(() => {}); }, [token]);
+  useEffect(() => { if (token) axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/cards`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setCards((r.data || []).filter((c) => c.is_public && !c.is_draft && c.title))).catch(() => {}); }, [token]);
   const respond = async (body) => { setBusy(true); try { await api.respond(token, iid, body); await load(); brunoToast.success("Respuesta guardada"); } catch (e) { brunoToast.error(errText(e, "No se pudo guardar")); } finally { setBusy(false); } };
   if (error) return <div className="min-h-screen flex flex-col items-center justify-center gap-3 p-6 text-center" data-testid="invitation-error"><p className="text-sm text-muted-foreground">{error}</p><Button asChild variant="outline" className="rounded-full"><Link to="/">Ir a BRUNO</Link></Button></div>;
   if (!data) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -61,7 +61,7 @@ export default function InvitationPage() {
                     <option value="">Sin tarjeta</option>
                     {cards.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
                   </select>
-                  {cards.length === 0 && <p className="text-[11px] text-muted-foreground mt-1">Aún no tienes tarjeta. <Link to="/cards/new" className="text-primary underline">Crea una gratis</Link>.</p>}
+                  {cards.length === 0 && <p className="text-[11px] text-muted-foreground mt-1">No tienes una tarjeta pública publicada. <Link to="/cards/new" className="text-primary underline">Crea una gratis</Link>.</p>}
                 </div>
                 {inv.linked_card_id && (
                   <label className="flex items-center justify-between gap-3 text-xs"><span>Mostrar mi tarjeta en las conexiones del evento</span><Switch checked={!!inv.show_card} disabled={busy} onCheckedChange={(v) => respond({ show_card: v })} data-testid="invitation-show-card" /></label>

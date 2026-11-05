@@ -30,7 +30,8 @@ export const EventAlbum = ({ event, photos, setPhotos, viewer, benefits }) => {
   const [nudge, setNudge] = useState(false);
   const input = useRef(null);
   const st = event.storage || {};
-  const canUpload = !st.full && (event.allow_guest_uploads || viewer.is_owner);
+  const full = st.full || photos.length >= st.total_photos;
+  const canUpload = !full && (event.allow_guest_uploads || viewer.is_owner);
   const pick = () => { if (!user) { setNudge(true); return; } input.current?.click(); };
   const onFile = async (e) => {
     const files = Array.from(e.target.files || []); e.target.value = "";
@@ -47,9 +48,9 @@ export const EventAlbum = ({ event, photos, setPhotos, viewer, benefits }) => {
     <section className="mt-6" data-testid="event-album">
       <div className="flex items-center justify-between gap-2 mb-2">
         <h2 className="text-base md:text-lg font-bold flex items-center gap-2"><Camera className="w-4 h-4 text-primary" /> Álbum del evento</h2>
-        <span className="text-[11px] text-muted-foreground" data-testid="album-count">{st.photo_count || 0}/{st.total_photos} fotos</span>
+        <span className="text-[11px] text-muted-foreground" data-testid="album-count">{photos.length}/{st.total_photos} fotos</span>
       </div>
-      {st.full && <p className="text-xs rounded-xl bg-amber-50 text-amber-800 border border-amber-200 px-3 py-2 mb-2" data-testid="album-full-notice">El álbum alcanzó su capacidad. Las fotos existentes se conservan; el organizador puede ampliarlo.</p>}
+      {full && <p className="text-xs rounded-xl bg-amber-50 text-amber-800 border border-amber-200 px-3 py-2 mb-2" data-testid="album-full-notice">El álbum alcanzó su capacidad. Las fotos existentes se conservan; el organizador puede ampliarlo.</p>}
       {canUpload && (
         <>
           <input ref={input} type="file" accept="image/*" multiple className="hidden" onChange={onFile} data-testid="album-file-input" />
