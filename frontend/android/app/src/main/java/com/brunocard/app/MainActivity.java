@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(BrunoNfcHcePlugin.class);
+        registerPlugin(BrunoDeviceCapsPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

@@ -19,8 +19,10 @@ export default function BiometricGate() {
 
   useEffect(() => {
     if (!isNative()) return undefined;
-    getBiometricLock().then((v) => { setEnabled(v); if (v) setLocked(true); });
-    biometricInfo().then((i) => setType(i.type));
+    getBiometricLock().then((v) => {
+      setEnabled(v);
+      if (v) { setLocked(true); biometricInfo().then((i) => setType(i.type)); } // solo consulta BiometricAuth si el usuario activó el bloqueo
+    });
     const onChange = (e) => setEnabled(!!e.detail?.enabled);
     window.addEventListener(BIOMETRIC_EVENT, onChange);
     const sub = App.addListener("appStateChange", ({ isActive }) => {

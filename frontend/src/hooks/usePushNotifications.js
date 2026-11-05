@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { isNative } from '@/native/capacitor';
+import { enableNativePush, nativePushAvailable, nativePushPermission } from '@/native/useNativePush';
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 const VAPID_PUBLIC_KEY = process.env.REACT_APP_VAPID_PUBLIC_KEY;
@@ -28,6 +30,12 @@ export function usePushNotifications(token) {
 
   // Check if push is supported
   useEffect(() => {
+    if (isNative()) {
+      // App nativa: FCM vía @capacitor/push-notifications; sin Firebase configurado se muestra como no disponible, sin crash.
+      nativePushAvailable().then(setIsSupported);
+      nativePushPermission().then((p) => { setPermission(p === 'granted' ? 'granted' : p === 'denied' ? 'denied' : 'default'); setIsSubscribed(p === 'granted'); });
+      return;
+    }
     const supported = 'serviceWorker' in navigator && 
                       'PushManager' in window && 
                       'Notification' in window;
@@ -60,6 +68,13 @@ export function usePushNotifications(token) {
     if (!isSupported || !token) return false;
     
     setLoading(true);
+    if (isNative()) {
+      const ok = await enableNativePush();
+      setPermission(ok ? 'granted' : 'denied');
+      setIsSubscribed(ok);
+      setLoading(false);
+      return ok;
+    }
     try {
       // Request notification permission
       const result = await Notification.requestPermission();
@@ -102,6 +117,7 @@ export function usePushNotifications(token) {
   // Unsubscribe
   const unsubscribe = useCallback(async () => {
     if (!isSupported || !token) return false;
+    if (isNative()) { setIsSubscribed(false); return true; } // la preferencia push_enabled=false la guarda la página
     
     setLoading(true);
     try {

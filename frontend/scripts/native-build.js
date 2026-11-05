@@ -25,7 +25,9 @@ function loadEnvNative() {
 
 function run(cmd, args, extraEnv = {}) {
   console.log(`\n▶ ${cmd} ${args.join(' ')}`);
-  const r = spawnSync(cmd, args, { stdio: 'inherit', shell: isWin, env: { ...process.env, ...extraEnv } });
+  // En Windows se ejecuta vía cmd.exe (resuelve yarn.cmd/npx.cmd); se entrecomillan argumentos con espacios ("C:\Program Files\...").
+  const safeArgs = isWin ? args.map((a) => (/\s/.test(a) && !/^".*"$/.test(a) ? `"${a}"` : a)) : args;
+  const r = spawnSync(cmd, safeArgs, { stdio: 'inherit', shell: isWin, env: { ...process.env, ...extraEnv } });
   if (r.status !== 0) {
     console.error(`\n✖ Falló: ${cmd} ${args.join(' ')} (código ${r.status})`);
     process.exit(r.status || 1);
@@ -67,4 +69,4 @@ if (isMac) {
   if (r.status !== 0) console.warn('⚠ cap copy ios no se completó en este sistema; no afecta a Android. Hazlo en el Mac con: npx cap sync ios');
 }
 
-run(process.execPath, [path.join(__dirname, 'native-verify.js'), api]);
+run('node', ['scripts/native-verify.js', api]);

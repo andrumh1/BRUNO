@@ -73,6 +73,26 @@ yarn native:aab                   # AAB para Google Play
   `curl -s https://brunocard.com/.well-known/assetlinks.json` y en el móvil `adb shell pm verify-app-links --re-verify com.brunocard.app`.
 - Archivos generados por `cap sync` (NO editar a mano, están en .gitignore): `android/capacitor.settings.gradle`, `android/app/capacitor.build.gradle`, `android/capacitor-cordova-android-plugins/`, `android/app/src/main/assets/`, `android/app/src/main/res/xml/config.xml`.
 
+### 3.1 Arranque sin crash (auditoría de los 18 plugins)
+Crash corregido: `IllegalStateException: Default FirebaseApp is not initialized` en `PushNotificationsPlugin.register` (Bridge.java callPluginMethod). `register()`/`unregister()` del plugin llaman a `FirebaseMessaging.getInstance()` en Java; sin `google-services.json` la excepción nace en el hilo nativo y mata el proceso (un try/catch en JS no la alcanza). Solución: **no llamar a `register()` si Firebase no está inicializado**.
+- `android/app/src/main/java/com/brunocard/app/BrunoDeviceCapsPlugin.java` (registrado en `MainActivity`) expone `BrunoDeviceCaps.get()` → `{ firebase, playServices, nfc, biometricHardware }`. `firebase` es true solo si el plugin google-services generó el recurso `google_app_id` (es decir, si existe `google-services.json`).
+- `src/native/useNativePush.js`: al arrancar **no pide permiso ni toca Firebase**; solo re-registra si `firebase === true` **y** el permiso ya estaba concedido. El permiso POST_NOTIFICATIONS se pide únicamente desde Ajustes → Notificaciones (`enableNativePush()`), por acción del usuario. Sin Firebase: `console.info("[BRUNO native] push desactivado: falta google-services.json")` y la app abre normal.
+- Sin Google Play Services: `register()` emite `registrationError` (sin crash); Maps es web (JS) y degrada solo.
+- Splash: `launchAutoHide: true` + `launchShowDuration: 3000` → se oculta antes desde JS cuando la web está lista, y como máximo a los 3 s aunque el bundle falle (ya no se queda pegado). Si falta `build/index.html`, `cap sync` falla antes con mensaje claro.
+
+| Plugin | Al arrancar | Sin hardware / permiso / servicio |
+|---|---|---|
+| push-notifications 7.0.7 | solo `addListener`; `register()` gated por Firebase + permiso previo | sin Firebase → push off; sin Play Services → `registrationError` |
+| biometric-auth 9.1.2 | import perezoso; `checkBiometry` solo si el usuario activó el bloqueo biométrico | `canAuthenticate` devuelve NO_HARDWARE/NONE_ENROLLED → `available:false`, sin crash |
+| secure-storage 7.1.6 | `get` dentro de try/catch (JS) y `call.reject` (Java) | Keystore no disponible → fallback AES/localStorage + `console.warn` |
+| exxili-capacitor-nfc 0.0.14 | `handleOnResume` retorna si `NfcAdapter == null`; JS solo en /card-transfer | `isSupported:false` → QR/enlace |
+| BrunoNfcHce (propio) | nada | `isSupported` comprueba FEATURE_NFC_HOST_CARD_EMULATION |
+| safe-area 7.0.0 / status-bar / keyboard / splash-screen / app | llamadas en try/catch | errores ignorados |
+| privacy-screen 6.1.0 | `load()` solo lee config; se activa en lives | — |
+| camera / geolocation / filesystem / share / haptics / browser / network / preferences | nunca al arrancar; permisos solo al usar la función | negar permiso → error controlado en la acción |
+Permisos del manifiesto (CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, NFC, POST_NOTIFICATIONS, USE_BIOMETRIC) **no** se solicitan al inicio. Red: la restauración de sesión tiene timeout (15 s) y conserva el usuario en caché sin red; la app abre igual.
+Prueba en frío obligatoria en el emulador: *Force stop* (o `adb shell am force-stop com.brunocard.app`) → abrir → debe pasar del splash a la app; `adb logcat *:E | findstr brunocard` sin `FATAL`.
+
 ## 4. iOS (solo en macOS con Xcode 15+)
 ```bash
 cd frontend && npx cap sync ios      # ejecuta pod install
