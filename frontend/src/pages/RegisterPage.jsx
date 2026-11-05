@@ -9,6 +9,7 @@ import { isNative } from "@/native/capacitor";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { OvcAttribution } from "@/components/brand/OvcAttribution";
 import { startGoogleLogin } from "@/lib/googleLogin";
+import GoogleNativeStatus from "@/components/auth/GoogleNativeStatus";
 import { Mail, Lock, User, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -180,6 +181,7 @@ const RegisterPage = () => {
             </svg>
             Continuar con Google
           </Button>
+          <div className="mt-3"><GoogleNativeStatus /></div>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
             ¿Ya tienes una cuenta?{" "}

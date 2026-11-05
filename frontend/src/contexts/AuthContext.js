@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
-import { rememberAccount } from "@/lib/rememberedAccounts";
+import { rememberAccount, storedAccountToken, dropAccountToken, forgetAccount } from "@/lib/rememberedAccounts";
 import { isNative } from "@/native/capacitor";
 import { subscribe, loadStored, setSession, clearSession, clearPrivateCaches, refreshSession, logoutRemote, decodeExp, expiresWithin, getToken, getUser, SESSION_PERSISTENT_KEY } from "@/lib/session";
 
@@ -35,7 +35,9 @@ export function AuthProvider({ children }) {
     (async () => {
       try {
         setSessionPersistent(localStorage.getItem(SESSION_PERSISTENT_KEY) !== "false");
-        const stored = await loadStored();
+        // Tope de seguridad: si el Keystore/plugin no responde, la app no se queda en el logo para siempre.
+        const stored = await Promise.race([loadStored(), new Promise((res) => setTimeout(() => res({ user: null, token: null, refreshToken: null, timedOut: true }), 8000))]);
+        if (stored.timedOut) console.warn("[BRUNO] loadStored superó 8 s; se continúa sin sesión en caché");
         setSnap({ user: stored.user, token: stored.token });
         if (native() && !stored.user && !stored.token && !stored.refreshToken) return;
         const r = await refreshSession();
@@ -106,6 +108,33 @@ export function AuthProvider({ children }) {
     try { await logoutRemote(); } finally { clearSession(); }
   };
 
+  // Cambiar de cuenta sin cerrar la actual (nativo): la sesión actual sigue guardada (su refresh token queda en el Keystore)
+  // y la otra se restaura con el suyo. Si ese token caducó, solo esa cuenta pierde su sesión guardada.
+  const switchAccount = async (account) => {
+    const stored = await storedAccountToken(account.id);
+    if (!stored) { const e = new Error("no-token"); e.code = "no-token"; throw e; }
+    let r;
+    try {
+      r = await axios.post(`${API}/auth/refresh`, { refresh_token: stored, platform: "native" }, { __skipAuthRetry: true, timeout: 15000 });
+    } catch (e) {
+      const err = new Error(e?.response?.status === 401 ? "expired" : "network");
+      err.code = err.message;
+      if (err.code === "expired") dropAccountToken(account.id);
+      throw err;
+    }
+    await login(r.data.user, r.data.access_token, true, r.data.refresh_token);
+    return r.data.user;
+  };
+
+  // Quitar una cuenta guardada: revoca su sesión en el servidor (solo la suya) y la borra de la lista; si es la actual, cierra sesión.
+  const removeAccount = async (account) => {
+    const current = getUser();
+    if (current && current.id === account.id) { await logout(); await forgetAccount(account.id); return; }
+    const stored = await storedAccountToken(account.id);
+    if (stored) { try { await axios.post(`${API}/auth/logout`, { refresh_token: stored }, { __skipAuthRetry: true, timeout: 10000 }); } catch { /* ya revocado o sin red: se borra igual del dispositivo */ } }
+    await forgetAccount(account.id);
+  };
+
   const setKeepSession = async (keep) => {
     setSessionPersistent(keep);
     localStorage.setItem(SESSION_PERSISTENT_KEY, keep ? "true" : "false");
@@ -117,6 +146,8 @@ export function AuthProvider({ children }) {
     token: snap.token,
     login,
     logout,
+    switchAccount,
+    removeAccount,
     refreshUser,
     updateUser,
     isLoading,

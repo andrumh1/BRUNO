@@ -1,7 +1,9 @@
 package com.brunocard.app;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.nfc.NfcAdapter;
 import android.os.Build;
 
@@ -40,6 +42,17 @@ public class BrunoDeviceCapsPlugin extends Plugin {
                 || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && (pm.hasSystemFeature(PackageManager.FEATURE_FACE) || pm.hasSystemFeature(PackageManager.FEATURE_IRIS)));
         } catch (Exception ignored) {}
         ret.put("biometricHardware", biometricHardware);
+
+        // Google exige un navegador real (Custom Tab); sin Chrome u otro navegador el login con Google no puede abrirse.
+        boolean browser = false;
+        boolean customTabs = false;
+        try {
+            Intent view = new Intent(Intent.ACTION_VIEW, Uri.parse("https://brunocard.com"));
+            browser = view.resolveActivity(pm) != null || !pm.queryIntentActivities(view, 0).isEmpty();
+            customTabs = !pm.queryIntentServices(new Intent("android.support.customtabs.action.CustomTabsService"), 0).isEmpty();
+        } catch (Exception ignored) {}
+        ret.put("browser", browser);
+        ret.put("customTabs", customTabs);
 
         call.resolve(ret);
     }

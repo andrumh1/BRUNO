@@ -30,7 +30,8 @@ import {
   Check,
   Loader2,
   Smartphone,
-  Languages, Sun, Monitor, Sparkles, Upload, Fingerprint, Package, CalendarDays, Store } from "lucide-react";
+  Languages, Sun, Monitor, Sparkles, Upload, Fingerprint, Package, CalendarDays, Store, Users } from "lucide-react";
+import AccountSwitcherSheet from "@/components/auth/AccountSwitcherSheet";
 import { isNative } from "@/native/capacitor";
 import { biometricInfo, authenticateBiometric, getBiometricLock, setBiometricLock } from "@/native/biometric";
 
@@ -85,6 +86,7 @@ const SettingsPage = () => {
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
   const [staffAccess, setStaffAccess] = useState(false);
+  const [showAccounts, setShowAccounts] = useState(false);
   const [advisorAccess, setAdvisorAccess] = useState(false);
   useEffect(() => { if (!token) return; axios.get(`${API}/bruno-service/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setStaffAccess(!!r.data?.staff)).catch(() => {}); axios.get(`${API}/packages/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setAdvisorAccess(!!r.data?.advisor)).catch(() => {}); axios.get(`${API}/packages/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setCommerceAdmin(!!r.data?.admin)).catch(() => {}); }, [token]);
   const [commerceAdmin, setCommerceAdmin] = useState(false);
@@ -204,6 +206,7 @@ const SettingsPage = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20" data-testid="settings-page">
+      {isNative() && <AccountSwitcherSheet open={showAccounts} onOpenChange={setShowAccounts} />}
       <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -449,6 +452,7 @@ const SettingsPage = () => {
                     </select>
                   </div>
                   <OptionRow icon={Lock} label="Cambiar contrasena" onClick={() => navigate("/change-password")} />
+                  {isNative() && <OptionRow icon={Users} label="Cuentas" value="Cambiar o añadir" onClick={() => setShowAccounts(true)} />}
                   <OptionRow icon={CalendarDays} label="Mis tarjetas de evento" onClick={() => navigate("/events")} />
                   <BiometricRow />
                   <OptionRow icon={Shield} label="Usuarios bloqueados" onClick={() => navigate("/settings/blocked")} />

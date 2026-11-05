@@ -2,7 +2,7 @@
 import { registerPlugin } from '@capacitor/core';
 import { isNative, isIOS } from './capacitor';
 
-const NONE = { firebase: false, playServices: false, nfc: false, biometricHardware: false };
+const NONE = { firebase: false, playServices: false, nfc: false, biometricHardware: false, browser: true, customTabs: false };
 const BrunoDeviceCaps = registerPlugin('BrunoDeviceCaps', { web: () => Promise.resolve({ get: async () => NONE }) });
 
 let cached = null;

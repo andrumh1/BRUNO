@@ -11,6 +11,7 @@ import { listAccounts, forgetAccount, storedAccountToken, maskEmail, initials } 
 import { authenticateBiometric, biometricInfo } from "@/native/biometric";
 import { isNative } from "@/native/capacitor";
 import { startGoogleLogin } from "@/lib/googleLogin";
+import GoogleNativeStatus from "@/components/auth/GoogleNativeStatus";
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -21,7 +22,7 @@ const safeRedirect = () => { const q = new URLSearchParams(window.location.searc
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login, logout, user: sessionUser, isAuthenticated, isLoading: authLoading } = useAuth();
-  const [switching, setSwitching] = useState(false);
+  const [switching, setSwitching] = useState(new URLSearchParams(window.location.search).get("add") === "1"); // ?add=1: añadir otra cuenta sin cerrar la actual
   const [formData, setFormData] = useState({ email: new URLSearchParams(window.location.search).get("email") || "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,7 +39,7 @@ const LoginPage = () => {
       const list = await listAccounts();
       const withTok = await Promise.all(list.map(async (a) => ({ ...a, hasToken: !!(await storedAccountToken(a.id)) })));
       setAccounts(withTok);
-      setShowPicker(withTok.length > 0 && !new URLSearchParams(window.location.search).get("email"));
+      setShowPicker(withTok.length > 0 && !new URLSearchParams(window.location.search).get("email") && new URLSearchParams(window.location.search).get("add") !== "1");
       if (isNative()) biometricInfo().then((i) => setBioReady(!!i.available));
     })();
   }, []);
@@ -53,7 +54,7 @@ const LoginPage = () => {
       if (!stored) throw new Error("no-token");
       const ok = await authenticateBiometric(`Entrar como ${picked.name || picked.email}`);
       if (!ok) throw new Error("bio-cancel");
-      if (isAuthenticated && sessionUser && sessionUser.id !== picked.id) await logout(); // cerrar la cuenta activa ANTES de abrir la otra
+      if (isAuthenticated && sessionUser && sessionUser.id !== picked.id && !isNative()) await logout(); // web: cerrar la cuenta activa ANTES; en nativo la sesión anterior queda guardada (multi-cuenta)
       const r = await axios.post(`${API}/auth/refresh`, { refresh_token: stored, platform: "native" }, { __skipAuthRetry: true });
       await login(r.data.user, r.data.access_token, true, r.data.refresh_token);
       navigate(safeRedirect());
@@ -94,7 +95,7 @@ const LoginPage = () => {
         remember: keepActive,
       };
       // Si hay otra sesión activa se cierra ANTES de iniciar la nueva (sus cookies/tokens se revocan sin tocar los de la cuenta entrante)
-      if (isAuthenticated && sessionUser) await logout();
+      if (isAuthenticated && sessionUser && !isNative()) await logout(); // web: una sola sesión; nativo: la anterior queda guardada para cambiar sin contraseña
       const response = await axios.post(`${API}/auth/login`, payload, { withCredentials: true, __skipAuthRetry: true });
       if (!response.data?.access_token || !response.data?.user) throw new Error("Respuesta de acceso inválida");
       // Persist preferences
@@ -146,7 +147,7 @@ const LoginPage = () => {
               <p>Ya tienes sesión iniciada como <strong data-testid="existing-session-name">{sessionUser.name || sessionUser.email}</strong>.</p>
               <div className="flex gap-2">
                 <Button type="button" size="sm" className="rounded-full flex-1" onClick={() => navigate("/my-profile")} data-testid="existing-session-continue">Continuar</Button>
-                <Button type="button" size="sm" variant="outline" className="rounded-full flex-1" onClick={async () => { await logout(); setSwitching(true); setFormData({ email: "", password: "" }); }} data-testid="existing-session-switch">Cambiar de cuenta</Button>
+                <Button type="button" size="sm" variant="outline" className="rounded-full flex-1" onClick={async () => { if (!isNative()) await logout(); setSwitching(true); setFormData({ email: "", password: "" }); }} data-testid="existing-session-switch">{isNative() ? "Añadir otra cuenta" : "Cambiar de cuenta"}</Button>
               </div>
             </div>
           )}
@@ -282,6 +283,7 @@ const LoginPage = () => {
             </svg>
             Continuar con Google
           </Button>
+          <div className="mt-3"><GoogleNativeStatus /></div>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
             ¿No tienes una cuenta?{" "}
