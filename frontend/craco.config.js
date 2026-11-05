@@ -61,8 +61,9 @@ const webpackConfig = {
         ],
       };
 
-      // Plugins Capacitor publicados como ESM estricto (imports sin extensión) — evita "fullySpecified" en CRA
-      webpackConfig.module.rules.push({ test: /\.m?js$/, include: /node_modules\/(@aparajita|@exxili|@capacitor)/, resolve: { fullySpecified: false } });
+      // Plugins Capacitor publicados como ESM estricto (imports sin extensión) — evita "fullySpecified" en CRA.
+      // [\\/] cubre Windows (node_modules\@aparajita\...) y Unix; sin esto el build fallaba en Windows con "Can't resolve './native'".
+      webpackConfig.module.rules.push({ test: /\.m?js$/, include: /node_modules[\\/](@aparajita|@exxili|@capacitor|@capacitor-community)[\\/]/, resolve: { fullySpecified: false } });
       webpackConfig.resolve.fallback = { ...(webpackConfig.resolve.fallback || {}), fs: false };
       webpackConfig.ignoreWarnings = [...(webpackConfig.ignoreWarnings || []), /Failed to parse source map/, { module: /face-api\.js/ }];
 

@@ -61,7 +61,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "cra-template": "1.2.0",
-    "date-fns": "^4.1.0",
+    "date-fns": "3.6.0",
     "embla-carousel-react": "^8.6.0",
     "face-api.js": "^0.22.2",
     "framer-motion": "^12.38.0",
@@ -90,12 +90,19 @@
     "web-vitals": "^4",
     "zod": "^3.24.4"
   },
+  "engines": {
+    "node": ">=20.0.0 <25",
+    "yarn": "1.x"
+  },
   "scripts": {
+    "preinstall": "node scripts/check-installer.js",
     "start": "craco start",
     "build": "craco build",
     "test": "craco test",
-    "native:build": "bash scripts/native-build.sh",
-    "native:verify": "bash scripts/native-verify.sh",
+    "native:build": "node scripts/native-build.js",
+    "native:build:windows": "node scripts/native-build.js",
+    "native:build:bash": "bash scripts/native-build.sh",
+    "native:verify": "node scripts/native-verify.js",
     "native:assets": "npx @capacitor/assets generate --ios --android --assetPath resources --iconBackgroundColor '#f9f1ea' --iconBackgroundColorDark '#474747' --splashBackgroundColor '#f9f1ea' --splashBackgroundColorDark '#474747'",
     "native:sync": "npx cap sync",
     "native:apk": "bash scripts/android-build.sh debug",
@@ -103,8 +110,8 @@
     "native:aab": "bash scripts/android-build.sh aab",
     "native:open:android": "npx cap open android",
     "native:open:ios": "npx cap open ios",
-    "native:run:android": "bash scripts/native-build.sh && npx cap run android",
-    "native:run:ios": "bash scripts/native-build.sh && npx cap run ios",
+    "native:run:android": "node scripts/native-build.js && npx cap run android",
+    "native:run:ios": "node scripts/native-build.js && npx cap run ios",
     "native:doctor": "npx cap doctor"
   },
   "browserslist": {
