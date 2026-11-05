@@ -16,6 +16,7 @@ from PIL import Image, ImageDraw
 import io
 import base64
 import requests
+import re
 import cloudinary
 import cloudinary.uploader
 from pathlib import Path
@@ -900,6 +901,44 @@ class GoogleAuthRequest(BaseModel):
 @api_router.post("/auth/google")
 async def google_auth(request: GoogleAuthRequest, http_request: Request, response: Response):
     """Handle Google OAuth callback - exchange session_id for user data from Emergent Auth"""
+    return await _google_exchange(request.session_id, request.platform, http_request, response)
+
+
+class NativeHandoffRequest(BaseModel):
+    nonce: str
+    session_id: str
+
+
+_NONCE_RE = re.compile(r"^[a-f0-9]{48,96}$")
+
+
+@api_router.post("/auth/native-handoff")
+async def native_handoff_create(body: NativeHandoffRequest, http_request: Request, response: Response):
+    """La web abierta desde la app (Custom Tab) canjea el session_id de Google y deja una sesión NATIVA de un solo uso
+    bajo un nonce que solo conoce la app; la app la recoge con GET /auth/native-handoff/{nonce} (TTL 2 min)."""
+    if not _NONCE_RE.match(body.nonce or ""):
+        raise HTTPException(status_code=400, detail="nonce inválido")
+    payload = await _google_exchange(body.session_id, "native", http_request, response)
+    now = datetime.now(timezone.utc)
+    await db.native_auth_handoffs.update_one(
+        {"nonce": body.nonce},
+        {"$set": {"nonce": body.nonce, "payload": payload, "created_at": now, "expires_at": now + timedelta(minutes=2)}},
+        upsert=True,
+    )
+    return {"ok": True}
+
+
+@api_router.get("/auth/native-handoff/{nonce}")
+async def native_handoff_take(nonce: str):
+    if not _NONCE_RE.match(nonce or ""):
+        raise HTTPException(status_code=400, detail="nonce inválido")
+    doc = await db.native_auth_handoffs.find_one_and_delete({"nonce": nonce, "expires_at": {"$gt": datetime.now(timezone.utc)}})
+    if not doc:
+        raise HTTPException(status_code=404, detail="pending")
+    return doc["payload"]
+
+
+async def _google_exchange(session_id: str, platform: Optional[str], http_request: Request, response: Response):
     import httpx
     
     try:
@@ -907,12 +946,12 @@ async def google_auth(request: GoogleAuthRequest, http_request: Request, respons
         async with httpx.AsyncClient() as client:
             oauth_resp = await client.get(
                 "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                headers={"X-Session-ID": request.session_id},
+                headers={"X-Session-ID": session_id},
                 timeout=10.0
             )
             
             if oauth_resp.status_code != 200:
-                raise HTTPException(status_code=401, detail="Invalid session_id")
+                raise HTTPException(status_code=401, detail="El inicio de sesión con Google caducó o no es válido. Inténtalo de nuevo.")
             
             auth_data = oauth_resp.json()
             
@@ -962,11 +1001,11 @@ async def google_auth(request: GoogleAuthRequest, http_request: Request, respons
         user_doc = await db.users.find_one({"email": email}, {"_id": 0})
         
         # Sesión: access corto + refresh rotatorio (cookies en web, cuerpo en nativo)
-        sess = await _start_session(response, http_request, user_doc, request.platform)
+        sess = await _start_session(response, http_request, user_doc, platform)
         if not user_doc.get("email_verified"):
             await db.users.update_one({"id": user_doc["id"]}, {"$set": {"email_verified": True, "email_verified_at": datetime.now(timezone.utc).isoformat()}})
             user_doc["email_verified"] = True  # Google ya verificó el correo
-        await _ev.note_login_device(user_doc, http_request, request.platform or "web")
+        await _ev.note_login_device(user_doc, http_request, platform or "web")
         
         return {
             "user": User(**user_doc).model_dump(),
@@ -2637,6 +2676,8 @@ async def auth_hardening_startup():
             logger.warning("AUTH: all sessions issued before now were invalidated (global reset)")
         await db.revoked_tokens.create_index("jti", unique=True)
         await db.revoked_tokens.create_index("expires_at", expireAfterSeconds=0)
+        await db.native_auth_handoffs.create_index("nonce", unique=True)
+        await db.native_auth_handoffs.create_index("expires_at", expireAfterSeconds=0)
         await db.login_attempts.create_index("key", unique=True)
         await db.login_attempts.create_index("last_failure_at", expireAfterSeconds=60 * 60 * 24)
         await db.chats.create_index("participants")

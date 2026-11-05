@@ -4,16 +4,17 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
 import { isNative } from "@/native/capacitor";
-import { NATIVE_AUTH_SCHEME, closeNativeBrowser } from "@/lib/googleLogin";
+import { NATIVE_AUTH_DONE_LINK } from "@/lib/googleLogin";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+const NONCE_RE = /^[a-f0-9]{48,96}$/;
 
 const AuthCallback = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const hasProcessed = useRef(false);
-  const [bounceUrl, setBounceUrl] = useState(null);
+  const [handoff, setHandoff] = useState(null); // 'working' | 'done'
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -34,11 +35,13 @@ const AuthCallback = () => {
           return;
         }
 
-        // Web abierta desde la app nativa (?native_auth=1): devolver el session_id a la app por su esquema, no iniciar sesión aquí.
-        if (!isNative() && new URLSearchParams(window.location.search).get('native_auth') === '1') {
-          const target = `${NATIVE_AUTH_SCHEME}#session_id=${encodeURIComponent(sessionId)}`;
-          setBounceUrl(target);
-          window.location.replace(target);
+        // Web abierta desde la app nativa (?native_auth=<nonce>): canjear aquí y dejar la sesión nativa para la app; no iniciar sesión en esta web.
+        const nonce = new URLSearchParams(window.location.search).get('native_auth');
+        if (!isNative() && nonce && NONCE_RE.test(nonce)) {
+          setHandoff('working');
+          await axios.post(`${API}/auth/native-handoff`, { nonce, session_id: sessionId }, { __skipAuthRetry: true, timeout: 20000 });
+          setHandoff('done');
+          window.history.replaceState(null, '', '/dashboard?native_auth=done');
           return;
         }
 
@@ -48,13 +51,13 @@ const AuthCallback = () => {
         // Login user - use access_token (JWT) for API calls
         const token = response.data.access_token || response.data.session_token;
         await login(response.data.user, token, true, response.data.refresh_token || null);
-        if (isNative()) closeNativeBrowser();
         
         // Redirect to dashboard
         navigate('/dashboard', { replace: true });
       } catch (err) {
         const msg = err?.response?.data?.detail || (err?.code === 'ERR_NETWORK' ? 'Sin conexión con el servidor. Revisa tu internet e inténtalo de nuevo.' : 'No se pudo completar el inicio de sesión con Google.');
         setError(typeof msg === 'string' ? msg : 'No se pudo completar el inicio de sesión con Google.');
+        setHandoff(null);
         setTimeout(() => navigate('/login', { replace: true }), 2500);
       }
     };
@@ -62,11 +65,18 @@ const AuthCallback = () => {
     processAuth();
   }, [navigate, login]);
 
-  if (bounceUrl) {
+  if (handoff) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center" data-testid="auth-native-bounce">
-        <p className="text-base">Volviendo a la app BRUNO…</p>
-        <a href={bounceUrl} className="underline text-sm" data-testid="auth-native-bounce-link">Si no se abre sola, toca aquí para abrir BRUNO</a>
+        {handoff === 'working' ? (
+          <p className="text-base" data-testid="auth-native-bounce-text">Conectando con BRUNO…</p>
+        ) : (
+          <>
+            <p className="text-base font-semibold" data-testid="auth-native-bounce-text">¡Listo! Tu sesión ya está en la app BRUNO.</p>
+            <p className="text-sm text-muted-foreground">Cierra esta ventana o vuelve a la app.</p>
+            <a href={NATIVE_AUTH_DONE_LINK} className="inline-flex items-center justify-center rounded-full bg-orange-500 text-white px-6 py-3 text-sm font-semibold" data-testid="auth-native-bounce-link">Abrir BRUNO</a>
+          </>
+        )}
       </div>
     );
   }

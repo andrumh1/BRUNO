@@ -11,6 +11,7 @@ import { useNativePush } from '@/native/useNativePush';
 import { isNative, isIOS } from '@/native/capacitor';
 import BiometricGate from '@/native/BiometricGate';
 import ApiStatusBanner from '@/native/ApiStatusBanner';
+import { pollNativeHandoffNow, closeNativeBrowser } from '@/lib/googleLogin';
 import { App } from '@capacitor/app';
 import { Keyboard } from '@capacitor/keyboard';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -34,7 +35,7 @@ const pathFromDeepLink = (raw) => {
 };
 
 export default function NativeBootstrap() {
-  const { token } = useAuth() || {};
+  const { token, login } = useAuth() || {};
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -79,12 +80,26 @@ export default function NativeBootstrap() {
     });
     const urlOpen = App.addListener('appUrlOpen', ({ url }) => {
       const path = pathFromDeepLink(url);
-      if (path) navigate(path);
+      if (!path) return;
+      if (path.startsWith('/auth/done')) { pollNativeHandoffNow(); navigate('/dashboard', { replace: true }); return; }
+      navigate(path);
     });
+    // Google en nativo: la web dejó la sesión bajo el nonce; al volver al frente la recogemos sin esperar al siguiente poll.
+    const stateSub = App.addListener('appStateChange', ({ isActive }) => { if (isActive) pollNativeHandoffNow(); });
+    const onNativeSession = async (e) => {
+      const d = e.detail || {};
+      try {
+        await login(d.user, d.access_token, true, d.refresh_token || null);
+        closeNativeBrowser();
+        navigate('/dashboard', { replace: true });
+      } catch (_) { /* login() nunca lanza en la práctica; si fallara, el usuario sigue en /login */ }
+    };
+    window.addEventListener('bruno:native-session', onNativeSession);
     App.getLaunchUrl?.().then((r) => { const p = r?.url && pathFromDeepLink(r.url); if (p && p !== '/') navigate(p); }).catch(() => {});
     return () => {
       observer?.disconnect();
-      kbShow.then((h) => h.remove()); kbHide.then((h) => h.remove()); urlOpen.then((h) => h.remove());
+      window.removeEventListener('bruno:native-session', onNativeSession);
+      kbShow.then((h) => h.remove()); kbHide.then((h) => h.remove()); urlOpen.then((h) => h.remove()); stateSub.then((h) => h.remove());
     };
   }, []); // eslint-disable-line
 
