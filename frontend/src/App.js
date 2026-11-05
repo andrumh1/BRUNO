@@ -56,6 +56,12 @@ const ServiceReviewPage = lazyPage(() => import("@/pages/service/ServiceReviewPa
 const AdminOrdersPage = lazyPage(() => import("@/pages/service/AdminOrdersPage"));
 const AdminOrderDetailPage = lazyPage(() => import("@/pages/service/AdminOrderDetailPage"));
 const AdvisorsPage = lazyPage(() => import("@/pages/packages/AdvisorsPage"));
+const MyEventsPage = lazyPage(() => import("@/pages/events/MyEventsPage"));
+const EventManagePage = lazyPage(() => import("@/pages/events/EventManagePage"));
+const EventPublicPage = lazyPage(() => import("@/pages/events/EventPublicPage"));
+const InvitationPage = lazyPage(() => import("@/pages/events/InvitationPage"));
+const EventPayReturnPage = lazyPage(() => import("@/pages/events/EventPayReturnPage"));
+const CommerceAdminPage = lazyPage(() => import("@/pages/admin/CommerceAdminPage"));
 const PackageEditorPage = lazyPage(() => import("@/pages/packages/PackageEditorPage"));
 const PackageClaimPage = lazyPage(() => import("@/pages/packages/PackageClaimPage"));
 const PackagePaymentReturnPage = lazyPage(() => import("@/pages/packages/PackagePaymentReturnPage"));
@@ -175,6 +181,12 @@ function AppRouter() {
       <Route path="/admin/pedidos" element={<ProtectedRoute><AdminOrdersPage /></ProtectedRoute>} />
       <Route path="/admin/pedidos/:orderId" element={<ProtectedRoute><AdminOrderDetailPage /></ProtectedRoute>} />
       <Route path="/asesores" element={<ProtectedRoute><AdvisorsPage /></ProtectedRoute>} />
+      <Route path="/events" element={<ProtectedRoute><MyEventsPage /></ProtectedRoute>} />
+      <Route path="/events/:id/manage" element={<ProtectedRoute><EventManagePage /></ProtectedRoute>} />
+      <Route path="/events/:id/pay" element={<ProtectedRoute><EventPayReturnPage /></ProtectedRoute>} />
+      <Route path="/e/:id" element={<EventPublicPage />} />
+      <Route path="/e/:id/i/:iid" element={<InvitationPage />} />
+      <Route path="/admin/comercio" element={<ProtectedRoute><CommerceAdminPage /></ProtectedRoute>} />
       <Route path="/asesores/paquete/:packageId" element={<ProtectedRoute><PackageEditorPage /></ProtectedRoute>} />
       <Route path="/paquete/:packageId/pago" element={<PackagePaymentReturnPage />} />
       <Route path="/paquete/:token" element={<PackageClaimPage />} />

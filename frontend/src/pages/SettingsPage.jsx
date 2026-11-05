@@ -30,7 +30,7 @@ import {
   Check,
   Loader2,
   Smartphone,
-  Languages, Sun, Monitor, Sparkles, Upload, Fingerprint, Package } from "lucide-react";
+  Languages, Sun, Monitor, Sparkles, Upload, Fingerprint, Package, CalendarDays, Store } from "lucide-react";
 import { isNative } from "@/native/capacitor";
 import { biometricInfo, authenticateBiometric, getBiometricLock, setBiometricLock } from "@/native/biometric";
 
@@ -86,7 +86,8 @@ const SettingsPage = () => {
   const { user, token, logout } = useAuth();
   const [staffAccess, setStaffAccess] = useState(false);
   const [advisorAccess, setAdvisorAccess] = useState(false);
-  useEffect(() => { if (!token) return; axios.get(`${API}/bruno-service/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setStaffAccess(!!r.data?.staff)).catch(() => {}); axios.get(`${API}/packages/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setAdvisorAccess(!!r.data?.advisor)).catch(() => {}); }, [token]);
+  useEffect(() => { if (!token) return; axios.get(`${API}/bruno-service/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setStaffAccess(!!r.data?.staff)).catch(() => {}); axios.get(`${API}/packages/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setAdvisorAccess(!!r.data?.advisor)).catch(() => {}); axios.get(`${API}/packages/me/access`, { headers: { Authorization: `Bearer ${token}` } }).then((r) => setCommerceAdmin(!!r.data?.admin)).catch(() => {}); }, [token]);
+  const [commerceAdmin, setCommerceAdmin] = useState(false);
   const [prefs, setPrefs] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -448,6 +449,7 @@ const SettingsPage = () => {
                     </select>
                   </div>
                   <OptionRow icon={Lock} label="Cambiar contrasena" onClick={() => navigate("/change-password")} />
+                  <OptionRow icon={CalendarDays} label="Mis tarjetas de evento" onClick={() => navigate("/events")} />
                   <BiometricRow />
                   <OptionRow icon={Shield} label="Usuarios bloqueados" onClick={() => navigate("/settings/blocked")} />
                   <OptionRow icon={Smartphone} label="Dispositivos y sesiones" onClick={() => navigate("/settings/devices")} />
@@ -469,13 +471,14 @@ const SettingsPage = () => {
             </Card>
 
             {/* Equipo BRUNO: pedidos del servicio «Creamos tu tarjeta» (solo admin / producción) */}
-            {(staffAccess || advisorAccess) && (
+            {(staffAccess || advisorAccess || commerceAdmin) && (
               <Card data-testid="settings-staff-card">
                 <CardContent className="p-4">
                   <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Equipo BRUNO</h2>
                   <div className="divide-y">
                     {staffAccess && <OptionRow icon={Package} label="Pedidos · Creamos tu tarjeta" onClick={() => navigate("/admin/pedidos")} />}
                     {advisorAccess && <OptionRow icon={Package} label="Área de asesores · Perfil + 3 tarjetas" onClick={() => navigate("/asesores")} />}
+                    {commerceAdmin && <OptionRow icon={Store} label="Comercio · Tarjetas inteligentes" onClick={() => navigate("/admin/comercio")} />}
                   </div>
                 </CardContent>
               </Card>

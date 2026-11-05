@@ -2477,6 +2477,8 @@ from routers.password_reset import router as password_reset_router  # noqa: E402
 api_router.include_router(password_reset_router)
 from routers import email_verify as _ev  # noqa: E402
 api_router.include_router(_ev.router)
+from routers.smart_cards import router as smart_cards_router  # noqa: E402
+api_router.include_router(smart_cards_router)
 from routers.piup_admin import router as piup_admin_router  # noqa: E402
 api_router.include_router(piup_admin_router)
 from routers.marketplace_orders import router as marketplace_orders_router  # noqa: E402

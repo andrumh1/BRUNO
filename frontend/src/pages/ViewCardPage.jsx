@@ -13,6 +13,7 @@ import { useTheme } from "@/contexts/ThemeProvider";
 import { renderCardImage } from "@/lib/cardShareImage";
 import ShareImageSheet from "@/components/bruno/ShareImageSheet";
 import CardRenderer from "@/components/cards/CardRenderer";
+import { CardConnections } from "@/components/bruno/CardConnections";
 import { CARD_LANGS, CARD_LANG_KEY, detectCardLang, translateCardLabel } from "@/lib/cardLabels";
 import { resolveDesign, deepMerge, luminance } from "@/lib/cardDesign";
 import { accentStyleFromHex } from "@/lib/accentScope";
@@ -241,6 +242,9 @@ const ViewCardPage = () => {
             </Button>
           )}
         </div>
+
+        {/* Conexiones: eventos que organiza/respalda, invitaciones autorizadas y más tarjetas del mismo perfil */}
+        {!card.is_example && <div className="px-1"><CardConnections cardId={cardId} current={card.title} /></div>}
 
         {/* CTA */}
         <div className="text-center mt-8">
