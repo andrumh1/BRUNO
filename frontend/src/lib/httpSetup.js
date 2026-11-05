@@ -10,6 +10,7 @@ const CLD_IMG = /(res\.cloudinary\.com\/[^/"\\]+\/image\/upload\/)(v\d+\/)/g;
 const optimizeCloudinary = (data, headers) => (typeof data === "string" && String(headers?.["content-type"] || "").includes("json") && data.includes("/image/upload/v") ? data.replace(CLD_IMG, "$1f_auto,q_auto/$2") : data);
 
 const DEFAULT_TIMEOUT = 20000;
+const API_BASE = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const RETRYABLE_STATUS = new Set([502, 503, 504]);
 const MAX_RETRIES = 2;
 
@@ -29,7 +30,7 @@ export function setupHttp() {
   });
 
   axios.interceptors.response.use(
-    (res) => { recordApiCall(res.config?.url, res.status, performance.now() - (res.config?.metadata?.start || performance.now()), "ok"); return res; },
+    (res) => { recordApiCall(res.config?.url, res.status, performance.now() - (res.config?.metadata?.start || performance.now()), "ok"); if (String(res.config?.url || "").startsWith(API_BASE)) window.dispatchEvent(new Event("bruno:api-ok")); return res; },
     async (error) => {
       const cfg = error.config || {};
       const status = error.response?.status || 0;
@@ -49,7 +50,7 @@ export function setupHttp() {
           if (hadAuth) { if (cfg.headers.set) cfg.headers.set("Authorization", `Bearer ${r.token}`); else cfg.headers.Authorization = `Bearer ${r.token}`; }
           return axios(cfg);
         }
-        if (r.fatal) clearSession();
+        if (r.fatal) { clearSession(); window.dispatchEvent(new CustomEvent("bruno:session-expired", { detail: { code: r.code } })); }
         return Promise.reject(error);
       }
 
@@ -60,6 +61,7 @@ export function setupHttp() {
         await new Promise((r) => setTimeout(r, 400 * cfg.__retries + Math.random() * 200));
         return axios(cfg);
       }
+      if (isNetwork && String(cfg.url || "").startsWith(API_BASE)) window.dispatchEvent(new CustomEvent("bruno:api-unreachable", { detail: { url: cfg.url, kind } }));
       return Promise.reject(error);
     },
   );

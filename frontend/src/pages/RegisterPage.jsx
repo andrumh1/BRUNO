@@ -8,6 +8,7 @@ import axios from "axios";
 import { isNative } from "@/native/capacitor";
 import { brunoToast } from "@/components/bruno/BrunoToast";
 import { OvcAttribution } from "@/components/brand/OvcAttribution";
+import { startGoogleLogin } from "@/lib/googleLogin";
 import { Mail, Lock, User, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -44,17 +45,14 @@ const RegisterPage = () => {
       brunoToast.success(`Te enviamos un correo a ${response.data.user.email} para confirmar tu cuenta`);
       navigate(redirectTo);
     } catch (err) {
-      setError(err.response?.data?.detail || "Error al registrarse");
+      setError(!err.response && err.code !== "ERR_CANCELED" ? "No se pudo conectar con BRUNO. Revisa tu internet e inténtalo de nuevo." : (err.response?.data?.detail || "Error al registrarse"));
     } finally {
       setLoading(false);
     }
   };
 
   // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-  const handleGoogleSignup = () => {
-    const redirectUrl = window.location.origin + '/dashboard';
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-  };
+  const handleGoogleSignup = () => { startGoogleLogin(); };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">

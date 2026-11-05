@@ -93,6 +93,12 @@ Crash corregido: `IllegalStateException: Default FirebaseApp is not initialized`
 Permisos del manifiesto (CAMERA, RECORD_AUDIO, ACCESS_FINE_LOCATION, NFC, POST_NOTIFICATIONS, USE_BIOMETRIC) **no** se solicitan al inicio. Red: la restauración de sesión tiene timeout (15 s) y conserva el usuario en caché sin red; la app abre igual.
 Prueba en frío obligatoria en el emulador: *Force stop* (o `adb shell am force-stop com.brunocard.app`) → abrir → debe pasar del splash a la app; `adb logcat *:E | findstr brunocard` sin `FATAL`.
 
+### 3.2 Login nativo: CORS y Google
+- El WebView de Android sirve la app en `https://localhost` (iOS: `capacitor://localhost`) y llama a `https://brunocard.com/api` con `withCredentials`. El backend **no puede responder `Access-Control-Allow-Origin: *`** con credenciales; `backend/server.py` ahora tiene lista explícita (`https://brunocard.com`, `https://www.brunocard.com`, `https://localhost`, `http://localhost`, `capacitor://localhost`, `ionic://localhost`, más `CORS_ORIGINS`/`FRONTEND_URL` del entorno y los dominios de preview/host de Emergent por regex) y devuelve el origen exacto + `Access-Control-Allow-Credentials: true` en preflight y respuesta. **Este cambio es de backend: brunocard.com lo tendrá cuando se publique la siguiente versión.**
+- Sesión nativa: login/registro/Google envían `platform: "native"` → el backend devuelve `refresh_token` en el cuerpo (la web usa cookie httpOnly) y la app lo guarda en Keychain/Keystore (`@aparajita/capacitor-secure-storage`); al reabrir, `/api/auth/refresh` con ese token restaura la sesión. Sin red mantiene el usuario en caché.
+- Google en nativo (`src/lib/googleLogin.js`): abre Emergent Auth en Custom Tab (`@capacitor/browser`) con `redirect = https://brunocard.com/dashboard?native_auth=1`; la web de producción (`AuthCallback`) detecta `native_auth=1` y reenvía a `com.brunocard.app://auth/callback#session_id=…` (esquema ya declarado en AndroidManifest e Info.plist); la app recibe `appUrlOpen` → `/auth/callback` → `POST /api/auth/google` con `platform: native`. Requiere la web publicada con esta versión. Sin cambios en Google Cloud (Emergent Auth gestiona el cliente de Google).
+- Sin internet / API caída: banner nativo "Sin conexión…/No se pudo conectar con BRUNO" con **Reintentar** (`src/native/ApiStatusBanner.jsx`); login y registro muestran el error de red en español. Sesión expirada: toast "Tu sesión expiró" y vuelta a /login (sin bucle).
+
 ## 4. iOS (solo en macOS con Xcode 15+)
 ```bash
 cd frontend && npx cap sync ios      # ejecuta pod install

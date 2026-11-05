@@ -10,6 +10,7 @@ import AccountPicker from "@/components/auth/AccountPicker";
 import { listAccounts, forgetAccount, storedAccountToken, maskEmail, initials } from "@/lib/rememberedAccounts";
 import { authenticateBiometric, biometricInfo } from "@/native/biometric";
 import { isNative } from "@/native/capacitor";
+import { startGoogleLogin } from "@/lib/googleLogin";
 import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -110,17 +111,15 @@ const LoginPage = () => {
       navigate(safeRedirect());
     } catch (err) {
       const status = err.response?.status;
-      setError(status === 429 ? (err.response?.data?.detail || "Demasiados intentos. Espera unos minutos.") : status === 401 ? "Correo o contraseña incorrectos" : (err.response?.data?.detail || "No se pudo iniciar sesión. Inténtalo de nuevo."));
+      const offline = !err.response && err.code !== "ERR_CANCELED";
+      setError(offline ? "No se pudo conectar con BRUNO. Revisa tu internet e inténtalo de nuevo." : status === 429 ? (err.response?.data?.detail || "Demasiados intentos. Espera unos minutos.") : status === 401 ? "Correo o contraseña incorrectos" : (err.response?.data?.detail || "No se pudo iniciar sesión. Inténtalo de nuevo."));
     } finally {
       setLoading(false);
     }
   };
 
   // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-  const handleGoogleLogin = () => {
-    const redirectUrl = window.location.origin + '/dashboard';
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-  };
+  const handleGoogleLogin = () => { startGoogleLogin(); };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">

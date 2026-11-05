@@ -2600,11 +2600,18 @@ from utils.perf import PerfMiddleware, SelectiveGZipMiddleware, ensure_indexes  
 app.add_middleware(PerfMiddleware)
 app.add_middleware(SelectiveGZipMiddleware, minimum_size=1000)
 
-# CORS
+# CORS — nunca "*" con credenciales: el WebView nativo (https://localhost / capacitor://localhost) envía withCredentials
+# y el navegador bloquea "*" en esa combinación; Starlette solo devuelve el origen exacto si la lista es explícita.
+_CORS_FIXED = [
+    "https://brunocard.com", "https://www.brunocard.com",
+    "https://localhost", "http://localhost", "capacitor://localhost", "ionic://localhost",
+]
+_cors_extra = [o.strip().rstrip("/") for o in (os.environ.get('CORS_ORIGINS', '') + ',' + os.environ.get('FRONTEND_URL', '')).split(',')]
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=list(dict.fromkeys(_CORS_FIXED + [o for o in _cors_extra if o and o != '*'])),
+    allow_origin_regex=r"^https://[a-z0-9-]+(\.[a-z0-9-]+)*\.(preview\.emergentagent\.com|emergent\.host)$",
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Server-Timing"],

@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNativePush } from '@/native/useNativePush';
 import { isNative, isIOS } from '@/native/capacitor';
 import BiometricGate from '@/native/BiometricGate';
+import ApiStatusBanner from '@/native/ApiStatusBanner';
 import { App } from '@capacitor/app';
 import { Keyboard } from '@capacitor/keyboard';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -100,5 +101,6 @@ export default function NativeBootstrap() {
     return () => { sub.then((h) => h.remove()); };
   }, [location.pathname, navigate]);
 
-  return <BiometricGate />;
+  if (!isNative()) return null;
+  return (<><BiometricGate /><ApiStatusBanner /></>);
 }
